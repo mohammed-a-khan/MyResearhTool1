@@ -1,0 +1,2067 @@
+com/cstestforge/framework/core/config/ConfigurationManager.java
+-----------------------------------------------------------------
+package com.cstestforge.framework.core.config;
+
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Properties;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+
+/**
+ * Singleton configuration manager that provides centralized access to all 
+ * framework configuration settings with thread-safe implementation.
+ */
+public class ConfigurationManager {
+    
+    private static final ConfigurationManager INSTANCE = new ConfigurationManager();
+    private final ConcurrentHashMap<String, Object> configCache = new ConcurrentHashMap<>();
+    private final ReadWriteLock configLock = new ReentrantReadWriteLock();
+    private final ConfigLoader configLoader;
+    private final ConfigValidator configValidator;
+    
+    private static final String DEFAULT_CONFIG_DIR = "config";
+    private static final String DEFAULT_CONFIG_FILE = "cstestforge.properties";
+    private static final String ENV_CONFIG_PREFIX = "CS_";
+    
+    private ConfigurationManager() {
+        this.configLoader = new ConfigLoader();
+        this.configValidator = new ConfigValidator();
+        initializeDefaultConfig();
+    }
+    
+    /**
+     * Gets the singleton instance of the ConfigurationManager.
+     * 
+     * @return The singleton ConfigurationManager instance
+     */
+    public static ConfigurationManager getInstance() {
+        return INSTANCE;
+    }
+    
+    /**
+     * Initializes the configuration with default values and loads from files.
+     */
+    private void initializeDefaultConfig() {
+        // Load configuration from the following sources in order of precedence:
+        // 1. Environment variables (highest precedence)
+        // 2. System properties
+        // 3. User-specified config file
+        // 4. Default config file
+        // 5. Default values (lowest precedence)
+        
+        try {
+            // Set default values
+            setDefaultValues();
+            
+            // Load from default config file
+            loadDefaultConfigFile();
+            
+            // Load from user-specified config file if exists
+            String userConfigPath = System.getProperty("cstestforge.config");
+            if (userConfigPath != null && !userConfigPath.isEmpty()) {
+                loadConfigFromFile(userConfigPath);
+            }
+            
+            // Load from system properties
+            loadFromSystemProperties();
+            
+            // Load from environment variables
+            loadFromEnvironment();
+            
+            // Validate the final configuration
+            validateConfiguration();
+        } catch (Exception e) {
+            throw new ConfigurationException("Failed to initialize configuration", e);
+        }
+    }
+    
+    /**
+     * Sets the default values for configuration parameters.
+     */
+    private void setDefaultValues() {
+        Map<String, Object> defaults = new HashMap<>();
+        
+        // Framework defaults
+        defaults.put("framework.name", "CSTestForge");
+        defaults.put("framework.version", "1.0.0");
+        defaults.put("framework.logging.level", "INFO");
+        defaults.put("framework.temp.dir", System.getProperty("java.io.tmpdir") + "/cstestforge");
+        
+        // Browser defaults
+        defaults.put("browser.default", "chrome");
+        defaults.put("browser.headless", "false");
+        defaults.put("browser.timeout.page", "30");
+        defaults.put("browser.timeout.element", "10");
+        defaults.put("browser.timeout.script", "30");
+        
+        // Selenium defaults
+        defaults.put("selenium.driver.path", "");
+        defaults.put("selenium.remote.url", "");
+        defaults.put("selenium.capabilities.file", "");
+        
+        // Playwright defaults
+        defaults.put("playwright.browsers.install", "true");
+        defaults.put("playwright.context.recordVideo", "false");
+        defaults.put("playwright.context.recordHar", "false");
+        
+        // Reports defaults
+        defaults.put("reports.dir", "test-output");
+        defaults.put("reports.screenshots", "true");
+        defaults.put("reports.video", "false");
+        defaults.put("reports.retention.days", "30");
+        
+        // AI-related defaults
+        defaults.put("ai.model.path", "models");
+        defaults.put("ai.dictionary.path", "dictionaries");
+        defaults.put("ai.self-healing.enabled", "true");
+        defaults.put("ai.locator.strategies", "id,name,css,xpath");
+        
+        // Parallel execution defaults
+        defaults.put("parallel.threads", "1");
+        defaults.put("parallel.mode", "METHODS");
+        defaults.put("parallel.timeout", "600");
+        defaults.put("parallel.data.isolation", "true");
+        
+        // Add default values to config cache with write lock
+        configLock.writeLock().lock();
+        try {
+            configCache.putAll(defaults);
+        } finally {
+            configLock.writeLock().unlock();
+        }
+    }
+    
+    /**
+     * Loads configuration from the default config file if it exists.
+     */
+    private void loadDefaultConfigFile() {
+        // Check user home directory
+        String userHome = System.getProperty("user.home");
+        Path homeConfigPath = Paths.get(userHome, "." + DEFAULT_CONFIG_DIR, DEFAULT_CONFIG_FILE);
+        
+        if (Files.exists(homeConfigPath)) {
+            loadConfigFromFile(homeConfigPath.toString());
+            return;
+        }
+        
+        // Check current working directory
+        Path workingConfigPath = Paths.get(DEFAULT_CONFIG_DIR, DEFAULT_CONFIG_FILE);
+        if (Files.exists(workingConfigPath)) {
+            loadConfigFromFile(workingConfigPath.toString());
+            return;
+        }
+        
+        // Check classpath
+        try {
+            ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
+            if (classLoader.getResource(DEFAULT_CONFIG_FILE) != null) {
+                loadConfigFromFile(classLoader.getResource(DEFAULT_CONFIG_FILE).getFile());
+            }
+        } catch (Exception e) {
+            // Log but continue with defaults
+            System.err.println("Warning: Could not load default configuration file: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * Loads configuration from a specific file path.
+     * 
+     * @param filePath Path to the configuration file
+     */
+    public void loadConfigFromFile(String filePath) {
+        try {
+            Map<String, Object> fileConfig = configLoader.loadFromFile(filePath);
+            
+            // Add file values to config cache with write lock
+            configLock.writeLock().lock();
+            try {
+                configCache.putAll(fileConfig);
+            } finally {
+                configLock.writeLock().unlock();
+            }
+        } catch (Exception e) {
+            throw new ConfigurationException("Failed to load configuration from file: " + filePath, e);
+        }
+    }
+    
+    /**
+     * Loads configuration from system properties.
+     */
+    private void loadFromSystemProperties() {
+        Properties sysProps = System.getProperties();
+        Map<String, Object> sysPropsMap = new HashMap<>();
+        
+        for (String key : sysProps.stringPropertyNames()) {
+            if (key.startsWith("cstestforge.")) {
+                String configKey = key.substring("cstestforge.".length());
+                sysPropsMap.put(configKey, sysProps.getProperty(key));
+            }
+        }
+        
+        // Add system properties to config cache with write lock
+        configLock.writeLock().lock();
+        try {
+            configCache.putAll(sysPropsMap);
+        } finally {
+            configLock.writeLock().unlock();
+        }
+    }
+    
+    /**
+     * Loads configuration from environment variables.
+     */
+    private void loadFromEnvironment() {
+        Map<String, String> envVars = System.getenv();
+        Map<String, Object> envConfig = new HashMap<>();
+        
+        for (Map.Entry<String, String> entry : envVars.entrySet()) {
+            String key = entry.getKey();
+            if (key.startsWith(ENV_CONFIG_PREFIX)) {
+                String configKey = key.substring(ENV_CONFIG_PREFIX.length())
+                        .toLowerCase()
+                        .replace('_', '.');
+                envConfig.put(configKey, entry.getValue());
+            }
+        }
+        
+        // Add environment variables to config cache with write lock
+        configLock.writeLock().lock();
+        try {
+            configCache.putAll(envConfig);
+        } finally {
+            configLock.writeLock().unlock();
+        }
+    }
+    
+    /**
+     * Validates the final configuration.
+     */
+    private void validateConfiguration() {
+        configLock.readLock().lock();
+        try {
+            configValidator.validate(new HashMap<>(configCache));
+        } finally {
+            configLock.readLock().unlock();
+        }
+    }
+    
+    /**
+     * Gets a configuration value as a String.
+     * 
+     * @param key The configuration key
+     * @return The configuration value, or null if not found
+     */
+    public String getStringConfig(String key) {
+        Object value = getConfig(key);
+        return value != null ? value.toString() : null;
+    }
+    
+    /**
+     * Gets a configuration value as a Boolean.
+     * 
+     * @param key The configuration key
+     * @return The boolean value, or false if not found or not a boolean
+     */
+    public boolean getBooleanConfig(String key) {
+        Object value = getConfig(key);
+        if (value == null) {
+            return false;
+        }
+        
+        if (value instanceof Boolean) {
+            return (Boolean) value;
+        }
+        
+        return Boolean.parseBoolean(value.toString());
+    }
+    
+    /**
+     * Gets a configuration value as an Integer.
+     * 
+     * @param key The configuration key
+     * @return The integer value, or 0 if not found or not an integer
+     */
+    public int getIntConfig(String key) {
+        Object value = getConfig(key);
+        if (value == null) {
+            return 0;
+        }
+        
+        if (value instanceof Number) {
+            return ((Number) value).intValue();
+        }
+        
+        try {
+            return Integer.parseInt(value.toString());
+        } catch (NumberFormatException e) {
+            return 0;
+        }
+    }
+    
+    /**
+     * Gets a configuration value as a Long.
+     * 
+     * @param key The configuration key
+     * @return The long value, or 0L if not found or not a long
+     */
+    public long getLongConfig(String key) {
+        Object value = getConfig(key);
+        if (value == null) {
+            return 0L;
+        }
+        
+        if (value instanceof Number) {
+            return ((Number) value).longValue();
+        }
+        
+        try {
+            return Long.parseLong(value.toString());
+        } catch (NumberFormatException e) {
+            return 0L;
+        }
+    }
+    
+    /**
+     * Gets a configuration value as a Double.
+     * 
+     * @param key The configuration key
+     * @return The double value, or 0.0 if not found or not a double
+     */
+    public double getDoubleConfig(String key) {
+        Object value = getConfig(key);
+        if (value == null) {
+            return 0.0;
+        }
+        
+        if (value instanceof Number) {
+            return ((Number) value).doubleValue();
+        }
+        
+        try {
+            return Double.parseDouble(value.toString());
+        } catch (NumberFormatException e) {
+            return 0.0;
+        }
+    }
+    
+    /**
+     * Gets a configuration value.
+     * 
+     * @param key The configuration key
+     * @return The configuration value, or null if not found
+     */
+    public Object getConfig(String key) {
+        configLock.readLock().lock();
+        try {
+            return configCache.get(key);
+        } finally {
+            configLock.readLock().unlock();
+        }
+    }
+    
+    /**
+     * Sets a configuration value.
+     * 
+     * @param key The configuration key
+     * @param value The configuration value
+     */
+    public void setConfig(String key, Object value) {
+        configLock.writeLock().lock();
+        try {
+            configCache.put(key, value);
+        } finally {
+            configLock.writeLock().unlock();
+        }
+    }
+    
+    /**
+     * Gets the framework's environment name.
+     * 
+     * @return The environment name
+     */
+    public String getEnvironment() {
+        String env = getStringConfig("framework.environment");
+        return env != null ? env : "default";
+    }
+    
+    /**
+     * Sets the framework's environment name.
+     * 
+     * @param environment The environment name
+     */
+    public void setEnvironment(String environment) {
+        setConfig("framework.environment", environment);
+        
+        // Load environment-specific configuration if available
+        String envConfigPath = DEFAULT_CONFIG_DIR + "/cstestforge-" + environment + ".properties";
+        Path envConfigFile = Paths.get(envConfigPath);
+        if (Files.exists(envConfigFile)) {
+            loadConfigFromFile(envConfigPath);
+        }
+    }
+    
+    /**
+     * Clears all configuration values.
+     */
+    public void clearConfig() {
+        configLock.writeLock().lock();
+        try {
+            configCache.clear();
+        } finally {
+            configLock.writeLock().unlock();
+        }
+    }
+    
+    /**
+     * Reloads the configuration from the default sources.
+     */
+    public void reloadConfig() {
+        clearConfig();
+        initializeDefaultConfig();
+    }
+    
+    /**
+     * Gets all configuration values.
+     * 
+     * @return An unmodifiable map of all configuration values
+     */
+    public Map<String, Object> getAllConfig() {
+        configLock.readLock().lock();
+        try {
+            return new HashMap<>(configCache);
+        } finally {
+            configLock.readLock().unlock();
+        }
+    }
+    
+    /**
+     * Exception thrown when a configuration error occurs.
+     */
+    public static class ConfigurationException extends RuntimeException {
+        public ConfigurationException(String message) {
+            super(message);
+        }
+        
+        public ConfigurationException(String message, Throwable cause) {
+            super(message, cause);
+        }
+    }
+}
+
+
+com/cstestforge/framework/core/config/ConfigLoader.java
+-----------------------------------------------------------
+
+package com.cstestforge.framework.core.config;
+
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Properties;
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
+
+/**
+ * Utility class for loading configuration data from various file formats and sources.
+ * Supports properties, XML, JSON, and YAML file formats.
+ */
+public class ConfigLoader {
+
+    private static final String JSON_EXTENSION = ".json";
+    private static final String XML_EXTENSION = ".xml";
+    private static final String YAML_EXTENSION = ".yaml";
+    private static final String YML_EXTENSION = ".yml";
+    private static final String PROPERTIES_EXTENSION = ".properties";
+
+    /**
+     * Loads configuration from a file. Automatically detects the file type based on extension.
+     *
+     * @param filePath Path to the configuration file
+     * @return Map containing loaded configuration values
+     * @throws IOException If an error occurs reading the file
+     */
+    public Map<String, Object> loadFromFile(String filePath) throws IOException {
+        File file = new File(filePath);
+        if (!file.exists() || !file.isFile()) {
+            throw new IOException("Configuration file not found or is not a file: " + filePath);
+        }
+
+        if (filePath.endsWith(PROPERTIES_EXTENSION)) {
+            return loadFromPropertiesFile(file);
+        } else if (filePath.endsWith(XML_EXTENSION)) {
+            return loadFromXmlFile(file);
+        } else if (filePath.endsWith(JSON_EXTENSION)) {
+            return loadFromJsonFile(file);
+        } else if (filePath.endsWith(YAML_EXTENSION) || filePath.endsWith(YML_EXTENSION)) {
+            return loadFromYamlFile(file);
+        } else {
+            // Default to properties if extension not recognized
+            return loadFromPropertiesFile(file);
+        }
+    }
+
+    /**
+     * Loads configuration from a properties file.
+     *
+     * @param file The properties file
+     * @return Map containing loaded configuration values
+     * @throws IOException If an error occurs reading the file
+     */
+    private Map<String, Object> loadFromPropertiesFile(File file) throws IOException {
+        Map<String, Object> configMap = new HashMap<>();
+        Properties properties = new Properties();
+
+        try (FileInputStream fis = new FileInputStream(file)) {
+            properties.load(fis);
+            
+            for (String key : properties.stringPropertyNames()) {
+                configMap.put(key, properties.getProperty(key));
+            }
+        }
+
+        return configMap;
+    }
+
+    /**
+     * Loads configuration from an XML file.
+     *
+     * @param file The XML file
+     * @return Map containing loaded configuration values
+     * @throws IOException If an error occurs reading the file
+     */
+    private Map<String, Object> loadFromXmlFile(File file) throws IOException {
+        Map<String, Object> configMap = new HashMap<>();
+
+        try {
+            DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+            DocumentBuilder builder = factory.newDocumentBuilder();
+            Document document = builder.parse(file);
+            document.getDocumentElement().normalize();
+
+            Element root = document.getDocumentElement();
+            processXmlElement(root, "", configMap);
+        } catch (Exception e) {
+            throw new IOException("Error parsing XML configuration file: " + file.getPath(), e);
+        }
+
+        return configMap;
+    }
+
+    /**
+     * Process an XML element and its children, adding entries to the config map.
+     *
+     * @param element The XML element to process
+     * @param prefix The key prefix for nested properties
+     * @param configMap The map to store configuration values
+     */
+    private void processXmlElement(Element element, String prefix, Map<String, Object> configMap) {
+        // Process attributes
+        for (int i = 0; i < element.getAttributes().getLength(); i++) {
+            Node attr = element.getAttributes().item(i);
+            String key = prefix.isEmpty() ? attr.getNodeName() : 
+                        prefix + "." + attr.getNodeName();
+            configMap.put(key, attr.getNodeValue());
+        }
+
+        // Process child elements
+        NodeList children = element.getChildNodes();
+        for (int i = 0; i < children.getLength(); i++) {
+            Node child = children.item(i);
+            
+            if (child.getNodeType() == Node.ELEMENT_NODE) {
+                Element childElement = (Element) child;
+                String childName = childElement.getNodeName();
+                String newPrefix = prefix.isEmpty() ? childName : prefix + "." + childName;
+
+                // If this element has no child elements, treat it as a property
+                if (!hasChildElements(childElement)) {
+                    String textContent = childElement.getTextContent().trim();
+                    if (!textContent.isEmpty()) {
+                        configMap.put(newPrefix, textContent);
+                    }
+                } else {
+                    // Process nested elements recursively
+                    processXmlElement(childElement, newPrefix, configMap);
+                }
+            }
+        }
+    }
+
+    /**
+     * Checks if an element has child elements (not counting text nodes or attributes).
+     *
+     * @param element The element to check
+     * @return true if the element has child elements, false otherwise
+     */
+    private boolean hasChildElements(Element element) {
+        NodeList children = element.getChildNodes();
+        for (int i = 0; i < children.getLength(); i++) {
+            if (children.item(i).getNodeType() == Node.ELEMENT_NODE) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Loads configuration from a JSON file.
+     *
+     * @param file The JSON file
+     * @return Map containing loaded configuration values
+     * @throws IOException If an error occurs reading the file
+     */
+    private Map<String, Object> loadFromJsonFile(File file) throws IOException {
+        ObjectMapper mapper = new ObjectMapper();
+        Map<String, Object> jsonMap = mapper.readValue(file, HashMap.class);
+        Map<String, Object> flattenedMap = new HashMap<>();
+        
+        // Flatten nested JSON structure
+        flattenJson("", jsonMap, flattenedMap);
+        
+        return flattenedMap;
+    }
+
+    /**
+     * Loads configuration from a YAML file.
+     *
+     * @param file The YAML file
+     * @return Map containing loaded configuration values
+     * @throws IOException If an error occurs reading the file
+     */
+    private Map<String, Object> loadFromYamlFile(File file) throws IOException {
+        ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
+        Map<String, Object> yamlMap = mapper.readValue(file, HashMap.class);
+        Map<String, Object> flattenedMap = new HashMap<>();
+        
+        // Flatten nested YAML structure
+        flattenJson("", yamlMap, flattenedMap);
+        
+        return flattenedMap;
+    }
+
+    /**
+     * Flattens a nested map structure into a single-level map with dot notation for keys.
+     *
+     * @param prefix The key prefix for nested properties
+     * @param jsonMap The nested map to flatten
+     * @param flattenedMap The resulting flattened map
+     */
+    private void flattenJson(String prefix, Map<String, Object> jsonMap, Map<String, Object> flattenedMap) {
+        for (Map.Entry<String, Object> entry : jsonMap.entrySet()) {
+            String key = prefix.isEmpty() ? entry.getKey() : prefix + "." + entry.getKey();
+            Object value = entry.getValue();
+            
+            if (value instanceof Map) {
+                @SuppressWarnings("unchecked")
+                Map<String, Object> nestedMap = (Map<String, Object>) value;
+                flattenJson(key, nestedMap, flattenedMap);
+            } else if (value instanceof Iterable) {
+                // Handle arrays/lists - store as comma-separated string
+                StringBuilder sb = new StringBuilder();
+                boolean first = true;
+                
+                for (Object item : (Iterable<?>) value) {
+                    if (!first) {
+                        sb.append(",");
+                    }
+                    sb.append(item.toString());
+                    first = false;
+                }
+                
+                flattenedMap.put(key, sb.toString());
+            } else {
+                flattenedMap.put(key, value != null ? value : "");
+            }
+        }
+    }
+
+    /**
+     * Loads configuration from a resource in the classpath.
+     *
+     * @param resourcePath Path to the resource in the classpath
+     * @return Map containing loaded configuration values
+     * @throws IOException If an error occurs reading the resource
+     */
+    public Map<String, Object> loadFromResource(String resourcePath) throws IOException {
+        ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
+        
+        try (InputStream is = classLoader.getResourceAsStream(resourcePath)) {
+            if (is == null) {
+                throw new IOException("Resource not found in classpath: " + resourcePath);
+            }
+            
+            if (resourcePath.endsWith(PROPERTIES_EXTENSION)) {
+                return loadFromPropertiesResource(is);
+            } else if (resourcePath.endsWith(XML_EXTENSION)) {
+                return loadFromXmlResource(is);
+            } else if (resourcePath.endsWith(JSON_EXTENSION)) {
+                return loadFromJsonResource(is);
+            } else if (resourcePath.endsWith(YAML_EXTENSION) || resourcePath.endsWith(YML_EXTENSION)) {
+                return loadFromYamlResource(is);
+            } else {
+                // Default to properties if extension not recognized
+                return loadFromPropertiesResource(is);
+            }
+        }
+    }
+
+    /**
+     * Loads configuration from a properties resource.
+     *
+     * @param inputStream The input stream for the resource
+     * @return Map containing loaded configuration values
+     * @throws IOException If an error occurs reading the resource
+     */
+    private Map<String, Object> loadFromPropertiesResource(InputStream inputStream) throws IOException {
+        Map<String, Object> configMap = new HashMap<>();
+        Properties properties = new Properties();
+        
+        properties.load(inputStream);
+        
+        for (String key : properties.stringPropertyNames()) {
+            configMap.put(key, properties.getProperty(key));
+        }
+        
+        return configMap;
+    }
+
+    /**
+     * Loads configuration from an XML resource.
+     *
+     * @param inputStream The input stream for the resource
+     * @return Map containing loaded configuration values
+     * @throws IOException If an error occurs reading the resource
+     */
+    private Map<String, Object> loadFromXmlResource(InputStream inputStream) throws IOException {
+        Map<String, Object> configMap = new HashMap<>();
+        
+        try {
+            DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+            DocumentBuilder builder = factory.newDocumentBuilder();
+            Document document = builder.parse(inputStream);
+            document.getDocumentElement().normalize();
+            
+            Element root = document.getDocumentElement();
+            processXmlElement(root, "", configMap);
+        } catch (Exception e) {
+            throw new IOException("Error parsing XML configuration resource", e);
+        }
+        
+        return configMap;
+    }
+
+    /**
+     * Loads configuration from a JSON resource.
+     *
+     * @param inputStream The input stream for the resource
+     * @return Map containing loaded configuration values
+     * @throws IOException If an error occurs reading the resource
+     */
+    private Map<String, Object> loadFromJsonResource(InputStream inputStream) throws IOException {
+        ObjectMapper mapper = new ObjectMapper();
+        Map<String, Object> jsonMap = mapper.readValue(inputStream, HashMap.class);
+        Map<String, Object> flattenedMap = new HashMap<>();
+        
+        // Flatten nested JSON structure
+        flattenJson("", jsonMap, flattenedMap);
+        
+        return flattenedMap;
+    }
+
+    /**
+     * Loads configuration from a YAML resource.
+     *
+     * @param inputStream The input stream for the resource
+     * @return Map containing loaded configuration values
+     * @throws IOException If an error occurs reading the resource
+     */
+    private Map<String, Object> loadFromYamlResource(InputStream inputStream) throws IOException {
+        ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
+        Map<String, Object> yamlMap = mapper.readValue(inputStream, HashMap.class);
+        Map<String, Object> flattenedMap = new HashMap<>();
+        
+        // Flatten nested YAML structure
+        flattenJson("", yamlMap, flattenedMap);
+        
+        return flattenedMap;
+    }
+}
+
+
+com/cstestforge/framework/core/config/ConfigValidator.java
+---------------------------------------------------------
+
+package com.cstestforge.framework.core.config;
+
+import java.io.File;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.regex.Pattern;
+
+/**
+ * Validates configuration settings to ensure they meet requirements.
+ * Performs type checking, format validation, and constraint enforcement.
+ */
+public class ConfigValidator {
+
+    // Required configuration keys
+    private static final Set<String> REQUIRED_KEYS = new HashSet<>(Arrays.asList(
+        "framework.name",
+        "framework.version",
+        "framework.logging.level"
+    ));
+    
+    // Configuration keys that should be boolean values
+    private static final Set<String> BOOLEAN_KEYS = new HashSet<>(Arrays.asList(
+        "browser.headless",
+        "playwright.browsers.install",
+        "playwright.context.recordVideo",
+        "playwright.context.recordHar",
+        "reports.screenshots",
+        "reports.video",
+        "ai.self-healing.enabled",
+        "parallel.data.isolation"
+    ));
+    
+    // Configuration keys that should be integer values
+    private static final Set<String> INTEGER_KEYS = new HashSet<>(Arrays.asList(
+        "browser.timeout.page",
+        "browser.timeout.element",
+        "browser.timeout.script",
+        "reports.retention.days",
+        "parallel.threads",
+        "parallel.timeout"
+    ));
+    
+    // Configuration keys that represent file paths that should exist
+    private static final Set<String> EXISTING_FILE_PATH_KEYS = new HashSet<>(Arrays.asList(
+        "selenium.capabilities.file"
+    ));
+    
+    // Configuration keys that represent directory paths that should exist or be creatable
+    private static final Set<String> DIRECTORY_PATH_KEYS = new HashSet<>(Arrays.asList(
+        "framework.temp.dir",
+        "reports.dir",
+        "ai.model.path",
+        "ai.dictionary.path"
+    ));
+    
+    // Valid logging levels
+    private static final Set<String> VALID_LOGGING_LEVELS = new HashSet<>(Arrays.asList(
+        "ERROR", "WARN", "INFO", "DEBUG", "TRACE", "OFF"
+    ));
+    
+    // Valid browsers
+    private static final Set<String> VALID_BROWSERS = new HashSet<>(Arrays.asList(
+        "chrome", "firefox", "edge", "safari", "ie"
+    ));
+    
+    // Valid parallel modes
+    private static final Set<String> VALID_PARALLEL_MODES = new HashSet<>(Arrays.asList(
+        "METHODS", "TESTS", "CLASSES", "NONE"
+    ));
+    
+    // URL pattern for validating URLs
+    private static final Pattern URL_PATTERN = Pattern.compile(
+        "^(https?|ftp)://[a-zA-Z0-9]+(\\.[a-zA-Z0-9]+)*(:[0-9]+)?(/[^\\s]*)?$"
+    );
+    
+    /**
+     * Validates the configuration map.
+     *
+     * @param config The configuration map to validate
+     * @throws ConfigurationManager.ConfigurationException If validation fails
+     */
+    public void validate(Map<String, Object> config) {
+        List<String> validationErrors = new ArrayList<>();
+        
+        // Check required keys
+        for (String requiredKey : REQUIRED_KEYS) {
+            if (!config.containsKey(requiredKey) || config.get(requiredKey) == null) {
+                validationErrors.add("Missing required configuration key: " + requiredKey);
+            }
+        }
+        
+        // Check boolean values
+        for (String booleanKey : BOOLEAN_KEYS) {
+            if (config.containsKey(booleanKey) && config.get(booleanKey) != null) {
+                Object value = config.get(booleanKey);
+                if (!(value instanceof Boolean) && 
+                    !("true".equalsIgnoreCase(value.toString()) || "false".equalsIgnoreCase(value.toString()))) {
+                    validationErrors.add("Configuration key must be a boolean value: " + booleanKey);
+                }
+            }
+        }
+        
+        // Check integer values
+        for (String integerKey : INTEGER_KEYS) {
+            if (config.containsKey(integerKey) && config.get(integerKey) != null) {
+                Object value = config.get(integerKey);
+                if (!(value instanceof Number)) {
+                    try {
+                        Integer.parseInt(value.toString());
+                    } catch (NumberFormatException e) {
+                        validationErrors.add("Configuration key must be an integer value: " + integerKey);
+                    }
+                }
+            }
+        }
+        
+        // Check file paths that should exist
+        for (String filePathKey : EXISTING_FILE_PATH_KEYS) {
+            if (config.containsKey(filePathKey) && config.get(filePathKey) != null) {
+                String filePath = config.get(filePathKey).toString();
+                if (!filePath.isEmpty() && !Files.exists(Paths.get(filePath))) {
+                    validationErrors.add("File does not exist: " + filePath + " (for key " + filePathKey + ")");
+                }
+            }
+        }
+        
+        // Check directory paths that should exist or be creatable
+        for (String dirPathKey : DIRECTORY_PATH_KEYS) {
+            if (config.containsKey(dirPathKey) && config.get(dirPathKey) != null) {
+                String dirPath = config.get(dirPathKey).toString();
+                if (!dirPath.isEmpty()) {
+                    File dir = new File(dirPath);
+                    if (!dir.exists()) {
+                        // Check if we can create the directory
+                        try {
+                            boolean created = dir.mkdirs();
+                            if (!created && !dir.exists()) {
+                                validationErrors.add("Cannot create directory: " + dirPath + " (for key " + dirPathKey + ")");
+                            }
+                        } catch (SecurityException e) {
+                            validationErrors.add("Cannot create directory due to security restrictions: " + 
+                                                dirPath + " (for key " + dirPathKey + ")");
+                        }
+                    } else if (!dir.isDirectory()) {
+                        validationErrors.add("Path exists but is not a directory: " + 
+                                            dirPath + " (for key " + dirPathKey + ")");
+                    }
+                }
+            }
+        }
+        
+        // Validate logging level
+        if (config.containsKey("framework.logging.level") && config.get("framework.logging.level") != null) {
+            String loggingLevel = config.get("framework.logging.level").toString().toUpperCase();
+            if (!VALID_LOGGING_LEVELS.contains(loggingLevel)) {
+                validationErrors.add("Invalid logging level: " + loggingLevel + 
+                                    ". Valid values are: " + String.join(", ", VALID_LOGGING_LEVELS));
+            }
+        }
+        
+        // Validate browser value
+        if (config.containsKey("browser.default") && config.get("browser.default") != null) {
+            String browser = config.get("browser.default").toString().toLowerCase();
+            if (!VALID_BROWSERS.contains(browser)) {
+                validationErrors.add("Invalid browser: " + browser + 
+                                    ". Valid values are: " + String.join(", ", VALID_BROWSERS));
+            }
+        }
+        
+        // Validate parallel mode
+        if (config.containsKey("parallel.mode") && config.get("parallel.mode") != null) {
+            String parallelMode = config.get("parallel.mode").toString().toUpperCase();
+            if (!VALID_PARALLEL_MODES.contains(parallelMode)) {
+                validationErrors.add("Invalid parallel mode: " + parallelMode + 
+                                    ". Valid values are: " + String.join(", ", VALID_PARALLEL_MODES));
+            }
+        }
+        
+        // Validate URL values
+        validateUrlValue(config, "selenium.remote.url", validationErrors);
+        
+        // Validate related values
+        validateRelatedValues(config, validationErrors);
+        
+        // Throw exception with all validation errors if any exist
+        if (!validationErrors.isEmpty()) {
+            throw new ConfigurationManager.ConfigurationException(
+                "Configuration validation failed with the following errors:\n" + 
+                String.join("\n", validationErrors)
+            );
+        }
+    }
+    
+    /**
+     * Validates a URL value in the configuration.
+     *
+     * @param config The configuration map
+     * @param key The configuration key for the URL
+     * @param validationErrors List to add validation errors to
+     */
+    private void validateUrlValue(Map<String, Object> config, String key, List<String> validationErrors) {
+        if (config.containsKey(key) && config.get(key) != null) {
+            String url = config.get(key).toString();
+            if (!url.isEmpty() && !URL_PATTERN.matcher(url).matches()) {
+                validationErrors.add("Invalid URL format: " + url + " (for key " + key + ")");
+            }
+        }
+    }
+    
+    /**
+     * Validates related configuration values against each other.
+     *
+     * @param config The configuration map
+     * @param validationErrors List to add validation errors to
+     */
+    private void validateRelatedValues(Map<String, Object> config, List<String> validationErrors) {
+        // Validate that parallel.threads is greater than 0 if parallel.mode is not NONE
+        if (config.containsKey("parallel.mode") && config.get("parallel.mode") != null) {
+            String parallelMode = config.get("parallel.mode").toString().toUpperCase();
+            if (!"NONE".equals(parallelMode)) {
+                int threads = 1;
+                if (config.containsKey("parallel.threads") && config.get("parallel.threads") != null) {
+                    try {
+                        threads = Integer.parseInt(config.get("parallel.threads").toString());
+                    } catch (NumberFormatException e) {
+                        // Already validated in integer check above
+                    }
+                }
+                
+                if (threads <= 0) {
+                    validationErrors.add("parallel.threads must be greater than 0 when parallel.mode is not NONE");
+                }
+            }
+        }
+        
+        // Validate timeout values are reasonable (not negative)
+        validatePositiveInteger(config, "browser.timeout.page", validationErrors);
+        validatePositiveInteger(config, "browser.timeout.element", validationErrors);
+        validatePositiveInteger(config, "browser.timeout.script", validationErrors);
+        validatePositiveInteger(config, "parallel.timeout", validationErrors);
+        
+        // Validate that if selenium.remote.url is set, browser.default should be set
+        if (config.containsKey("selenium.remote.url") && config.get("selenium.remote.url") != null) {
+            String remoteUrl = config.get("selenium.remote.url").toString();
+            if (!remoteUrl.isEmpty() && 
+                (!config.containsKey("browser.default") || config.get("browser.default") == null)) {
+                validationErrors.add("browser.default should be set when selenium.remote.url is specified");
+            }
+        }
+    }
+    
+    /**
+     * Validates that an integer configuration value is positive.
+     *
+     * @param config The configuration map
+     * @param key The configuration key for the integer
+     * @param validationErrors List to add validation errors to
+     */
+    private void validatePositiveInteger(Map<String, Object> config, String key, List<String> validationErrors) {
+        if (config.containsKey(key) && config.get(key) != null) {
+            try {
+                int value = Integer.parseInt(config.get(key).toString());
+                if (value < 0) {
+                    validationErrors.add("Configuration key must have a positive value: " + key);
+                }
+            } catch (NumberFormatException e) {
+                // Already validated in integer check above
+            }
+        }
+    }
+}
+
+
+com/cstestforge/framework/core/config/EnvironmentConfig.java
+---------------------------------------------------------------
+
+package com.cstestforge.framework.core.config;
+
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Properties;
+import java.util.concurrent.ConcurrentHashMap;
+
+/**
+ * Manages environment-specific configuration settings.
+ * Supports different environments (dev, test, stage, prod) with environment-specific values.
+ */
+public class EnvironmentConfig {
+
+    private static final String ENV_CONFIG_DIR = "config/environments";
+    private static final String ENV_CONFIG_PATTERN = "cstestforge-%s.properties";
+    
+    private final ConfigurationManager configManager;
+    private final ConcurrentHashMap<String, Map<String, Object>> environmentConfigs;
+    private String currentEnvironment;
+    
+    /**
+     * Constructs a new EnvironmentConfig instance.
+     * 
+     * @param configManager The ConfigurationManager to use
+     */
+    public EnvironmentConfig(ConfigurationManager configManager) {
+        this.configManager = configManager;
+        this.environmentConfigs = new ConcurrentHashMap<>();
+        this.currentEnvironment = configManager.getStringConfig("framework.environment");
+        if (this.currentEnvironment == null) {
+            this.currentEnvironment = "default";
+        }
+        
+        // Initialize environment configurations
+        initializeEnvironments();
+    }
+    
+    /**
+     * Initializes environment configurations.
+     */
+    private void initializeEnvironments() {
+        // Load standard environments if they exist
+        loadEnvironmentIfExists("dev");
+        loadEnvironmentIfExists("test");
+        loadEnvironmentIfExists("stage");
+        loadEnvironmentIfExists("prod");
+        
+        // Load current environment if not already loaded
+        if (!environmentConfigs.containsKey(currentEnvironment)) {
+            loadEnvironmentIfExists(currentEnvironment);
+        }
+    }
+    
+    /**
+     * Loads environment-specific configuration if the file exists.
+     * 
+     * @param environment The environment name
+     */
+    private void loadEnvironmentIfExists(String environment) {
+        if (environment == null || environment.isEmpty()) {
+            return;
+        }
+        
+        String configFileName = String.format(ENV_CONFIG_PATTERN, environment);
+        
+        // Check custom environment directory
+        Path customEnvPath = Paths.get(ENV_CONFIG_DIR, configFileName);
+        if (Files.exists(customEnvPath)) {
+            try {
+                Map<String, Object> envConfig = loadEnvironmentConfig(customEnvPath.toString());
+                environmentConfigs.put(environment, envConfig);
+                return;
+            } catch (IOException e) {
+                // Log but continue trying other locations
+                System.err.println("Warning: Failed to load environment configuration from " + 
+                                customEnvPath + ": " + e.getMessage());
+            }
+        }
+        
+        // Check current directory
+        Path currentDirPath = Paths.get(configFileName);
+        if (Files.exists(currentDirPath)) {
+            try {
+                Map<String, Object> envConfig = loadEnvironmentConfig(currentDirPath.toString());
+                environmentConfigs.put(environment, envConfig);
+                return;
+            } catch (IOException e) {
+                // Log but continue trying other locations
+                System.err.println("Warning: Failed to load environment configuration from " + 
+                                currentDirPath + ": " + e.getMessage());
+            }
+        }
+        
+        // Check classpath
+        try {
+            ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
+            if (classLoader.getResource(configFileName) != null) {
+                Map<String, Object> envConfig = loadEnvironmentConfig(
+                    classLoader.getResource(configFileName).getFile());
+                environmentConfigs.put(environment, envConfig);
+                return;
+            }
+            
+            // Check in environments directory in classpath
+            String classpathEnvPath = "environments/" + configFileName;
+            if (classLoader.getResource(classpathEnvPath) != null) {
+                Map<String, Object> envConfig = loadEnvironmentConfig(
+                    classLoader.getResource(classpathEnvPath).getFile());
+                environmentConfigs.put(environment, envConfig);
+            }
+        } catch (Exception e) {
+            // Log but continue
+            System.err.println("Warning: Failed to load environment configuration from classpath: " + 
+                            e.getMessage());
+        }
+    }
+    
+    /**
+     * Loads environment-specific configuration from a file.
+     * 
+     * @param filePath The path to the configuration file
+     * @return A map of configuration values
+     * @throws IOException If an error occurs reading the file
+     */
+    private Map<String, Object> loadEnvironmentConfig(String filePath) throws IOException {
+        ConfigLoader loader = new ConfigLoader();
+        return loader.loadFromFile(filePath);
+    }
+    
+    /**
+     * Gets the current environment name.
+     * 
+     * @return The current environment name
+     */
+    public String getCurrentEnvironment() {
+        return currentEnvironment;
+    }
+    
+    /**
+     * Sets the current environment.
+     * 
+     * @param environment The environment name to set
+     */
+    public void setCurrentEnvironment(String environment) {
+        if (environment == null || environment.isEmpty()) {
+            throw new IllegalArgumentException("Environment name cannot be null or empty");
+        }
+        
+        // Load the environment if not already loaded
+        if (!environmentConfigs.containsKey(environment)) {
+            loadEnvironmentIfExists(environment);
+        }
+        
+        // Update current environment
+        this.currentEnvironment = environment;
+        
+        // Apply environment-specific configuration to the global configuration
+        applyEnvironmentConfig(environment);
+        
+        // Update the environment in the configuration manager
+        configManager.setConfig("framework.environment", environment);
+    }
+    
+    /**
+     * Applies environment-specific configuration values to the global configuration.
+     * 
+     * @param environment The environment name
+     */
+    private void applyEnvironmentConfig(String environment) {
+        Map<String, Object> envConfig = environmentConfigs.get(environment);
+        if (envConfig != null) {
+            for (Map.Entry<String, Object> entry : envConfig.entrySet()) {
+                configManager.setConfig(entry.getKey(), entry.getValue());
+            }
+        }
+    }
+    
+    /**
+     * Gets the configuration for a specific environment.
+     * 
+     * @param environment The environment name
+     * @return The environment-specific configuration map
+     */
+    public Map<String, Object> getEnvironmentConfig(String environment) {
+        if (!environmentConfigs.containsKey(environment)) {
+            loadEnvironmentIfExists(environment);
+        }
+        
+        return environmentConfigs.getOrDefault(environment, new HashMap<>());
+    }
+    
+    /**
+     * Gets a configuration value for a specific environment.
+     * 
+     * @param environment The environment name
+     * @param key The configuration key
+     * @return The configuration value, or null if not found
+     */
+    public Object getEnvironmentValue(String environment, String key) {
+        Map<String, Object> envConfig = getEnvironmentConfig(environment);
+        return envConfig.get(key);
+    }
+    
+    /**
+     * Gets a configuration value for the current environment.
+     * 
+     * @param key The configuration key
+     * @return The configuration value, or null if not found
+     */
+    public Object getCurrentEnvironmentValue(String key) {
+        return getEnvironmentValue(currentEnvironment, key);
+    }
+    
+    /**
+     * Determines whether a given environment exists in the configuration.
+     * 
+     * @param environment The environment name to check
+     * @return true if the environment exists, false otherwise
+     */
+    public boolean environmentExists(String environment) {
+        if (environmentConfigs.containsKey(environment)) {
+            return true;
+        }
+        
+        // Try to load the environment
+        loadEnvironmentIfExists(environment);
+        
+        return environmentConfigs.containsKey(environment);
+    }
+    
+    /**
+     * Gets all available environment names.
+     * 
+     * @return An array of environment names
+     */
+    public String[] getAvailableEnvironments() {
+        return environmentConfigs.keySet().toArray(new String[0]);
+    }
+    
+    /**
+     * Creates a new environment configuration.
+     * 
+     * @param environment The environment name
+     * @param config The environment configuration
+     * @throws IOException If an error occurs saving the configuration
+     */
+    public void createEnvironment(String environment, Map<String, Object> config) throws IOException {
+        if (environment == null || environment.isEmpty()) {
+            throw new IllegalArgumentException("Environment name cannot be null or empty");
+        }
+        
+        // Add the environment to the cache
+        environmentConfigs.put(environment, new HashMap<>(config));
+        
+        // Save the environment configuration to file
+        saveEnvironmentConfig(environment, config);
+    }
+    
+    /**
+     * Saves environment-specific configuration to a file.
+     * 
+     * @param environment The environment name
+     * @param config The environment configuration
+     * @throws IOException If an error occurs saving the configuration
+     */
+    private void saveEnvironmentConfig(String environment, Map<String, Object> config) throws IOException {
+        // Create environment directory if it doesn't exist
+        Path envDir = Paths.get(ENV_CONFIG_DIR);
+        if (!Files.exists(envDir)) {
+            Files.createDirectories(envDir);
+        }
+        
+        // Create environment configuration file
+        String configFileName = String.format(ENV_CONFIG_PATTERN, environment);
+        Path configPath = Paths.get(ENV_CONFIG_DIR, configFileName);
+        
+        // Convert config map to properties
+        Properties properties = new Properties();
+        for (Map.Entry<String, Object> entry : config.entrySet()) {
+            properties.setProperty(entry.getKey(), 
+                                entry.getValue() != null ? entry.getValue().toString() : "");
+        }
+        
+        // Save properties to file
+        try (FileInputStream fos = new FileInputStream(configPath.toFile())) {
+            properties.store(fos, "CSTestForge Environment Configuration for " + environment);
+        }
+    }
+    
+    /**
+     * Updates an existing environment configuration.
+     * 
+     * @param environment The environment name
+     * @param config The updated environment configuration
+     * @throws IOException If an error occurs saving the configuration
+     */
+    public void updateEnvironment(String environment, Map<String, Object> config) throws IOException {
+        if (environment == null || environment.isEmpty()) {
+            throw new IllegalArgumentException("Environment name cannot be null or empty");
+        }
+        
+        if (!environmentExists(environment)) {
+            throw new IllegalArgumentException("Environment does not exist: " + environment);
+        }
+        
+        // Update the environment in the cache
+        environmentConfigs.put(environment, new HashMap<>(config));
+        
+        // Save the updated environment configuration to file
+        saveEnvironmentConfig(environment, config);
+        
+        // If this is the current environment, apply the changes
+        if (environment.equals(currentEnvironment)) {
+            applyEnvironmentConfig(environment);
+        }
+    }
+    
+    /**
+     * Deletes an environment configuration.
+     * 
+     * @param environment The environment name
+     * @throws IllegalArgumentException If the environment is the current environment
+     * @throws IOException If an error occurs deleting the configuration file
+     */
+    public void deleteEnvironment(String environment) throws IOException {
+        if (environment == null || environment.isEmpty()) {
+            throw new IllegalArgumentException("Environment name cannot be null or empty");
+        }
+        
+        if (environment.equals(currentEnvironment)) {
+            throw new IllegalArgumentException("Cannot delete the current environment");
+        }
+        
+        // Remove the environment from the cache
+        environmentConfigs.remove(environment);
+        
+        // Delete the environment configuration file
+        String configFileName = String.format(ENV_CONFIG_PATTERN, environment);
+        Path configPath = Paths.get(ENV_CONFIG_DIR, configFileName);
+        if (Files.exists(configPath)) {
+            Files.delete(configPath);
+        }
+    }
+    
+    /**
+     * Reloads all environment configurations.
+     */
+    public void reloadEnvironments() {
+        // Clear the cache
+        environmentConfigs.clear();
+        
+        // Re-initialize environments
+        initializeEnvironments();
+        
+        // Re-apply current environment
+        applyEnvironmentConfig(currentEnvironment);
+    }
+}
+
+
+com/cstestforge/framework/core/config/FrameworkConfig.java
+-------------------------------------------------------------
+package com.cstestforge.framework.core.config;
+
+import java.io.File;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicReference;
+
+/**
+ * Manages framework-specific configuration settings.
+ * Provides access to settings specific to the test automation framework.
+ */
+public class FrameworkConfig {
+
+    private final ConfigurationManager configManager;
+    private final AtomicReference<String> selectedFramework = new AtomicReference<>("selenium");
+    private final AtomicReference<String> selectedLanguage = new AtomicReference<>("java");
+    private final AtomicReference<String> selectedTestType = new AtomicReference<>("testng");
+    
+    /**
+     * Constructs a new FrameworkConfig instance.
+     * 
+     * @param configManager The ConfigurationManager to use
+     */
+    public FrameworkConfig(ConfigurationManager configManager) {
+        this.configManager = configManager;
+        
+        // Initialize framework settings from configuration
+        initializeFrameworkSettings();
+    }
+    
+    /**
+     * Initializes framework settings from the configuration.
+     */
+    private void initializeFrameworkSettings() {
+        // Get the selected framework from configuration
+        String framework = configManager.getStringConfig("framework.selected");
+        if (framework != null && !framework.isEmpty()) {
+            selectedFramework.set(framework.toLowerCase());
+        }
+        
+        // Get the selected language from configuration
+        String language = configManager.getStringConfig("framework.language");
+        if (language != null && !language.isEmpty()) {
+            selectedLanguage.set(language.toLowerCase());
+        }
+        
+        // Get the selected test type from configuration
+        String testType = configManager.getStringConfig("framework.test.type");
+        if (testType != null && !testType.isEmpty()) {
+            selectedTestType.set(testType.toLowerCase());
+        }
+    }
+    
+    /**
+     * Gets the currently selected test automation framework.
+     * 
+     * @return The selected framework (selenium or playwright)
+     */
+    public String getSelectedFramework() {
+        return selectedFramework.get();
+    }
+    
+    /**
+     * Sets the selected test automation framework.
+     * 
+     * @param framework The framework to select (selenium or playwright)
+     * @throws IllegalArgumentException If the framework is invalid
+     */
+    public void setSelectedFramework(String framework) {
+        if (framework == null || framework.isEmpty()) {
+            throw new IllegalArgumentException("Framework cannot be null or empty");
+        }
+        
+        String normalizedFramework = framework.toLowerCase();
+        if (!"selenium".equals(normalizedFramework) && !"playwright".equals(normalizedFramework)) {
+            throw new IllegalArgumentException("Invalid framework: " + framework + 
+                                             ". Valid values are 'selenium' or 'playwright'");
+        }
+        
+        // Update the selected framework
+        selectedFramework.set(normalizedFramework);
+        
+        // Update the configuration
+        configManager.setConfig("framework.selected", normalizedFramework);
+    }
+    
+    /**
+     * Gets the currently selected programming language.
+     * 
+     * @return The selected language (java or typescript)
+     */
+    public String getSelectedLanguage() {
+        return selectedLanguage.get();
+    }
+    
+    /**
+     * Sets the selected programming language.
+     * 
+     * @param language The language to select (java or typescript)
+     * @throws IllegalArgumentException If the language is invalid
+     */
+    public void setSelectedLanguage(String language) {
+        if (language == null || language.isEmpty()) {
+            throw new IllegalArgumentException("Language cannot be null or empty");
+        }
+        
+        String normalizedLanguage = language.toLowerCase();
+        if (!"java".equals(normalizedLanguage) && !"typescript".equals(normalizedLanguage)) {
+            throw new IllegalArgumentException("Invalid language: " + language + 
+                                             ". Valid values are 'java' or 'typescript'");
+        }
+        
+        // Update the selected language
+        selectedLanguage.set(normalizedLanguage);
+        
+        // Update the configuration
+        configManager.setConfig("framework.language", normalizedLanguage);
+    }
+    
+    /**
+     * Gets the currently selected test type.
+     * 
+     * @return The selected test type (testng or bdd)
+     */
+    public String getSelectedTestType() {
+        return selectedTestType.get();
+    }
+    
+    /**
+     * Sets the selected test type.
+     * 
+     * @param testType The test type to select (testng or bdd)
+     * @throws IllegalArgumentException If the test type is invalid
+     */
+    public void setSelectedTestType(String testType) {
+        if (testType == null || testType.isEmpty()) {
+            throw new IllegalArgumentException("Test type cannot be null or empty");
+        }
+        
+        String normalizedTestType = testType.toLowerCase();
+        if (!"testng".equals(normalizedTestType) && !"bdd".equals(normalizedTestType)) {
+            throw new IllegalArgumentException("Invalid test type: " + testType + 
+                                             ". Valid values are 'testng' or 'bdd'");
+        }
+        
+        // Update the selected test type
+        selectedTestType.set(normalizedTestType);
+        
+        // Update the configuration
+        configManager.setConfig("framework.test.type", normalizedTestType);
+    }
+    
+    /**
+     * Gets configuration specific to the selected framework.
+     * 
+     * @return A map of framework-specific configuration values
+     */
+    public Map<String, Object> getFrameworkSpecificConfig() {
+        String framework = selectedFramework.get();
+        Map<String, Object> allConfig = configManager.getAllConfig();
+        Map<String, Object> frameworkConfig = new HashMap<>();
+        
+        // Filter configuration values specific to the selected framework
+        for (Map.Entry<String, Object> entry : allConfig.entrySet()) {
+            if (entry.getKey().startsWith(framework + ".")) {
+                // Remove the framework prefix
+                String key = entry.getKey().substring(framework.length() + 1);
+                frameworkConfig.put(key, entry.getValue());
+            }
+        }
+        
+        return frameworkConfig;
+    }
+    
+    /**
+     * Gets configuration specific to the selected language.
+     * 
+     * @return A map of language-specific configuration values
+     */
+    public Map<String, Object> getLanguageSpecificConfig() {
+        String language = selectedLanguage.get();
+        Map<String, Object> allConfig = configManager.getAllConfig();
+        Map<String, Object> languageConfig = new HashMap<>();
+        
+        // Filter configuration values specific to the selected language
+        for (Map.Entry<String, Object> entry : allConfig.entrySet()) {
+            if (entry.getKey().startsWith(language + ".")) {
+                // Remove the language prefix
+                String key = entry.getKey().substring(language.length() + 1);
+                languageConfig.put(key, entry.getValue());
+            }
+        }
+        
+        return languageConfig;
+    }
+    
+    /**
+     * Gets configuration specific to the selected test type.
+     * 
+     * @return A map of test type-specific configuration values
+     */
+    public Map<String, Object> getTestTypeSpecificConfig() {
+        String testType = selectedTestType.get();
+        Map<String, Object> allConfig = configManager.getAllConfig();
+        Map<String, Object> testTypeConfig = new HashMap<>();
+        
+        // Filter configuration values specific to the selected test type
+        for (Map.Entry<String, Object> entry : allConfig.entrySet()) {
+            if (entry.getKey().startsWith(testType + ".")) {
+                // Remove the test type prefix
+                String key = entry.getKey().substring(testType.length() + 1);
+                testTypeConfig.put(key, entry.getValue());
+            }
+        }
+        
+        return testTypeConfig;
+    }
+    
+    /**
+     * Gets a combined configuration value for the selected framework, language, and test type.
+     * 
+     * @param key The configuration key
+     * @return The configuration value, or null if not found
+     */
+    public Object getFrameworkValue(String key) {
+        // Check framework-specific value
+        String frameworkKey = selectedFramework.get() + "." + key;
+        Object frameworkValue = configManager.getConfig(frameworkKey);
+        if (frameworkValue != null) {
+            return frameworkValue;
+        }
+        
+        // Check language-specific value
+        String languageKey = selectedLanguage.get() + "." + key;
+        Object languageValue = configManager.getConfig(languageKey);
+        if (languageValue != null) {
+            return languageValue;
+        }
+        
+        // Check test type-specific value
+        String testTypeKey = selectedTestType.get() + "." + key;
+        Object testTypeValue = configManager.getConfig(testTypeKey);
+        if (testTypeValue != null) {
+            return testTypeValue;
+        }
+        
+        // Check general value
+        return configManager.getConfig(key);
+    }
+    
+    /**
+     * Gets the framework's base directory.
+     * 
+     * @return The base directory path
+     */
+    public String getBaseDirectory() {
+        String baseDir = configManager.getStringConfig("framework.base.dir");
+        if (baseDir == null || baseDir.isEmpty()) {
+            // Use current directory if not specified
+            baseDir = System.getProperty("user.dir");
+        }
+        return baseDir;
+    }
+    
+    /**
+     * Gets the framework's temporary directory.
+     * 
+     * @return The temporary directory path
+     */
+    public String getTempDirectory() {
+        String tempDir = configManager.getStringConfig("framework.temp.dir");
+        if (tempDir == null || tempDir.isEmpty()) {
+            // Use system temp directory if not specified
+            tempDir = System.getProperty("java.io.tmpdir") + File.separator + "cstestforge";
+        }
+        
+        // Create the temp directory if it doesn't exist
+        Path tempPath = Paths.get(tempDir);
+        if (!Files.exists(tempPath)) {
+            try {
+                Files.createDirectories(tempPath);
+            } catch (Exception e) {
+                throw new RuntimeException("Failed to create temporary directory: " + tempDir, e);
+            }
+        }
+        
+        return tempDir;
+    }
+    
+    /**
+     * Gets the framework's report directory.
+     * 
+     * @return The report directory path
+     */
+    public String getReportDirectory() {
+        String reportDir = configManager.getStringConfig("reports.dir");
+        if (reportDir == null || reportDir.isEmpty()) {
+            // Use default report directory if not specified
+            reportDir = getBaseDirectory() + File.separator + "test-output";
+        }
+        
+        // Create the report directory if it doesn't exist
+        Path reportPath = Paths.get(reportDir);
+        if (!Files.exists(reportPath)) {
+            try {
+                Files.createDirectories(reportPath);
+            } catch (Exception e) {
+                throw new RuntimeException("Failed to create report directory: " + reportDir, e);
+            }
+        }
+        
+        return reportDir;
+    }
+    
+    /**
+     * Gets the framework's model directory for AI models.
+     * 
+     * @return The model directory path
+     */
+    public String getModelDirectory() {
+        String modelDir = configManager.getStringConfig("ai.model.path");
+        if (modelDir == null || modelDir.isEmpty()) {
+            // Use default model directory if not specified
+            modelDir = getBaseDirectory() + File.separator + "models";
+        }
+        
+        // Create the model directory if it doesn't exist
+        Path modelPath = Paths.get(modelDir);
+        if (!Files.exists(modelPath)) {
+            try {
+                Files.createDirectories(modelPath);
+            } catch (Exception e) {
+                throw new RuntimeException("Failed to create model directory: " + modelDir, e);
+            }
+        }
+        
+        return modelDir;
+    }
+    
+    /**
+     * Gets the framework's dictionary directory for AI dictionaries.
+     * 
+     * @return The dictionary directory path
+     */
+    public String getDictionaryDirectory() {
+        String dictionaryDir = configManager.getStringConfig("ai.dictionary.path");
+        if (dictionaryDir == null || dictionaryDir.isEmpty()) {
+            // Use default dictionary directory if not specified
+            dictionaryDir = getBaseDirectory() + File.separator + "dictionaries";
+        }
+        
+        // Create the dictionary directory if it doesn't exist
+        Path dictionaryPath = Paths.get(dictionaryDir);
+        if (!Files.exists(dictionaryPath)) {
+            try {
+                Files.createDirectories(dictionaryPath);
+            } catch (Exception e) {
+                throw new RuntimeException("Failed to create dictionary directory: " + dictionaryDir, e);
+            }
+        }
+        
+        return dictionaryDir;
+    }
+    
+    /**
+     * Gets the configuration for browser settings.
+     * 
+     * @return A map of browser-specific configuration values
+     */
+    public Map<String, Object> getBrowserConfig() {
+        Map<String, Object> allConfig = configManager.getAllConfig();
+        Map<String, Object> browserConfig = new HashMap<>();
+        
+        // Filter configuration values specific to browser settings
+        for (Map.Entry<String, Object> entry : allConfig.entrySet()) {
+            if (entry.getKey().startsWith("browser.")) {
+                browserConfig.put(entry.getKey(), entry.getValue());
+            }
+        }
+        
+        return browserConfig;
+    }
+    
+    /**
+     * Gets the default browser to use.
+     * 
+     * @return The default browser name
+     */
+    public String getDefaultBrowser() {
+        String browser = configManager.getStringConfig("browser.default");
+        if (browser == null || browser.isEmpty()) {
+            // Default to Chrome if not specified
+            browser = "chrome";
+        }
+        return browser.toLowerCase();
+    }
+    
+    /**
+     * Gets whether to use headless mode for browsers.
+     * 
+     * @return true if headless mode is enabled, false otherwise
+     */
+    public boolean isHeadlessMode() {
+        return configManager.getBooleanConfig("browser.headless");
+    }
+    
+    /**
+     * Gets the page load timeout in seconds.
+     * 
+     * @return The page load timeout in seconds
+     */
+    public int getPageLoadTimeout() {
+        int timeout = configManager.getIntConfig("browser.timeout.page");
+        if (timeout <= 0) {
+            // Default to 30 seconds if not specified or invalid
+            timeout = 30;
+        }
+        return timeout;
+    }
+    
+    /**
+     * Gets the element wait timeout in seconds.
+     * 
+     * @return The element wait timeout in seconds
+     */
+    public int getElementTimeout() {
+        int timeout = configManager.getIntConfig("browser.timeout.element");
+        if (timeout <= 0) {
+            // Default to 10 seconds if not specified or invalid
+            timeout = 10;
+        }
+        return timeout;
+    }
+    
+    /**
+     * Gets the script execution timeout in seconds.
+     * 
+     * @return The script execution timeout in seconds
+     */
+    public int getScriptTimeout() {
+        int timeout = configManager.getIntConfig("browser.timeout.script");
+        if (timeout <= 0) {
+            // Default to 30 seconds if not specified or invalid
+            timeout = 30;
+        }
+        return timeout;
+    }
+    
+    /**
+     * Gets whether to capture screenshots for test reports.
+     * 
+     * @return true if screenshots should be captured, false otherwise
+     */
+    public boolean isCaptureScreenshots() {
+        return configManager.getBooleanConfig("reports.screenshots");
+    }
+    
+    /**
+     * Gets whether to record videos of test execution.
+     * 
+     * @return true if videos should be recorded, false otherwise
+     */
+    public boolean isRecordVideos() {
+        return configManager.getBooleanConfig("reports.video");
+    }
+    
+    /**
+     * Gets whether self-healing locators are enabled.
+     * 
+     * @return true if self-healing locators are enabled, false otherwise
+     */
+    public boolean isSelfHealingEnabled() {
+        return configManager.getBooleanConfig("ai.self-healing.enabled");
+    }
+    
+    /**
+     * Gets the remote WebDriver URL for Selenium.
+     * 
+     * @return The remote WebDriver URL, or null if not using a remote WebDriver
+     */
+    public String getRemoteWebDriverUrl() {
+        return configManager.getStringConfig("selenium.remote.url");
+    }
+    
+    /**
+     * Gets whether to install browsers for Playwright.
+     * 
+     * @return true if browsers should be installed for Playwright, false otherwise
+     */
+    public boolean isInstallPlaywrightBrowsers() {
+        return configManager.getBooleanConfig("playwright.browsers.install");
+    }
+    
+    /**
+     * Gets whether to record videos for Playwright context.
+     * 
+     * @return true if videos should be recorded for Playwright context, false otherwise
+     */
+    public boolean isRecordPlaywrightVideos() {
+        return configManager.getBooleanConfig("playwright.context.recordVideo");
+    }
+    
+    /**
+     * Gets whether to record HAR files for Playwright context.
+     * 
+     * @return true if HAR files should be recorded for Playwright context, false otherwise
+     */
+    public boolean isRecordPlaywrightHar() {
+        return configManager.getBooleanConfig("playwright.context.recordHar");
+    }
+    
+    /**
+     * Gets the number of threads for parallel execution.
+     * 
+     * @return The number of threads for parallel execution
+     */
+    public int getParallelThreads() {
+        int threads = configManager.getIntConfig("parallel.threads");
+        if (threads <= 0) {
+            // Default to 1 thread if not specified or invalid
+            threads = 1;
+        }
+        return threads;
+    }
+    
+    /**
+     * Gets the parallel execution mode.
+     * 
+     * @return The parallel execution mode
+     */
+    public String getParallelMode() {
+        String mode = configManager.getStringConfig("parallel.mode");
+        if (mode == null || mode.isEmpty()) {
+            // Default to METHODS if not specified
+            mode = "METHODS";
+        }
+        return mode.toUpperCase();
+    }
+    
+    /**
+     * Gets the parallel execution timeout in seconds.
+     * 
+     * @return The parallel execution timeout in seconds
+     */
+    public int getParallelTimeout() {
+        int timeout = configManager.getIntConfig("parallel.timeout");
+        if (timeout <= 0) {
+            // Default to 600 seconds (10 minutes) if not specified or invalid
+            timeout = 600;
+        }
+        return timeout;
+    }
+    
+    /**
+     * Gets whether data isolation is enabled for parallel execution.
+     * 
+     * @return true if data isolation is enabled, false otherwise
+     */
+    public boolean isDataIsolationEnabled() {
+        return configManager.getBooleanConfig("parallel.data.isolation");
+    }
+    
+    /**
+     * Gets the path to the browser driver for Selenium.
+     * 
+     * @return The path to the browser driver, or null if not specified
+     */
+    public String getBrowserDriverPath() {
+        return configManager.getStringConfig("selenium.driver.path");
+    }
+    
+    /**
+     * Gets the supported locator strategies for AI.
+     * 
+     * @return An array of supported locator strategies
+     */
+    public String[] getLocatorStrategies() {
+        String strategies = configManager.getStringConfig("ai.locator.strategies");
+        if (strategies == null || strategies.isEmpty()) {
+            // Default to common strategies if not specified
+            return new String[]{"id", "name", "css", "xpath"};
+        }
+        return strategies.split(",");
+    }
+    
+    /**
+     * Gets the report retention period in days.
+     * 
+     * @return The report retention period in days
+     */
+    public int getReportRetentionDays() {
+        int days = configManager.getIntConfig("reports.retention.days");
+        if (days <= 0) {
+            // Default to 30 days if not specified or invalid
+            days = 30;
+        }
+        return days;
+    }
+}
+
