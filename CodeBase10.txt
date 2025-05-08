@@ -3116,461 +3116,615 @@ public class NotificationService {
 ExecutionUpdateMessage.java
 ---------------------------------
 
-Predicate<NotificationEvent> sourcesFilter = sources.isEmpty() ? 
-                e -> true : e -> sources.contains(e.getSource());
-                
-        Predicate<NotificationEvent> priorityFilter = e -> 
-                e.getPriority().getValue() >= minPriority.getValue();
-                
-        Predicate<NotificationEvent> sessionFilter = e -> 
-                e.getTargetSessions().isEmpty() || e.getTargetSessions().contains(sessionId);
-        
-        // Apply filters
-        historyLock.readLock().lock();
-        try {
-            // Collect all notifications from global and session-specific history
-            List<NotificationEvent> allNotifications = new ArrayList<>();
-            
-            // Add global notifications
-            List<NotificationEvent> globalHistory = notificationHistory.get(CSConstants.GLOBAL_HISTORY_KEY);
-            if (globalHistory != null) {
-                allNotifications.addAll(globalHistory);
-            }
-            
-            // Add session-specific notifications
-            List<NotificationEvent> sessionHistory = notificationHistory.get(sessionId);
-            if (sessionHistory != null) {
-                allNotifications.addAll(sessionHistory);
-            }
-            
-            // Filter and limit
-            result = allNotifications.stream()
-                    .filter(typesFilter)
-                    .filter(categoriesFilter)
-                    .filter(sourcesFilter)
-                    .filter(priorityFilter)
-                    .filter(sessionFilter)
-                    .sorted((a, b) -> Long.compare(b.getTimestamp(), a.getTimestamp())) // Newest first
-                    .limit(limit > 0 ? limit : DEFAULT_HISTORY_SIZE)
-                    .collect(Collectors.toList());
-        } finally {
-            historyLock.readLock().unlock();
-        }
-        
-        return result;
-    }
-    
+package com.cstestforge.model.websocket;
+
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * Message class for real-time test execution updates.
+ * Contains detailed information about the current execution state,
+ * test results, progress, and related metrics.
+ */
+public class ExecutionUpdateMessage {
+
     /**
-     * Mark a notification as read.
-     * 
-     * @param notificationId The notification ID
-     * @param sessionId The session ID
-     * @return true if successfully marked as read, false otherwise
+     * Enum representing the execution phase/state.
      */
-    public boolean markAsRead(String notificationId, String sessionId) {
-        if (!isRunning.get()) {
-            return false;
+    public enum ExecutionPhase {
+        INITIALIZING("initializing"),
+        RUNNING("running"),
+        PAUSED("paused"),
+        COMPLETED("completed"),
+        ABORTED("aborted"),
+        FAILED("failed");
+        
+        private final String code;
+        
+        ExecutionPhase(String code) {
+            this.code = code;
         }
         
-        boolean found = false;
-        
-        historyLock.writeLock().lock();
-        try {
-            // Check global history
-            found = updateNotificationStatus(notificationId, CSConstants.GLOBAL_HISTORY_KEY, true, false, null, sessionId);
-            
-            // Check session-specific history if not found
-            if (!found) {
-                found = updateNotificationStatus(notificationId, sessionId, true, false, null, sessionId);
-            }
-        } finally {
-            historyLock.writeLock().unlock();
+        public String getCode() {
+            return code;
         }
         
-        return found;
-    }
-    
-    /**
-     * Mark a notification as acknowledged.
-     * 
-     * @param notificationId The notification ID
-     * @param sessionId The session ID
-     * @param acknowledgedBy The user who acknowledged the notification
-     * @return true if successfully acknowledged, false otherwise
-     */
-    public boolean acknowledgeNotification(String notificationId, String sessionId, String acknowledgedBy) {
-        if (!isRunning.get()) {
-            return false;
-        }
-        
-        boolean found = false;
-        
-        historyLock.writeLock().lock();
-        try {
-            // Check global history
-            found = updateNotificationStatus(notificationId, CSConstants.GLOBAL_HISTORY_KEY, true, true, acknowledgedBy, sessionId);
-            
-            // Check session-specific history if not found
-            if (!found) {
-                found = updateNotificationStatus(notificationId, sessionId, true, true, acknowledgedBy, sessionId);
-            }
-        } finally {
-            historyLock.writeLock().unlock();
-        }
-        
-        return found;
-    }
-    
-    /**
-     * Delete a notification from history.
-     * 
-     * @param notificationId The notification ID
-     * @param sessionId The session ID
-     * @return true if successfully deleted, false otherwise
-     */
-    public boolean deleteNotification(String notificationId, String sessionId) {
-        if (!isRunning.get()) {
-            return false;
-        }
-        
-        boolean found = false;
-        
-        historyLock.writeLock().lock();
-        try {
-            // Check global history
-            List<NotificationEvent> globalHistory = notificationHistory.get(CSConstants.GLOBAL_HISTORY_KEY);
-            if (globalHistory != null) {
-                found = globalHistory.removeIf(n -> n.getId().equals(notificationId));
-            }
-            
-            // Check session-specific history if not found
-            if (!found) {
-                List<NotificationEvent> sessionHistory = notificationHistory.get(sessionId);
-                if (sessionHistory != null) {
-                    found = sessionHistory.removeIf(n -> n.getId().equals(notificationId));
+        public static ExecutionPhase fromCode(String code) {
+            for (ExecutionPhase phase : values()) {
+                if (phase.getCode().equals(code)) {
+                    return phase;
                 }
             }
-        } finally {
-            historyLock.writeLock().unlock();
+            return INITIALIZING;
         }
-        
-        return found;
     }
     
     /**
-     * Clear all notifications for a session.
-     * 
-     * @param sessionId The session ID
-     * @return The number of notifications cleared
+     * Enum representing the test result status.
      */
-    public int clearNotifications(String sessionId) {
-        if (!isRunning.get()) {
+    public enum TestStatus {
+        QUEUED("queued"),
+        RUNNING("running"),
+        PASSED("passed"),
+        FAILED("failed"),
+        SKIPPED("skipped"),
+        BLOCKED("blocked"),
+        WARNING("warning"),
+        ERROR("error");
+        
+        private final String code;
+        
+        TestStatus(String code) {
+            this.code = code;
+        }
+        
+        public String getCode() {
+            return code;
+        }
+        
+        public static TestStatus fromCode(String code) {
+            for (TestStatus status : values()) {
+                if (status.getCode().equals(code)) {
+                    return status;
+                }
+            }
+            return QUEUED;
+        }
+    }
+    
+    private String executionId;
+    private String sessionId;
+    private ExecutionPhase phase;
+    private long timestamp;
+    private int totalTests;
+    private int completedTests;
+    private int passedTests;
+    private int failedTests;
+    private int skippedTests;
+    private int blockedTests;
+    private int warningTests;
+    private int errorTests;
+    private long startTime;
+    private long estimatedEndTime;
+    private long elapsedTime;
+    private int progress;
+    private List<TestUpdate> recentUpdates;
+    private Map<String, Object> metrics;
+    private Map<String, Object> metadata;
+    private Map<String, Object> resourceUtilization;
+    private String currentActivity;
+    
+    /**
+     * Class representing a single test update within the execution.
+     */
+    public static class TestUpdate {
+        private String testId;
+        private String testName;
+        private String testClass;
+        private String testMethod;
+        private String testSuite;
+        private TestStatus status;
+        private long startTime;
+        private long endTime;
+        private long duration;
+        private String errorMessage;
+        private String errorType;
+        private String errorStackTrace;
+        private String screenshotId;
+        private String videoId;
+        private Map<String, Object> metadata;
+        
+        public TestUpdate() {
+            this.metadata = new HashMap<>();
+        }
+        
+        public String getTestId() {
+            return testId;
+        }
+        
+        public void setTestId(String testId) {
+            this.testId = testId;
+        }
+        
+        public String getTestName() {
+            return testName;
+        }
+        
+        public void setTestName(String testName) {
+            this.testName = testName;
+        }
+        
+        public String getTestClass() {
+            return testClass;
+        }
+        
+        public void setTestClass(String testClass) {
+            this.testClass = testClass;
+        }
+        
+        public String getTestMethod() {
+            return testMethod;
+        }
+        
+        public void setTestMethod(String testMethod) {
+            this.testMethod = testMethod;
+        }
+        
+        public String getTestSuite() {
+            return testSuite;
+        }
+        
+        public void setTestSuite(String testSuite) {
+            this.testSuite = testSuite;
+        }
+        
+        public TestStatus getStatus() {
+            return status;
+        }
+        
+        public void setStatus(TestStatus status) {
+            this.status = status;
+        }
+        
+        public long getStartTime() {
+            return startTime;
+        }
+        
+        public void setStartTime(long startTime) {
+            this.startTime = startTime;
+        }
+        
+        public long getEndTime() {
+            return endTime;
+        }
+        
+        public void setEndTime(long endTime) {
+            this.endTime = endTime;
+        }
+        
+        public long getDuration() {
+            return duration;
+        }
+        
+        public void setDuration(long duration) {
+            this.duration = duration;
+        }
+        
+        public String getErrorMessage() {
+            return errorMessage;
+        }
+        
+        public void setErrorMessage(String errorMessage) {
+            this.errorMessage = errorMessage;
+        }
+        
+        public String getErrorType() {
+            return errorType;
+        }
+        
+        public void setErrorType(String errorType) {
+            this.errorType = errorType;
+        }
+        
+        public String getErrorStackTrace() {
+            return errorStackTrace;
+        }
+        
+        public void setErrorStackTrace(String errorStackTrace) {
+            this.errorStackTrace = errorStackTrace;
+        }
+        
+        public String getScreenshotId() {
+            return screenshotId;
+        }
+        
+        public void setScreenshotId(String screenshotId) {
+            this.screenshotId = screenshotId;
+        }
+        
+        public String getVideoId() {
+            return videoId;
+        }
+        
+        public void setVideoId(String videoId) {
+            this.videoId = videoId;
+        }
+        
+        public Map<String, Object> getMetadata() {
+            return metadata;
+        }
+        
+        public void setMetadata(Map<String, Object> metadata) {
+            this.metadata = metadata;
+        }
+        
+        public void addMetadata(String key, Object value) {
+            if (this.metadata == null) {
+                this.metadata = new HashMap<>();
+            }
+            this.metadata.put(key, value);
+        }
+    }
+    
+    public ExecutionUpdateMessage() {
+        this.timestamp = Instant.now().toEpochMilli();
+        this.recentUpdates = new ArrayList<>();
+        this.metrics = new HashMap<>();
+        this.metadata = new HashMap<>();
+        this.resourceUtilization = new HashMap<>();
+        this.phase = ExecutionPhase.INITIALIZING;
+        this.progress = 0;
+    }
+    
+    public String getExecutionId() {
+        return executionId;
+    }
+    
+    public void setExecutionId(String executionId) {
+        this.executionId = executionId;
+    }
+    
+    public String getSessionId() {
+        return sessionId;
+    }
+    
+    public void setSessionId(String sessionId) {
+        this.sessionId = sessionId;
+    }
+    
+    public ExecutionPhase getPhase() {
+        return phase;
+    }
+    
+    public void setPhase(ExecutionPhase phase) {
+        this.phase = phase;
+    }
+    
+    public long getTimestamp() {
+        return timestamp;
+    }
+    
+    public void setTimestamp(long timestamp) {
+        this.timestamp = timestamp;
+    }
+    
+    public int getTotalTests() {
+        return totalTests;
+    }
+    
+    public void setTotalTests(int totalTests) {
+        this.totalTests = totalTests;
+    }
+    
+    public int getCompletedTests() {
+        return completedTests;
+    }
+    
+    public void setCompletedTests(int completedTests) {
+        this.completedTests = completedTests;
+    }
+    
+    public int getPassedTests() {
+        return passedTests;
+    }
+    
+    public void setPassedTests(int passedTests) {
+        this.passedTests = passedTests;
+    }
+    
+    public int getFailedTests() {
+        return failedTests;
+    }
+    
+    public void setFailedTests(int failedTests) {
+        this.failedTests = failedTests;
+    }
+    
+    public int getSkippedTests() {
+        return skippedTests;
+    }
+    
+    public void setSkippedTests(int skippedTests) {
+        this.skippedTests = skippedTests;
+    }
+    
+    public int getBlockedTests() {
+        return blockedTests;
+    }
+    
+    public void setBlockedTests(int blockedTests) {
+        this.blockedTests = blockedTests;
+    }
+    
+    public int getWarningTests() {
+        return warningTests;
+    }
+    
+    public void setWarningTests(int warningTests) {
+        this.warningTests = warningTests;
+    }
+    
+    public int getErrorTests() {
+        return errorTests;
+    }
+    
+    public void setErrorTests(int errorTests) {
+        this.errorTests = errorTests;
+    }
+    
+    public long getStartTime() {
+        return startTime;
+    }
+    
+    public void setStartTime(long startTime) {
+        this.startTime = startTime;
+    }
+    
+    public long getEstimatedEndTime() {
+        return estimatedEndTime;
+    }
+    
+    public void setEstimatedEndTime(long estimatedEndTime) {
+        this.estimatedEndTime = estimatedEndTime;
+    }
+    
+    public long getElapsedTime() {
+        return elapsedTime;
+    }
+    
+    public void setElapsedTime(long elapsedTime) {
+        this.elapsedTime = elapsedTime;
+    }
+    
+    public int getProgress() {
+        return progress;
+    }
+    
+    public void setProgress(int progress) {
+        this.progress = Math.min(Math.max(progress, 0), 100); // Ensure 0-100 range
+    }
+    
+    public List<TestUpdate> getRecentUpdates() {
+        return recentUpdates;
+    }
+    
+    public void setRecentUpdates(List<TestUpdate> recentUpdates) {
+        this.recentUpdates = recentUpdates;
+    }
+    
+    public void addRecentUpdate(TestUpdate update) {
+        if (this.recentUpdates == null) {
+            this.recentUpdates = new ArrayList<>();
+        }
+        this.recentUpdates.add(update);
+    }
+    
+    public Map<String, Object> getMetrics() {
+        return metrics;
+    }
+    
+    public void setMetrics(Map<String, Object> metrics) {
+        this.metrics = metrics;
+    }
+    
+    public void addMetric(String key, Object value) {
+        if (this.metrics == null) {
+            this.metrics = new HashMap<>();
+        }
+        this.metrics.put(key, value);
+    }
+    
+    public Map<String, Object> getMetadata() {
+        return metadata;
+    }
+    
+    public void setMetadata(Map<String, Object> metadata) {
+        this.metadata = metadata;
+    }
+    
+    public void addMetadata(String key, Object value) {
+        if (this.metadata == null) {
+            this.metadata = new HashMap<>();
+        }
+        this.metadata.put(key, value);
+    }
+    
+    public Map<String, Object> getResourceUtilization() {
+        return resourceUtilization;
+    }
+    
+    public void setResourceUtilization(Map<String, Object> resourceUtilization) {
+        this.resourceUtilization = resourceUtilization;
+    }
+    
+    public void addResourceUtilization(String key, Object value) {
+        if (this.resourceUtilization == null) {
+            this.resourceUtilization = new HashMap<>();
+        }
+        this.resourceUtilization.put(key, value);
+    }
+    
+    public String getCurrentActivity() {
+        return currentActivity;
+    }
+    
+    public void setCurrentActivity(String currentActivity) {
+        this.currentActivity = currentActivity;
+    }
+    
+    /**
+     * Creates a test update object.
+     * 
+     * @param testId The test ID
+     * @param testName The test name
+     * @param status The test status
+     * @return A new TestUpdate instance
+     */
+    public static TestUpdate createTestUpdate(String testId, String testName, TestStatus status) {
+        TestUpdate update = new TestUpdate();
+        update.setTestId(testId);
+        update.setTestName(testName);
+        update.setStatus(status);
+        update.setStartTime(Instant.now().toEpochMilli());
+        return update;
+    }
+    
+    /**
+     * Calculates the current progress based on completed tests.
+     * 
+     * @return The calculated progress as a percentage (0-100)
+     */
+    public int calculateProgress() {
+        if (totalTests <= 0) {
             return 0;
         }
         
-        int count = 0;
-        
-        historyLock.writeLock().lock();
-        try {
-            List<NotificationEvent> sessionHistory = notificationHistory.get(sessionId);
-            if (sessionHistory != null) {
-                count = sessionHistory.size();
-                sessionHistory.clear();
-            }
-        } finally {
-            historyLock.writeLock().unlock();
-        }
-        
-        return count;
+        int calculatedProgress = (int) (((double) completedTests / totalTests) * 100);
+        progress = Math.min(Math.max(calculatedProgress, 0), 100); // Ensure 0-100 range
+        return progress;
     }
     
     /**
-     * Send a test notification to a session.
+     * Updates test counters based on a test status change.
      * 
-     * @param sessionId The session ID
-     * @return The notification ID
+     * @param oldStatus The previous test status
+     * @param newStatus The new test status
      */
-    public String sendTestNotification(String sessionId) {
-        NotificationEvent notification = new NotificationEvent.Builder()
-                .title("Test Notification")
-                .message("This is a test notification from the NotificationService.")
-                .type(NotificationType.SYSTEM)
-                .priority(PriorityLevel.LOW)
-                .targetSession(sessionId)
-                .timestamp(Instant.now().toEpochMilli())
-                .build();
-        
-        return sendNotification(notification);
-    }
-    
-    /**
-     * Process notifications from the queue.
-     */
-    private void processNotifications() {
-        LOGGER.info("Starting notification processor");
-        
-        while (isRunning.get()) {
-            try {
-                List<NotificationEvent> batch = new ArrayList<>(MAX_BATCH_SIZE);
-                
-                // Get the next notification (blocking)
-                NotificationEvent notification = notificationQueue.take();
-                batch.add(notification);
-                
-                // Drain more notifications if available (non-blocking)
-                notificationQueue.drainTo(batch, MAX_BATCH_SIZE - 1);
-                
-                // Process the batch
-                for (NotificationEvent event : batch) {
-                    // Global notification (no specific targets)
-                    if (event.getTargetSessions().isEmpty() && event.getTargetGroups().isEmpty()) {
-                        broadcastNotification(event);
-                    } else {
-                        // Targeted notification
-                        sendTargetedNotification(event);
-                    }
-                }
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                LOGGER.debug("Notification processor interrupted");
-                break;
-            } catch (Exception e) {
-                LOGGER.error("Error processing notification", e);
-            }
-        }
-        
-        LOGGER.info("Notification processor stopped");
-    }
-    
-    /**
-     * Process scheduled notifications.
-     */
-    private void processScheduledNotifications() {
-        LOGGER.info("Starting scheduled notification processor");
-        
-        while (isRunning.get()) {
-            try {
-                // Take the next scheduled notification that's ready (blocking)
-                ScheduledNotification scheduledNotification = scheduledNotifications.take();
-                
-                // Add to the regular notification queue
-                notificationQueue.add(scheduledNotification.getEvent());
-                
-                // Sleep a bit to avoid busy-waiting if there are many notifications
-                if (scheduledNotifications.isEmpty()) {
-                    Thread.sleep(100);
-                }
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                LOGGER.debug("Scheduled notification processor interrupted");
-                break;
-            } catch (Exception e) {
-                LOGGER.error("Error processing scheduled notification", e);
-            }
-        }
-        
-        LOGGER.info("Scheduled notification processor stopped");
-    }
-    
-    /**
-     * Broadcast a notification to all subscribed sessions.
-     * 
-     * @param notification The notification to broadcast
-     */
-    private void broadcastNotification(NotificationEvent notification) {
-        // For each session with subscriptions
-        for (Map.Entry<String, List<NotificationSubscription>> entry : subscriptions.entrySet()) {
-            String sessionId = entry.getKey();
-            List<NotificationSubscription> sessionSubscriptions = entry.getValue();
-            
-            // Check if any subscription matches
-            boolean matched = false;
-            for (NotificationSubscription subscription : sessionSubscriptions) {
-                if (subscription.matches(notification)) {
-                    matched = true;
+    public void updateTestCounters(TestStatus oldStatus, TestStatus newStatus) {
+        // Decrement old status counter
+        if (oldStatus != null) {
+            switch (oldStatus) {
+                case PASSED:
+                    passedTests = Math.max(0, passedTests - 1);
                     break;
-                }
-            }
-            
-            // Send if matched
-            if (matched) {
-                sendNotificationToSession(notification, sessionId);
-            }
-        }
-    }
-    
-    /**
-     * Send a targeted notification to specific sessions or groups.
-     * 
-     * @param notification The notification to send
-     */
-    private void sendTargetedNotification(NotificationEvent notification) {
-        // Target specific sessions
-        for (String sessionId : notification.getTargetSessions()) {
-            sendNotificationToSession(notification, sessionId);
-        }
-    }
-    
-    /**
-     * Send a notification to a specific session.
-     * 
-     * @param notification The notification to send
-     * @param sessionId The session ID to send to
-     */
-    private void sendNotificationToSession(NotificationEvent notification, String sessionId) {
-        try {
-            // Create WebSocket message
-            NotificationMessage message = new NotificationMessage();
-            message.setNotification(notification.toMap());
-            message.setTimestamp(Instant.now().toEpochMilli());
-            
-            WebSocketMessage wsMessage = new WebSocketMessage();
-            wsMessage.setType(MessageType.NOTIFICATION);
-            wsMessage.setData(message);
-            
-            // Send message
-            messagePublisher.sendMessageToSession(sessionId, wsMessage);
-        } catch (Exception e) {
-            LOGGER.error("Error sending notification to session: " + sessionId, e);
-        }
-    }
-    
-    /**
-     * Add a notification to history.
-     * 
-     * @param notification The notification to add
-     */
-    private void addToHistory(NotificationEvent notification) {
-        historyLock.writeLock().lock();
-        try {
-            // For global history
-            if (notification.getTargetSessions().isEmpty()) {
-                notificationHistory.computeIfAbsent(CSConstants.GLOBAL_HISTORY_KEY, k -> new LinkedList<>())
-                    .add(0, notification); // Add to the beginning (newest first)
-                
-                // Trim if necessary
-                trimHistory(CSConstants.GLOBAL_HISTORY_KEY);
-            }
-            
-            // For each target session
-            for (String sessionId : notification.getTargetSessions()) {
-                notificationHistory.computeIfAbsent(sessionId, k -> new LinkedList<>())
-                    .add(0, notification); // Add to the beginning (newest first)
-                
-                // Trim if necessary
-                trimHistory(sessionId);
-            }
-        } finally {
-            historyLock.writeLock().unlock();
-        }
-    }
-    
-    /**
-     * Trim history to limit its size.
-     * 
-     * @param historyKey The history key to trim
-     */
-    private void trimHistory(String historyKey) {
-        List<NotificationEvent> history = notificationHistory.get(historyKey);
-        if (history != null && history.size() > DEFAULT_HISTORY_SIZE) {
-            while (history.size() > DEFAULT_HISTORY_SIZE) {
-                history.remove(history.size() - 1); // Remove the oldest
-            }
-        }
-    }
-    
-    /**
-     * Update notification status (read/acknowledged).
-     * 
-     * @param notificationId The notification ID
-     * @param historyKey The history key
-     * @param markRead Whether to mark as read
-     * @param markAcknowledged Whether to mark as acknowledged
-     * @param acknowledgedBy Who acknowledged the notification
-     * @param sessionId The session ID
-     * @return true if the notification was found and updated, false otherwise
-     */
-    private boolean updateNotificationStatus(String notificationId, String historyKey, 
-            boolean markRead, boolean markAcknowledged, String acknowledgedBy, String sessionId) {
-        
-        List<NotificationEvent> history = notificationHistory.get(historyKey);
-        if (history == null) {
-            return false;
-        }
-        
-        for (NotificationEvent notification : history) {
-            if (notification.getId().equals(notificationId)) {
-                if (markRead) {
-                    notification.setRead(true);
-                }
-                
-                if (markAcknowledged) {
-                    notification.setAcknowledged(true);
-                    notification.setAcknowledgedTimestamp(Instant.now().toEpochMilli());
-                    notification.setAcknowledgedBy(acknowledgedBy);
-                    
-                    // Create an acknowledgement notification for audit purposes
-                    NotificationEvent ackNotification = new NotificationEvent.Builder()
-                            .title("Notification Acknowledged")
-                            .message("Notification \"" + notification.getTitle() + "\" was acknowledged by " + acknowledgedBy)
-                            .type(NotificationType.SYSTEM)
-                            .priority(PriorityLevel.LOW)
-                            .targetSession(sessionId)
-                            .addData("originalNotificationId", notificationId)
-                            .addData("acknowledgedBy", acknowledgedBy)
-                            .build();
-                    
-                    sendNotification(ackNotification);
-                }
-                
-                return true;
+                case FAILED:
+                    failedTests = Math.max(0, failedTests - 1);
+                    break;
+                case SKIPPED:
+                    skippedTests = Math.max(0, skippedTests - 1);
+                    break;
+                case BLOCKED:
+                    blockedTests = Math.max(0, blockedTests - 1);
+                    break;
+                case WARNING:
+                    warningTests = Math.max(0, warningTests - 1);
+                    break;
+                case ERROR:
+                    errorTests = Math.max(0, errorTests - 1);
+                    break;
+                default:
+                    // No action needed for QUEUED or RUNNING
+                    break;
             }
         }
         
-        return false;
+        // Increment new status counter
+        if (newStatus != null) {
+            switch (newStatus) {
+                case PASSED:
+                    passedTests++;
+                    completedTests = passedTests + failedTests + skippedTests + blockedTests + warningTests + errorTests;
+                    break;
+                case FAILED:
+                    failedTests++;
+                    completedTests = passedTests + failedTests + skippedTests + blockedTests + warningTests + errorTests;
+                    break;
+                case SKIPPED:
+                    skippedTests++;
+                    completedTests = passedTests + failedTests + skippedTests + blockedTests + warningTests + errorTests;
+                    break;
+                case BLOCKED:
+                    blockedTests++;
+                    completedTests = passedTests + failedTests + skippedTests + blockedTests + warningTests + errorTests;
+                    break;
+                case WARNING:
+                    warningTests++;
+                    completedTests = passedTests + failedTests + skippedTests + blockedTests + warningTests + errorTests;
+                    break;
+                case ERROR:
+                    errorTests++;
+                    completedTests = passedTests + failedTests + skippedTests + blockedTests + warningTests + errorTests;
+                    break;
+                default:
+                    // No action needed for QUEUED or RUNNING
+                    break;
+            }
+        }
+        
+        // Update progress
+        calculateProgress();
     }
     
     /**
-     * Send notification history to a subscription.
-     * 
-     * @param subscription The subscription to send history to
+     * Updates the elapsed time based on the current time and start time.
      */
-    private void sendNotificationHistory(NotificationSubscription subscription) {
-        List<NotificationEvent> history = getNotificationHistory(
-                subscription.getSessionId(),
-                subscription.getTypes(),
-                subscription.getCategories(),
-                subscription.getSources(),
-                subscription.getMinPriority(),
-                subscription.getHistorySize());
-        
-        // Send each historical notification
-        for (NotificationEvent notification : history) {
-            sendNotificationToSession(notification, subscription.getSessionId());
+    public void updateElapsedTime() {
+        if (startTime > 0) {
+            elapsedTime = Instant.now().toEpochMilli() - startTime;
         }
     }
     
     /**
-     * Register a session disconnection to clean up resources.
-     * 
-     * @param sessionId The session ID that disconnected
+     * Estimates the end time based on progress and elapsed time.
      */
-    public void handleSessionDisconnect(String sessionId) {
-        // Unsubscribe from all notifications
-        unsubscribe(sessionId, null);
-        
-        // Clean up session-specific history
-        historyLock.writeLock().lock();
-        try {
-            notificationHistory.remove(sessionId);
-        } finally {
-            historyLock.writeLock().unlock();
+    public void estimateEndTime() {
+        if (startTime > 0 && progress > 0 && progress < 100) {
+            // Estimate total time based on current progress and elapsed time
+            long estimatedTotalTime = (long) ((double) elapsedTime / progress * 100);
+            estimatedEndTime = startTime + estimatedTotalTime;
+        } else {
+            estimatedEndTime = 0; // Unable to estimate
         }
+    }
+    
+    /**
+     * Creates a summary of the execution status.
+     * 
+     * @return A string summary of the execution status
+     */
+    public String createSummary() {
+        StringBuilder summary = new StringBuilder();
+        summary.append("Execution: ").append(executionId).append(" (").append(phase.getCode()).append(")\n");
+        summary.append("Progress: ").append(progress).append("%\n");
+        summary.append("Tests: ").append(completedTests).append("/").append(totalTests).append(" completed\n");
+        summary.append("Results: ").append(passedTests).append(" passed, ")
+               .append(failedTests).append(" failed, ")
+               .append(skippedTests).append(" skipped, ")
+               .append(blockedTests).append(" blocked, ")
+               .append(warningTests).append(" warnings, ")
+               .append(errorTests).append(" errors\n");
         
-        LOGGER.info("Cleaned up resources for disconnected session: " + sessionId);
+        long durationSeconds = elapsedTime / 1000;
+        long minutes = durationSeconds / 60;
+        long seconds = durationSeconds % 60;
+        summary.append("Duration: ").append(minutes).append("m ").append(seconds).append("s");
+        
+        return summary.toString();
     }
 }
-
 LogMessage.java
 ------------------------------
 
