@@ -1,0 +1,2572 @@
+BrowserFrame.tsx
+----------------------------
+
+
+import React, { useState, useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
+import './BrowserFrame.css';
+import { RecordingOptions, ElementInfo } from './RecorderComponent';
+
+interface BrowserFrameProps {
+  /** Initial URL to navigate to */
+  url: string;
+  /** Whether recording is active */
+  isRecording: boolean;
+  /** Callback when URL changes */
+  onUrlChange: (url: string) => void;
+  /** Callback when an error occurs */
+  onError: (error: Error) => void;
+  /** Recording options */
+  options: RecordingOptions;
+  /** Framework in use */
+  framework: 'selenium' | 'playwright';
+  /** Programming language in use */
+  language: 'java' | 'typescript';
+  /** Test type in use */
+  testType: 'testng' | 'bdd';
+  /** Whether the component is disabled */
+  disabled?: boolean;
+}
+
+export interface BrowserFrameRef {
+  /** Start recording */
+  startRecording: (options: RecordingOptions) => void;
+  /** Stop recording */
+  stopRecording: () => void;
+  /** Pause recording */
+  pauseRecording: () => void;
+  /** Resume recording */
+  resumeRecording: () => void;
+  /** Navigate to a URL */
+  navigate: (url: string) => void;
+  /** Toggle element picker */
+  toggleElementPicker: (active: boolean) => void;
+  /** Highlight an element */
+  highlightElement: (element: ElementInfo) => void;
+}
+
+/**
+ * BrowserFrame Component
+ * 
+ * Provides a browser frame for interacting with web applications during testing.
+ * Features:
+ * - Navigation to specific URLs
+ * - Recording user interactions
+ * - Element picking and highlighting
+ * - Screenshot capture
+ * - Error handling
+ */
+const BrowserFrame = forwardRef<BrowserFrameRef, BrowserFrameProps>((props, ref) => {
+  const {
+    url,
+    isRecording,
+    onUrlChange,
+    onError,
+    options,
+    framework,
+    language,
+    testType,
+    disabled = false
+  } = props;
+  
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+  const [elementPickerActive, setElementPickerActive] = useState<boolean>(false);
+  const [currentUrl, setCurrentUrl] = useState<string>(url);
+  const [recordingActive, setRecordingActive] = useState<boolean>(isRecording);
+  const [recordingPaused, setRecordingPaused] = useState<boolean>(false);
+  
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+  const injectedRef = useRef<boolean>(false);
+  const messageHandlerRef = useRef<(event: MessageEvent) => void | null>(null);
+  
+  useImperativeHandle(ref, () => ({
+    startRecording: (options: RecordingOptions) => {
+      startRecording(options);
+    },
+    stopRecording: () => {
+      stopRecording();
+    },
+    pauseRecording: () => {
+      pauseRecording();
+    },
+    resumeRecording: () => {
+      resumeRecording();
+    },
+    navigate: (url: string) => {
+      navigateToUrl(url);
+    },
+    toggleElementPicker: (active: boolean) => {
+      toggleElementPicker(active);
+    },
+    highlightElement: (element: ElementInfo) => {
+      highlightElement(element);
+    }
+  }));
+  
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      if (event.origin !== window.location.origin && !event.data.fromCSTestForge) {
+        return;
+      }
+      
+      try {
+        const message = event.data;
+        
+        if (!message || !message.type) {
+          return;
+        }
+        
+        switch (message.type) {
+          case 'CS_READY':
+            setIsLoading(false);
+            injectedRef.current = true;
+            break;
+            
+          case 'CS_ERROR':
+            setError(message.error || 'Unknown error occurred');
+            if (onError) {
+              onError(new Error(message.error || 'Unknown error occurred'));
+            }
+            break;
+            
+          case 'CS_URL_CHANGE':
+            if (message.url) {
+              setCurrentUrl(message.url);
+              onUrlChange(message.url);
+            }
+            break;
+            
+          case 'CS_ACTION':
+            if (window.parent && window.parent.postMessage) {
+              window.parent.postMessage({
+                type: 'CS_ACTION',
+                action: message.action,
+                fromCSTestForge: true
+              }, '*');
+            }
+            break;
+            
+          case 'CS_ELEMENT':
+            if (window.parent && window.parent.postMessage) {
+              window.parent.postMessage({
+                type: 'CS_ELEMENT',
+                element: message.element,
+                fromCSTestForge: true
+              }, '*');
+            }
+            break;
+            
+          case 'CS_SCREENSHOT':
+            if (window.parent && window.parent.postMessage) {
+              window.parent.postMessage({
+                type: 'CS_SCREENSHOT',
+                screenshot: message.screenshot,
+                actionId: message.actionId,
+                fromCSTestForge: true
+              }, '*');
+            }
+            break;
+        }
+      } catch (error) {
+        console.error('Error processing message from iframe:', error);
+        if (onError) {
+          onError(new Error('Failed to process message from browser frame'));
+        }
+      }
+    };
+    
+    messageHandlerRef.current = handleMessage;
+    
+    window.addEventListener('message', handleMessage);
+    
+    return () => {
+      if (messageHandlerRef.current) {
+        window.removeEventListener('message', messageHandlerRef.current);
+      }
+    };
+  }, [onUrlChange, onError]);
+  
+  useEffect(() => {
+    setRecordingActive(isRecording);
+  }, [isRecording]);
+  
+  useEffect(() => {
+    if (iframeRef.current && !injectedRef.current) {
+      injectScript();
+    }
+  }, [iframeRef.current]);
+  
+  useEffect(() => {
+    if (url !== currentUrl) {
+      navigateToUrl(url);
+    }
+  }, [url]);
+  
+  const injectScript = () => {
+    if (!iframeRef.current) return;
+    
+    try {
+      iframeRef.current.onload = () => {
+        if (!iframeRef.current) return;
+        
+        try {
+          const iframeWindow = iframeRef.current.contentWindow;
+          
+          if (!iframeWindow) {
+            throw new Error('Cannot access iframe content window');
+          }
+          
+          const iframeDocument = iframeWindow.document;
+          
+          const script = iframeDocument.createElement('script');
+          script.textContent = getRecorderScript();
+          script.type = 'text/javascript';
+          iframeDocument.head.appendChild(script);
+          
+          const style = iframeDocument.createElement('style');
+          style.textContent = getRecorderStyles();
+          iframeDocument.head.appendChild(style);
+          
+          iframeWindow.postMessage({
+            type: 'CS_INIT',
+            options,
+            framework,
+            language,
+            testType,
+            fromCSTestForge: true
+          }, '*');
+          
+          setIsLoading(false);
+        } catch (error) {
+          console.error('Failed to inject recorder script:', error);
+          setError('Cannot access iframe content due to cross-origin restrictions. Please make sure the target URL is on the same domain or has appropriate CORS headers.');
+          setIsLoading(false);
+          
+          if (onError) {
+            onError(new Error('Failed to inject recorder script: Cross-origin access denied'));
+          }
+        }
+      };
+      
+      if (iframeRef.current.contentWindow && iframeRef.current.contentDocument && iframeRef.current.contentDocument.readyState === 'complete') {
+        const currentSrc = iframeRef.current.src;
+        iframeRef.current.src = 'about:blank';
+        setTimeout(() => {
+          if (iframeRef.current) {
+            iframeRef.current.src = currentSrc;
+          }
+        }, 50);
+      }
+    } catch (error) {
+      console.error('Error during script injection:', error);
+      setError('Failed to initialize browser frame');
+      setIsLoading(false);
+      
+      if (onError) {
+        onError(new Error('Failed to initialize browser frame'));
+      }
+    }
+  };
+  
+  const startRecording = (options: RecordingOptions) => {
+    if (!iframeRef.current || !iframeRef.current.contentWindow) return;
+    
+    try {
+      setRecordingActive(true);
+      setRecordingPaused(false);
+      
+      iframeRef.current.contentWindow.postMessage({
+        type: 'CS_START_RECORDING',
+        options,
+        fromCSTestForge: true
+      }, '*');
+    } catch (error) {
+      console.error('Failed to start recording:', error);
+      if (onError) {
+        onError(new Error('Failed to start recording'));
+      }
+    }
+  };
+  
+  const stopRecording = () => {
+    if (!iframeRef.current || !iframeRef.current.contentWindow) return;
+    
+    try {
+      setRecordingActive(false);
+      setRecordingPaused(false);
+      
+      iframeRef.current.contentWindow.postMessage({
+        type: 'CS_STOP_RECORDING',
+        fromCSTestForge: true
+      }, '*');
+    } catch (error) {
+      console.error('Failed to stop recording:', error);
+      if (onError) {
+        onError(new Error('Failed to stop recording'));
+      }
+    }
+  };
+  
+  const pauseRecording = () => {
+    if (!iframeRef.current || !iframeRef.current.contentWindow) return;
+    
+    try {
+      setRecordingPaused(true);
+      
+      iframeRef.current.contentWindow.postMessage({
+        type: 'CS_PAUSE_RECORDING',
+        fromCSTestForge: true
+      }, '*');
+    } catch (error) {
+      console.error('Failed to pause recording:', error);
+      if (onError) {
+        onError(new Error('Failed to pause recording'));
+      }
+    }
+  };
+  
+  const resumeRecording = () => {
+    if (!iframeRef.current || !iframeRef.current.contentWindow) return;
+    
+    try {
+      setRecordingPaused(false);
+      
+      iframeRef.current.contentWindow.postMessage({
+        type: 'CS_RESUME_RECORDING',
+        fromCSTestForge: true
+      }, '*');
+    } catch (error) {
+      console.error('Failed to resume recording:', error);
+      if (onError) {
+        onError(new Error('Failed to resume recording'));
+      }
+    }
+  };
+  
+  const navigateToUrl = (url: string) => {
+    if (!iframeRef.current) return;
+    
+    try {
+      setIsLoading(true);
+      setError(null);
+      setCurrentUrl(url);
+      
+      let navigateUrl = url;
+      if (!/^https?:\/\//i.test(navigateUrl) && navigateUrl !== 'about:blank') {
+        navigateUrl = 'https://' + navigateUrl;
+      }
+      
+      iframeRef.current.src = navigateUrl;
+    } catch (error) {
+      console.error('Failed to navigate:', error);
+      setIsLoading(false);
+      setError('Failed to navigate to: ' + url);
+      
+      if (onError) {
+        onError(new Error('Failed to navigate to: ' + url));
+      }
+    }
+  };
+  
+  const toggleElementPicker = (active: boolean) => {
+    if (!iframeRef.current || !iframeRef.current.contentWindow) return;
+    
+    try {
+      setElementPickerActive(active);
+      
+      iframeRef.current.contentWindow.postMessage({
+        type: active ? 'CS_ENABLE_ELEMENT_PICKER' : 'CS_DISABLE_ELEMENT_PICKER',
+        fromCSTestForge: true
+      }, '*');
+    } catch (error) {
+      console.error('Failed to toggle element picker:', error);
+      if (onError) {
+        onError(new Error('Failed to toggle element picker'));
+      }
+    }
+  };
+  
+  const highlightElement = (element: ElementInfo) => {
+    if (!iframeRef.current || !iframeRef.current.contentWindow) return;
+    
+    try {
+      iframeRef.current.contentWindow.postMessage({
+        type: 'CS_HIGHLIGHT_ELEMENT',
+        element,
+        fromCSTestForge: true
+      }, '*');
+    } catch (error) {
+      console.error('Failed to highlight element:', error);
+      if (onError) {
+        onError(new Error('Failed to highlight element'));
+      }
+    }
+  };
+  
+  const getRecorderScript = (): string => {
+    return `(function() {
+      if (window.CSTestForgeRecorder) {
+        console.warn('CSTestForgeRecorder already initialized');
+        return;
+      }
+
+      const CSElementIdentifier = {
+        possibleAttributes: ['id', 'name', 'placeholder', 'title', 'aria-label', 'role', 'type', 'data-testid'],
+        
+        getTagName(element) {
+          return element.tagName.toLowerCase();
+        },
+        
+        getElementId(element) {
+          return element.id || '';
+        },
+        
+        getAttributes(element) {
+          const attrs = {};
+          for (let i = 0; i < element.attributes.length; i++) {
+            const attr = element.attributes[i];
+            attrs[attr.name] = attr.value;
+          }
+          return attrs;
+        },
+        
+        getTextContent(element) {
+          const text = element.textContent ? element.textContent.trim() : '';
+          return text.length > 100 ? text.substring(0, 100) + '...' : text;
+        },
+        
+        getElementRole(element) {
+          return element.getAttribute('role') || this.inferRole(element);
+        },
+        
+        inferRole(element) {
+          const tagName = this.getTagName(element);
+          
+          switch (tagName) {
+            case 'button': return 'button';
+            case 'a': return 'link';
+            case 'input':
+              const type = element.getAttribute('type');
+              if (type === 'checkbox') return 'checkbox';
+              if (type === 'radio') return 'radio';
+              if (type === 'button' || type === 'submit' || type === 'reset') return 'button';
+              return 'textbox';
+            case 'textarea': return 'textbox';
+            case 'select': return 'combobox';
+            case 'table': return 'table';
+            case 'img': return 'img';
+            case 'form': return 'form';
+            case 'h1':
+            case 'h2':
+            case 'h3':
+            case 'h4':
+            case 'h5':
+            case 'h6': return 'heading';
+            case 'ul':
+            case 'ol': return 'list';
+            case 'li': return 'listitem';
+            case 'option': return 'option';
+            default: return '';
+          }
+        },
+        
+        getSelectorData(element) {
+          const data = {
+            tagName: this.getTagName(element),
+            id: this.getElementId(element),
+            className: element.className,
+            attributes: this.getAttributes(element),
+            text: this.getTextContent(element),
+            role: this.getElementRole(element),
+            value: element.value
+          };
+          
+          if (element.name) {
+            data.name = element.name;
+          }
+          
+          if (element.type) {
+            data.type = element.type;
+          }
+          
+          if (element.placeholder) {
+            data.placeholder = element.placeholder;
+          }
+          
+          return data;
+        },
+        
+        getLocation(element) {
+          const rect = element.getBoundingClientRect();
+          
+          return {
+            x: rect.left + window.scrollX,
+            y: rect.top + window.scrollY,
+            width: rect.width,
+            height: rect.height,
+            viewportX: rect.left,
+            viewportY: rect.top
+          };
+        },
+        
+        getElementHierarchy(element, maxDepth = 5) {
+          const hierarchy = [];
+          let current = element;
+          let depth = 0;
+          
+          while (current && current.nodeType === Node.ELEMENT_NODE && depth < maxDepth) {
+            const tagName = this.getTagName(current);
+            const id = this.getElementId(current);
+            const className = current.className;
+            
+            hierarchy.unshift({
+              tagName,
+              id,
+              className
+            });
+            
+            current = current.parentElement;
+            depth++;
+          }
+          
+          return hierarchy;
+        },
+        
+        getXPath(element) {
+          let xpath = '';
+          let current = element;
+          
+          while (current && current.nodeType === Node.ELEMENT_NODE) {
+            let index = 0;
+            
+            for (let sibling = current.previousSibling; sibling; sibling = sibling.previousSibling) {
+              if (sibling.nodeType === Node.ELEMENT_NODE && sibling.tagName === current.tagName) {
+                index++;
+              }
+            }
+            
+            const tagName = current.tagName.toLowerCase();
+            const currentPath = index > 0 ? `/${tagName}[${index + 1}]` : `/${tagName}`;
+            
+            if (current.id) {
+              xpath = `//${tagName}[@id="${current.id}"]`;
+              break;
+            } else {
+              xpath = currentPath + xpath;
+              current = current.parentElement;
+            }
+          }
+          
+          return xpath || '/html';
+        },
+        
+        getCssSelector(element) {
+          if (element.id) {
+            return '#' + element.id;
+          }
+          
+          const parts = [];
+          let current = element;
+          
+          while (current && current.nodeType === Node.ELEMENT_NODE) {
+            let part = current.tagName.toLowerCase();
+            
+            if (current.id) {
+              part = `#${current.id}`;
+              parts.unshift(part);
+              break;
+            }
+            
+            const classes = Array.from(current.classList).filter(c => !/\\d/.test(c));
+            if (classes.length) {
+              part += '.' + classes.join('.');
+            }
+            
+            for (const attr of this.possibleAttributes) {
+              if (attr !== 'id' && current.hasAttribute(attr)) {
+                part += `[${attr}="${current.getAttribute(attr).replace(/"/g, '\\"')}"]`;
+                break;
+              }
+            }
+            
+            if (current.parentElement) {
+              const siblings = Array.from(current.parentElement.children).filter(el => el.tagName === current.tagName);
+              
+              if (siblings.length > 1) {
+                const index = siblings.indexOf(current) + 1;
+                part += `:nth-child(${index})`;
+              }
+            }
+            
+            parts.unshift(part);
+            
+            if (parts.length >= 3) break;
+            current = current.parentElement;
+          }
+          
+          return parts.join(' > ');
+        },
+        
+        getSmartLocator(element, framework) {
+          const data = this.getSelectorData(element);
+          
+          if (framework === 'selenium') {
+            return this.getSeleniumLocator(element, data);
+          } else if (framework === 'playwright') {
+            return this.getPlaywrightLocator(element, data);
+          }
+          
+          return {
+            byId: data.id ? data.id : null,
+            byXPath: this.getXPath(element),
+            byCss: this.getCssSelector(element),
+            byText: data.text
+          };
+        },
+        
+        getSeleniumLocator(element, data) {
+          const locators = {
+            byId: data.id ? data.id : null,
+            byName: data.attributes.name || null,
+            byClassName: data.className || null,
+            byTagName: data.tagName || null,
+            byLinkText: (data.tagName === 'a' && data.text) ? data.text : null,
+            byPartialLinkText: (data.tagName === 'a' && data.text && data.text.length > 30) ? data.text.substring(0, 30) : null,
+            byCssSelector: this.getCssSelector(element),
+            byXPath: this.getXPath(element)
+          };
+          
+          return locators;
+        },
+        
+        getPlaywrightLocator(element, data) {
+          const locators = {};
+          
+          // Role locator
+          if (data.role) {
+            const roleOptions = [];
+            
+            if (data.text) roleOptions.push({ name: data.text });
+            if (data.id) roleOptions.push({ exact: true });
+            
+            locators.byRole = {
+              role: data.role,
+              options: roleOptions.length ? roleOptions.reduce((acc, val) => ({ ...acc, ...val }), {}) : null
+            };
+          }
+          
+          // ID locator
+          if (data.id) {
+            locators.byId = data.id;
+          }
+          
+          // Text locator
+          if (data.text) {
+            locators.byText = {
+              text: data.text,
+              exact: data.text.length < 25
+            };
+          }
+          
+          // Placeholder locator
+          if (data.placeholder) {
+            locators.byPlaceholder = {
+              text: data.placeholder,
+              exact: data.placeholder.length < 25
+            };
+          }
+          
+          // TestId locator
+          if (data.attributes['data-testid']) {
+            locators.byTestId = data.attributes['data-testid'];
+          }
+          
+          // Label locator
+          if (data.attributes.for && document.getElementById(data.attributes.for)) {
+            const labelElement = document.getElementById(data.attributes.for);
+            if (labelElement.textContent) {
+              locators.byLabel = labelElement.textContent.trim();
+            }
+          }
+          
+          locators.bySelector = this.getCssSelector(element);
+          locators.byXPath = this.getXPath(element);
+          
+          return locators;
+        },
+        
+        getAllPossibleAttributes(element) {
+          const allAttrs = { ...this.getAttributes(element) };
+          
+          for (const attr in allAttrs) {
+            if (allAttrs[attr] === '') {
+              delete allAttrs[attr];
+            }
+          }
+          
+          return allAttrs;
+        },
+        
+        getCompoundAttributes(element) {
+          const attributes = this.getAllPossibleAttributes(element);
+          const compound = {};
+          
+          for (const key in attributes) {
+            if (this.possibleAttributes.includes(key)) {
+              compound[key] = attributes[key];
+            }
+          }
+          
+          return compound;
+        },
+        
+        getFullElementInfo(element, framework) {
+          if (!element || element.nodeType !== Node.ELEMENT_NODE) {
+            return null;
+          }
+          
+          const tagName = this.getTagName(element);
+          const id = this.getElementId(element);
+          const attributes = this.getAttributes(element);
+          const location = this.getLocation(element);
+          const hierarchy = this.getElementHierarchy(element);
+          const xpath = this.getXPath(element);
+          const selector = this.getCssSelector(element);
+          const role = this.getElementRole(element);
+          const text = this.getTextContent(element);
+          const smartLocator = this.getSmartLocator(element, framework);
+          
+          const elementInfo = {
+            tagName,
+            id,
+            className: element.className,
+            name: element.name,
+            type: element.type,
+            attributes,
+            text,
+            role,
+            location,
+            hierarchy,
+            xpath,
+            selector,
+            smartLocator,
+            value: element.value,
+            isFocusable: element.tabIndex >= 0 || ['a', 'button', 'input', 'textarea', 'select', 'button'].includes(tagName),
+            isVisible: this.isElementVisible(element),
+            hasOnClick: element.onclick !== null || element.getAttribute('onclick') !== null
+          };
+          
+          if (window !== window.top) {
+            elementInfo.frameId = window.name || '';
+            elementInfo.framePath = this.getFramePath();
+          }
+          
+          return elementInfo;
+        },
+        
+        isElementVisible(element) {
+          if (!element) return false;
+          
+          const style = window.getComputedStyle(element);
+          
+          if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') {
+            return false;
+          }
+          
+          const rect = element.getBoundingClientRect();
+          
+          if (rect.width === 0 || rect.height === 0) {
+            return false;
+          }
+          
+          return true;
+        },
+        
+        getFramePath() {
+          if (window === window.top) return [];
+          
+          const frameElements = [];
+          let win = window;
+          
+          while (win !== window.top) {
+            try {
+              const frameElement = win.frameElement;
+              if (frameElement) {
+                const index = Array.from(frameElement.parentNode.querySelectorAll('iframe')).indexOf(frameElement);
+                frameElements.unshift({
+                  name: frameElement.name || '',
+                  id: frameElement.id || '',
+                  index
+                });
+              }
+              win = win.parent;
+            } catch (e) {
+              break;
+            }
+          }
+          
+          return frameElements;
+        }
+      };
+      
+      const CSEventCapturer = {
+        recorder: null,
+        options: {},
+        eventListeners: {},
+        targetSelectors: {},
+        eventNamesToCaptureConfig: {
+          click: { capture: true, debounce: 50 },
+          input: { capture: true, debounce: 200 },
+          change: { capture: true, debounce: 0 },
+          submit: { capture: true, debounce: 0 },
+          keydown: { capture: true, debounce: 0, filter: true },
+          select: { capture: true, debounce: 0 },
+          drop: { capture: true, debounce: 0 },
+          dragstart: { capture: true, debounce: 0 },
+          contextmenu: { capture: true, debounce: 0 },
+          mouseover: { capture: false, debounce: 300 },
+          mouseout: { capture: false, debounce: 300 }
+        },
+        keyboardEvents: {},
+        lastEvents: {},
+        
+        init(recorder, options) {
+          this.recorder = recorder;
+          this.options = options || {};
+          this.keyboardEvents = {};
+          this.lastEvents = {};
+          this.targetSelectors = {};
+          
+          this.setupHistory();
+        },
+        
+        setupHistory() {
+          if (this.hasInjectedHistory) return;
+          
+          this.hasInjectedHistory = true;
+          
+          const originalPushState = history.pushState;
+          const originalReplaceState = history.replaceState;
+          const self = this;
+          
+          history.pushState = function() {
+            const result = originalPushState.apply(this, arguments);
+            self.handleUrlChange();
+            return result;
+          };
+          
+          history.replaceState = function() {
+            const result = originalReplaceState.apply(this, arguments);
+            self.handleUrlChange();
+            return result;
+          };
+          
+          window.addEventListener('popstate', () => this.handleUrlChange());
+          window.addEventListener('hashchange', () => this.handleUrlChange());
+        },
+        
+        handleUrlChange() {
+          if (!this.recorder || !this.recorder.active || this.recorder.paused) return;
+          
+          this.recorder.sendMessage('CS_URL_CHANGE', { url: window.location.href });
+          
+          const actionId = 'action_' + Date.now() + '_' + Math.random().toString(36).substring(2, 9);
+          
+          const action = {
+            id: actionId,
+            type: 'navigate',
+            targetUrl: window.location.href,
+            timestamp: Date.now(),
+            description: 'Navigate to ' + window.location.href,
+            framework: this.recorder.framework
+          };
+          
+          this.recorder.recordAction(action);
+        },
+        
+        attachListeners() {
+          if (!this.recorder || !this.recorder.active || this.recorder.paused) return;
+          
+          Object.keys(this.eventNamesToCaptureConfig).forEach(eventName => {
+            const config = this.eventNamesToCaptureConfig[eventName];
+            
+            if (!this.eventListeners[eventName]) {
+              const handler = this.createEventHandler(eventName, config.debounce, config.filter);
+              this.eventListeners[eventName] = handler;
+              document.addEventListener(eventName, handler, config.capture);
+            }
+          });
+        },
+        
+        detachListeners() {
+          Object.keys(this.eventListeners).forEach(eventName => {
+            const config = this.eventNamesToCaptureConfig[eventName] || { capture: false };
+            document.removeEventListener(eventName, this.eventListeners[eventName], config.capture);
+            delete this.eventListeners[eventName];
+          });
+          
+          this.lastEvents = {};
+        },
+        
+        createEventHandler(eventName, debounceTime, filterEvent) {
+          const handler = event => {
+            if (!this.recorder || !this.recorder.active || this.recorder.paused) return;
+            
+            if (filterEvent && !this.shouldCaptureEvent(event, eventName)) {
+              return;
+            }
+            
+            const targetElement = event.target;
+            
+            // Skip recorder elements
+            if (this.isRecorderElement(targetElement)) {
+              return;
+            }
+            
+            const now = Date.now();
+            const eventKey = eventName + '_' + this.getElementHashCode(targetElement);
+            const lastEvent = this.lastEvents[eventKey];
+            
+            if (lastEvent && now - lastEvent < debounceTime) {
+              return;
+            }
+            
+            this.lastEvents[eventKey] = now;
+            
+            // Don't record mouseover/mouseout for irrelevant elements
+            if ((eventName === 'mouseover' || eventName === 'mouseout') && !this.isInteractiveElement(targetElement)) {
+              return;
+            }
+            
+            // Record the event
+            this.handleEvent(event);
+          };
+          
+          return handler;
+        },
+        
+        getElementHashCode(element) {
+          if (!element || element.nodeType !== Node.ELEMENT_NODE) return 'non-element';
+          
+          const tagName = element.tagName.toLowerCase();
+          const id = element.id ? '#' + element.id : '';
+          const position = this.getElementPosition(element);
+          
+          return tagName + id + '_' + position;
+        },
+        
+        getElementPosition(element) {
+          if (!element.parentNode) return '0';
+          
+          const siblings = Array.from(element.parentNode.children);
+          return siblings.indexOf(element).toString();
+        },
+        
+        shouldCaptureEvent(event, eventName) {
+          if (eventName === 'keydown') {
+            // Only capture certain key combinations
+            const key = event.key.toLowerCase();
+            const hasModifier = event.ctrlKey || event.altKey || event.metaKey;
+            
+            // Capture navigation keys
+            if (['tab', 'enter', 'escape', 'space', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright'].includes(key)) {
+              return true;
+            }
+            
+            // Capture modifier combinations
+            if (hasModifier && ['a', 'c', 'v', 'x', 'z', 's', 'f', 'r'].includes(key)) {
+              return true;
+            }
+            
+            return false;
+          }
+          
+          return true;
+        },
+        
+        isRecorderElement(element) {
+          while (element && element !== document.body) {
+            if (element.classList && (
+              element.classList.contains('cs-element-highlight') ||
+              element.classList.contains('cs-element-picker-badge') ||
+              element.classList.contains('cs-recording-badge')
+            )) {
+              return true;
+            }
+            element = element.parentElement;
+          }
+          
+          return false;
+        },
+        
+        isInteractiveElement(element) {
+          if (!element || element.nodeType !== Node.ELEMENT_NODE) return false;
+          
+          const tagName = element.tagName.toLowerCase();
+          const type = element.getAttribute('type');
+          
+          if (['a', 'button', 'input', 'select', 'textarea', 'video', 'audio'].includes(tagName)) {
+            return true;
+          }
+          
+          if (element.hasAttribute('onclick') || element.hasAttribute('role')) {
+            return true;
+          }
+          
+          const style = window.getComputedStyle(element);
+          if (style.cursor === 'pointer') {
+            return true;
+          }
+          
+          return false;
+        },
+        
+        handleEvent(event) {
+          const targetElement = event.target;
+          
+          switch (event.type) {
+            case 'click':
+              this.handleClickEvent(event, targetElement);
+              break;
+              
+            case 'input':
+              this.handleInputEvent(event, targetElement);
+              break;
+              
+            case 'change':
+              this.handleChangeEvent(event, targetElement);
+              break;
+              
+            case 'submit':
+              this.handleSubmitEvent(event, targetElement);
+              break;
+              
+            case 'keydown':
+              this.handleKeyDownEvent(event, targetElement);
+              break;
+              
+            case 'select':
+              this.handleSelectEvent(event, targetElement);
+              break;
+              
+            case 'contextmenu':
+              this.handleContextMenuEvent(event, targetElement);
+              break;
+              
+            case 'dragstart':
+            case 'drop':
+              this.handleDragDropEvent(event, targetElement);
+              break;
+              
+            case 'mouseover':
+              this.handleMouseOverEvent(event, targetElement);
+              break;
+              
+            case 'mouseout':
+              this.handleMouseOutEvent(event, targetElement);
+              break;
+          }
+        },
+        
+        handleClickEvent(event, targetElement) {
+          if (!this.recorder || !this.recorder.active || this.recorder.paused) return;
+          
+          const elementInfo = CSElementIdentifier.getFullElementInfo(targetElement, this.recorder.framework);
+          
+          if (!elementInfo) return;
+          
+          const actionId = 'action_' + Date.now() + '_' + Math.random().toString(36).substring(2, 9);
+          
+          // Determine what kind of click is this (button, checkbox, radio, link, etc.)
+          let clickType = 'click';
+          let actionType = 'click';
+          let valueChange = null;
+          
+          if (elementInfo.tagName === 'input') {
+            if (elementInfo.type === 'checkbox') {
+              clickType = 'checkbox';
+              actionType = targetElement.checked ? 'check' : 'uncheck';
+              valueChange = targetElement.checked;
+            } else if (elementInfo.type === 'radio') {
+              clickType = 'radio';
+              actionType = 'select';
+              valueChange = targetElement.value;
+            } else if (elementInfo.type === 'submit') {
+              clickType = 'submit';
+              actionType = 'click';
+            }
+          } else if (elementInfo.tagName === 'a') {
+            clickType = 'link';
+            actionType = 'click';
+          } else if (elementInfo.tagName === 'button') {
+            clickType = 'button';
+            actionType = 'click';
+          }
+          
+          const actionDescription = this.getActionDescription(actionType, elementInfo);
+          
+          const action = {
+            id: actionId,
+            type: actionType,
+            clickType,
+            element: elementInfo,
+            timestamp: Date.now(),
+            description: actionDescription,
+            framework: this.recorder.framework
+          };
+          
+          if (valueChange !== null) {
+            action.value = valueChange;
+          }
+          
+          this.recorder.recordAction(action);
+          
+          // Save target selector for potential future input events
+          if (clickType === 'click' && (elementInfo.tagName === 'input' || elementInfo.tagName === 'textarea')) {
+            this.targetSelectors[this.getElementHashCode(targetElement)] = elementInfo.selector;
+          }
+        },
+        
+        handleInputEvent(event, targetElement) {
+          if (!this.recorder || !this.recorder.active || this.recorder.paused) return;
+          
+          if (targetElement.tagName !== 'INPUT' && targetElement.tagName !== 'TEXTAREA') return;
+          
+          const elementInfo = CSElementIdentifier.getFullElementInfo(targetElement, this.recorder.framework);
+          
+          if (!elementInfo) return;
+          
+          const actionId = 'action_' + Date.now() + '_' + Math.random().toString(36).substring(2, 9);
+          const value = targetElement.value;
+          
+          // Different action type depending on the element type
+          let actionType = 'type';
+          
+          if (elementInfo.type === 'range') {
+            actionType = 'setRange';
+          } else if (elementInfo.type === 'color') {
+            actionType = 'setColor';
+          } else if (elementInfo.type === 'date' || elementInfo.type === 'datetime-local' || elementInfo.type === 'month' || elementInfo.type === 'time' || elementInfo.type === 'week') {
+            actionType = 'setDate';
+          } else if (elementInfo.type === 'file') {
+            // File inputs handled by change event
+            return;
+          }
+          
+          const actionDescription = this.getActionDescription(actionType, elementInfo, value);
+          
+          const action = {
+            id: actionId,
+            type: actionType,
+            element: elementInfo,
+            value: value,
+            timestamp: Date.now(),
+            description: actionDescription,
+            framework: this.recorder.framework
+          };
+          
+          this.recorder.recordAction(action);
+        },
+        
+        handleChangeEvent(event, targetElement) {
+          if (!this.recorder || !this.recorder.active || this.recorder.paused) return;
+          
+          const elementInfo = CSElementIdentifier.getFullElementInfo(targetElement, this.recorder.framework);
+          
+          if (!elementInfo) return;
+          
+          const actionId = 'action_' + Date.now() + '_' + Math.random().toString(36).substring(2, 9);
+          let actionType, value;
+          
+          if (elementInfo.tagName === 'select') {
+            actionType = 'select';
+            
+            if (targetElement.multiple) {
+              value = Array.from(targetElement.selectedOptions).map(opt => opt.value);
+            } else {
+              value = targetElement.value;
+            }
+          } else if (elementInfo.tagName === 'input' && elementInfo.type === 'file') {
+            actionType = 'uploadFile';
+            value = Array.from(targetElement.files).map(file => file.name).join(', ');
+          } else {
+            return; // Other change events are handled by input event
+          }
+          
+          const actionDescription = this.getActionDescription(actionType, elementInfo, value);
+          
+          const action = {
+            id: actionId,
+            type: actionType,
+            element: elementInfo,
+            value: value,
+            timestamp: Date.now(),
+            description: actionDescription,
+            framework: this.recorder.framework
+          };
+          
+          this.recorder.recordAction(action);
+        },
+        
+        handleSubmitEvent(event, targetElement) {
+          if (!this.recorder || !this.recorder.active || this.recorder.paused) return;
+          
+          const elementInfo = CSElementIdentifier.getFullElementInfo(targetElement, this.recorder.framework);
+          
+          if (!elementInfo) return;
+          
+          const actionId = 'action_' + Date.now() + '_' + Math.random().toString(36).substring(2, 9);
+          
+          const action = {
+            id: actionId,
+            type: 'submit',
+            element: elementInfo,
+            timestamp: Date.now(),
+            description: 'Submit form' + (elementInfo.id ? ' #' + elementInfo.id : ''),
+            framework: this.recorder.framework
+          };
+          
+          this.recorder.recordAction(action);
+        },
+        
+        handleKeyDownEvent(event, targetElement) {
+          if (!this.recorder || !this.recorder.active || this.recorder.paused) return;
+          
+          const key = event.key.toLowerCase();
+          const hasModifier = event.ctrlKey || event.altKey || event.metaKey;
+          
+          if (!hasModifier && !['tab', 'enter', 'escape'].includes(key)) {
+            return;
+          }
+          
+          const elementInfo = CSElementIdentifier.getFullElementInfo(targetElement, this.recorder.framework);
+          
+          if (!elementInfo) return;
+          
+          const actionId = 'action_' + Date.now() + '_' + Math.random().toString(36).substring(2, 9);
+          
+          const modifiers = [];
+          if (event.ctrlKey) modifiers.push('Control');
+          if (event.altKey) modifiers.push('Alt');
+          if (event.shiftKey) modifiers.push('Shift');
+          if (event.metaKey) modifiers.push('Meta');
+          
+          let actionType = 'keyPress';
+          let displayKey = key;
+          
+          if (key === 'tab') displayKey = 'Tab';
+          if (key === 'enter') displayKey = 'Enter';
+          if (key === 'escape') displayKey = 'Escape';
+          if (key === ' ') displayKey = 'Space';
+          if (key === 'arrowup') displayKey = 'ArrowUp';
+          if (key === 'arrowdown') displayKey = 'ArrowDown';
+          if (key === 'arrowleft') displayKey = 'ArrowLeft';
+          if (key === 'arrowright') displayKey = 'ArrowRight';
+          
+          const modifierPrefix = modifiers.length ? modifiers.join('+') + '+' : '';
+          const displayKeyCombo = modifierPrefix + displayKey;
+          
+          const action = {
+            id: actionId,
+            type: actionType,
+            element: elementInfo,
+            key: displayKey,
+            modifiers: modifiers,
+            keyCode: event.keyCode,
+            timestamp: Date.now(),
+            description: `Press ${displayKeyCombo}${elementInfo.tagName ? ' on ' + elementInfo.tagName : ''}`,
+            framework: this.recorder.framework
+          };
+          
+          this.recorder.recordAction(action);
+        },
+        
+        handleSelectEvent(event, targetElement) {
+          if (!this.recorder || !this.recorder.active || this.recorder.paused) return;
+          
+          const elementInfo = CSElementIdentifier.getFullElementInfo(targetElement, this.recorder.framework);
+          
+          if (!elementInfo) return;
+          
+          const actionId = 'action_' + Date.now() + '_' + Math.random().toString(36).substring(2, 9);
+          
+          const selection = window.getSelection();
+          let selectedText = '';
+          
+          if (selection.rangeCount > 0) {
+            selectedText = selection.toString();
+          }
+          
+          if (!selectedText) return;
+          
+          const action = {
+            id: actionId,
+            type: 'selectText',
+            element: elementInfo,
+            value: selectedText,
+            timestamp: Date.now(),
+            description: `Select text "${selectedText.length > 30 ? selectedText.substring(0, 30) + '...' : selectedText}"`,
+            framework: this.recorder.framework
+          };
+          
+          this.recorder.recordAction(action);
+        },
+        
+        handleContextMenuEvent(event, targetElement) {
+          if (!this.recorder || !this.recorder.active || this.recorder.paused) return;
+          
+          const elementInfo = CSElementIdentifier.getFullElementInfo(targetElement, this.recorder.framework);
+          
+          if (!elementInfo) return;
+          
+          const actionId = 'action_' + Date.now() + '_' + Math.random().toString(36).substring(2, 9);
+          
+          const action = {
+            id: actionId,
+            type: 'rightClick',
+            element: elementInfo,
+            timestamp: Date.now(),
+            description: 'Right click on ' + (elementInfo.tagName + (elementInfo.id ? ' #' + elementInfo.id : '')),
+            framework: this.recorder.framework
+          };
+          
+          this.recorder.recordAction(action);
+        },
+        
+        handleDragDropEvent(event, targetElement) {
+          if (!this.recorder || !this.recorder.active || this.recorder.paused) return;
+          
+          const elementInfo = CSElementIdentifier.getFullElementInfo(targetElement, this.recorder.framework);
+          
+          if (!elementInfo) return;
+          
+          const actionId = 'action_' + Date.now() + '_' + Math.random().toString(36).substring(2, 9);
+          
+          const action = {
+            id: actionId,
+            type: event.type === 'dragstart' ? 'dragStart' : 'drop',
+            element: elementInfo,
+            timestamp: Date.now(),
+            description: (event.type === 'dragstart' ? 'Start dragging ' : 'Drop onto ') + 
+                        (elementInfo.tagName + (elementInfo.id ? ' #' + elementInfo.id : '')),
+            framework: this.recorder.framework
+          };
+          
+          this.recorder.recordAction(action);
+        },
+        
+        handleMouseOverEvent(event, targetElement) {
+          if (!this.recorder || !this.recorder.active || this.recorder.paused) return;
+          
+          if (!this.isInteractiveElement(targetElement)) return;
+          
+          const elementInfo = CSElementIdentifier.getFullElementInfo(targetElement, this.recorder.framework);
+          
+          if (!elementInfo) return;
+          
+          const actionId = 'action_' + Date.now() + '_' + Math.random().toString(36).substring(2, 9);
+          
+          const action = {
+            id: actionId,
+            type: 'hover',
+            element: elementInfo,
+            timestamp: Date.now(),
+            description: 'Hover over ' + (elementInfo.tagName + (elementInfo.id ? ' #' + elementInfo.id : '')),
+            framework: this.recorder.framework
+          };
+          
+          this.recorder.recordAction(action);
+        },
+        
+        handleMouseOutEvent(event, targetElement) {
+          if (!this.recorder || !this.recorder.active || this.recorder.paused) return;
+          
+          if (!this.isInteractiveElement(targetElement)) return;
+          
+          // Mouse out events are not recorded by default as they're usually not needed
+          // But they can be enabled in options if needed
+          if (!this.options.captureMouseOut) return;
+          
+          const elementInfo = CSElementIdentifier.getFullElementInfo(targetElement, this.recorder.framework);
+          
+          if (!elementInfo) return;
+          
+          const actionId = 'action_' + Date.now() + '_' + Math.random().toString(36).substring(2, 9);
+          
+          const action = {
+            id: actionId,
+            type: 'mouseOut',
+            element: elementInfo,
+            timestamp: Date.now(),
+            description: 'Mouse out from ' + (elementInfo.tagName + (elementInfo.id ? ' #' + elementInfo.id : '')),
+            framework: this.recorder.framework
+          };
+          
+          this.recorder.recordAction(action);
+        },
+        
+        getActionDescription(actionType, elementInfo, value) {
+          let description = '';
+          
+          switch (actionType) {
+            case 'click':
+              description = 'Click on ';
+              break;
+            case 'check':
+              description = 'Check checkbox ';
+              break;
+            case 'uncheck':
+              description = 'Uncheck checkbox ';
+              break;
+            case 'select':
+              description = 'Select ';
+              if (value !== undefined) {
+                if (Array.isArray(value)) {
+                  description += `options [${value.join(', ')}] from `;
+                } else {
+                  description += `option "${value}" from `;
+                }
+              }
+              break;
+            case 'type':
+              description = 'Type ';
+              if (value !== undefined) {
+                if (elementInfo.type === 'password') {
+                  description += '"********" in ';
+                } else {
+                  description += `"${value.length > 30 ? value.substring(0, 30) + '...' : value}" in `;
+                }
+              }
+              break;
+            case 'setRange':
+              description = `Set range to ${value} in `;
+              break;
+            case 'setColor':
+              description = `Set color to ${value} in `;
+              break;
+            case 'setDate':
+              description = `Set date to ${value} in `;
+              break;
+            case 'uploadFile':
+              description = `Upload file${value ? ` (${value})` : ''} to `;
+              break;
+            default:
+              description = `${actionType.charAt(0).toUpperCase() + actionType.slice(1)} on `;
+          }
+          
+          description += elementInfo.tagName.toLowerCase();
+          
+          // Add ID if available
+          if (elementInfo.id) {
+            description += ` #${elementInfo.id}`;
+          } 
+          // Add name if available and no ID
+          else if (elementInfo.name) {
+            description += ` name="${elementInfo.name}"`;
+          }
+          // Add text content if no ID or name
+          else if (elementInfo.text && elementInfo.text.length > 0) {
+            const shortText = elementInfo.text.length > 30 ? elementInfo.text.substring(0, 30) + '...' : elementInfo.text;
+            description += ` with text "${shortText}"`;
+          }
+          
+          return description;
+        }
+      };
+      
+      const CSScreenshotCapturer = {
+        recorder: null,
+        options: {},
+        
+        init(recorder, options) {
+          this.recorder = recorder;
+          this.options = options || {};
+        },
+        
+        capture(actionId) {
+          if (!this.recorder || !this.options.captureScreenshots) return;
+          
+          try {
+            const options = {
+              scale: this.options.screenshotScale || 0.5,
+              quality: this.options.screenshotQuality || 0.8,
+              width: window.innerWidth,
+              height: window.innerHeight
+            };
+            
+            // Use html2canvas if available (would be injected separately)
+            if (typeof html2canvas !== 'undefined') {
+              this.captureWithHtml2Canvas(actionId, options);
+            } else {
+              // Fallback to canvas-based capture
+              this.captureWithCanvas(actionId, options);
+            }
+          } catch (error) {
+            console.error('Error capturing screenshot:', error);
+          }
+        },
+        
+        captureWithHtml2Canvas(actionId, options) {
+          html2canvas(document.documentElement, {
+            scale: options.scale,
+            width: options.width,
+            height: options.height,
+            logging: false,
+            allowTaint: true,
+            useCORS: true,
+            imageTimeout: 10000,
+            backgroundColor: null
+          }).then(canvas => {
+            const dataUrl = canvas.toDataURL('image/jpeg', options.quality);
+            
+            this.recorder.sendMessage('CS_SCREENSHOT', {
+              screenshot: dataUrl,
+              actionId: actionId,
+              timestamp: Date.now()
+            });
+          }).catch(error => {
+            console.error('Error in html2canvas:', error);
+          });
+        },
+        
+        captureWithCanvas(actionId, options) {
+          const canvas = document.createElement('canvas');
+          canvas.width = options.width * options.scale;
+          canvas.height = options.height * options.scale;
+          
+          const context = canvas.getContext('2d');
+          context.scale(options.scale, options.scale);
+          
+          // Fill with white background
+          context.fillStyle = '#ffffff';
+          context.fillRect(0, 0, canvas.width, canvas.height);
+          
+          try {
+            // Try to draw the page content
+            context.drawImage(
+              window,
+              0,
+              0,
+              options.width,
+              options.height
+            );
+          } catch (error) {
+            console.warn('Native window capture not supported:', error);
+            
+            // Draw visible elements instead
+            this.drawVisibleElements(context);
+          }
+          
+          const dataUrl = canvas.toDataURL('image/jpeg', options.quality);
+          
+          this.recorder.sendMessage('CS_SCREENSHOT', {
+            screenshot: dataUrl,
+            actionId: actionId,
+            timestamp: Date.now()
+          });
+        },
+        
+        drawVisibleElements(context) {
+          // This is a simplified approach that won't work well
+          // but is better than nothing when html2canvas is not available
+          
+          // Draw the background
+          context.fillStyle = getComputedStyle(document.body).backgroundColor || '#ffffff';
+          context.fillRect(0, 0, context.canvas.width, context.canvas.height);
+          
+          // Try to draw visible elements with background colors
+          const elements = document.querySelectorAll('*');
+          
+          for (let i = 0; i < elements.length; i++) {
+            const element = elements[i];
+            const rect = element.getBoundingClientRect();
+            
+            // Skip elements that are not visible
+            if (rect.width === 0 || rect.height === 0 || !this.isElementVisible(element)) {
+              continue;
+            }
+            
+            const style = getComputedStyle(element);
+            
+            // Draw background
+            if (style.backgroundColor && style.backgroundColor !== 'transparent' && style.backgroundColor !== 'rgba(0, 0, 0, 0)') {
+              context.fillStyle = style.backgroundColor;
+              context.fillRect(rect.left, rect.top, rect.width, rect.height);
+            }
+            
+            // Draw border
+            if (style.borderWidth && parseInt(style.borderWidth) > 0 && style.borderStyle !== 'none') {
+              context.strokeStyle = style.borderColor || '#000000';
+              context.lineWidth = parseInt(style.borderWidth) || 1;
+              context.strokeRect(rect.left, rect.top, rect.width, rect.height);
+            }
+            
+            // Draw text
+            if (element.textContent && element.textContent.trim() !== '') {
+              context.fillStyle = style.color || '#000000';
+              context.font = style.font || '14px sans-serif';
+              context.textBaseline = 'top';
+              context.fillText(element.textContent.trim(), rect.left + 5, rect.top + 5);
+            }
+          }
+        },
+        
+        isElementVisible(element) {
+          const style = getComputedStyle(element);
+          return style.display !== 'none' && 
+                 style.visibility !== 'hidden' && 
+                 style.opacity !== '0' && 
+                 element.offsetWidth > 0 && 
+                 element.offsetHeight > 0;
+        }
+      };
+      
+      window.CSTestForgeRecorder = {
+        active: false,
+        paused: false,
+        options: {},
+        framework: 'selenium',
+        language: 'java',
+        testType: 'testng',
+        elementPickerActive: false,
+        highlightedElement: null,
+        lastActionTime: 0,
+        
+        eventCapturer: CSEventCapturer,
+        elementIdentifier: CSElementIdentifier,
+        screenshotCapturer: CSScreenshotCapturer,
+        
+        init(options, framework, language, testType) {
+          this.options = options || {};
+          this.framework = framework || 'selenium';
+          this.language = language || 'java';
+          this.testType = testType || 'testng';
+          this.active = false;
+          this.paused = false;
+          this.elementPickerActive = false;
+          this.highlightedElement = null;
+          
+          this.eventCapturer.init(this, this.options);
+          this.screenshotCapturer.init(this, this.options);
+          
+          window.addEventListener('message', this.handleMessage.bind(this));
+          
+          this.sendMessage('CS_READY');
+          this.sendMessage('CS_URL_CHANGE', { url: window.location.href });
+        },
+        
+        handleMessage(event) {
+          if (!event.data || !event.data.type || !event.data.fromCSTestForge) {
+            return;
+          }
+          
+          const message = event.data;
+          
+          switch (message.type) {
+            case 'CS_INIT':
+              this.init(message.options, message.framework, message.language, message.testType);
+              break;
+              
+            case 'CS_START_RECORDING':
+              this.startRecording(message.options);
+              break;
+              
+            case 'CS_STOP_RECORDING':
+              this.stopRecording();
+              break;
+              
+            case 'CS_PAUSE_RECORDING':
+              this.pauseRecording();
+              break;
+              
+            case 'CS_RESUME_RECORDING':
+              this.resumeRecording();
+              break;
+              
+            case 'CS_ENABLE_ELEMENT_PICKER':
+              this.enableElementPicker();
+              break;
+              
+            case 'CS_DISABLE_ELEMENT_PICKER':
+              this.disableElementPicker();
+              break;
+              
+            case 'CS_HIGHLIGHT_ELEMENT':
+              this.highlightElement(message.element);
+              break;
+              
+            case 'CS_CAPTURE_SCREENSHOT':
+              this.captureScreenshot(message.actionId);
+              break;
+          }
+        },
+        
+        sendMessage(type, data) {
+          if (window.parent) {
+            const message = {
+              type: type,
+              ...data,
+              fromCSTestForge: true
+            };
+            
+            window.parent.postMessage(message, '*');
+          }
+        },
+        
+        startRecording(options) {
+          if (this.active) return;
+          
+          this.options = options || this.options;
+          this.active = true;
+          this.paused = false;
+          
+          this.eventCapturer.attachListeners();
+          
+          if (this.options.captureScreenshots) {
+            this.captureScreenshot('initial_' + Date.now());
+          }
+        },
+        
+        stopRecording() {
+          if (!this.active) return;
+          
+          this.active = false;
+          this.paused = false;
+          
+          this.eventCapturer.detachListeners();
+        },
+        
+        pauseRecording() {
+          if (!this.active || this.paused) return;
+          
+          this.paused = true;
+          
+          this.eventCapturer.detachListeners();
+        },
+        
+        resumeRecording() {
+          if (!this.active || !this.paused) return;
+          
+          this.paused = false;
+          
+          this.eventCapturer.attachListeners();
+        },
+        
+        recordAction(action) {
+          if (!this.active || this.paused) return;
+          
+          // Record minimum time between actions
+          const now = Date.now();
+          if (now - this.lastActionTime < 50) {
+            return;
+          }
+          
+          this.lastActionTime = now;
+          
+          this.sendMessage('CS_ACTION', { action });
+          
+          if (this.options.captureScreenshots) {
+            setTimeout(() => {
+              this.captureScreenshot(action.id);
+            }, 100);
+          }
+        },
+        
+        captureScreenshot(actionId) {
+          if (!this.active || !this.options.captureScreenshots) return;
+          
+          this.screenshotCapturer.capture(actionId);
+        },
+        
+        enableElementPicker() {
+          this.elementPickerActive = true;
+          document.body.classList.add('cs-element-picker-active');
+          
+          this.removeElementHighlight();
+          
+          document.addEventListener('mouseover', this.handleElementPickerMouseOver);
+          document.addEventListener('click', this.handleElementPickerClick, true);
+          document.addEventListener('keydown', this.handleElementPickerKeyDown, true);
+        },
+        
+        disableElementPicker() {
+          this.elementPickerActive = false;
+          document.body.classList.remove('cs-element-picker-active');
+          
+          this.removeElementHighlight();
+          
+          document.removeEventListener('mouseover', this.handleElementPickerMouseOver);
+          document.removeEventListener('click', this.handleElementPickerClick, true);
+          document.removeEventListener('keydown', this.handleElementPickerKeyDown, true);
+        },
+        
+        handleElementPickerMouseOver(event) {
+          if (!window.CSTestForgeRecorder.elementPickerActive) return;
+          
+          event.preventDefault();
+          event.stopPropagation();
+          
+          const target = event.target;
+          
+          window.CSTestForgeRecorder.highlightElementDom(target);
+        },
+        
+        handleElementPickerClick(event) {
+          if (!window.CSTestForgeRecorder.elementPickerActive) return;
+          
+          event.preventDefault();
+          event.stopPropagation();
+          
+          const target = event.target;
+          
+          const elementInfo = window.CSTestForgeRecorder.elementIdentifier.getFullElementInfo(
+            target, 
+            window.CSTestForgeRecorder.framework
+          );
+          
+          window.CSTestForgeRecorder.sendMessage('CS_ELEMENT', { element: elementInfo });
+          
+          window.CSTestForgeRecorder.disableElementPicker();
+        },
+        
+        handleElementPickerKeyDown(event) {
+          if (!window.CSTestForgeRecorder.elementPickerActive) return;
+          
+          if (event.key === 'Escape') {
+            event.preventDefault();
+            event.stopPropagation();
+            
+            window.CSTestForgeRecorder.disableElementPicker();
+          }
+        },
+        
+        highlightElement(elementInfo) {
+          if (!elementInfo) return;
+          
+          let element = null;
+          
+          // Try to find by ID
+          if (elementInfo.id) {
+            element = document.getElementById(elementInfo.id);
+          }
+          
+          // Try to find by XPath
+          if (!element && elementInfo.xpath) {
+            try {
+              const result = document.evaluate(
+                elementInfo.xpath,
+                document,
+                null,
+                XPathResult.FIRST_ORDERED_NODE_TYPE,
+                null
+              );
+              
+              if (result.singleNodeValue) {
+                element = result.singleNodeValue;
+              }
+            } catch (error) {
+              console.error('Failed to evaluate XPath:', error);
+            }
+          }
+          
+          // Try to find by CSS selector
+          if (!element && elementInfo.selector) {
+            try {
+              element = document.querySelector(elementInfo.selector);
+            } catch (error) {
+              console.error('Failed to query selector:', error);
+            }
+          }
+          
+          // Try with smart locator
+          if (!element && elementInfo.smartLocator) {
+            const smartLocator = elementInfo.smartLocator;
+            
+            if (this.framework === 'selenium') {
+              if (smartLocator.byId) {
+                element = document.getElementById(smartLocator.byId);
+              }
+              
+              if (!element && smartLocator.byName) {
+                element = document.querySelector(`[name="${smartLocator.byName}"]`);
+              }
+              
+              if (!element && smartLocator.byCssSelector) {
+                try {
+                  element = document.querySelector(smartLocator.byCssSelector);
+                } catch (error) {
+                  console.error('Failed to query CSS selector:', error);
+                }
+              }
+            } else if (this.framework === 'playwright') {
+              if (smartLocator.byId) {
+                element = document.getElementById(smartLocator.byId);
+              }
+              
+              if (!element && smartLocator.byTestId) {
+                element = document.querySelector(`[data-testid="${smartLocator.byTestId}"]`);
+              }
+              
+              if (!element && smartLocator.byText && smartLocator.byText.text) {
+                const xpath = `//*[contains(text(), "${smartLocator.byText.text}")]`;
+                try {
+                  const result = document.evaluate(
+                    xpath,
+                    document,
+                    null,
+                    XPathResult.FIRST_ORDERED_NODE_TYPE,
+                    null
+                  );
+                  
+                  if (result.singleNodeValue) {
+                    element = result.singleNodeValue;
+                  }
+                } catch (error) {
+                  console.error('Failed to evaluate text XPath:', error);
+                }
+              }
+              
+              if (!element && smartLocator.bySelector) {
+                try {
+                  element = document.querySelector(smartLocator.bySelector);
+                } catch (error) {
+                  console.error('Failed to query CSS selector:', error);
+                }
+              }
+            }
+          }
+          
+          // Highlight the element if found
+          if (element) {
+            this.highlightElementDom(element);
+            
+            // Scroll element into view
+            element.scrollIntoView({
+              behavior: 'smooth',
+              block: 'center'
+            });
+          }
+        },
+        
+        highlightElementDom(element) {
+          // Remove any existing highlight
+          this.removeElementHighlight();
+          
+          // Create highlight element
+          const highlight = document.createElement('div');
+          highlight.classList.add('cs-element-highlight');
+          
+          // Get element position and size
+          const rect = element.getBoundingClientRect();
+          
+          // Set highlight position and size
+          highlight.style.position = 'absolute';
+          highlight.style.top = (rect.top + window.scrollY) + 'px';
+          highlight.style.left = (rect.left + window.scrollX) + 'px';
+          highlight.style.width = rect.width + 'px';
+          highlight.style.height = rect.height + 'px';
+          highlight.style.zIndex = '9999999';
+          highlight.style.pointerEvents = 'none';
+          
+          // Add info tooltip
+          const tooltip = document.createElement('div');
+          tooltip.classList.add('cs-element-tooltip');
+          
+          const tagDisplay = element.tagName.toLowerCase();
+          const idDisplay = element.id ? '#' + element.id : '';
+          const classDisplay = element.className && typeof element.className === 'string' ? 
+                              '.' + element.className.trim().replace(/\s+/g, '.') : '';
+          
+          tooltip.textContent = `${tagDisplay}${idDisplay}${classDisplay}`;
+          
+          // Position tooltip
+          if (rect.top > 40) {
+            tooltip.style.bottom = '100%';
+            tooltip.style.marginBottom = '5px';
+          } else {
+            tooltip.style.top = '100%';
+            tooltip.style.marginTop = '5px';
+          }
+          
+          highlight.appendChild(tooltip);
+          
+          // Add highlight to document
+          document.body.appendChild(highlight);
+          
+          // Save reference to highlighted element
+          this.highlightedElement = element;
+        },
+        
+        removeElementHighlight() {
+          // Remove any existing highlight
+          const highlights = document.querySelectorAll('.cs-element-highlight');
+          highlights.forEach(highlight => highlight.remove());
+          
+          // Clear highlighted element reference
+          this.highlightedElement = null;
+        }
+      };
+      
+      // Initialize recorder
+      if (document.readyState === 'complete') {
+        // Document already loaded
+        window.CSTestForgeRecorder.init();
+      } else {
+        // Wait for document to load
+        window.addEventListener('load', function() {
+          window.CSTestForgeRecorder.init();
+        });
+      }
+    })();`;
+  };
+  
+  const getRecorderStyles = (): string => {
+    return `
+      .cs-element-highlight {
+        position: absolute;
+        box-sizing: border-box;
+        border: 2px solid #C54B8C;
+        background-color: rgba(197, 75, 140, 0.1);
+        z-index: 9999;
+        transition: all 0.2s ease;
+        pointer-events: none;
+      }
+      
+      .cs-element-tooltip {
+        position: absolute;
+        left: 0;
+        background-color: #C54B8C;
+        color: white;
+        padding: 3px 6px;
+        border-radius: 3px;
+        font-family: monospace;
+        font-size: 12px;
+        white-space: nowrap;
+        z-index: 9999;
+        pointer-events: none;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+      }
+      
+      .cs-element-picker-active * {
+        cursor: crosshair !important;
+      }
+      
+      .cs-recording-badge {
+        position: fixed;
+        top: 10px;
+        right: 10px;
+        background-color: #C54B8C;
+        color: white;
+        padding: 5px 10px;
+        border-radius: 4px;
+        font-family: sans-serif;
+        font-size: 12px;
+        display: flex;
+        align-items: center;
+        z-index: 999999;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+      }
+      
+      .cs-recording-indicator {
+        width: 10px;
+        height: 10px;
+        background-color: red;
+        border-radius: 50%;
+        margin-right: 6px;
+        display: inline-block;
+        animation: cs-blink 1.5s infinite;
+      }
+      
+      .cs-recording-overlay.paused .cs-recording-indicator {
+        animation: none;
+        background-color: #888;
+      }
+      
+      @keyframes cs-blink {
+        0% { opacity: 1; }
+        50% { opacity: 0.4; }
+        100% { opacity: 1; }
+      }
+      
+      .cs-element-picker-badge {
+        position: fixed;
+        top: 10px;
+        left: 10px;
+        background-color: #C54B8C;
+        color: white;
+        padding: 5px 10px;
+        border-radius: 4px;
+        font-family: sans-serif;
+        font-size: 12px;
+        display: flex;
+        align-items: center;
+        z-index: 999999;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+      }
+      
+      .cs-element-picker-badge svg {
+        margin-right: 6px;
+      }
+    `;
+  };
+  
+  const renderLoading = () => {
+    if (!isLoading) return null;
+    
+    return (
+      <div className="cs-browser-loading">
+        <div className="cs-loading-spinner"></div>
+        <p className="cs-loading-message">Loading browser frame...</p>
+      </div>
+    );
+  };
+  
+  const renderError = () => {
+    if (!error) return null;
+    
+    return (
+      <div className="cs-browser-error">
+        <div className="cs-error-icon">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            <path d="M12 8V12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            <path d="M12 16H12.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </div>
+        <h3 className="cs-error-title">Browser Error</h3>
+        <p className="cs-error-message">{error}</p>
+        <button
+          className="cs-retry-button"
+          onClick={() => navigateToUrl(currentUrl)}
+          disabled={disabled}
+        >
+          Retry
+        </button>
+      </div>
+    );
+  };
+  
+  const renderRecordingIndicator = () => {
+    if (!recordingActive) return null;
+    
+    return (
+      <div className={`cs-recording-overlay ${recordingPaused ? 'paused' : ''}`}>
+        <div className="cs-recording-badge">
+          <span className="cs-recording-indicator"></span>
+          <span className="cs-recording-text">
+            {recordingPaused ? 'Recording Paused' : 'Recording'}
+          </span>
+        </div>
+      </div>
+    );
+  };
+  
+  const renderElementPickerIndicator = () => {
+    if (!elementPickerActive) return null;
+    
+    return (
+      <div className="cs-element-picker-overlay">
+        <div className="cs-element-picker-badge">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M3 3H21V21H3V3Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            <path d="M9 3V21" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+          <span>Select an Element</span>
+        </div>
+      </div>
+    );
+  };
+  
+  return (
+    <div className={`cs-browser-frame ${disabled ? 'disabled' : ''}`} data-testid="browser-frame">
+      <iframe
+        ref={iframeRef}
+        src={currentUrl}
+        title="Browser Frame"
+        className="cs-browser-iframe"
+        sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox"
+      ></iframe>
+      
+      {renderLoading()}
+      {renderError()}
+      {renderRecordingIndicator()}
+      {renderElementPickerIndicator()}
+    </div>
+  );
+});
+
+export default BrowserFrame;
+
+
+
+BrowserFrame.css
+-----------------------------
+
+.cs-browser-frame {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  position: relative;
+  overflow: hidden;
+  border-radius: 4px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  background-color: #f5f5f5;
+}
+
+.cs-browser-frame.disabled {
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+.cs-browser-iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+  background-color: white;
+  flex: 1;
+}
+
+.cs-browser-loading {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  background-color: rgba(255, 255, 255, 0.9);
+  z-index: 10;
+}
+
+.cs-loading-spinner {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  border: 3px solid rgba(197, 75, 140, 0.2);
+  border-top-color: #C54B8C;
+  animation: cs-spin 1s infinite linear;
+  margin-bottom: 16px;
+}
+
+.cs-loading-message {
+  font-family: sans-serif;
+  font-size: 16px;
+  color: #333;
+  margin: 0;
+}
+
+.cs-browser-error {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  background-color: white;
+  z-index: 10;
+  padding: 20px;
+  box-sizing: border-box;
+  text-align: center;
+}
+
+.cs-error-icon {
+  color: #ea4c59;
+  margin-bottom: 16px;
+}
+
+.cs-error-title {
+  font-family: sans-serif;
+  font-size: 24px;
+  color: #333;
+  margin: 0 0 12px 0;
+}
+
+.cs-error-message {
+  font-family: sans-serif;
+  font-size: 16px;
+  color: #666;
+  margin: 0 0 24px 0;
+  max-width: 90%;
+  line-height: 1.4;
+}
+
+.cs-retry-button {
+  background-color: #C54B8C;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 8px 16px;
+  font-family: sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.cs-retry-button:hover {
+  background-color: #a53a73;
+}
+
+.cs-retry-button:disabled {
+  background-color: #d68db4;
+  cursor: not-allowed;
+}
+
+.cs-recording-overlay {
+  position: absolute;
+  top: 0;
+  right: 0;
+  z-index: 20;
+  pointer-events: none;
+}
+
+.cs-element-picker-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 20;
+  pointer-events: none;
+}
+
+@keyframes cs-spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes cs-blink {
+  0% { opacity: 1; }
+  50% { opacity: 0.4; }
+  100% { opacity: 1; }
+}
+
+
+RecorderComponent.ts
+---------------------------------
+
+/**
+ * Recording options interface
+ * Defines configuration options for recording
+ */
+export interface RecordingOptions {
+  /** Capture screenshots during recording */
+  captureScreenshots: boolean;
+  /** Screenshot quality (0-1) */
+  screenshotQuality?: number;
+  /** Screenshot scale (0-1) */
+  screenshotScale?: number;
+  /** Record mouse movements */
+  recordMouseMovements?: boolean;
+  /** Record keyboard input */
+  recordKeyboardInput?: boolean;
+  /** Record mouse hover */
+  recordHover?: boolean;
+  /** Record mouse out */
+  captureMouseOut?: boolean;
+  /** Capture network requests */
+  captureNetwork?: boolean;
+  /** Exclude elements matching these selectors */
+  excludeSelectors?: string[];
+  /** Include only elements matching these selectors */
+  includeSelectors?: string[];
+  /** Maximum number of actions to record */
+  maxActions?: number;
+  /** Maximum recording duration in seconds */
+  maxDuration?: number;
+  /** Custom delay between actions in milliseconds */
+  actionDelay?: number;
+  /** Auto-scroll to elements during recording */
+  autoScroll?: boolean;
+  /** Ignore invisible elements */
+  ignoreInvisible?: boolean;
+  /** Capture viewport changes */
+  captureViewportChanges?: boolean;
+  /** Capture console logs */
+  captureConsole?: boolean;
+  /** Highlight elements on interaction */
+  highlightElements?: boolean;
+  /** Group similar actions */
+  groupSimilarActions?: boolean;
+  /** Add smart assertions */
+  smartAssertions?: boolean;
+  /** Use AI for element recognition */
+  useAI?: boolean;
+  /** Extend locator strategies */
+  extendedLocators?: boolean;
+  /** Custom injection script */
+  customInjection?: string;
+  /** Additional capabilities */
+  [key: string]: any;
+}
+
+/**
+ * Element location information
+ */
+export interface ElementLocation {
+  /** X-coordinate relative to the document */
+  x: number;
+  /** Y-coordinate relative to the document */
+  y: number;
+  /** Element width */
+  width: number;
+  /** Element height */
+  height: number;
+  /** X-coordinate relative to the viewport */
+  viewportX?: number;
+  /** Y-coordinate relative to the viewport */
+  viewportY?: number;
+}
+
+/**
+ * Element hierarchy information
+ */
+export interface ElementHierarchyInfo {
+  /** Element tag name */
+  tagName: string;
+  /** Element ID */
+  id?: string;
+  /** Element class name */
+  className?: string;
+}
+
+/**
+ * Smart locator information for Selenium
+ */
+export interface SeleniumLocator {
+  /** Locate by ID */
+  byId?: string | null;
+  /** Locate by name */
+  byName?: string | null;
+  /** Locate by class name */
+  byClassName?: string | null;
+  /** Locate by tag name */
+  byTagName?: string | null;
+  /** Locate by link text */
+  byLinkText?: string | null;
+  /** Locate by partial link text */
+  byPartialLinkText?: string | null;
+  /** Locate by CSS selector */
+  byCssSelector?: string | null;
+  /** Locate by XPath */
+  byXPath?: string | null;
+}
+
+/**
+ * Playwright text locator options
+ */
+export interface PlaywrightTextOptions {
+  /** Text content */
+  text: string;
+  /** Exact match */
+  exact?: boolean;
+}
+
+/**
+ * Playwright role locator options
+ */
+export interface PlaywrightRoleOptions {
+  /** ARIA role */
+  role: string;
+  /** Additional options */
+  options?: {
+    /** Element name */
+    name?: string;
+    /** Exact match */
+    exact?: boolean;
+    /** Element checked state */
+    checked?: boolean;
+    /** Element disabled state */
+    disabled?: boolean;
+    /** Element selected state */
+    selected?: boolean;
+    /** Element expanded state */
+    expanded?: boolean;
+    /** Additional attributes */
+    [key: string]: any;
+  } | null;
+}
+
+/**
+ * Smart locator information for Playwright
+ */
+export interface PlaywrightLocator {
+  /** Locate by role */
+  byRole?: PlaywrightRoleOptions;
+  /** Locate by ID */
+  byId?: string;
+  /** Locate by text */
+  byText?: PlaywrightTextOptions;
+  /** Locate by placeholder */
+  byPlaceholder?: PlaywrightTextOptions;
+  /** Locate by test ID */
+  byTestId?: string;
+  /** Locate by label */
+  byLabel?: string;
+  /** Locate by selector */
+  bySelector?: string;
+  /** Locate by XPath */
+  byXPath?: string;
+}
+
+/**
+ * Frame location information
+ */
+export interface FrameInfo {
+  /** Frame name */
+  name?: string;
+  /** Frame ID */
+  id?: string;
+  /** Frame index among siblings */
+  index: number;
+}
+
+/**
+ * Comprehensive element information
+ */
+export interface ElementInfo {
+  /** Element tag name */
+  tagName: string;
+  /** Element ID */
+  id?: string;
+  /** Element class name */
+  className?: string;
+  /** Element name attribute */
+  name?: string;
+  /** Element type attribute */
+  type?: string;
+  /** Element text content */
+  text?: string;
+  /** Element value */
+  value?: string;
+  /** Element placeholder */
+  placeholder?: string;
+  /** Element ARIA role */
+  role?: string;
+  /** Element attributes */
+  attributes?: Record<string, string>;
+  /** Element location information */
+  location?: ElementLocation;
+  /** Element hierarchy (parents) */
+  hierarchy?: ElementHierarchyInfo[];
+  /** Element XPath */
+  xpath?: string;
+  /** Element CSS selector */
+  selector?: string;
+  /** Smart locator strategies */
+  smartLocator?: SeleniumLocator | PlaywrightLocator;
+  /** Is element focusable */
+  isFocusable?: boolean;
+  /** Is element visible */
+  isVisible?: boolean;
+  /** Has onclick handler */
+  hasOnClick?: boolean;
+  /** Frame ID if element is in an iframe */
+  frameId?: string;
+  /** Path to frame in frame hierarchy */
+  framePath?: FrameInfo[];
+}
