@@ -1,10 +1,236 @@
+src/types/recorder.ts
+--------------------------------
+
+/**
+ * Recording options interface
+ * Defines configuration options for recording
+ */
+export interface RecordingOptions {
+  /** Capture screenshots during recording */
+  captureScreenshots: boolean;
+  /** Screenshot quality (0-1) */
+  screenshotQuality?: number;
+  /** Screenshot scale (0-1) */
+  screenshotScale?: number;
+  /** Record mouse movements */
+  recordMouseMovements?: boolean;
+  /** Record keyboard input */
+  recordKeyboardInput?: boolean;
+  /** Record mouse hover */
+  recordHover?: boolean;
+  /** Record mouse out */
+  captureMouseOut?: boolean;
+  /** Capture network requests */
+  captureNetwork?: boolean;
+  /** Exclude elements matching these selectors */
+  excludeSelectors?: string[];
+  /** Include only elements matching these selectors */
+  includeSelectors?: string[];
+  /** Maximum number of actions to record */
+  maxActions?: number;
+  /** Maximum recording duration in seconds */
+  maxDuration?: number;
+  /** Custom delay between actions in milliseconds */
+  actionDelay?: number;
+  /** Auto-scroll to elements during recording */
+  autoScroll?: boolean;
+  /** Ignore invisible elements */
+  ignoreInvisible?: boolean;
+  /** Capture viewport changes */
+  captureViewportChanges?: boolean;
+  /** Capture console logs */
+  captureConsole?: boolean;
+  /** Highlight elements on interaction */
+  highlightElements?: boolean;
+  /** Group similar actions */
+  groupSimilarActions?: boolean;
+  /** Add smart assertions */
+  smartAssertions?: boolean;
+  /** Use AI for element recognition */
+  useAI?: boolean;
+  /** Extend locator strategies */
+  extendedLocators?: boolean;
+  /** Custom injection script */
+  customInjection?: string;
+  /** Additional capabilities */
+  [key: string]: any;
+}
+
+/**
+ * Element location information
+ */
+export interface ElementLocation {
+  /** X-coordinate relative to the document */
+  x: number;
+  /** Y-coordinate relative to the document */
+  y: number;
+  /** Element width */
+  width: number;
+  /** Element height */
+  height: number;
+  /** X-coordinate relative to the viewport */
+  viewportX?: number;
+  /** Y-coordinate relative to the viewport */
+  viewportY?: number;
+}
+
+/**
+ * Element hierarchy information
+ */
+export interface ElementHierarchyInfo {
+  /** Element tag name */
+  tagName: string;
+  /** Element ID */
+  id?: string;
+  /** Element class name */
+  className?: string;
+}
+
+/**
+ * Smart locator information for Selenium
+ */
+export interface SeleniumLocator {
+  /** Locate by ID */
+  byId?: string | null;
+  /** Locate by name */
+  byName?: string | null;
+  /** Locate by class name */
+  byClassName?: string | null;
+  /** Locate by tag name */
+  byTagName?: string | null;
+  /** Locate by link text */
+  byLinkText?: string | null;
+  /** Locate by partial link text */
+  byPartialLinkText?: string | null;
+  /** Locate by CSS selector */
+  byCssSelector?: string | null;
+  /** Locate by XPath */
+  byXPath?: string | null;
+}
+
+/**
+ * Playwright text locator options
+ */
+export interface PlaywrightTextOptions {
+  /** Text content */
+  text: string;
+  /** Exact match */
+  exact?: boolean;
+}
+
+/**
+ * Playwright role locator options
+ */
+export interface PlaywrightRoleOptions {
+  /** ARIA role */
+  role: string;
+  /** Additional options */
+  options?: {
+    /** Element name */
+    name?: string;
+    /** Exact match */
+    exact?: boolean;
+    /** Element checked state */
+    checked?: boolean;
+    /** Element disabled state */
+    disabled?: boolean;
+    /** Element selected state */
+    selected?: boolean;
+    /** Element expanded state */
+    expanded?: boolean;
+    /** Additional attributes */
+    [key: string]: any;
+  } | null;
+}
+
+/**
+ * Smart locator information for Playwright
+ */
+export interface PlaywrightLocator {
+  /** Locate by role */
+  byRole?: PlaywrightRoleOptions;
+  /** Locate by ID */
+  byId?: string;
+  /** Locate by text */
+  byText?: PlaywrightTextOptions;
+  /** Locate by placeholder */
+  byPlaceholder?: PlaywrightTextOptions;
+  /** Locate by test ID */
+  byTestId?: string;
+  /** Locate by label */
+  byLabel?: string;
+  /** Locate by selector */
+  bySelector?: string;
+  /** Locate by XPath */
+  byXPath?: string;
+}
+
+/**
+ * Frame location information
+ */
+export interface FrameInfo {
+  /** Frame name */
+  name?: string;
+  /** Frame ID */
+  id?: string;
+  /** Frame index among siblings */
+  index: number;
+}
+
+/**
+ * Comprehensive element information
+ */
+export interface ElementInfo {
+  /** Element tag name */
+  tagName: string;
+  /** Element ID */
+  id?: string;
+  /** Element class name */
+  className?: string;
+  /** Element name attribute */
+  name?: string;
+  /** Element type attribute */
+  type?: string;
+  /** Element text content */
+  text?: string;
+  /** Element value */
+  value?: string;
+  /** Element placeholder */
+  placeholder?: string;
+  /** Element ARIA role */
+  role?: string;
+  /** Element attributes */
+  attributes?: Record<string, string>;
+  /** Element location information */
+  location?: ElementLocation;
+  /** Element hierarchy (parents) */
+  hierarchy?: ElementHierarchyInfo[];
+  /** Element XPath */
+  xpath?: string;
+  /** Element CSS selector */
+  selector?: string;
+  /** Smart locator strategies */
+  smartLocator?: SeleniumLocator | PlaywrightLocator;
+  /** Is element focusable */
+  isFocusable?: boolean;
+  /** Is element visible */
+  isVisible?: boolean;
+  /** Has onclick handler */
+  hasOnClick?: boolean;
+  /** Frame ID if element is in an iframe */
+  frameId?: string;
+  /** Path to frame in frame hierarchy */
+  framePath?: FrameInfo[];
+}
+
+
+
 BrowserFrame.tsx
 ----------------------------
 
-
 import React, { useState, useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
 import './BrowserFrame.css';
-import { RecordingOptions, ElementInfo } from './RecorderComponent';
+import { RecordingOptions, ElementInfo } from '../../types/recorder';
 
 interface BrowserFrameProps {
   /** Initial URL to navigate to */
@@ -2199,374 +2425,879 @@ export default BrowserFrame;
 
 
 
-BrowserFrame.css
------------------------------
+ElementHighlighter.tsx
+---------------------------
 
-.cs-browser-frame {
-  display: flex;
-  flex-direction: column;
-  width: 100%;
-  height: 100%;
-  position: relative;
-  overflow: hidden;
-  border-radius: 4px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  background-color: #f5f5f5;
+import React, { useState, useEffect, useRef } from 'react';
+import './ElementHighlighter.css';
+import { ElementInfo } from '../../types/recorder';
+
+interface ElementHighlighterProps {
+  /** Element info to highlight */
+  element: ElementInfo | null;
+  /** Whether highlighting is enabled */
+  isEnabled: boolean;
+  /** Callback when element is selected */
+  onSelect?: (element: ElementInfo) => void;
+  /** Callback when highlighting is disabled */
+  onDisable?: () => void;
+  /** Whether to show element details */
+  showDetails?: boolean;
+  /** Whether the component is disabled */
+  disabled?: boolean;
+  /** Framework in use */
+  framework: 'selenium' | 'playwright';
+  /** Programming language in use */
+  language: 'java' | 'typescript';
 }
 
-.cs-browser-frame.disabled {
-  opacity: 0.7;
-  pointer-events: none;
-}
+/**
+ * ElementHighlighter Component
+ * 
+ * Provides highlighting for elements during test recording.
+ * Features:
+ * - Visual highlighting of elements
+ * - Display of element information
+ * - Copy of element locators
+ * - Framework-specific locator suggestions
+ */
+const ElementHighlighter: React.FC<ElementHighlighterProps> = ({
+  element,
+  isEnabled,
+  onSelect,
+  onDisable,
+  showDetails = true,
+  disabled = false,
+  framework,
+  language
+}) => {
+  const [position, setPosition] = useState<{ top: number; left: number; width: number; height: number } | null>(null);
+  const [tooltipPosition, setTooltipPosition] = useState<'top' | 'bottom' | 'left' | 'right'>('bottom');
+  const [showCopyTooltip, setShowCopyTooltip] = useState<boolean>(false);
+  const [copiedLocator, setCopiedLocator] = useState<string>('');
+  const [selectedTab, setSelectedTab] = useState<string>('info');
+  
+  const highlightRef = useRef<HTMLDivElement>(null);
+  const tooltipRef = useRef<HTMLDivElement>(null);
+  
+  // Position highlight when element changes
+  useEffect(() => {
+    if (element && element.location && isEnabled) {
+      const { x, y, width, height } = element.location;
+      
+      setPosition({
+        top: y,
+        left: x,
+        width,
+        height
+      });
+      
+      // Determine tooltip position
+      const viewportHeight = window.innerHeight;
+      const viewportWidth = window.innerWidth;
+      
+      // Default to bottom
+      let newPosition: 'top' | 'bottom' | 'left' | 'right' = 'bottom';
+      
+      // If near bottom of viewport, show on top
+      if (y + height + 150 > viewportHeight) {
+        newPosition = 'top';
+      }
+      
+      // If too wide for viewport, position on left or right
+      if (width > viewportWidth / 2) {
+        newPosition = x < viewportWidth / 2 ? 'right' : 'left';
+      }
+      
+      setTooltipPosition(newPosition);
+    } else {
+      setPosition(null);
+    }
+  }, [element, isEnabled]);
+  
+  // Close on escape key
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && isEnabled && onDisable) {
+        onDisable();
+      }
+    };
+    
+    window.addEventListener('keydown', handleKeyDown);
+    
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isEnabled, onDisable]);
+  
+  // Auto-close copy tooltip
+  useEffect(() => {
+    if (showCopyTooltip) {
+      const timer = setTimeout(() => {
+        setShowCopyTooltip(false);
+      }, 2000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [showCopyTooltip]);
+  
+  if (!position || !isEnabled || disabled || !element) {
+    return null;
+  }
+  
+  const handleCopyLocator = (locator: string, type: string) => {
+    navigator.clipboard.writeText(locator).then(() => {
+      setCopiedLocator(type);
+      setShowCopyTooltip(true);
+    }).catch(err => {
+      console.error('Failed to copy locator:', err);
+    });
+  };
+  
+  const getBestLocator = (): string => {
+    if (!element) return '';
+    
+    if (framework === 'selenium') {
+      if (element.id) {
+        return `driver.findElement(By.id("${element.id}"))`;
+      } else if (element.attributes && element.attributes.name) {
+        return `driver.findElement(By.name("${element.attributes.name}"))`;
+      } else if (element.selector) {
+        return `driver.findElement(By.cssSelector("${element.selector}"))`;
+      } else if (element.xpath) {
+        return `driver.findElement(By.xpath("${element.xpath}"))`;
+      }
+    } else if (framework === 'playwright') {
+      if (element.id) {
+        return `page.locator('#${element.id}')`;
+      } else if (element.attributes && element.attributes['data-testid']) {
+        return `page.getByTestId("${element.attributes['data-testid']}")`;
+      } else if (element.text && element.text.length > 0 && element.text.length < 50) {
+        return `page.getByText("${element.text}")`;
+      } else if (element.selector) {
+        return `page.locator("${element.selector}")`;
+      }
+    }
+    
+    return element.selector || element.xpath || '';
+  };
+  
+  const getSmartLocators = () => {
+    if (!element || !element.smartLocator) return [];
+    
+    const locators = [];
+    const smartLocator = element.smartLocator;
+    
+    if (framework === 'selenium') {
+      const seleniumLocator = smartLocator as any;
+      
+      if (seleniumLocator.byId) {
+        locators.push({
+          type: 'By.id',
+          value: `driver.findElement(By.id("${seleniumLocator.byId}"))`,
+          display: `By.id("${seleniumLocator.byId}")`
+        });
+      }
+      
+      if (seleniumLocator.byName) {
+        locators.push({
+          type: 'By.name',
+          value: `driver.findElement(By.name("${seleniumLocator.byName}"))`,
+          display: `By.name("${seleniumLocator.byName}")`
+        });
+      }
+      
+      if (seleniumLocator.byClassName) {
+        locators.push({
+          type: 'By.className',
+          value: `driver.findElement(By.className("${seleniumLocator.byClassName}"))`,
+          display: `By.className("${seleniumLocator.byClassName}")`
+        });
+      }
+      
+      if (seleniumLocator.byLinkText && seleniumLocator.byLinkText.length < 50) {
+        locators.push({
+          type: 'By.linkText',
+          value: `driver.findElement(By.linkText("${seleniumLocator.byLinkText}"))`,
+          display: `By.linkText("${seleniumLocator.byLinkText}")`
+        });
+      }
+      
+      if (seleniumLocator.byCssSelector) {
+        locators.push({
+          type: 'By.cssSelector',
+          value: `driver.findElement(By.cssSelector("${seleniumLocator.byCssSelector}"))`,
+          display: `By.cssSelector("${seleniumLocator.byCssSelector}")`
+        });
+      }
+      
+      if (seleniumLocator.byXPath) {
+        locators.push({
+          type: 'By.xpath',
+          value: `driver.findElement(By.xpath("${seleniumLocator.byXPath}"))`,
+          display: `By.xpath("${seleniumLocator.byXPath}")`
+        });
+      }
+    } else if (framework === 'playwright') {
+      const playwrightLocator = smartLocator as any;
+      
+      if (playwrightLocator.byRole && playwrightLocator.byRole.role) {
+        const role = playwrightLocator.byRole.role;
+        const options = playwrightLocator.byRole.options;
+        let optionsStr = '';
+        
+        if (options) {
+          const optionEntries = [];
+          for (const [key, value] of Object.entries(options)) {
+            if (typeof value === 'string') {
+              optionEntries.push(`${key}: "${value}"`);
+            } else {
+              optionEntries.push(`${key}: ${value}`);
+            }
+          }
+          
+          if (optionEntries.length > 0) {
+            optionsStr = `, { ${optionEntries.join(', ')} }`;
+          }
+        }
+        
+        locators.push({
+          type: 'getByRole',
+          value: `page.getByRole("${role}"${optionsStr})`,
+          display: `getByRole("${role}"${optionsStr})`
+        });
+      }
+      
+      if (playwrightLocator.byText && playwrightLocator.byText.text) {
+        const text = playwrightLocator.byText.text;
+        const exact = playwrightLocator.byText.exact;
+        const exactStr = exact ? `, { exact: true }` : '';
+        
+        locators.push({
+          type: 'getByText',
+          value: `page.getByText("${text}"${exactStr})`,
+          display: `getByText("${text}"${exactStr})`
+        });
+      }
+      
+      if (playwrightLocator.byId) {
+        locators.push({
+          type: 'locator(#id)',
+          value: `page.locator('#${playwrightLocator.byId}')`,
+          display: `locator('#${playwrightLocator.byId}')`
+        });
+      }
+      
+      if (playwrightLocator.byTestId) {
+        locators.push({
+          type: 'getByTestId',
+          value: `page.getByTestId("${playwrightLocator.byTestId}")`,
+          display: `getByTestId("${playwrightLocator.byTestId}")`
+        });
+      }
+      
+      if (playwrightLocator.byPlaceholder && playwrightLocator.byPlaceholder.text) {
+        const text = playwrightLocator.byPlaceholder.text;
+        const exact = playwrightLocator.byPlaceholder.exact;
+        const exactStr = exact ? `, { exact: true }` : '';
+        
+        locators.push({
+          type: 'getByPlaceholder',
+          value: `page.getByPlaceholder("${text}"${exactStr})`,
+          display: `getByPlaceholder("${text}"${exactStr})`
+        });
+      }
+      
+      if (playwrightLocator.byLabel) {
+        locators.push({
+          type: 'getByLabel',
+          value: `page.getByLabel("${playwrightLocator.byLabel}")`,
+          display: `getByLabel("${playwrightLocator.byLabel}")`
+        });
+      }
+      
+      if (playwrightLocator.bySelector) {
+        locators.push({
+          type: 'locator(selector)',
+          value: `page.locator("${playwrightLocator.bySelector}")`,
+          display: `locator("${playwrightLocator.bySelector}")`
+        });
+      }
+    }
+    
+    return locators;
+  };
+  
+  const renderElementInfo = () => {
+    if (!element) return null;
+    
+    return (
+      <div className="cs-element-info">
+        <div className="cs-info-row">
+          <span className="cs-info-label">Tag:</span>
+          <span className="cs-info-value">{element.tagName}</span>
+        </div>
+        
+        {element.id && (
+          <div className="cs-info-row">
+            <span className="cs-info-label">ID:</span>
+            <span className="cs-info-value">{element.id}</span>
+          </div>
+        )}
+        
+        {element.className && (
+          <div className="cs-info-row">
+            <span className="cs-info-label">Class:</span>
+            <span className="cs-info-value">{element.className}</span>
+          </div>
+        )}
+        
+        {element.name && (
+          <div className="cs-info-row">
+            <span className="cs-info-label">Name:</span>
+            <span className="cs-info-value">{element.name}</span>
+          </div>
+        )}
+        
+        {element.type && (
+          <div className="cs-info-row">
+            <span className="cs-info-label">Type:</span>
+            <span className="cs-info-value">{element.type}</span>
+          </div>
+        )}
+        
+        {element.text && (
+          <div className="cs-info-row">
+            <span className="cs-info-label">Text:</span>
+            <span className="cs-info-value cs-truncate">
+              {element.text.length > 50 ? element.text.substring(0, 50) + '...' : element.text}
+            </span>
+          </div>
+        )}
+        
+        {element.value && (
+          <div className="cs-info-row">
+            <span className="cs-info-label">Value:</span>
+            <span className="cs-info-value cs-truncate">
+              {element.value.length > 50 ? element.value.substring(0, 50) + '...' : element.value}
+            </span>
+          </div>
+        )}
+        
+        {element.placeholder && (
+          <div className="cs-info-row">
+            <span className="cs-info-label">Placeholder:</span>
+            <span className="cs-info-value cs-truncate">
+              {element.placeholder.length > 50 ? element.placeholder.substring(0, 50) + '...' : element.placeholder}
+            </span>
+          </div>
+        )}
+        
+        {element.role && (
+          <div className="cs-info-row">
+            <span className="cs-info-label">Role:</span>
+            <span className="cs-info-value">{element.role}</span>
+          </div>
+        )}
+      </div>
+    );
+  };
+  
+  const renderLocators = () => {
+    if (!element) return null;
+    
+    const smartLocators = getSmartLocators();
+    const bestLocator = getBestLocator();
+    
+    return (
+      <div className="cs-element-locators">
+        {bestLocator && (
+          <div className="cs-locator-item cs-best-locator">
+            <div className="cs-locator-header">
+              <span className="cs-locator-label">Recommended Locator:</span>
+              <button 
+                className="cs-copy-button"
+                onClick={() => handleCopyLocator(bestLocator, 'Recommended')}
+                title="Copy to clipboard"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M8 4V16C8 16.5304 8.21071 17.0391 8.58579 17.4142C8.96086 17.7893 9.46957 18 10 18H18C18.5304 18 19.0391 17.7893 19.4142 17.4142C19.7893 17.0391 20 16.5304 20 16V8.5L15.5 4H10C9.46957 4 8.96086 4.21071 8.58579 4.58579C8.21071 4.96086 8 5.46957 8 6V4ZM8 4H4V16C4 17.0609 4.42143 18.0783 5.17157 18.8284C5.92172 19.5786 6.93913 20 8 20H16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </button>
+            </div>
+            <div className="cs-locator-code">
+              <code>{bestLocator}</code>
+            </div>
+          </div>
+        )}
+        
+        {smartLocators.length > 0 && (
+          <div className="cs-all-locators">
+            <div className="cs-locator-section-header">Alternative Locators:</div>
+            {smartLocators.map((locator, index) => (
+              <div className="cs-locator-item" key={index}>
+                <div className="cs-locator-header">
+                  <span className="cs-locator-label">{locator.type}:</span>
+                  <button 
+                    className="cs-copy-button"
+                    onClick={() => handleCopyLocator(locator.value, locator.type)}
+                    title="Copy to clipboard"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M8 4V16C8 16.5304 8.21071 17.0391 8.58579 17.4142C8.96086 17.7893 9.46957 18 10 18H18C18.5304 18 19.0391 17.7893 19.4142 17.4142C19.7893 17.0391 20 16.5304 20 16V8.5L15.5 4H10C9.46957 4 8.96086 4.21071 8.58579 4.58579C8.21071 4.96086 8 5.46957 8 6V4ZM8 4H4V16C4 17.0609 4.42143 18.0783 5.17157 18.8284C5.92172 19.5786 6.93913 20 8 20H16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  </button>
+                </div>
+                <div className="cs-locator-code">
+                  <code>{locator.display}</code>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  };
+  
+  const renderAttributes = () => {
+    if (!element || !element.attributes) return null;
+    
+    const attributes = element.attributes;
+    const attributeEntries = Object.entries(attributes);
+    
+    if (attributeEntries.length === 0) {
+      return <div className="cs-no-attributes">No attributes found</div>;
+    }
+    
+    return (
+      <div className="cs-element-attributes">
+        {attributeEntries.map(([key, value]) => (
+          <div className="cs-attribute-row" key={key}>
+            <span className="cs-attribute-name">{key}</span>
+            <span className="cs-attribute-value cs-truncate" title={value}>
+              {value.length > 30 ? value.substring(0, 30) + '...' : value}
+            </span>
+          </div>
+        ))}
+      </div>
+    );
+  };
+  
+  const renderTooltip = () => {
+    if (!showDetails) return null;
+    
+    let tooltipClass = 'cs-tooltip';
+    switch (tooltipPosition) {
+      case 'top':
+        tooltipClass += ' cs-tooltip-top';
+        break;
+      case 'bottom':
+        tooltipClass += ' cs-tooltip-bottom';
+        break;
+      case 'left':
+        tooltipClass += ' cs-tooltip-left';
+        break;
+      case 'right':
+        tooltipClass += ' cs-tooltip-right';
+        break;
+    }
+    
+    return (
+      <div className={tooltipClass} ref={tooltipRef}>
+        <div className="cs-tooltip-header">
+          <div className="cs-element-title">
+            {element.tagName.toLowerCase()}
+            {element.id && <span className="cs-element-id">#{element.id}</span>}
+          </div>
+          <button className="cs-close-button" onClick={onDisable} title="Close">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M18 6L6 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              <path d="M6 6L18 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </button>
+        </div>
+        
+        <div className="cs-tooltip-tabs">
+          <button 
+            className={`cs-tab-button ${selectedTab === 'info' ? 'active' : ''}`}
+            onClick={() => setSelectedTab('info')}
+          >
+            Info
+          </button>
+          <button 
+            className={`cs-tab-button ${selectedTab === 'locators' ? 'active' : ''}`}
+            onClick={() => setSelectedTab('locators')}
+          >
+            Locators
+          </button>
+          <button 
+            className={`cs-tab-button ${selectedTab === 'attributes' ? 'active' : ''}`}
+            onClick={() => setSelectedTab('attributes')}
+          >
+            Attributes
+          </button>
+        </div>
+        
+        <div className="cs-tooltip-content">
+          {selectedTab === 'info' && renderElementInfo()}
+          {selectedTab === 'locators' && renderLocators()}
+          {selectedTab === 'attributes' && renderAttributes()}
+        </div>
+        
+        {onSelect && (
+          <div className="cs-tooltip-footer">
+            <button 
+              className="cs-select-button"
+              onClick={() => onSelect(element)}
+            >
+              Select Element
+            </button>
+          </div>
+        )}
+      </div>
+    );
+  };
+  
+  return (
+    <>
+      <div 
+        className="cs-element-highlight"
+        style={{
+          top: position.top,
+          left: position.left,
+          width: position.width,
+          height: position.height
+        }}
+        ref={highlightRef}
+      >
+        {renderTooltip()}
+      </div>
+      
+      {showCopyTooltip && (
+        <div className="cs-copy-tooltip">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M20 6L9 17L4 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+          <span>{copiedLocator} locator copied to clipboard</span>
+        </div>
+      )}
+    </>
+  );
+};
 
-.cs-browser-iframe {
-  width: 100%;
-  height: 100%;
-  border: none;
-  background-color: white;
-  flex: 1;
-}
+export default ElementHighlighter;
 
-.cs-browser-loading {
+
+ElementHighlighter.css
+--------------------------------------
+
+.cs-element-highlight {
   position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  background-color: rgba(255, 255, 255, 0.9);
-  z-index: 10;
-}
-
-.cs-loading-spinner {
-  width: 50px;
-  height: 50px;
-  border-radius: 50%;
-  border: 3px solid rgba(197, 75, 140, 0.2);
-  border-top-color: #C54B8C;
-  animation: cs-spin 1s infinite linear;
-  margin-bottom: 16px;
-}
-
-.cs-loading-message {
-  font-family: sans-serif;
-  font-size: 16px;
-  color: #333;
-  margin: 0;
-}
-
-.cs-browser-error {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  background-color: white;
-  z-index: 10;
-  padding: 20px;
   box-sizing: border-box;
-  text-align: center;
+  border: 2px solid #C54B8C;
+  background-color: rgba(197, 75, 140, 0.1);
+  z-index: 9999;
+  pointer-events: none;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.5);
+  border-radius: 2px;
+  animation: cs-pulse 2s infinite;
 }
 
-.cs-error-icon {
-  color: #ea4c59;
-  margin-bottom: 16px;
+@keyframes cs-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(197, 75, 140, 0.4); }
+  70% { box-shadow: 0 0 0 6px rgba(197, 75, 140, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(197, 75, 140, 0); }
 }
 
-.cs-error-title {
-  font-family: sans-serif;
-  font-size: 24px;
+.cs-tooltip {
+  position: absolute;
+  background-color: white;
+  border-radius: 4px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
+  width: 300px;
+  max-width: calc(100vw - 40px);
+  max-height: 400px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  pointer-events: auto;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+  z-index: 10000;
   color: #333;
-  margin: 0 0 12px 0;
+  font-size: 13px;
+  border: 1px solid rgba(0, 0, 0, 0.1);
 }
 
-.cs-error-message {
-  font-family: sans-serif;
-  font-size: 16px;
+.cs-tooltip-top {
+  bottom: calc(100% + 10px);
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.cs-tooltip-bottom {
+  top: calc(100% + 10px);
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.cs-tooltip-left {
+  right: calc(100% + 10px);
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.cs-tooltip-right {
+  left: calc(100% + 10px);
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.cs-tooltip-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 12px;
+  background-color: #f5f5f5;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.cs-element-title {
+  font-family: monospace;
+  font-weight: 600;
+  color: #333;
+}
+
+.cs-element-id {
+  color: #C54B8C;
+  margin-left: 2px;
+}
+
+.cs-close-button {
+  background: none;
+  border: none;
+  cursor: pointer;
   color: #666;
-  margin: 0 0 24px 0;
-  max-width: 90%;
-  line-height: 1.4;
+  padding: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 3px;
 }
 
-.cs-retry-button {
+.cs-close-button:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+  color: #333;
+}
+
+.cs-tooltip-tabs {
+  display: flex;
+  background-color: #f8f8f8;
+}
+
+.cs-select-button {
   background-color: #C54B8C;
   color: white;
   border: none;
   border-radius: 4px;
-  padding: 8px 16px;
-  font-family: sans-serif;
-  font-size: 14px;
-  font-weight: 600;
+  padding: 6px 12px;
   cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
   transition: background-color 0.2s;
 }
 
-.cs-retry-button:hover {
-  background-color: #a53a73;
+.cs-select-button:hover {
+  background-color: #a13a6d;
 }
 
-.cs-retry-button:disabled {
-  background-color: #d68db4;
-  cursor: not-allowed;
+.cs-info-row {
+  display: flex;
+  margin-bottom: 8px;
 }
 
-.cs-recording-overlay {
-  position: absolute;
-  top: 0;
-  right: 0;
-  z-index: 20;
-  pointer-events: none;
+.cs-info-label {
+  font-weight: 600;
+  width: 80px;
+  flex-shrink: 0;
+  color: #555;
 }
 
-.cs-element-picker-overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  z-index: 20;
-  pointer-events: none;
+.cs-info-value {
+  color: #333;
+  word-break: break-word;
 }
 
-@keyframes cs-spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+.cs-truncate {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 190px;
 }
 
-@keyframes cs-blink {
-  0% { opacity: 1; }
-  50% { opacity: 0.4; }
-  100% { opacity: 1; }
+.cs-element-locators {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
-
-RecorderComponent.ts
----------------------------------
-
-/**
- * Recording options interface
- * Defines configuration options for recording
- */
-export interface RecordingOptions {
-  /** Capture screenshots during recording */
-  captureScreenshots: boolean;
-  /** Screenshot quality (0-1) */
-  screenshotQuality?: number;
-  /** Screenshot scale (0-1) */
-  screenshotScale?: number;
-  /** Record mouse movements */
-  recordMouseMovements?: boolean;
-  /** Record keyboard input */
-  recordKeyboardInput?: boolean;
-  /** Record mouse hover */
-  recordHover?: boolean;
-  /** Record mouse out */
-  captureMouseOut?: boolean;
-  /** Capture network requests */
-  captureNetwork?: boolean;
-  /** Exclude elements matching these selectors */
-  excludeSelectors?: string[];
-  /** Include only elements matching these selectors */
-  includeSelectors?: string[];
-  /** Maximum number of actions to record */
-  maxActions?: number;
-  /** Maximum recording duration in seconds */
-  maxDuration?: number;
-  /** Custom delay between actions in milliseconds */
-  actionDelay?: number;
-  /** Auto-scroll to elements during recording */
-  autoScroll?: boolean;
-  /** Ignore invisible elements */
-  ignoreInvisible?: boolean;
-  /** Capture viewport changes */
-  captureViewportChanges?: boolean;
-  /** Capture console logs */
-  captureConsole?: boolean;
-  /** Highlight elements on interaction */
-  highlightElements?: boolean;
-  /** Group similar actions */
-  groupSimilarActions?: boolean;
-  /** Add smart assertions */
-  smartAssertions?: boolean;
-  /** Use AI for element recognition */
-  useAI?: boolean;
-  /** Extend locator strategies */
-  extendedLocators?: boolean;
-  /** Custom injection script */
-  customInjection?: string;
-  /** Additional capabilities */
-  [key: string]: any;
+.cs-locator-item {
+  background-color: #f8f8f8;
+  border-radius: 3px;
+  padding: 8px;
+  border: 1px solid #e0e0e0;
 }
 
-/**
- * Element location information
- */
-export interface ElementLocation {
-  /** X-coordinate relative to the document */
-  x: number;
-  /** Y-coordinate relative to the document */
-  y: number;
-  /** Element width */
-  width: number;
-  /** Element height */
-  height: number;
-  /** X-coordinate relative to the viewport */
-  viewportX?: number;
-  /** Y-coordinate relative to the viewport */
-  viewportY?: number;
+.cs-best-locator {
+  border-color: #C54B8C;
+  background-color: rgba(197, 75, 140, 0.05);
 }
 
-/**
- * Element hierarchy information
- */
-export interface ElementHierarchyInfo {
-  /** Element tag name */
-  tagName: string;
-  /** Element ID */
-  id?: string;
-  /** Element class name */
-  className?: string;
+.cs-locator-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
 }
 
-/**
- * Smart locator information for Selenium
- */
-export interface SeleniumLocator {
-  /** Locate by ID */
-  byId?: string | null;
-  /** Locate by name */
-  byName?: string | null;
-  /** Locate by class name */
-  byClassName?: string | null;
-  /** Locate by tag name */
-  byTagName?: string | null;
-  /** Locate by link text */
-  byLinkText?: string | null;
-  /** Locate by partial link text */
-  byPartialLinkText?: string | null;
-  /** Locate by CSS selector */
-  byCssSelector?: string | null;
-  /** Locate by XPath */
-  byXPath?: string | null;
+.cs-locator-label {
+  font-weight: 600;
+  font-size: 12px;
+  color: #555;
 }
 
-/**
- * Playwright text locator options
- */
-export interface PlaywrightTextOptions {
-  /** Text content */
-  text: string;
-  /** Exact match */
-  exact?: boolean;
+.cs-copy-button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #666;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px;
+  border-radius: 3px;
 }
 
-/**
- * Playwright role locator options
- */
-export interface PlaywrightRoleOptions {
-  /** ARIA role */
-  role: string;
-  /** Additional options */
-  options?: {
-    /** Element name */
-    name?: string;
-    /** Exact match */
-    exact?: boolean;
-    /** Element checked state */
-    checked?: boolean;
-    /** Element disabled state */
-    disabled?: boolean;
-    /** Element selected state */
-    selected?: boolean;
-    /** Element expanded state */
-    expanded?: boolean;
-    /** Additional attributes */
-    [key: string]: any;
-  } | null;
+.cs-copy-button:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+  color: #333;
 }
 
-/**
- * Smart locator information for Playwright
- */
-export interface PlaywrightLocator {
-  /** Locate by role */
-  byRole?: PlaywrightRoleOptions;
-  /** Locate by ID */
-  byId?: string;
-  /** Locate by text */
-  byText?: PlaywrightTextOptions;
-  /** Locate by placeholder */
-  byPlaceholder?: PlaywrightTextOptions;
-  /** Locate by test ID */
-  byTestId?: string;
-  /** Locate by label */
-  byLabel?: string;
-  /** Locate by selector */
-  bySelector?: string;
-  /** Locate by XPath */
-  byXPath?: string;
+.cs-locator-code {
+  background-color: white;
+  padding: 6px 8px;
+  border-radius: 3px;
+  border: 1px solid #e0e0e0;
+  overflow-x: auto;
 }
 
-/**
- * Frame location information
- */
-export interface FrameInfo {
-  /** Frame name */
-  name?: string;
-  /** Frame ID */
-  id?: string;
-  /** Frame index among siblings */
-  index: number;
+.cs-locator-code code {
+  font-family: monospace;
+  font-size: 12px;
+  color: #333;
+  white-space: pre;
 }
 
-/**
- * Comprehensive element information
- */
-export interface ElementInfo {
-  /** Element tag name */
-  tagName: string;
-  /** Element ID */
-  id?: string;
-  /** Element class name */
-  className?: string;
-  /** Element name attribute */
-  name?: string;
-  /** Element type attribute */
-  type?: string;
-  /** Element text content */
-  text?: string;
-  /** Element value */
-  value?: string;
-  /** Element placeholder */
-  placeholder?: string;
-  /** Element ARIA role */
-  role?: string;
-  /** Element attributes */
-  attributes?: Record<string, string>;
-  /** Element location information */
-  location?: ElementLocation;
-  /** Element hierarchy (parents) */
-  hierarchy?: ElementHierarchyInfo[];
-  /** Element XPath */
-  xpath?: string;
-  /** Element CSS selector */
-  selector?: string;
-  /** Smart locator strategies */
-  smartLocator?: SeleniumLocator | PlaywrightLocator;
-  /** Is element focusable */
-  isFocusable?: boolean;
-  /** Is element visible */
-  isVisible?: boolean;
-  /** Has onclick handler */
-  hasOnClick?: boolean;
-  /** Frame ID if element is in an iframe */
-  frameId?: string;
-  /** Path to frame in frame hierarchy */
-  framePath?: FrameInfo[];
+.cs-locator-section-header {
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: #555;
+  font-size: 13px;
 }
+
+.cs-all-locators {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cs-element-attributes {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.cs-attribute-row {
+  display: flex;
+  font-size: 12px;
+  padding: 4px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.cs-attribute-name {
+  font-weight: 600;
+  color: #C54B8C;
+  width: 100px;
+  flex-shrink: 0;
+  font-family: monospace;
+}
+
+.cs-attribute-value {
+  color: #333;
+  font-family: monospace;
+}
+
+.cs-no-attributes {
+  color: #888;
+  font-style: italic;
+  padding: 10px 0;
+}
+
+.cs-copy-tooltip {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  background-color: #333;
+  color: white;
+  padding: 8px 12px;
+  border-radius: 4px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  z-index: 10001;
+  animation: cs-fade-in 0.3s ease;
+}
+
+@keyframes cs-fade-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.cs-tab-button {
+  flex: 1;
+  background: none;
+  border: none;
+  padding: 8px 12px;
+  cursor: pointer;
+  font-size: 13px;
+  color: #666;
+  transition: background-color 0.2s, color 0.2s;
+}
+
+.cs-tab-button:hover {
+  background-color: rgba(0, 0, 0, 0.03);
+}
+
+.cs-tab-button.active {
+  color: #C54B8C;
+  border-bottom: 2px solid #C54B8C;
+  font-weight: 600;
+}
+
+.cs-tooltip-content {
+  padding: 10px 12px;
+  overflow-y: auto;
+  flex: 1;
+  max-height: 250px;
+}
+
+.cs-tooltip-footer {
+  display: flex;
+  justify-content: flex-end;
+  padding: 8px 12px;
+  border-top: 1px solid #e0e0e0;
+  background-color: #f8f8f8;
