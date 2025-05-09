@@ -8282,3 +8282,1644 @@ public @interface CSTestStepDef {
 }
 
 
+// com/cstestforge/framework/selenium/java/element/CSElement.java
+package com.cstestforge.framework.selenium.java.element;
+
+import org.openqa.selenium.By;
+import org.openqa.selenium.Dimension;
+import org.openqa.selenium.JavascriptExecutor;
+import org.openqa.selenium.Keys;
+import org.openqa.selenium.NoSuchElementException;
+import org.openqa.selenium.OutputType;
+import org.openqa.selenium.Point;
+import org.openqa.selenium.Rectangle;
+import org.openqa.selenium.StaleElementReferenceException;
+import org.openqa.selenium.WebDriver;
+import org.openqa.selenium.WebElement;
+import org.openqa.selenium.interactions.Actions;
+import org.openqa.selenium.support.ui.ExpectedConditions;
+import org.openqa.selenium.support.ui.WebDriverWait;
+
+import com.cstestforge.framework.core.config.ConfigurationManager;
+import com.cstestforge.framework.core.utils.CSLogger;
+import com.cstestforge.framework.core.utils.CSScreenshotManager;
+import com.cstestforge.framework.selenium.java.browser.CSBrowserManager;
+import com.cstestforge.framework.selenium.java.browser.CSWebDriverManager;
+
+import java.io.File;
+import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+
+/**
+ * Enhanced WebElement wrapper for Selenium WebDriver.
+ * This class provides additional methods and functionality for working with WebElements.
+ */
+public class CSElement implements WebElement {
+    private final CSLogger logger = new CSLogger(CSElement.class);
+    private final WebElement element;
+    private final WebDriver driver;
+    private final By locator;
+    private final CSScreenshotManager screenshotManager;
+    
+    /**
+     * Constructor for CSElement.
+     * 
+     * @param element The WebElement to wrap
+     * @param driver The WebDriver instance
+     * @param locator The locator used to find the element
+     */
+    public CSElement(WebElement element, WebDriver driver, By locator) {
+        this.element = element;
+        this.driver = driver;
+        this.locator = locator;
+        this.screenshotManager = new CSScreenshotManager();
+        logger.debug("Created CSElement with locator: " + locator);
+    }
+    
+    /**
+     * Constructor for CSElement.
+     * 
+     * @param element The WebElement to wrap
+     * @param driver The WebDriver instance
+     */
+    public CSElement(WebElement element, WebDriver driver) {
+        this(element, driver, null);
+    }
+    
+    /**
+     * Gets the wrapped WebElement.
+     * 
+     * @return The wrapped WebElement
+     */
+    public WebElement getWrappedElement() {
+        return element;
+    }
+    
+    /**
+     * Gets the WebDriver instance.
+     * 
+     * @return The WebDriver instance
+     */
+    public WebDriver getWrappedDriver() {
+        return driver;
+    }
+    
+    /**
+     * Gets the locator used to find the element.
+     * 
+     * @return The locator used to find the element
+     */
+    public By getLocator() {
+        return locator;
+    }
+    
+    /**
+     * Clicks the element with JavaScript.
+     */
+    public void jsClick() {
+        logger.debug("Performing JavaScript click");
+        JavascriptExecutor js = (JavascriptExecutor) driver;
+        js.executeScript("arguments[0].click();", element);
+    }
+    
+    /**
+     * Scrolls the element into view.
+     */
+    public void scrollIntoView() {
+        logger.debug("Scrolling element into view");
+        JavascriptExecutor js = (JavascriptExecutor) driver;
+        js.executeScript("arguments[0].scrollIntoView({behavior: 'smooth', block: 'center'});", element);
+    }
+    
+    /**
+     * Highlights the element.
+     */
+    public void highlight() {
+        highlight("red", "yellow");
+    }
+    
+    /**
+     * Highlights the element with the specified colors.
+     * 
+     * @param borderColor The border color
+     * @param backgroundColor The background color
+     */
+    public void highlight(String borderColor, String backgroundColor) {
+        logger.debug("Highlighting element");
+        JavascriptExecutor js = (JavascriptExecutor) driver;
+        
+        // Save original style
+        String originalStyle = (String) js.executeScript(
+                "return arguments[0].getAttribute('style');", element);
+        
+        // Highlight element
+        js.executeScript(
+                "arguments[0].setAttribute('style', arguments[1]);", 
+                element, 
+                "border: 2px solid " + borderColor + "; background-color: " + backgroundColor + "; transition: all 300ms;");
+        
+        // Pause briefly for the highlight to be visible
+        try {
+            Thread.sleep(300);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+        
+        // Restore original style
+        js.executeScript(
+                "arguments[0].setAttribute('style', arguments[1]);", 
+                element, 
+                originalStyle != null ? originalStyle : "");
+    }
+    
+    /**
+     * Waits for the element to be visible.
+     * 
+     * @return The CSElement once it is visible
+     */
+    public CSElement waitForVisible() {
+        logger.debug("Waiting for element to be visible");
+        WebDriverWait wait = new WebDriverWait(driver, 
+                Duration.ofSeconds(ConfigurationManager.getInstance().getFrameworkConfig().getExplicitWaitSeconds()));
+        wait.until(ExpectedConditions.visibilityOf(element));
+        return this;
+    }
+    
+    /**
+     * Waits for the element to be visible with the specified timeout.
+     * 
+     * @param timeoutSeconds The timeout in seconds
+     * @return The CSElement once it is visible
+     */
+    public CSElement waitForVisible(int timeoutSeconds) {
+        logger.debug("Waiting for element to be visible with timeout: " + timeoutSeconds);
+        WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(timeoutSeconds));
+        wait.until(ExpectedConditions.visibilityOf(element));
+        return this;
+    }
+    
+    /**
+     * Waits for the element to be clickable.
+     * 
+     * @return The CSElement once it is clickable
+     */
+    public CSElement waitForClickable() {
+        logger.debug("Waiting for element to be clickable");
+        WebDriverWait wait = new WebDriverWait(driver, 
+                Duration.ofSeconds(ConfigurationManager.getInstance().getFrameworkConfig().getExplicitWaitSeconds()));
+        wait.until(ExpectedConditions.elementToBeClickable(element));
+        return this;
+    }
+    
+    /**
+     * Waits for the element to be clickable with the specified timeout.
+     * 
+     * @param timeoutSeconds The timeout in seconds
+     * @return The CSElement once it is clickable
+     */
+    public CSElement waitForClickable(int timeoutSeconds) {
+        logger.debug("Waiting for element to be clickable with timeout: " + timeoutSeconds);
+        WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(timeoutSeconds));
+        wait.until(ExpectedConditions.elementToBeClickable(element));
+        return this;
+    }
+    
+    /**
+     * Waits for the element to have the specified text.
+     * 
+     * @param text The text to wait for
+     * @return The CSElement once it has the specified text
+     */
+    public CSElement waitForText(String text) {
+        logger.debug("Waiting for element to have text: " + text);
+        WebDriverWait wait = new WebDriverWait(driver, 
+                Duration.ofSeconds(ConfigurationManager.getInstance().getFrameworkConfig().getExplicitWaitSeconds()));
+        wait.until(ExpectedConditions.textToBePresentInElement(element, text));
+        return this;
+    }
+    
+    /**
+     * Waits for the element to have the specified text with the specified timeout.
+     * 
+     * @param text The text to wait for
+     * @param timeoutSeconds The timeout in seconds
+     * @return The CSElement once it has the specified text
+     */
+    public CSElement waitForText(String text, int timeoutSeconds) {
+        logger.debug("Waiting for element to have text: " + text + " with timeout: " + timeoutSeconds);
+        WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(timeoutSeconds));
+        wait.until(ExpectedConditions.textToBePresentInElement(element, text));
+        return this;
+    }
+    
+    /**
+     * Waits for the element to have the specified value.
+     * 
+     * @param value The value to wait for
+     * @return The CSElement once it has the specified value
+     */
+    public CSElement waitForValue(String value) {
+        logger.debug("Waiting for element to have value: " + value);
+        WebDriverWait wait = new WebDriverWait(driver, 
+                Duration.ofSeconds(ConfigurationManager.getInstance().getFrameworkConfig().getExplicitWaitSeconds()));
+        wait.until(ExpectedConditions.attributeToBe(element, "value", value));
+        return this;
+    }
+    
+    /**
+     * Waits for the element to have the specified value with the specified timeout.
+     * 
+     * @param value The value to wait for
+     * @param timeoutSeconds The timeout in seconds
+     * @return The CSElement once it has the specified value
+     */
+    public CSElement waitForValue(String value, int timeoutSeconds) {
+        logger.debug("Waiting for element to have value: " + value + " with timeout: " + timeoutSeconds);
+        WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(timeoutSeconds));
+        wait.until(ExpectedConditions.attributeToBe(element, "value", value));
+        return this;
+    }
+    
+    /**
+     * Waits for the element to have the specified attribute.
+     * 
+     * @param attribute The attribute to wait for
+     * @param value The value to wait for
+     * @return The CSElement once it has the specified attribute
+     */
+    public CSElement waitForAttribute(String attribute, String value) {
+        logger.debug("Waiting for element to have attribute: " + attribute + " with value: " + value);
+        WebDriverWait wait = new WebDriverWait(driver, 
+                Duration.ofSeconds(ConfigurationManager.getInstance().getFrameworkConfig().getExplicitWaitSeconds()));
+        wait.until(ExpectedConditions.attributeToBe(element, attribute, value));
+        return this;
+    }
+    
+    /**
+     * Waits for the element to have the specified attribute with the specified timeout.
+     * 
+     * @param attribute The attribute to wait for
+     * @param value The value to wait for
+     * @param timeoutSeconds The timeout in seconds
+     * @return The CSElement once it has the specified attribute
+     */
+    public CSElement waitForAttribute(String attribute, String value, int timeoutSeconds) {
+        logger.debug("Waiting for element to have attribute: " + attribute + " with value: " + value + 
+                " with timeout: " + timeoutSeconds);
+        WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(timeoutSeconds));
+        wait.until(ExpectedConditions.attributeToBe(element, attribute, value));
+        return this;
+    }
+    
+    /**
+     * Waits for a condition to be true for the element.
+     * 
+     * @param <T> The return type of the condition
+     * @param condition The condition to wait for
+     * @return The value returned by the condition function
+     */
+    public <T> T waitFor(Function<WebElement, T> condition) {
+        logger.debug("Waiting for custom condition");
+        WebDriverWait wait = new WebDriverWait(driver, 
+                Duration.ofSeconds(ConfigurationManager.getInstance().getFrameworkConfig().getExplicitWaitSeconds()));
+        return wait.until(driver -> condition.apply(element));
+    }
+    
+    /**
+     * Waits for a condition to be true for the element with the specified timeout.
+     * 
+     * @param <T> The return type of the condition
+     * @param condition The condition to wait for
+     * @param timeoutSeconds The timeout in seconds
+     * @return The value returned by the condition function
+     */
+    public <T> T waitFor(Function<WebElement, T> condition, int timeoutSeconds) {
+        logger.debug("Waiting for custom condition with timeout: " + timeoutSeconds);
+        WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(timeoutSeconds));
+        return wait.until(driver -> condition.apply(element));
+    }
+    
+    /**
+     * Takes a screenshot of the element.
+     * 
+     * @param fileName The name to give the screenshot file
+     * @return The absolute path to the screenshot file
+     */
+    public String takeScreenshot(String fileName) {
+        logger.debug("Taking screenshot of element: " + fileName);
+        File screenshotFile = element.getScreenshotAs(OutputType.FILE);
+        return screenshotManager.saveScreenshot(screenshotFile, fileName);
+    }
+    
+    /**
+     * Submits a form by clicking the form's submit button if present, or by submitting the form using JavaScript.
+     */
+    public void submitForm() {
+        logger.debug("Submitting form");
+        try {
+            // Try to find and click the submit button
+            List<WebElement> submitButtons = driver.findElements(By.cssSelector("input[type='submit'], button[type='submit']"));
+            if (!submitButtons.isEmpty()) {
+                submitButtons.get(0).click();
+                return;
+            }
+            
+            // If no submit button, try to submit the form using JavaScript
+            JavascriptExecutor js = (JavascriptExecutor) driver;
+            js.executeScript("arguments[0].form.submit();", element);
+        } catch (Exception e) {
+            // If both methods fail, try to submit the form element directly
+            try {
+                element.submit();
+            } catch (Exception ex) {
+                throw new RuntimeException("Failed to submit form", ex);
+            }
+        }
+    }
+    
+    /**
+     * Types text into the element with optional clearing of existing text.
+     * 
+     * @param text The text to type
+     * @param clear Whether to clear existing text
+     * @return The CSElement for method chaining
+     */
+    public CSElement type(String text, boolean clear) {
+        if (clear) {
+            element.clear();
+        }
+        element.sendKeys(text);
+        return this;
+    }
+    
+    /**
+     * Types text into the element after clearing existing text.
+     * 
+     * @param text The text to type
+     * @return The CSElement for method chaining
+     */
+    public CSElement type(String text) {
+        return type(text, true);
+    }
+    
+    /**
+     * Types text slowly into the element, simulating human typing.
+     * 
+     * @param text The text to type
+     * @param delayMillis The delay between characters in milliseconds
+     * @return The CSElement for method chaining
+     */
+    public CSElement typeSlowly(String text, int delayMillis) {
+        logger.debug("Typing slowly: " + text + " with delay: " + delayMillis);
+        element.clear();
+        
+        for (char c : text.toCharArray()) {
+            element.sendKeys(String.valueOf(c));
+            try {
+                Thread.sleep(delayMillis);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                break;
+            }
+        }
+        
+        return this;
+    }
+    
+    /**
+     * Types text slowly into the element, simulating human typing with a default delay.
+     * 
+     * @param text The text to type
+     * @return The CSElement for method chaining
+     */
+    public CSElement typeSlowly(String text) {
+        return typeSlowly(text, 100);
+    }
+    
+    /**
+     * Hovers over the element.
+     * 
+     * @return The CSElement for method chaining
+     */
+    public CSElement hover() {
+        logger.debug("Hovering over element");
+        Actions actions = new Actions(driver);
+        actions.moveToElement(element).perform();
+        return this;
+    }
+    
+    /**
+     * Right-clicks the element.
+     * 
+     * @return The CSElement for method chaining
+     */
+    public CSElement rightClick() {
+        logger.debug("Right-clicking element");
+        Actions actions = new Actions(driver);
+        actions.contextClick(element).perform();
+        return this;
+    }
+    
+    /**
+     * Double-clicks the element.
+     * 
+     * @return The CSElement for method chaining
+     */
+    public CSElement doubleClick() {
+        logger.debug("Double-clicking element");
+        Actions actions = new Actions(driver);
+        actions.doubleClick(element).perform();
+        return this;
+    }
+    
+    /**
+     * Drags the element to the specified target element.
+     * 
+     * @param target The target element
+     * @return The CSElement for method chaining
+     */
+    public CSElement dragAndDropTo(WebElement target) {
+        logger.debug("Dragging and dropping element");
+        Actions actions = new Actions(driver);
+        actions.dragAndDrop(element, target).perform();
+        return this;
+    }
+    
+    /**
+     * Drags the element to the specified offset.
+     * 
+     * @param xOffset The x offset
+     * @param yOffset The y offset
+     * @return The CSElement for method chaining
+     */
+    public CSElement dragAndDropBy(int xOffset, int yOffset) {
+        logger.debug("Dragging and dropping element by offset: " + xOffset + ", " + yOffset);
+        Actions actions = new Actions(driver);
+        actions.dragAndDropBy(element, xOffset, yOffset).perform();
+        return this;
+    }
+    
+    /**
+     * Presses and holds the mouse button on the element.
+     * 
+     * @return The CSElement for method chaining
+     */
+    public CSElement clickAndHold() {
+        logger.debug("Clicking and holding element");
+        Actions actions = new Actions(driver);
+        actions.clickAndHold(element).perform();
+        return this;
+    }
+    
+    /**
+     * Releases the mouse button.
+     * 
+     * @return The CSElement for method chaining
+     */
+    public CSElement release() {
+        logger.debug("Releasing element");
+        Actions actions = new Actions(driver);
+        actions.release().perform();
+        return this;
+    }
+    
+    /**
+     * Sets the attribute value of the element using JavaScript.
+     * 
+     * @param attribute The attribute to set
+     * @param value The value to set
+     * @return The CSElement for method chaining
+     */
+    public CSElement setAttribute(String attribute, String value) {
+        logger.debug("Setting attribute: " + attribute + " to value: " + value);
+        JavascriptExecutor js = (JavascriptExecutor) driver;
+        js.executeScript("arguments[0].setAttribute(arguments[1], arguments[2]);", element, attribute, value);
+        return this;
+    }
+    
+    /**
+     * Sets the value of the element using JavaScript.
+     * 
+     * @param value The value to set
+     * @return The CSElement for method chaining
+     */
+    public CSElement setValue(String value) {
+        logger.debug("Setting value to: " + value);
+        JavascriptExecutor js = (JavascriptExecutor) driver;
+        js.executeScript("arguments[0].value = arguments[1];", element, value);
+        return this;
+    }
+    
+    /**
+     * Checks if the element is displayed and enabled.
+     * 
+     * @return true if the element is displayed and enabled, false otherwise
+     */
+    public boolean isInteractable() {
+        return element.isDisplayed() && element.isEnabled();
+    }
+    
+    /**
+     * Gets all child elements matching the specified locator.
+     * 
+     * @param locator The locator to find child elements
+     * @return A list of CSElement objects for the child elements
+     */
+    public List<CSElement> findAll(By locator) {
+        logger.debug("Finding all child elements with locator: " + locator);
+        List<WebElement> childElements = element.findElements(locator);
+        return childElements.stream()
+                .map(childElement -> new CSElement(childElement, driver, locator))
+                .collect(Collectors.toList());
+    }
+    
+    /**
+     * Gets the first child element matching the specified locator.
+     * 
+     * @param locator The locator to find the child element
+     * @return A CSElement object for the child element
+     * @throws NoSuchElementException if no child element is found
+     */
+    public CSElement find(By locator) {
+        logger.debug("Finding child element with locator: " + locator);
+        WebElement childElement = element.findElement(locator);
+        return new CSElement(childElement, driver, locator);
+    }
+    
+    /**
+     * Gets the text of the element with normalization.
+     * 
+     * @return The text of the element with normalized whitespace
+     */
+    public String getTextNormalized() {
+        String text = element.getText();
+        return text != null ? text.trim().replaceAll("\\s+", " ") : "";
+    }
+    
+    /**
+     * Gets the value of the element.
+     * 
+     * @return The value of the element
+     */
+    public String getValue() {
+        return element.getAttribute("value");
+    }
+    
+    /**
+     * Gets the inner HTML of the element.
+     * 
+     * @return The inner HTML of the element
+     */
+    public String getInnerHtml() {
+        return element.getAttribute("innerHTML");
+    }
+    
+    /**
+     * Gets the outer HTML of the element.
+     * 
+     * @return The outer HTML of the element
+     */
+    public String getOuterHtml() {
+        return element.getAttribute("outerHTML");
+    }
+    
+    /**
+     * Gets the CSS property value of the element.
+     * 
+     * @param propertyName The name of the CSS property
+     * @return The value of the CSS property
+     */
+    public String getCssProperty(String propertyName) {
+        return element.getCssValue(propertyName);
+    }
+    
+    /**
+     * Checks if the element has the specified class.
+     * 
+     * @param className The class name to check
+     * @return true if the element has the specified class, false otherwise
+     */
+    public boolean hasClass(String className) {
+        String classAttribute = element.getAttribute("class");
+        if (classAttribute == null) {
+            return false;
+        }
+        
+        String[] classes = classAttribute.split("\\s+");
+        for (String cls : classes) {
+            if (cls.equals(className)) {
+                return true;
+            }
+        }
+        
+        return false;
+    }
+    
+    /**
+     * Checks if the element has the specified attribute.
+     * 
+     * @param attributeName The attribute name to check
+     * @return true if the element has the specified attribute, false otherwise
+     */
+    public boolean hasAttribute(String attributeName) {
+        String attribute = element.getAttribute(attributeName);
+        return attribute != null;
+    }
+    
+    /**
+     * Checks if the element contains the specified text.
+     * 
+     * @param text The text to check
+     * @return true if the element contains the specified text, false otherwise
+     */
+    public boolean containsText(String text) {
+        String elementText = element.getText();
+        return elementText != null && elementText.contains(text);
+    }
+    
+    /**
+     * Performs a click with retry logic.
+     * 
+     * @param maxRetries The maximum number of retries
+     * @param retryIntervalMillis The interval between retries in milliseconds
+     * @return The CSElement for method chaining
+     */
+    public CSElement clickWithRetry(int maxRetries, long retryIntervalMillis) {
+        logger.debug("Clicking element with retry: " + maxRetries + ", interval: " + retryIntervalMillis);
+        
+        int retries = 0;
+        while (retries < maxRetries) {
+            try {
+                element.click();
+                return this;
+            } catch (Exception e) {
+                retries++;
+                logger.warn("Click failed, retrying (" + retries + "/" + maxRetries + "): " + e.getMessage());
+                
+                if (retries >= maxRetries) {
+                    throw e;
+                }
+                
+                try {
+                    Thread.sleep(retryIntervalMillis);
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                    throw new RuntimeException("Click interrupted", ie);
+                }
+            }
+        }
+        
+        return this;
+    }
+    
+    /**
+     * Performs a click with retry logic using default values.
+     * 
+     * @return The CSElement for method chaining
+     */
+    public CSElement clickWithRetry() {
+        return clickWithRetry(3, 500);
+    }
+    
+    /**
+     * Checks if the element is stale.
+     * 
+     * @return true if the element is stale, false otherwise
+     */
+    public boolean isStale() {
+        try {
+            element.isEnabled();
+            return false;
+        } catch (StaleElementReferenceException e) {
+            return true;
+        }
+    }
+    
+    /**
+     * Refreshes the element if it is stale.
+     * 
+     * @return The refreshed CSElement
+     * @throws NoSuchElementException if the element cannot be refreshed
+     */
+    public CSElement refresh() {
+        if (!isStale()) {
+            return this;
+        }
+        
+        logger.debug("Refreshing stale element");
+        
+        if (locator == null) {
+            throw new IllegalStateException("Cannot refresh element: locator is null");
+        }
+        
+        WebElement refreshedElement = driver.findElement(locator);
+        return new CSElement(refreshedElement, driver, locator);
+    }
+    
+    /**
+     * Waits for animations to complete on the element.
+     * 
+     * @return The CSElement for method chaining
+     */
+    public CSElement waitForAnimations() {
+        logger.debug("Waiting for animations to complete");
+        JavascriptExecutor js = (JavascriptExecutor) driver;
+        WebDriverWait wait = new WebDriverWait(driver, 
+                Duration.ofSeconds(ConfigurationManager.getInstance().getFrameworkConfig().getExplicitWaitSeconds()));
+        
+        wait.until(driver -> {
+            try {
+                String script = 
+                        "var el = arguments[0];" +
+                        "var computedStyle = window.getComputedStyle(el);" +
+                        "var animationName = computedStyle.getPropertyValue('animation-name');" +
+                        "var transitionDuration = computedStyle.getPropertyValue('transition-duration');" +
+                        "var animationDuration = computedStyle.getPropertyValue('animation-duration');" +
+                        "return animationName == 'none' && " +
+                        "      (transitionDuration == '0s' || transitionDuration == '') && " +
+                        "      (animationDuration == '0s' || animationDuration == '');";
+                return (Boolean) js.executeScript(script, element);
+            } catch (Exception e) {
+                return false;
+            }
+        });
+        
+        return this;
+    }
+    
+    /**
+     * Performs a force click using JavaScript.
+     * 
+     * @return The CSElement for method chaining
+     */
+    public CSElement forceClick() {
+        logger.debug("Force clicking element using JavaScript");
+        JavascriptExecutor js = (JavascriptExecutor) driver;
+        js.executeScript("arguments[0].click();", element);
+        return this;
+    }
+    
+    /**
+     * Gets the computed style of the element.
+     * 
+     * @param property The CSS property to get
+     * @return The computed style value
+     */
+    public String getComputedStyle(String property) {
+        logger.debug("Getting computed style: " + property);
+        JavascriptExecutor js = (JavascriptExecutor) driver;
+        return (String) js.executeScript(
+                "return window.getComputedStyle(arguments[0]).getPropertyValue(arguments[1]);", 
+                element, property);
+    }
+    
+    /**
+     * Gets all computed styles of the element.
+     * 
+     * @return A map of computed style properties and values
+     */
+    @SuppressWarnings("unchecked")
+    public java.util.Map<String, String> getAllComputedStyles() {
+        logger.debug("Getting all computed styles");
+        JavascriptExecutor js = (JavascriptExecutor) driver;
+        return (java.util.Map<String, String>) js.executeScript(
+                "var styles = window.getComputedStyle(arguments[0]);" +
+                "var result = {};" +
+                "for (var i = 0; i < styles.length; i++) {" +
+                "    var prop = styles[i];" +
+                "    result[prop] = styles.getPropertyValue(prop);" +
+                "}" +
+                "return result;", 
+                element);
+    }
+    
+    /**
+     * Sends keyboard shortcuts to the element.
+     * 
+     * @param keys The keys to send
+     * @return The CSElement for method chaining
+     */
+    public CSElement sendShortcut(CharSequence... keys) {
+        logger.debug("Sending keyboard shortcut");
+        Actions actions = new Actions(driver);
+        actions.sendKeys(element, keys).perform();
+        return this;
+    }
+    
+    /**
+     * Sends Control+A to select all text.
+     * 
+     * @return The CSElement for method chaining
+     */
+    public CSElement selectAll() {
+        logger.debug("Selecting all text");
+        if (System.getProperty("os.name").toLowerCase().contains("mac")) {
+            return sendShortcut(Keys.COMMAND, "a");
+        } else {
+            return sendShortcut(Keys.CONTROL, "a");
+        }
+    }
+    
+    /**
+     * Sends Control+C to copy text.
+     * 
+     * @return The CSElement for method chaining
+     */
+    public CSElement copy() {
+        logger.debug("Copying text");
+        if (System.getProperty("os.name").toLowerCase().contains("mac")) {
+            return sendShortcut(Keys.COMMAND, "c");
+        } else {
+            return sendShortcut(Keys.CONTROL, "c");
+        }
+    }
+    
+    /**
+     * Sends Control+V to paste text.
+     * 
+     * @return The CSElement for method chaining
+     */
+    public CSElement paste() {
+        logger.debug("Pasting text");
+        if (System.getProperty("os.name").toLowerCase().contains("mac")) {
+            return sendShortcut(Keys.COMMAND, "v");
+        } else {
+            return sendShortcut(Keys.CONTROL, "v");
+        }
+    }
+    
+    /**
+     * Executes JavaScript on the element.
+     * 
+     * @param script The JavaScript to execute
+     * @param args The arguments to pass to the script
+     * @return The result of the script execution
+     */
+    public Object executeScript(String script, Object... args) {
+        logger.debug("Executing JavaScript on element: " + script);
+        JavascriptExecutor js = (JavascriptExecutor) driver;
+        
+        // Add the element as the first argument
+        Object[] allArgs = new Object[args.length + 1];
+        allArgs[0] = element;
+        System.arraycopy(args, 0, allArgs, 1, args.length);
+        
+        return js.executeScript(script, allArgs);
+    }
+    
+    // WebElement interface methods
+    
+    @Override
+    public void click() {
+        logger.debug("Clicking element");
+        element.click();
+    }
+    
+    @Override
+    public void submit() {
+        logger.debug("Submitting element");
+        element.submit();
+    }
+    
+    // Continuation of com/cstestforge/framework/selenium/java/element/CSElement.java
+    @Override
+    public void sendKeys(CharSequence... keysToSend) {
+        logger.debug("Sending keys to element");
+        element.sendKeys(keysToSend);
+    }
+    
+    @Override
+    public void clear() {
+        logger.debug("Clearing element");
+        element.clear();
+    }
+    
+    @Override
+    public String getTagName() {
+        return element.getTagName();
+    }
+    
+    @Override
+    public String getAttribute(String name) {
+        return element.getAttribute(name);
+    }
+    
+    @Override
+    public boolean isSelected() {
+        return element.isSelected();
+    }
+    
+    @Override
+    public boolean isEnabled() {
+        return element.isEnabled();
+    }
+    
+    @Override
+    public String getText() {
+        return element.getText();
+    }
+    
+    @Override
+    public List<WebElement> findElements(By by) {
+        return element.findElements(by);
+    }
+    
+    @Override
+    public WebElement findElement(By by) {
+        return element.findElement(by);
+    }
+    
+    @Override
+    public boolean isDisplayed() {
+        return element.isDisplayed();
+    }
+    
+    @Override
+    public Point getLocation() {
+        return element.getLocation();
+    }
+    
+    @Override
+    public Dimension getSize() {
+        return element.getSize();
+    }
+    
+    @Override
+    public Rectangle getRect() {
+        return element.getRect();
+    }
+    
+    @Override
+    public String getCssValue(String propertyName) {
+        return element.getCssValue(propertyName);
+    }
+    
+    @Override
+    public <X> X getScreenshotAs(OutputType<X> target) {
+        return element.getScreenshotAs(target);
+    }
+}
+
+
+// com/cstestforge/framework/selenium/java/listeners/CSWebDriverEventListener.java
+package com.cstestforge.framework.selenium.java.listeners;
+
+import org.openqa.selenium.Alert;
+import org.openqa.selenium.By;
+import org.openqa.selenium.JavascriptExecutor;
+import org.openqa.selenium.OutputType;
+import org.openqa.selenium.TakesScreenshot;
+import org.openqa.selenium.WebDriver;
+import org.openqa.selenium.WebElement;
+import org.openqa.selenium.interactions.Interactive;
+import org.openqa.selenium.interactions.Sequence;
+import org.openqa.selenium.support.events.WebDriverListener;
+
+import com.cstestforge.framework.core.config.ConfigurationManager;
+import com.cstestforge.framework.core.reporting.CSReporter;
+import com.cstestforge.framework.core.utils.CSLogger;
+import com.cstestforge.framework.core.utils.CSScreenshotManager;
+
+import java.io.File;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.net.URL;
+import java.time.Duration;
+import java.util.Collection;
+import java.util.List;
+
+/**
+ * Event listener for WebDriver events to log actions, take screenshots, and report status.
+ * This class is used to monitor WebDriver activity and perform additional actions.
+ */
+public class CSWebDriverEventListener implements WebDriverListener {
+    private final CSLogger logger = new CSLogger(CSWebDriverEventListener.class);
+    private final CSScreenshotManager screenshotManager = new CSScreenshotManager();
+    private final boolean logElementText;
+    private final boolean takeScreenshotOnClick;
+    private final boolean takeScreenshotOnException;
+    private final boolean takeScreenshotOnNavigate;
+    private final boolean highlightElements;
+    
+    public CSWebDriverEventListener() {
+        this.logElementText = ConfigurationManager.getInstance().getFrameworkConfig().isLogElementText();
+        this.takeScreenshotOnClick = ConfigurationManager.getInstance().getFrameworkConfig().isTakeScreenshotOnClick();
+        this.takeScreenshotOnException = ConfigurationManager.getInstance().getFrameworkConfig().isTakeScreenshotOnException();
+        this.takeScreenshotOnNavigate = ConfigurationManager.getInstance().getFrameworkConfig().isTakeScreenshotOnNavigate();
+        this.highlightElements = ConfigurationManager.getInstance().getFrameworkConfig().isHighlightElements();
+    }
+    
+    /**
+     * Called before a navigation command is executed.
+     */
+    @Override
+    public void beforeGet(WebDriver driver, String url) {
+        logger.info("Navigating to: " + url);
+        CSReporter.getInstance().logInfo("Navigating to: " + url);
+    }
+    
+    /**
+     * Called after a navigation command is executed.
+     */
+    @Override
+    public void afterGet(WebDriver driver, String url) {
+        String title = driver.getTitle();
+        logger.info("Navigated to: " + url + " (Title: " + title + ")");
+        CSReporter.getInstance().logInfo("Navigated to: " + url + " (Title: " + title + ")");
+        
+        if (takeScreenshotOnNavigate) {
+            takeScreenshot(driver, "navigate_to_" + sanitizeUrl(url));
+        }
+    }
+    
+    /**
+     * Called before finding an element.
+     */
+    @Override
+    public void beforeFindElement(WebDriver driver, By locator) {
+        logger.debug("Finding element with locator: " + locator);
+    }
+    
+    /**
+     * Called after finding an element.
+     */
+    @Override
+    public void afterFindElement(WebDriver driver, By locator, WebElement result) {
+        if (result != null) {
+            logger.debug("Found element with locator: " + locator);
+            
+            if (highlightElements) {
+                highlightElement(driver, result);
+            }
+        } else {
+            logger.debug("Element not found with locator: " + locator);
+        }
+    }
+    
+    /**
+     * Called before finding multiple elements.
+     */
+    @Override
+    public void beforeFindElements(WebDriver driver, By locator) {
+        logger.debug("Finding elements with locator: " + locator);
+    }
+    
+    /**
+     * Called after finding multiple elements.
+     */
+    @Override
+    public void afterFindElements(WebDriver driver, By locator, List<WebElement> result) {
+        logger.debug("Found " + (result != null ? result.size() : 0) + " elements with locator: " + locator);
+    }
+    
+    /**
+     * Called before clicking an element.
+     */
+    @Override
+    public void beforeClick(WebElement element) {
+        String elementDescription = getElementDescription(element);
+        logger.info("Clicking on element: " + elementDescription);
+        CSReporter.getInstance().logInfo("Clicking on element: " + elementDescription);
+        
+        if (highlightElements) {
+            highlightElement(element);
+        }
+    }
+    
+    /**
+     * Called after clicking an element.
+     */
+    @Override
+    public void afterClick(WebElement element) {
+        logger.debug("Clicked on element: " + getElementDescription(element));
+        
+        if (takeScreenshotOnClick) {
+            takeScreenshot(element, "click_" + getElementId(element));
+        }
+    }
+    
+    /**
+     * Called before sending keys to an element.
+     */
+    @Override
+    public void beforeSendKeys(WebElement element, CharSequence... keysToSend) {
+        String keys = keysToSend != null ? String.valueOf(keysToSend) : "null";
+        String elementDescription = getElementDescription(element);
+        boolean isPasswordField = isPasswordField(element);
+        
+        if (isPasswordField) {
+            keys = "********";
+        }
+        
+        logger.info("Sending keys to element: " + elementDescription + ", keys: " + keys);
+        CSReporter.getInstance().logInfo("Sending keys to element: " + elementDescription + 
+                (isPasswordField ? ", keys: ********" : ", keys: " + keys));
+        
+        if (highlightElements) {
+            highlightElement(element);
+        }
+    }
+    
+    /**
+     * Called after sending keys to an element.
+     */
+    @Override
+    public void afterSendKeys(WebElement element, CharSequence... keysToSend) {
+        logger.debug("Sent keys to element: " + getElementDescription(element));
+    }
+    
+    /**
+     * Called before clearing an element.
+     */
+    @Override
+    public void beforeClear(WebElement element) {
+        String elementDescription = getElementDescription(element);
+        logger.info("Clearing element: " + elementDescription);
+        CSReporter.getInstance().logInfo("Clearing element: " + elementDescription);
+        
+        if (highlightElements) {
+            highlightElement(element);
+        }
+    }
+    
+    /**
+     * Called after clearing an element.
+     */
+    @Override
+    public void afterClear(WebElement element) {
+        logger.debug("Cleared element: " + getElementDescription(element));
+    }
+    
+    /**
+     * Called before executing JavaScript.
+     */
+    @Override
+    public void beforeExecuteScript(WebDriver driver, String script, Object[] args) {
+        logger.debug("Executing JavaScript: " + script);
+    }
+    
+    /**
+     * Called after executing JavaScript.
+     */
+    @Override
+    public void afterExecuteScript(WebDriver driver, String script, Object[] args, Object result) {
+        logger.debug("Executed JavaScript: " + script + ", result: " + (result != null ? result.toString() : "null"));
+    }
+    
+    /**
+     * Called before navigating back.
+     */
+    @Override
+    public void beforeBack(WebDriver driver) {
+        logger.info("Navigating back");
+        CSReporter.getInstance().logInfo("Navigating back");
+    }
+    
+    /**
+     * Called after navigating back.
+     */
+    @Override
+    public void afterBack(WebDriver driver) {
+        String title = driver.getTitle();
+        logger.info("Navigated back (Title: " + title + ")");
+        CSReporter.getInstance().logInfo("Navigated back (Title: " + title + ")");
+        
+        if (takeScreenshotOnNavigate) {
+            takeScreenshot(driver, "navigate_back");
+        }
+    }
+    
+    /**
+     * Called before navigating forward.
+     */
+    @Override
+    public void beforeForward(WebDriver driver) {
+        logger.info("Navigating forward");
+        CSReporter.getInstance().logInfo("Navigating forward");
+    }
+    
+    /**
+     * Called after navigating forward.
+     */
+    @Override
+    public void afterForward(WebDriver driver) {
+        String title = driver.getTitle();
+        logger.info("Navigated forward (Title: " + title + ")");
+        CSReporter.getInstance().logInfo("Navigated forward (Title: " + title + ")");
+        
+        if (takeScreenshotOnNavigate) {
+            takeScreenshot(driver, "navigate_forward");
+        }
+    }
+    
+    /**
+     * Called before refreshing the page.
+     */
+    @Override
+    public void beforeRefresh(WebDriver driver) {
+        logger.info("Refreshing page");
+        CSReporter.getInstance().logInfo("Refreshing page");
+    }
+    
+    /**
+     * Called after refreshing the page.
+     */
+    @Override
+    public void afterRefresh(WebDriver driver) {
+        String title = driver.getTitle();
+        logger.info("Refreshed page (Title: " + title + ")");
+        CSReporter.getInstance().logInfo("Refreshed page (Title: " + title + ")");
+        
+        if (takeScreenshotOnNavigate) {
+            takeScreenshot(driver, "refresh_page");
+        }
+    }
+    
+    /**
+     * Called before switching to an alert.
+     */
+    @Override
+    public void beforeSwitchToAlert(WebDriver driver) {
+        logger.info("Switching to alert");
+        CSReporter.getInstance().logInfo("Switching to alert");
+    }
+    
+    /**
+     * Called after switching to an alert.
+     */
+    @Override
+    public void afterSwitchToAlert(WebDriver driver, Alert alert) {
+        try {
+            String alertText = alert.getText();
+            logger.info("Switched to alert with text: " + alertText);
+            CSReporter.getInstance().logInfo("Switched to alert with text: " + alertText);
+        } catch (Exception e) {
+            logger.warn("Unable to get alert text: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * Called before any WebDriver method is called.
+     */
+    @Override
+    public void beforeAnyCall(Object target, Method method, Object[] args) {
+        // Only log specific methods at debug level
+        if (logger.isDebugEnabled() && (
+                method.getName().startsWith("get") || 
+                method.getName().startsWith("is") ||
+                method.getName().equals("getTitle") ||
+                method.getName().equals("getCurrentUrl"))) {
+            logger.debug("Before calling " + method.getName() + " on " + target.getClass().getSimpleName());
+        }
+    }
+    
+    /**
+     * Called after any WebDriver method is called.
+     */
+    @Override
+    public void afterAnyCall(Object target, Method method, Object[] args, Object result) {
+        // Only log specific methods at debug level
+        if (logger.isDebugEnabled() && (
+                method.getName().startsWith("get") || 
+                method.getName().startsWith("is") ||
+                method.getName().equals("getTitle") ||
+                method.getName().equals("getCurrentUrl"))) {
+            logger.debug("After calling " + method.getName() + " on " + target.getClass().getSimpleName() + 
+                    ", result: " + (result != null ? result.toString() : "null"));
+        }
+    }
+    
+    /**
+     * Called when an exception is thrown by WebDriver.
+     */
+    @Override
+    public void onError(Object target, Method method, Object[] args, InvocationTargetException e) {
+        Throwable cause = e.getTargetException();
+        logger.error("Error in " + method.getName() + " on " + target.getClass().getSimpleName() + 
+                ": " + cause.getMessage(), cause);
+        CSReporter.getInstance().logError("Error in " + method.getName() + ": " + cause.getMessage());
+        
+        if (takeScreenshotOnException && target instanceof WebDriver) {
+            takeScreenshot((WebDriver) target, "error_" + method.getName());
+        }
+    }
+    
+    /**
+     * Gets a description of an element for logging.
+     * 
+     * @param element The element to describe
+     * @return A description of the element
+     */
+    private String getElementDescription(WebElement element) {
+        if (element == null) {
+            return "null";
+        }
+        
+        try {
+            StringBuilder builder = new StringBuilder();
+            
+            // Add tag name if available
+            try {
+                String tagName = element.getTagName();
+                if (tagName != null && !tagName.isEmpty()) {
+                    builder.append(tagName);
+                }
+            } catch (Exception e) {
+                // Skip if not available
+            }
+            
+            // Add id if available
+            try {
+                String id = element.getAttribute("id");
+                if (id != null && !id.isEmpty()) {
+                    builder.append("#").append(id);
+                }
+            } catch (Exception e) {
+                // Skip if not available
+            }
+            
+            // Add class if available
+            try {
+                String className = element.getAttribute("class");
+                if (className != null && !className.isEmpty()) {
+                    builder.append(".").append(className.replace(" ", "."));
+                }
+            } catch (Exception e) {
+                // Skip if not available
+            }
+            
+            // Add name if available
+            try {
+                String name = element.getAttribute("name");
+                if (name != null && !name.isEmpty()) {
+                    builder.append("[name='").append(name).append("']");
+                }
+            } catch (Exception e) {
+                // Skip if not available
+            }
+            
+            // Add type if available
+            try {
+                String type = element.getAttribute("type");
+                if (type != null && !type.isEmpty()) {
+                    builder.append("[type='").append(type).append("']");
+                }
+            } catch (Exception e) {
+                // Skip if not available
+            }
+            
+            // Add value if available and element is not a password field
+            if (logElementText && !isPasswordField(element)) {
+                try {
+                    String value = element.getAttribute("value");
+                    if (value != null && !value.isEmpty()) {
+                        builder.append("[value='").append(value).append("']");
+                    }
+                } catch (Exception e) {
+                    // Skip if not available
+                }
+                
+                // Add text if available
+                try {
+                    String text = element.getText();
+                    if (text != null && !text.isEmpty()) {
+                        builder.append("[text='").append(text).append("']");
+                    }
+                } catch (Exception e) {
+                    // Skip if not available
+                }
+            }
+            
+            return builder.toString();
+        } catch (Exception e) {
+            return element.toString();
+        }
+    }
+    
+    /**
+     * Checks if an element is a password field.
+     * 
+     * @param element The element to check
+     * @return true if the element is a password field, false otherwise
+     */
+    private boolean isPasswordField(WebElement element) {
+        if (element == null) {
+            return false;
+        }
+        
+        try {
+            String type = element.getAttribute("type");
+            return "password".equalsIgnoreCase(type);
+        } catch (Exception e) {
+            return false;
+        }
+    }
+    
+    /**
+     * Highlights an element by changing its background color temporarily.
+     * 
+     * @param element The element to highlight
+     */
+    private void highlightElement(WebElement element) {
+        try {
+            WebDriver driver = getDriverFromElement(element);
+            if (driver != null) {
+                highlightElement(driver, element);
+            }
+        } catch (Exception e) {
+            logger.warn("Unable to highlight element: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * Highlights an element by changing its background color temporarily.
+     * 
+     * @param driver The WebDriver instance
+     * @param element The element to highlight
+     */
+    private void highlightElement(WebDriver driver, WebElement element) {
+        try {
+            if (driver instanceof JavascriptExecutor) {
+                JavascriptExecutor js = (JavascriptExecutor) driver;
+                
+                // Save original style
+                String originalStyle = (String) js.executeScript(
+                        "return arguments[0].getAttribute('style');", element);
+                
+                // Highlight element by setting a red border and yellow background
+                js.executeScript(
+                        "arguments[0].setAttribute('style', arguments[1]);", 
+                        element, 
+                        "border: 2px solid red; background-color: yellow; transition: all 300ms;");
+                
+                // Pause briefly for the highlight to be visible
+                pause(300);
+                
+                // Restore original style
+                js.executeScript(
+                        "arguments[0].setAttribute('style', arguments[1]);", 
+                        element, 
+                        originalStyle != null ? originalStyle : "");
+            }
+        } catch (Exception e) {
+            logger.warn("Unable to highlight element: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * Takes a screenshot of the current page.
+     * 
+     * @param driver The WebDriver instance
+     * @param name The base name for the screenshot
+     */
+    private void takeScreenshot(WebDriver driver, String name) {
+        try {
+            if (driver instanceof TakesScreenshot) {
+                File screenshotFile = ((TakesScreenshot) driver).getScreenshotAs(OutputType.FILE);
+                String screenshotPath = screenshotManager.saveScreenshot(screenshotFile, name + "_" + System.currentTimeMillis());
+                logger.debug("Screenshot saved: " + screenshotPath);
+                CSReporter.getInstance().attachScreenshot(screenshotPath, name);
+            }
+        } catch (Exception e) {
+            logger.warn("Unable to take screenshot: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * Takes a screenshot of the current page after locating an element.
+     * 
+     * @param element The element to focus on
+     * @param name The base name for the screenshot
+     */
+    private void takeScreenshot(WebElement element, String name) {
+        try {
+            WebDriver driver = getDriverFromElement(element);
+            if (driver != null) {
+                if (highlightElements) {
+                    highlightElement(driver, element);
+                }
+                takeScreenshot(driver, name);
+            }
+        } catch (Exception e) {
+            logger.warn("Unable to take screenshot: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * Gets the WebDriver instance from a WebElement.
+     * 
+     * @param element The WebElement
+     * @return The WebDriver instance, or null if not available
+     */
+    private WebDriver getDriverFromElement(WebElement element) {
+        try {
+            // Try to get the WebDriver instance using reflection
+            Method getWrappedDriver = element.getClass().getMethod("getWrappedDriver");
+            getWrappedDriver.setAccessible(true);
+            return (WebDriver) getWrappedDriver.invoke(element);
+        } catch (Exception e) {
+            logger.warn("Unable to get WebDriver from element: " + e.getMessage());
+            return null;
+        }
+    }
+    
+    /**
+     * Gets an ID for an element for use in screenshot names.
+     * 
+     * @param element The element
+     * @return An ID for the element
+     */
+    private String getElementId(WebElement element) {
+        if (element == null) {
+            return "unknown";
+        }
+        
+        try {
+            String id = element.getAttribute("id");
+            if (id != null && !id.isEmpty()) {
+                return id;
+            }
+            
+            String name = element.getAttribute("name");
+            if (name != null && !name.isEmpty()) {
+                return name;
+            }
+            
+            String className = element.getAttribute("class");
+            if (className != null && !className.isEmpty()) {
+                return className.replace(" ", "_");
+            }
+            
+            String tagName = element.getTagName();
+            if (tagName != null && !tagName.isEmpty()) {
+                return tagName;
+            }
+            
+            return element.hashCode() + "";
+        } catch (Exception e) {
+            return "element_" + System.currentTimeMillis();
+        }
+    }
+    
+    /**
+     * Sanitizes a URL for use in file names.
+     * 
+     * @param url The URL to sanitize
+     * @return The sanitized URL
+     */
+    private String sanitizeUrl(String url) {
+        if (url == null || url.isEmpty()) {
+            return "unknown";
+        }
+        
+        try {
+            URL parsedUrl = new URL(url);
+            String host = parsedUrl.getHost();
+            String path = parsedUrl.getPath();
+            
+            // Remove any trailing slash from the path
+            if (path.endsWith("/")) {
+                path = path.substring(0, path.length() - 1);
+            }
+            
+            // Remove any leading slash from the path
+            if (path.startsWith("/")) {
+                path = path.substring(1);
+            }
+            
+            // Replace slashes and other invalid characters with underscores
+            path = path.replace("/", "_")
+                    .replace("\\", "_")
+                    .replace(":", "_")
+                    .replace("*", "_")
+                    .replace("?", "_")
+                    .replace("\"", "_")
+                    .replace("<", "_")
+                    .replace(">", "_")
+                    .replace("|", "_")
+                    .replace(" ", "_");
+            
+            return host + (path.isEmpty() ? "" : "_" + path);
+        } catch (Exception e) {
+            return url.replaceAll("[^a-zA-Z0-9.-]", "_");
+        }
+    }
+    
+    /**
+     * Pauses execution for the specified duration.
+     * 
+     * @param millis The duration to pause in milliseconds
+     */
+    private void pause(long millis) {
+        try {
+            Thread.sleep(millis);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+    }
+}
+
+
