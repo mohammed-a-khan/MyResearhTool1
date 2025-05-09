@@ -6119,3 +6119,113 @@ public enum TestType {
 
 
 
+ActionType.java
+----------------------
+
+package com.cstestforge.model.action;
+
+/**
+ * Enumeration of supported action types in the CSTestForge framework.
+ * Each action type represents a specific testing operation that can be performed.
+ */
+public enum ActionType {
+    /**
+     * Click on an element.
+     */
+    CLICK,
+    
+    /**
+     * Type text into an input field.
+     */
+    TYPE,
+    
+    /**
+     * Select an option from a dropdown.
+     */
+    SELECT,
+    
+    /**
+     * Verify conditions or element states.
+     */
+    ASSERT,
+    
+    /**
+     * Wait for a condition to be met.
+     */
+    WAIT,
+    
+    /**
+     * Navigate to a URL.
+     */
+    NAVIGATE,
+    
+    /**
+     * Execute actions conditionally.
+     */
+    CONDITIONAL,
+    
+    /**
+     * Repeat actions multiple times.
+     */
+    LOOP,
+    
+    /**
+     * Supply test data from external sources.
+     */
+    DATA_PROVIDER,
+    
+    /**
+     * Execute custom code.
+     */
+    CUSTOM,
+    
+    /**
+     * Define and manipulate variables.
+     */
+    VARIABLE,
+    
+    /**
+     * Capture screenshot.
+     */
+    SCREENSHOT,
+    
+    /**
+     * Mouse over an element.
+     */
+    HOVER,
+    
+    /**
+     * Drag and drop elements.
+     */
+    DRAG_DROP,
+    
+    /**
+     * Switch to a different frame or iframe.
+     */
+    SWITCH_FRAME,
+    
+    /**
+     * Switch to a different window or tab.
+     */
+    SWITCH_WINDOW,
+    
+    /**
+     * Execute JavaScript code.
+     */
+    EXECUTE_SCRIPT,
+    
+    /**
+     * Upload a file.
+     */
+    FILE_UPLOAD,
+    
+    /**
+     * Press keyboard keys.
+     */
+    KEY_PRESS,
+    
+    /**
+     * Scroll the page or within an element.
+     */
+    SCROLL
+}
