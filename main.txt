@@ -147,20 +147,6 @@ public class CSTestForgeApplication {
     }
 
     /**
-     * Configures file storage service initialization.
-     * This ensures the file system storage is ready for use on startup.
-     * 
-     * @return CommandLineRunner for initialization
-     */
-    @Bean
-    public org.springframework.boot.CommandLineRunner init(com.cstestforge.service.storage.FileSystemStorageService fileSystemStorageService) {
-        return args -> {
-            // Initialize storage directories
-            fileSystemStorageService.init();
-        };
-    }
-
-    /**
      * Configures ObjectMapper for JSON serialization/deserialization.
      * This ensures consistent JSON handling across the application.
      * 
