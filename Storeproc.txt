@@ -1,0 +1,91 @@
+public static List<Map<String, Object>> executeStoredProcedure(String procedureName, List<Object> params) {
+    List<Map<String, Object>> rows = new ArrayList<>();
+    Connection conn = null;
+    CallableStatement stmt = null;
+    ResultSet rs = null;
+    
+    try {
+        conn = getConnection();
+        
+        // Build the call string with proper schema prefix
+        StringBuilder call = new StringBuilder("{call ");
+        if (!procedureName.contains(".")) {
+            call.append("dbo."); // Add schema if not present
+        }
+        call.append(procedureName);
+        
+        if (params != null && !params.isEmpty()) {
+            call.append("(");
+            for (int i = 0; i < params.size(); i++) {
+                if (i > 0) {
+                    call.append(", ");
+                }
+                call.append("?");
+            }
+            call.append(")");
+        }
+        call.append("}");
+        
+        System.out.println("Executing call: " + call.toString()); // Debug output
+        
+        stmt = conn.prepareCall(call.toString());
+        
+        // Set parameters
+        if (params != null) {
+            for (int i = 0; i < params.size(); i++) {
+                Object param = params.get(i);
+                System.out.println("Setting parameter " + (i+1) + ": " + param); // Debug output
+                stmt.setObject(i + 1, param);
+            }
+        }
+        
+        // Execute and check if we have results
+        boolean hasResults = stmt.execute();
+        
+        if (hasResults) {
+            rs = stmt.getResultSet();
+            
+            if (rs != null) {
+                int columnCount = rs.getMetaData().getColumnCount();
+                
+                while (rs.next()) {
+                    Map<String, Object> row = new HashMap<>();
+                    for (int i = 1; i <= columnCount; i++) {
+                        String columnName = rs.getMetaData().getColumnName(i);
+                        Object value = rs.getObject(i);
+                        row.put(columnName, value);
+                    }
+                    rows.add(row);
+                }
+            }
+        } else {
+            // Check if there are more result sets
+            while (stmt.getMoreResults()) {
+                rs = stmt.getResultSet();
+                if (rs != null) {
+                    int columnCount = rs.getMetaData().getColumnCount();
+                    
+                    while (rs.next()) {
+                        Map<String, Object> row = new HashMap<>();
+                        for (int i = 1; i <= columnCount; i++) {
+                            String columnName = rs.getMetaData().getColumnName(i);
+                            Object value = rs.getObject(i);
+                            row.put(columnName, value);
+                        }
+                        rows.add(row);
+                    }
+                }
+            }
+        }
+        
+        System.out.println("Retrieved " + rows.size() + " rows"); // Debug output
+        
+    } catch (SQLException e) {
+        System.err.println("SQL Error: " + e.getMessage());
+        e.printStackTrace();
+    } finally {
+        close(rs, stmt, conn);
+    }
+    
+    return rows;
+}
