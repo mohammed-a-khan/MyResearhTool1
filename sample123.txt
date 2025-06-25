@@ -1,0 +1,815 @@
+package com.qaf.framework.stepdefs;
+
+import com.qaf.framework.util.TestContextManager;
+import com.qaf.framework.util.SQLServerDBUtil;
+import com.qaf.framework.pages.InventoryMaintenanceItems;
+import com.qaf.framework.pages.ManageInventorySchedulePage;
+import com.qaf.framework.util.CommonFunctions;
+import com.qmetry.qaf.automation.step.QAFTestStep;
+import com.qmetry.qaf.automation.util.Reporter;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.json.JSONArray;
+import org.json.JSONObject;
+
+import java.text.SimpleDateFormat;
+import java.util.*;
+
+public class BunchesUIDataCaptureSteps {
+    
+    private static final Log logger = LogFactory.getLog(BunchesUIDataCaptureSteps.class);
+    private InventoryMaintenanceItems inventoryMaintenanceItemsPage = new InventoryMaintenanceItems();
+    private ManageInventorySchedulePage manageInventorySchedulePage = new ManageInventorySchedulePage();
+    private CommonFunctions commonFunctions = new CommonFunctions();
+    
+    @QAFTestStep(description = "I capture all bunches data from UI and prepare complete expected JSON for product {productId} with as of date {checkDate}")
+    public void captureAllBunchesDataAndPrepareJSON(String productId, String checkDate) {
+        logger.info("Starting complete bunches data capture for productId: " + productId + ", checkDate: " + checkDate);
+        
+        JSONObject expectedResponse = new JSONObject();
+        JSONArray bunchesArray = new JSONArray();
+        
+        try {
+            // Wait for loader and verify Items header
+            commonFunctions.waitForCDOFusionLoaderToDisappear(4);
+            inventoryMaintenanceItemsPage.getItemsHeader().waitForPresent(10000);
+            
+            // Get company ID once
+            String companyId = TestContextManager.getTestDataValueAsString("companyId");
+            
+            // Get row count from items table
+            int itemsTableRowCount = inventoryMaintenanceItemsPage.getItemsTableRowCount();
+            logger.info("Total bunches to process: " + (itemsTableRowCount - 1));
+            
+            // First, collect all article IDs and main quantities
+            Map<String, String[]> mainQuantitiesMap = new HashMap<>();
+            List<String> articleIds = new ArrayList<>();
+            
+            for (int row = 2; row <= itemsTableRowCount; row++) {
+                String articleId = inventoryMaintenanceItemsPage.getItemsTableArticleCodeLinkTextByRow(row).getText();
+                articleIds.add(articleId);
+                
+                String mainOriginal = inventoryMaintenanceItemsPage.getItemsTableRecordCellData(row, 8, "Main Qty / Initial Stock / Allocation /Batch Size (Original)").getText();
+                String mainCurrent = inventoryMaintenanceItemsPage.getItemsTableRecordCellData(row, 9, "Main Qty / Initial Stock / Allocation /Batch Size (Current)").getText();
+                
+                mainQuantitiesMap.put(articleId, new String[]{mainOriginal, mainCurrent});
+            }
+            
+            // Process each bunch one by one
+            for (int i = 0; i < articleIds.size(); i++) {
+                String currentArticleId = articleIds.get(i);
+                int rowNumber = i + 2; // Since we start from row 2
+                
+                logger.info("Processing bunch " + (i + 1) + " of " + articleIds.size() + " - ArticleId: " + currentArticleId);
+                
+                JSONObject bunch = captureSingleBunchData(companyId, currentArticleId, rowNumber, checkDate, mainQuantitiesMap.get(currentArticleId));
+                bunchesArray.put(bunch);
+                
+                // Navigate back to Items list for next bunch
+                if (i < articleIds.size() - 1) {
+                    navigateBackToItemsList();
+                }
+            }
+            
+            // After capturing all bunches, navigate to schedule page for multiplier effective dates
+            navigateToSchedulePage();
+            captureMultiplierEffectiveDatesForAllBunches(bunchesArray, checkDate);
+            
+            // Build complete expected response
+            expectedResponse.put("bunches", bunchesArray);
+            expectedResponse.put("systemError", JSONObject.NULL);
+            expectedResponse.put("responseMessageId", TestContextManager.getTestDataValueAsString("messageId"));
+            expectedResponse.put("validationErrorMessage", JSONObject.NULL);
+            expectedResponse.put("errorMessage", JSONObject.NULL);
+            
+            // Store the complete expected response
+            TestContextManager.setContext("expected.bunches.response", expectedResponse);
+            
+            Reporter.log("Successfully captured complete expected JSON for " + bunchesArray.length() + " bunches");
+            logger.info("Complete bunches data capture finished");
+            
+        } catch (Exception e) {
+            logger.error("Error capturing bunches data: " + e.getMessage(), e);
+            throw new RuntimeException("Failed to capture bunches data", e);
+        }
+    }
+    
+    private JSONObject captureSingleBunchData(String companyId, String articleId, int rowNumber, String checkDate, String[] mainQuantities) {
+        try {
+            JSONObject bunch = new JSONObject();
+            
+            // Basic fields
+            bunch.put("companyId", Integer.parseInt(companyId));
+            bunch.put("articleId", Integer.parseInt(articleId));
+            
+            // Click on Article/Code ID link
+            inventoryMaintenanceItemsPage.getItemsTableArticleCodeLinkByRow(rowNumber).click();
+            commonFunctions.waitForCDOFusionLoaderToDisappear(4);
+            inventoryMaintenanceItemsPage.getArticleInformationHeader().waitForPresent(10000);
+            
+            // Navigate to Master tab and capture data
+            inventoryMaintenanceItemsPage.getMasterTab().waitForPresent(10000);
+            inventoryMaintenanceItemsPage.getMasterTab().click();
+            commonFunctions.waitForCDOFusionLoaderToDisappear(4);
+            inventoryMaintenanceItemsPage.getArticleInformationHeader().waitForPresent(10000);
+            
+            // Capture all Master tab fields
+            bunch.put("productName", inventoryMaintenanceItemsPage.getMasterArticleInformationByFieldName("Article Name").getText());
+            bunch.put("referenceNumber", inventoryMaintenanceItemsPage.getMasterArticleInformationByFieldName("REFERENCE Number").getText());
+            
+            String barcode = inventoryMaintenanceItemsPage.getMasterArticleInformationByFieldName("BARCODE Number").getText();
+            bunch.put("barcode", barcode.isEmpty() ? JSONObject.NULL : barcode);
+            
+            bunch.put("unit", inventoryMaintenanceItemsPage.getMasterArticleInformationByFieldName("Unit").getText());
+            bunch.put("articleDate", inventoryMaintenanceItemsPage.getMasterArticleInformationByFieldName("Article Date").getText());
+            bunch.put("expiryDate", inventoryMaintenanceItemsPage.getMasterArticleInformationByFieldName("Expiry Date").getText());
+            bunch.put("currentPriceType", inventoryMaintenanceItemsPage.getMasterArticleInformationByFieldName("Price Type").getText());
+            bunch.put("originalPriceType", inventoryMaintenanceItemsPage.getMasterArticleInformationByFieldName("Initial Price Type").getText());
+            bunch.put("discountResetPeriod", inventoryMaintenanceItemsPage.getMasterArticleInformationByFieldName("Discount Reset Cycle").getText());
+            bunch.put("categoryType", inventoryMaintenanceItemsPage.getMasterArticleInformationByFieldName("Category Type").getText());
+            bunch.put("currentDeliveryPeriod", inventoryMaintenanceItemsPage.getMasterArticleInformationByFieldName("Delivery Period").getText());
+            bunch.put("currentStockCheckMethod", inventoryMaintenanceItemsPage.getMasterArticleInformationByFieldName("Stock Check Method").getText());
+            bunch.put("originalMarkupPercentage", Double.parseDouble(inventoryMaintenanceItemsPage.getMasterArticleInformationByFieldName("Initial Markup %").getText()));
+            bunch.put("originalPricePercentage", Double.parseDouble(inventoryMaintenanceItemsPage.getMasterArticleInformationByFieldName("Initial Price %").getText()));
+            
+            // Create articleDetails object
+            JSONObject articleDetails = new JSONObject();
+            
+            // Capture Operations
+            captureOperations(articleDetails, companyId, articleId);
+            
+            // Capture Article Movements
+            captureArticleMovements(articleDetails, companyId, articleId);
+            
+            // Capture Inventory Status Info
+            captureInventoryStatusInfo(articleDetails, companyId, articleId, checkDate, mainQuantities);
+            
+            bunch.put("articleDetails", articleDetails);
+            
+            return bunch;
+            
+        } catch (Exception e) {
+            logger.error("Error capturing single bunch data for articleId: " + articleId, e);
+            throw new RuntimeException("Failed to capture bunch data", e);
+        }
+    }
+    
+    private void captureOperations(JSONObject articleDetails, String companyId, String articleId) throws Exception {
+        inventoryMaintenanceItemsPage.getOperationsTab().waitForPresent(10000);
+        inventoryMaintenanceItemsPage.getOperationsTab().click();
+        inventoryMaintenanceItemsPage.getAddOperationButton().waitForPresent(10000);
+        
+        JSONArray articleOperations = new JSONArray();
+        int operationRowCount = inventoryMaintenanceItemsPage.getOperationsTableRowCount();
+        
+        for (int row = 2; row <= operationRowCount; row++) {
+            JSONObject operation = new JSONObject();
+            operation.put("companyId", Integer.parseInt(companyId));
+            operation.put("articleId", Integer.parseInt(articleId));
+            operation.put("operationDate", inventoryMaintenanceItemsPage.getOperationsTableDataByrowAndColumn(row, 2, "Operation Date").getText());
+            operation.put("operationType", inventoryMaintenanceItemsPage.getOperationsTableDataByrowAndColumn(row, 3, "Operation Type").getText());
+            operation.put("mainQuantity", parseAmount(inventoryMaintenanceItemsPage.getOperationsTableDataByrowAndColumn(row, 5, "Main Quantity (Units)").getText()));
+            operation.put("discountAmount", parseAmount(inventoryMaintenanceItemsPage.getOperationsTableDataByrowAndColumn(row, 6, "Discount Amount (Units)").getText()));
+            articleOperations.put(operation);
+        }
+        articleDetails.put("articleOperations", articleOperations);
+    }
+    
+    private void captureArticleMovements(JSONObject articleDetails, String companyId, String articleId) throws Exception {
+        inventoryMaintenanceItemsPage.getPricingTab().waitForPresent(10000);
+        inventoryMaintenanceItemsPage.getPricingTab().click();
+        commonFunctions.waitForCDOFusionLoaderToDisappear(4);
+        
+        JSONArray articleMovements = new JSONArray();
+        int movementRowCount = inventoryMaintenanceItemsPage.getRealChangesToPriceAndMarkupTableRowCount();
+        
+        for (int row = 2; row <= movementRowCount; row++) {
+            JSONObject movement = new JSONObject();
+            movement.put("companyId", Integer.parseInt(companyId));
+            movement.put("articleId", Integer.parseInt(articleId));
+            movement.put("modifyDate", inventoryMaintenanceItemsPage.getRealChangesToPriceAndMarkupTableDataByrowAndColumn(row, 1, "Modify Date").getText());
+            movement.put("currentCategoryPercentage", Double.parseDouble(inventoryMaintenanceItemsPage.getRealChangesToPriceAndMarkupTableDataByrowAndColumn(row, 2, "Category %").getText()));
+            movement.put("currentMarkupPercentage", Double.parseDouble(inventoryMaintenanceItemsPage.getRealChangesToPriceAndMarkupTableDataByrowAndColumn(row, 3, "Markup %").getText()));
+            movement.put("currentPricePercentage", Double.parseDouble(inventoryMaintenanceItemsPage.getRealChangesToPriceAndMarkupTableDataByrowAndColumn(row, 4, "Selling Price %").getText()));
+            articleMovements.put(movement);
+        }
+        articleDetails.put("articleMovements", articleMovements);
+    }
+    
+    private void captureInventoryStatusInfo(JSONObject articleDetails, String companyId, String articleId, 
+                                            String checkDate, String[] mainQuantities) throws Exception {
+        JSONArray inventoryStatusInfos = new JSONArray();
+        JSONObject inventoryInfo = new JSONObject();
+        
+        inventoryInfo.put("companyId", Integer.parseInt(companyId));
+        inventoryInfo.put("articleId", Integer.parseInt(articleId));
+        inventoryInfo.put("checkDate", checkDate);
+        inventoryInfo.put("mainQtyOriginalBatchSize", parseAmount(mainQuantities[0]));
+        inventoryInfo.put("mainQtyCurrentBatchSize", parseAmount(mainQuantities[1]));
+        
+        // Get current multiplier from Features tab
+        inventoryMaintenanceItemsPage.getFeaturesTab().waitForPresent(10000);
+        inventoryMaintenanceItemsPage.getFeaturesTab().click();
+        commonFunctions.waitForCDOFusionLoaderToDisappear(4);
+        
+        int multiplierHistoryRowCount = inventoryMaintenanceItemsPage.getMultiplierHistoryTableRowCount();
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+        SimpleDateFormat uiDateFormat = new SimpleDateFormat("M/d/yyyy");
+        Date checkDateObj = sdf.parse(checkDate);
+        
+        String currentMultiplier = "1.0";
+        for (int row = 2; row <= multiplierHistoryRowCount; row++) {
+            String checkDateStr = inventoryMaintenanceItemsPage.getMultiplierHistoryTableDataByrowAndColumn(row, 1, "Check Date").getText();
+            Date checkDateTableObj = uiDateFormat.parse(checkDateStr);
+            if (checkDateTableObj.compareTo(checkDateObj) <= 0) {
+                String articleMultiplier = inventoryMaintenanceItemsPage.getMultiplierHistoryTableDataByrowAndColumn(row, 2, "Article Multiplier").getText();
+                currentMultiplier = articleMultiplier.contains(".") ? articleMultiplier : articleMultiplier + ".0";
+            }
+        }
+        inventoryInfo.put("currentMultiplier", Double.parseDouble(currentMultiplier));
+        
+        // currentMultiplierEffDate will be set later from schedule page
+        inventoryInfo.put("currentMultiplierEffDate", JSONObject.NULL);
+        
+        // Capture all scores from database
+        captureAllScores(inventoryInfo, articleId, checkDate);
+        
+        // Capture all alert statuses from database
+        captureAllAlertStatuses(inventoryInfo, articleId, checkDate);
+        
+        inventoryStatusInfos.put(inventoryInfo);
+        articleDetails.put("inventoryStatusInfos", inventoryStatusInfos);
+    }
+    
+    private void captureAllScores(JSONObject inventoryInfo, String articleId, String checkDate) {
+        try {
+            SimpleDateFormat dbDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+            SimpleDateFormat reportDateFormat = new SimpleDateFormat("yyyy-MM-dd");
+            Date checkDateObj = reportDateFormat.parse(checkDate);
+            
+            // Process all score agencies
+            String[][] agencies = {
+                {"MR", "Alpha"},
+                {"FR", "Beta"},
+                {"SPR", "Gamma"},
+                {"DBRS", "Delta"},
+                {"KBRA", "Epsilon"}
+            };
+            
+            for (String[] agency : agencies) {
+                List<Object> params = Arrays.asList(Integer.parseInt(articleId), agency[0]);
+                List<Map<String, Object>> results = SQLServerDBUtil.executeStoredProcedure("dbo.Article_score_list", params);
+                
+                String originalScore = null, originalScoreDate = null;
+                String currentScore = null, currentScoreDate = null;
+                
+                for (Map<String, Object> row : results) {
+                    Date scoreDate = dbDateFormat.parse(row.get("Score Date").toString());
+                    Object scoreEndDateObj = row.get("Score End Date");
+                    
+                    if (scoreEndDateObj == null) {
+                        currentScore = row.get("Score").toString();
+                        currentScoreDate = reportDateFormat.format(scoreDate);
+                    } else {
+                        Date scoreEndDate = dbDateFormat.parse(scoreEndDateObj.toString());
+                        if (checkDateObj.compareTo(scoreDate) >= 0 && checkDateObj.compareTo(scoreEndDate) <= 0) {
+                            originalScore = row.get("Score").toString();
+                            originalScoreDate = reportDateFormat.format(scoreDate);
+                        }
+                    }
+                }
+                
+                if (currentScore == null) {
+                    currentScore = originalScore;
+                    currentScoreDate = originalScoreDate;
+                }
+                
+                inventoryInfo.put("originalScore" + agency[1], originalScore != null ? originalScore : JSONObject.NULL);
+                inventoryInfo.put("originalScoreEffDate" + agency[1], originalScoreDate != null ? originalScoreDate : JSONObject.NULL);
+                inventoryInfo.put("currentScore" + agency[1], currentScore != null ? currentScore : JSONObject.NULL);
+                inventoryInfo.put("currentScoreEffDate" + agency[1], currentScoreDate != null ? currentScoreDate : JSONObject.NULL);
+            }
+            
+        } catch (Exception e) {
+            logger.error("Error capturing scores for articleId: " + articleId, e);
+            // Set all scores to null in case of error
+            String[] agencies = {"Alpha", "Beta", "Gamma", "Delta", "Epsilon"};
+            for (String agency : agencies) {
+                inventoryInfo.put("originalScore" + agency, JSONObject.NULL);
+                inventoryInfo.put("originalScoreEffDate" + agency, JSONObject.NULL);
+                inventoryInfo.put("currentScore" + agency, JSONObject.NULL);
+                inventoryInfo.put("currentScoreEffDate" + agency, JSONObject.NULL);
+            }
+        }
+    }
+    
+    private void captureAllAlertStatuses(JSONObject inventoryInfo, String articleId, String checkDate) {
+        try {
+            SimpleDateFormat dbDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+            SimpleDateFormat reportDateFormat = new SimpleDateFormat("yyyy-MM-dd");
+            Date checkDateObj = reportDateFormat.parse(checkDate);
+            
+            String[][] agencies = {
+                {"MR", "Alpha"},
+                {"FR", "Beta"},
+                {"SPR", "Gamma"},
+                {"DBRS", "Delta"},
+                {"KBRA", "Epsilon"}
+            };
+            
+            for (String[] agency : agencies) {
+                List<Object> params = Arrays.asList(Integer.parseInt(articleId), agency[0]);
+                List<Map<String, Object>> results = SQLServerDBUtil.executeStoredProcedure("dbo.Article_Score_AlertList_list", params);
+                
+                String alertStatus = null;
+                String alertStatusDate = null;
+                
+                for (Map<String, Object> row : results) {
+                    Date alertlistDate = dbDateFormat.parse(row.get("Alertlist Date").toString());
+                    Object alertlistEndDateObj = row.get("Alertlist End Date");
+                    
+                    if (alertlistEndDateObj == null) {
+                        alertStatus = row.get("alertlist_status").toString();
+                        alertStatusDate = reportDateFormat.format(alertlistDate);
+                        break;
+                    } else {
+                        Date alertlistEndDate = dbDateFormat.parse(alertlistEndDateObj.toString());
+                        if (checkDateObj.compareTo(alertlistDate) >= 0 && checkDateObj.compareTo(alertlistEndDate) <= 0) {
+                            alertStatus = row.get("alertlist_status").toString();
+                            alertStatusDate = reportDateFormat.format(alertlistDate);
+                            break;
+                        }
+                    }
+                }
+                
+                inventoryInfo.put("alertStatus" + agency[1], alertStatus != null ? alertStatus : JSONObject.NULL);
+                inventoryInfo.put("alertStatusEffDate" + agency[1], alertStatusDate != null ? alertStatusDate : JSONObject.NULL);
+            }
+            
+        } catch (Exception e) {
+            logger.error("Error capturing alert statuses for articleId: " + articleId, e);
+            // Set all alert statuses to null in case of error
+            String[] agencies = {"Alpha", "Beta", "Gamma", "Delta", "Epsilon"};
+            for (String agency : agencies) {
+                inventoryInfo.put("alertStatus" + agency, JSONObject.NULL);
+                inventoryInfo.put("alertStatusEffDate" + agency, JSONObject.NULL);
+            }
+        }
+    }
+    
+    private void captureMultiplierEffectiveDatesForAllBunches(JSONArray bunchesArray, String checkDate) {
+        try {
+            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+            SimpleDateFormat scheduleFormat = new SimpleDateFormat("MM/dd/yyyy");
+            Date checkDateObj = sdf.parse(checkDate);
+            
+            commonFunctions.waitForCDOFusionLoaderToDisappear(4);
+            int scheduleRowCount = manageInventorySchedulePage.getProductScheduleTableDataRows();
+            List<Date> itemDeliveryDates = new ArrayList<>();
+            
+            // Collect all unique item delivery dates
+            for (int row = 1; row <= scheduleRowCount; row++) {
+                String itemDeliveryDateStr = manageInventorySchedulePage.getProductScheduleTableCellDataByRowAndColIndex(row, 5, "Item Delivery Date").getText();
+                if (!itemDeliveryDateStr.isEmpty()) {
+                    Date itemDeliveryDate = scheduleFormat.parse(itemDeliveryDateStr);
+                    if (!itemDeliveryDates.contains(itemDeliveryDate)) {
+                        itemDeliveryDates.add(itemDeliveryDate);
+                    }
+                }
+            }
+            
+            Collections.sort(itemDeliveryDates);
+            
+            // Find the appropriate effective date
+            String currentMultiplierEffDate = null;
+            for (int i = 0; i < itemDeliveryDates.size() - 1; i++) {
+                if (checkDateObj.after(itemDeliveryDates.get(i)) && checkDateObj.compareTo(itemDeliveryDates.get(i + 1)) <= 0) {
+                    currentMultiplierEffDate = sdf.format(itemDeliveryDates.get(i));
+                    break;
+                }
+            }
+            
+            // Update all bunches with the same currentMultiplierEffDate
+            for (int i = 0; i < bunchesArray.length(); i++) {
+                JSONObject bunch = bunchesArray.getJSONObject(i);
+                if (bunch.has("articleDetails")) {
+                    JSONObject articleDetails = bunch.getJSONObject("articleDetails");
+                    if (articleDetails.has("inventoryStatusInfos")) {
+                        JSONArray inventoryInfos = articleDetails.getJSONArray("inventoryStatusInfos");
+                        if (inventoryInfos.length() > 0) {
+                            JSONObject inventoryInfo = inventoryInfos.getJSONObject(0);
+                            inventoryInfo.put("currentMultiplierEffDate", currentMultiplierEffDate != null ? currentMultiplierEffDate : JSONObject.NULL);
+                        }
+                    }
+                }
+            }
+            
+        } catch (Exception e) {
+            logger.error("Error capturing multiplier effective dates: " + e.getMessage(), e);
+        }
+    }
+    
+    private void navigateBackToItemsList() {
+        // Implementation depends on your UI navigation
+        // This might involve clicking a back button or breadcrumb
+        logger.info("Navigating back to Items list");
+        // Add navigation logic here
+    }
+    
+    private void navigateToSchedulePage() {
+        // Implementation depends on your UI navigation
+        // This is handled by the feature file step
+        logger.info("Ready to navigate to schedule page");
+    }
+    
+    private double parseAmount(String amountStr) {
+        if (amountStr == null || amountStr.isEmpty()) return 0.0;
+        return Double.parseDouble(amountStr.replaceAll("[,\\s]", ""));
+    }
+}
+
+-----------------------------------------------------------------------------
+
+package com.qaf.framework.stepdefs;
+
+import com.qaf.framework.util.TestContextManager;
+import com.qaf.framework.util.ApiResponse;
+import com.qmetry.qaf.automation.step.QAFTestStep;
+import com.qmetry.qaf.automation.util.Reporter;
+import org.json.JSONObject;
+import org.json.JSONArray;
+import static org.testng.Assert.*;
+
+public class BunchesValidationSteps {
+    
+    @QAFTestStep(description = "I validate complete bunches API response against captured expected JSON")
+    public void validateCompleteBunchesResponse() {
+        // Get actual response from API
+        ApiResponse apiResponse = TestContextManager.getApiResponse();
+        String actualResponseStr = apiResponse.getResponseBody();
+        JSONObject actualResponse = new JSONObject(actualResponseStr);
+        
+        // Get expected response prepared from UI
+        JSONObject expectedResponse = (JSONObject) TestContextManager.getContext("expected.bunches.response");
+        
+        Reporter.log("=== Starting Complete Bunches Validation ===");
+        
+        // Validate response structure
+        validateResponseStructure(actualResponse, expectedResponse);
+        
+        // Validate bunches array
+        validateBunchesArray(actualResponse.getJSONArray("bunches"), expectedResponse.getJSONArray("bunches"));
+        
+        Reporter.log("=== Bunches Validation Completed Successfully ===");
+    }
+    
+    private void validateResponseStructure(JSONObject actual, JSONObject expected) {
+        // Validate top-level fields
+        assertEquals(actual.get("responseMessageId").toString(), expected.get("responseMessageId").toString(), 
+                    "responseMessageId mismatch");
+        
+        assertEquals(actual.get("errorMessage"), expected.get("errorMessage"), 
+                    "errorMessage should be null");
+        
+        assertEquals(actual.get("systemError"), expected.get("systemError"), 
+                    "systemError should be null");
+        
+        assertEquals(actual.get("validationErrorMessage"), expected.get("validationErrorMessage"), 
+                    "validationErrorMessage should be null");
+        
+        assertTrue(actual.has("bunches"), "Response missing bunches array");
+    }
+    
+    private void validateBunchesArray(JSONArray actualBunches, JSONArray expectedBunches) {
+        assertEquals(actualBunches.length(), expectedBunches.length(), 
+                    "Bunches count mismatch - Expected: " + expectedBunches.length() + ", Actual: " + actualBunches.length());
+        
+        Reporter.log("Validating " + expectedBunches.length() + " bunches");
+        
+        // Validate each bunch
+        for (int i = 0; i < expectedBunches.length(); i++) {
+            JSONObject expectedBunch = expectedBunches.getJSONObject(i);
+            int articleId = expectedBunch.getInt("articleId");
+            
+            // Find matching bunch in actual response by articleId
+            JSONObject actualBunch = findBunchByArticleId(actualBunches, articleId);
+            assertNotNull(actualBunch, "Bunch with articleId " + articleId + " not found in response");
+            
+            Reporter.log("Validating bunch " + (i + 1) + " with articleId: " + articleId);
+            validateSingleBunch(actualBunch, expectedBunch);
+        }
+    }
+    
+    private JSONObject findBunchByArticleId(JSONArray bunches, int articleId) {
+        for (int i = 0; i < bunches.length(); i++) {
+            JSONObject bunch = bunches.getJSONObject(i);
+            if (bunch.getInt("articleId") == articleId) {
+                return bunch;
+            }
+        }
+        return null;
+    }
+    
+    private void validateSingleBunch(JSONObject actual, JSONObject expected) {
+        // Validate all basic fields
+        validateField("companyId", actual, expected);
+        validateField("articleId", actual, expected);
+        validateField("productName", actual, expected);
+        validateField("referenceNumber", actual, expected);
+        validateField("barcode", actual, expected);
+        validateField("unit", actual, expected);
+        validateField("articleDate", actual, expected);
+        validateField("expiryDate", actual, expected);
+        validateField("currentPriceType", actual, expected);
+        validateField("originalPriceType", actual, expected);
+        validateField("discountResetPeriod", actual, expected);
+        validateField("categoryType", actual, expected);
+        validateField("currentDeliveryPeriod", actual, expected);
+        validateField("currentStockCheckMethod", actual, expected);
+        validateField("originalMarkupPercentage", actual, expected);
+        validateField("originalPricePercentage", actual, expected);
+        
+        // Validate articleDetails
+        assertTrue(actual.has("articleDetails"), "articleDetails missing in actual response");
+        assertTrue(expected.has("articleDetails"), "articleDetails missing in expected response");
+        
+        JSONObject actualDetails = actual.getJSONObject("articleDetails");
+        JSONObject expectedDetails = expected.getJSONObject("articleDetails");
+        
+        // Validate articleOperations
+        validateJSONArray("articleOperations", actualDetails, expectedDetails);
+        
+        // Validate articleMovements
+        validateJSONArray("articleMovements", actualDetails, expectedDetails);
+        
+        // Validate inventoryStatusInfos
+        validateInventoryStatusInfos(actualDetails, expectedDetails);
+    }
+    
+    private void validateField(String fieldName, JSONObject actual, JSONObject expected) {
+        assertTrue(actual.has(fieldName), "Field '" + fieldName + "' missing in actual response");
+        assertTrue(expected.has(fieldName), "Field '" + fieldName + "' missing in expected response");
+        
+        Object actualValue = actual.get(fieldName);
+        Object expectedValue = expected.get(fieldName);
+        
+        if (actualValue == JSONObject.NULL && expectedValue == JSONObject.NULL) {
+            Reporter.log("Field '" + fieldName + "' is null as expected");
+        } else if (actualValue instanceof Number && expectedValue instanceof Number) {
+            // Compare numbers with tolerance for floating point
+            double actualNum = ((Number) actualValue).doubleValue();
+            double expectedNum = ((Number) expectedValue).doubleValue();
+            assertEquals(actualNum, expectedNum, 0.0001, "Field '" + fieldName + "' mismatch");
+        } else {
+            assertEquals(actualValue.toString(), expectedValue.toString(), 
+                       "Field '" + fieldName + "' mismatch");
+        }
+    }
+    
+    private void validateJSONArray(String arrayName, JSONObject actual, JSONObject expected) {
+        assertTrue(actual.has(arrayName), "Array '" + arrayName + "' missing in actual response");
+        assertTrue(expected.has(arrayName), "Array '" + arrayName + "' missing in expected response");
+        
+        JSONArray actualArray = actual.getJSONArray(arrayName);
+        JSONArray expectedArray = expected.getJSONArray(arrayName);
+        
+        assertEquals(actualArray.length(), expectedArray.length(), 
+                    "Array '" + arrayName + "' size mismatch");
+        
+        // Validate each item in array
+        for (int i = 0; i < expectedArray.length(); i++) {
+            JSONObject actualItem = actualArray.getJSONObject(i);
+            JSONObject expectedItem = expectedArray.getJSONObject(i);
+            
+            // Validate all fields in the object
+            for (String key : expectedItem.keySet()) {
+                validateField(key, actualItem, expectedItem);
+            }
+        }
+    }
+    
+    private void validateInventoryStatusInfos(JSONObject actual, JSONObject expected) {
+        validateJSONArray("inventoryStatusInfos", actual, expected);
+        
+        // Additional validation for scores and alert statuses
+        JSONArray actualInventoryInfos = actual.getJSONArray("inventoryStatusInfos");
+        JSONArray expectedInventoryInfos = expected.getJSONArray("inventoryStatusInfos");
+        
+        for (int i = 0; i < expectedInventoryInfos.length(); i++) {
+            JSONObject actualInventory = actualInventoryInfos.getJSONObject(i);
+            JSONObject expectedInventory = expectedInventoryInfos.getJSONObject(i);
+            
+            // Validate all score agencies
+            String[] agencies = {"Alpha", "Beta", "Gamma", "Delta", "Epsilon"};
+            for (String agency : agencies) {
+                validateField("originalScore" + agency, actualInventory, expectedInventory);
+                validateField("originalScoreEffDate" + agency, actualInventory, expectedInventory);
+                validateField("currentScore" + agency, actualInventory, expectedInventory);
+                validateField("currentScoreEffDate" + agency, actualInventory, expectedInventory);
+                validateField("alertStatus" + agency, actualInventory, expectedInventory);
+                validateField("alertStatusEffDate" + agency, actualInventory, expectedInventory);
+            }
+        }
+    }
+    
+    @QAFTestStep(description = "I print the captured expected JSON for debugging")
+    public void printCapturedExpectedJSON() {
+        JSONObject expectedResponse = (JSONObject) TestContextManager.getContext("expected.bunches.response");
+        
+        if (expectedResponse != null) {
+            Reporter.log("=== Expected JSON Response ===");
+            Reporter.log(expectedResponse.toString(2));
+            
+            // Print summary
+            JSONArray bunches = expectedResponse.getJSONArray("bunches");
+            Reporter.log("Total bunches captured: " + bunches.length());
+            
+            for (int i = 0; i < bunches.length(); i++) {
+                JSONObject bunch = bunches.getJSONObject(i);
+                Reporter.log("Bunch " + (i + 1) + " - ArticleId: " + bunch.get("articleId") + 
+                           ", Product: " + bunch.get("productName"));
+            }
+        } else {
+            Reporter.log("No expected JSON response found in context");
+        }
+    }
+    
+    @QAFTestStep(description = "I print the actual API response JSON for debugging")
+    public void printActualAPIResponseJSON() {
+        ApiResponse apiResponse = TestContextManager.getApiResponse();
+        
+        if (apiResponse != null) {
+            JSONObject actualResponse = new JSONObject(apiResponse.getResponseBody());
+            Reporter.log("=== Actual API Response ===");
+            Reporter.log(actualResponse.toString(2));
+            
+            // Print summary
+            if (actualResponse.has("bunches")) {
+                JSONArray bunches = actualResponse.getJSONArray("bunches");
+                Reporter.log("Total bunches in response: " + bunches.length());
+                
+                for (int i = 0; i < bunches.length(); i++) {
+                    JSONObject bunch = bunches.getJSONObject(i);
+                    Reporter.log("Bunch " + (i + 1) + " - ArticleId: " + bunch.get("articleId") + 
+                               ", Product: " + bunch.get("productName"));
+                }
+            }
+        } else {
+            Reporter.log("No API response found in context");
+        }
+    }
+}
+
+
+------------------------------------------------------------
+
+@Regression
+@BunchesAPI
+Feature: Bunches API Testing
+
+@Positive
+@TestCaseId:BR-001
+@Description:Verify Bunches API returns correct data matching UI information for all bunches
+@dataProvider:dp-for-excel
+@dataFile:resources/${environment.name}/testdata/Bunches_testdata.xlsx
+@dataProviderClass:com.mycompany.utils.DataProviderUtil
+@sheet:testData
+@key:BR-001
+Scenario: Verify Bunches API returns correct data for all bunches in a product
+  # Navigate to UI and capture complete data for all bunches
+  Given that a user is successfully logged in to the XYZ Friction application using Internet Explorer browser
+  And user searches for a inventory by name '${ProductName}' and clicks the Inventory Nickname '${ProductName}' link in the results to view details
+  And user capture company id from Inventory Setup - General Information Main screens
+  Then user clicks on 'Inventory Maintenance -> Items' and successfully navigates to the 'Items' page
+  And I capture all bunches data from UI and prepare complete expected JSON for product "${productId}" with as of date "${checkDate}"
+  Then user clicks on 'XYZ Inventory Maintenance -> Manage Inventory Schedule' and successfully navigates to the 'Product Schedule' page
+  
+  # Send API request using existing generic steps
+  When I send a "POST" request to "/api/v1/xyz/bunches" with payload "bunches-request.json"
+  Then the response status code should be 200
+  And the response should be successful
+  
+  # Validate response structure using generic steps
+  And the response should contain field "bunches"
+  And the response should contain field "systemError"
+  And the response should contain field "responseMessageId"
+  And the response should contain field "validationErrorMessage"
+  And the response should contain field "errorMessage"
+  
+  # Validate response metadata
+  And the response field "responseMessageId" should be "${messageId}"
+  And the response field "errorMessage" should be "null"
+  And the response field "systemError" should be "null"
+  And the response field "validationErrorMessage" should be "null"
+  
+  # Validate bunches array exists and is not empty
+  And the response should contain a non-empty "bunches" array
+  
+  # Complete validation of all bunches data
+  And I validate complete bunches API response against captured expected JSON
+
+@Positive
+@TestCaseId:BR-002
+@Description:Debug scenario to print captured and actual JSON for comparison
+@dataProvider:dp-for-excel
+@dataFile:resources/${environment.name}/testdata/Bunches_testdata.xlsx
+@dataProviderClass:com.mycompany.utils.DataProviderUtil
+@sheet:testData
+@key:BR-002
+Scenario: Debug - Print expected and actual JSON for bunches
+  # Navigate to UI and capture complete data
+  Given that a user is successfully logged in to the XYZ Fusion application using Internet Explorer browser
+  And user searches for a inventory by name '${ProductName}' and clicks the Inventory Nickname '${ProductName}' link in the results to view details
+  And user capture company id from Inventory Setup - General Information Main screens
+  Then user clicks on 'Inventory Maintenance -> Items' and successfully navigates to the 'Items' page
+  And I capture all bunches data from UI and prepare complete expected JSON for product "${productId}" with as of date "${checkDate}"
+  Then user clicks on 'XYZ Inventory Maintenance -> Manage Inventory Schedule' and successfully navigates to the 'Product Schedule' page
+  
+  # Print expected JSON
+  And I print the captured expected JSON for debugging
+  
+  # Send API request
+  When I send a "POST" request to "/api/v1/xyz/bunches" with payload "bunches-request.json"
+  Then the response status code should be 200
+  
+  # Print actual response
+  And I print the actual API response JSON for debugging
+  
+  # Validate
+  And I validate complete bunches API response against captured expected JSON
+
+@Negative
+@TestCaseId:BR-003
+@Description:Verify Bunches API returns error for non-existent product ID
+@dataProvider:dp-for-excel
+@dataFile:resources/${environment.name}/testdata/Bunches_testdata.xlsx
+@dataProviderClass:com.mycompany.utils.DataProviderUtil
+@sheet:testData
+@key:BR-003
+Scenario: Verify Bunches API with non-existent product ID
+  When I send a "POST" request to "/api/v1/xyz/bunches" with payload "bunches-invalid-product-request.json"
+  Then the response status code should be 200
+  And the response should contain field "errorMessage"
+  And the response field "errorMessage" should contain "No bunches data found"
+  And the response field "responseMessageId" should be "${messageId}"
+  And the response field "bunches" should be "[]"
+
+@Negative
+@TestCaseId:BR-004
+@Description:Verify Bunches API returns validation error when messageId is missing
+@dataProvider:dp-for-excel
+@dataFile:resources/${environment.name}/testdata/Bunches_testdata.xlsx
+@dataProviderClass:com.mycompany.utils.DataProviderUtil
+@sheet:testData
+@key:BR-004
+Scenario: Verify Bunches API with missing messageId
+  When I send a "POST" request to "/api/v1/xyz/bunches" with payload "bunches-missing-messageid.json"
+  Then the response status code should be 400
+  And the response should contain field "validationErrorMessage"
+  And the response field "validationErrorMessage.messageId" should be "must not be null"
+
+@Negative
+@TestCaseId:BR-005
+@Description:Verify Bunches API returns validation error when productId is missing
+@dataProvider:dp-for-excel
+@dataFile:resources/${environment.name}/testdata/Bunches_testdata.xlsx
+@dataProviderClass:com.mycompany.utils.DataProviderUtil
+@sheet:testData
+@key:BR-005
+Scenario: Verify Bunches API with missing productId
+  When I send a "POST" request to "/api/v1/xyz/bunches" with payload "bunches-missing-productid.json"
+  Then the response status code should be 400
+  And the response should contain field "validationErrorMessage"
+  And the response field "validationErrorMessage.productId" should be "must not be null"
+
+@Negative
+@TestCaseId:BR-006
+@Description:Verify Bunches API returns validation error when checkDate is missing
+@dataProvider:dp-for-excel
+@dataFile:resources/${environment.name}/testdata/Bunches_testdata.xlsx
+@dataProviderClass:com.mycompany.utils.DataProviderUtil
+@sheet:testData
+@key:BR-006
+Scenario: Verify Bunches API with missing checkDate
+  When I send a "POST" request to "/api/v1/xyz/bunches" with payload "bunches-missing-checkdate.json"
+  Then the response status code should be 400
+  And the response should contain field "validationErrorMessage"
+  And the response field "validationErrorMessage.checkDate" should be "must not be null"
+
+@Negative
+@TestCaseId:BR-007
+@Description:Verify Bunches API returns error for invalid date format
+@dataProvider:dp-for-excel
+@dataFile:resources/${environment.name}/testdata/Bunches_testdata.xlsx
+@dataProviderClass:com.mycompany.utils.DataProviderUtil
+@sheet:testData
+@key:BR-007
+Scenario: Verify Bunches API with invalid date format
+  When I send a "POST" request to "/api/v1/xyz/bunches" with payload "bunches-invalid-date-format.json"
+  Then the response status code should be 400
+  And the response should contain field "errorMessage"
+  And the response field "errorMessage" should contain "Invalid date format"
+
+
+-------------------------------------------------------------------------------------
+
