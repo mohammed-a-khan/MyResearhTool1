@@ -14,7 +14,7 @@ public class GenericJsonValidationSteps {
     
     /**
      * Generic step to store any captured UI data as expected JSON with a key
-     * Usage: I store the captured UI data as expected JSON with key "tranches"
+     * Usage: I store the captured UI data as expected JSON with key "employee"
      */
     @QAFTestStep(description = "I store the captured UI data as expected JSON with key {storageKey}")
     public void storeCapturedUiDataAsJson(String storageKey) {
@@ -32,7 +32,7 @@ public class GenericJsonValidationSteps {
     
     /**
      * Generic step to validate complete API response against stored expected JSON
-     * Usage: I validate the API response against expected JSON stored with key "tranches"
+     * Usage: I validate the API response against expected JSON stored with key "employee"
      */
     @QAFTestStep(description = "I validate the API response against expected JSON stored with key {storageKey}")
     public void validateApiResponseAgainstExpectedJson(String storageKey) {
@@ -68,7 +68,7 @@ public class GenericJsonValidationSteps {
     
     /**
      * Generic step to validate API response contains expected structure
-     * Usage: I validate the API response has the same structure as expected JSON with key "tranches"
+     * Usage: I validate the API response has the same structure as expected JSON with key "employee"
      */
     @QAFTestStep(description = "I validate the API response has the same structure as expected JSON with key {storageKey}")
     public void validateApiResponseStructure(String storageKey) {
@@ -88,7 +88,7 @@ public class GenericJsonValidationSteps {
     
     /**
      * Generic step to validate specific path in API response against expected value
-     * Usage: I validate the API response field "tranches[0].issueInfo[0].issueId" equals "787187"
+     * Usage: I validate the API response field "Employees[0].empInfo[0].empId" equals "787187"
      */
     @QAFTestStep(description = "I validate the API response field {jsonPath} equals {expectedValue}")
     public void validateJsonFieldValue(String jsonPath, String expectedValue) {
@@ -112,7 +112,7 @@ public class GenericJsonValidationSteps {
     
     /**
      * Alternative simplified step for complete JSON comparison
-     * Usage: the API response should match the captured "tranches" data
+     * Usage: the API response should match the captured "employees" data
      */
     @QAFTestStep(description = "the API response should match the captured {dataType} data")
     public void apiResponseShouldMatchCapturedData(String dataType) {
