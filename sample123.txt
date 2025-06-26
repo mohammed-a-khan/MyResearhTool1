@@ -9,20 +9,22 @@ import org.json.JSONObject;
 import org.json.JSONArray;
 import static org.hamcrest.Matchers.*;
 import static org.testng.Assert.*;
+import java.util.*;
 
 public class GenericJsonValidationSteps {
     
+    private List<String> comparisonLogs = new ArrayList<>();
+    private boolean deepLogging = true;
+    
     /**
      * Generic step to store any captured UI data as expected JSON with a key
-     * Usage: I store the captured UI data as expected JSON with key "employee"
+     * Usage: I store the captured UI data as expected JSON with key "employees"
      */
     @QAFTestStep(description = "I store the captured UI data as expected JSON with key {storageKey}")
     public void storeCapturedUiDataAsJson(String storageKey) {
-        // Get the JSON that was prepared from UI capture (from context)
         JSONObject capturedJson = (JSONObject) TestContextManager.getContext("expected." + storageKey + ".response");
         
         if (capturedJson != null) {
-            // Store it with the given key for later comparison
             TestContextManager.setContext("expected.json." + storageKey, capturedJson);
             Reporter.log("Stored expected JSON for key: " + storageKey);
         } else {
@@ -31,92 +33,14 @@ public class GenericJsonValidationSteps {
     }
     
     /**
-     * Generic step to validate complete API response against stored expected JSON
-     * Usage: I validate the API response against expected JSON stored with key "employee"
-     */
-    @QAFTestStep(description = "I validate the API response against expected JSON stored with key {storageKey}")
-    public void validateApiResponseAgainstExpectedJson(String storageKey) {
-        // Get actual API response
-        ApiResponse apiResponse = TestContextManager.getApiResponse();
-        if (apiResponse == null) {
-            fail("No API response available. Make sure to send a request first.");
-            return;
-        }
-        
-        // Get expected JSON
-        JSONObject expectedJson = (JSONObject) TestContextManager.getContext("expected.json." + storageKey);
-        if (expectedJson == null) {
-            fail("No expected JSON found for key: " + storageKey);
-            return;
-        }
-        
-        // Parse actual response
-        JSONObject actualJson = new JSONObject(apiResponse.getResponseBody());
-        
-        // Perform deep comparison
-        Reporter.log("Starting JSON comparison for: " + storageKey);
-        boolean matches = compareJson(expectedJson, actualJson, "");
-        
-        if (!matches) {
-            Reporter.log("=== JSON Mismatch Details ===");
-            Reporter.log("Expected JSON: " + expectedJson.toString(2));
-            Reporter.log("Actual JSON: " + actualJson.toString(2));
-        }
-        
-        assertTrue(matches, "API response does not match expected JSON for: " + storageKey);
-    }
-    
-    /**
-     * Generic step to validate API response contains expected structure
-     * Usage: I validate the API response has the same structure as expected JSON with key "employee"
-     */
-    @QAFTestStep(description = "I validate the API response has the same structure as expected JSON with key {storageKey}")
-    public void validateApiResponseStructure(String storageKey) {
-        ApiResponse apiResponse = TestContextManager.getApiResponse();
-        JSONObject expectedJson = (JSONObject) TestContextManager.getContext("expected.json." + storageKey);
-        
-        if (apiResponse == null || expectedJson == null) {
-            fail("Missing API response or expected JSON for key: " + storageKey);
-            return;
-        }
-        
-        JSONObject actualJson = new JSONObject(apiResponse.getResponseBody());
-        boolean structureMatches = validateJsonStructure(expectedJson, actualJson, "");
-        
-        assertTrue(structureMatches, "API response structure does not match expected for: " + storageKey);
-    }
-    
-    /**
-     * Generic step to validate specific path in API response against expected value
-     * Usage: I validate the API response field "Employees[0].empInfo[0].empId" equals "787187"
-     */
-    @QAFTestStep(description = "I validate the API response field {jsonPath} equals {expectedValue}")
-    public void validateJsonFieldValue(String jsonPath, String expectedValue) {
-        ApiResponse apiResponse = TestContextManager.getApiResponse();
-        if (apiResponse == null) {
-            fail("No API response available");
-            return;
-        }
-        
-        JSONObject actualJson = new JSONObject(apiResponse.getResponseBody());
-        Object actualValue = getValueByPath(actualJson, jsonPath);
-        
-        if (actualValue == null) {
-            fail("Path not found in response: " + jsonPath);
-            return;
-        }
-        
-        String actualStr = String.valueOf(actualValue);
-        assertEquals(actualStr, expectedValue, "Value mismatch at path: " + jsonPath);
-    }
-    
-    /**
-     * Alternative simplified step for complete JSON comparison
+     * Main validation step - compares any two JSON structures
      * Usage: the API response should match the captured "employees" data
      */
     @QAFTestStep(description = "the API response should match the captured {dataType} data")
     public void apiResponseShouldMatchCapturedData(String dataType) {
-        // Get expected JSON from context (set by UI capture steps)
+        comparisonLogs.clear();
+        
+        // Get expected JSON from context
         JSONObject expectedJson = (JSONObject) TestContextManager.getContext("expected." + dataType + ".response");
         
         // Get actual API response
@@ -129,32 +53,110 @@ public class GenericJsonValidationSteps {
         
         JSONObject actualJson = new JSONObject(apiResponse.getResponseBody());
         
-        // Simple comparison first
-        boolean quickMatch = actualJson.similar(expectedJson);
+        Reporter.log("=== Starting JSON Comparison for: " + dataType + " ===");
         
-        if (quickMatch) {
-            Reporter.log(dataType + " API response matches expected data perfectly");
-            return;
+        // Perform comparison
+        boolean matches = compareJsonElements(expectedJson, actualJson, "root");
+        
+        // Log results
+        Reporter.log("=== Comparison Summary ===");
+        Reporter.log("Total comparison points: " + comparisonLogs.size());
+        
+        int errors = 0;
+        for (String log : comparisonLogs) {
+            if (log.contains("ERROR") || log.contains("✗")) {
+                Reporter.log(log);
+                errors++;
+            } else if (deepLogging) {
+                Reporter.log(log);
+            }
         }
         
-        // If quick match fails, do detailed comparison
-        Reporter.log("Performing detailed comparison for: " + dataType);
-        boolean detailedMatch = compareJson(expectedJson, actualJson, "");
+        if (!deepLogging && errors == 0) {
+            Reporter.log("All " + comparisonLogs.size() + " comparison points matched successfully!");
+        }
         
-        assertTrue(detailedMatch, dataType + " API response does not match expected data");
+        Reporter.log("=== Comparison Result: " + (matches ? "PASS" : "FAIL") + " ===");
+        Reporter.log("Errors found: " + errors);
+        
+        if (!matches) {
+            Reporter.log("=== Expected JSON ===");
+            Reporter.log(expectedJson.toString(2));
+            Reporter.log("=== Actual JSON ===");
+            Reporter.log(actualJson.toString(2));
+        }
+        
+        assertTrue(matches, dataType + " API response does not match expected data. Found " + errors + " mismatches.");
     }
     
-    // Helper methods
+    /**
+     * Enable/disable deep logging
+     */
+    @QAFTestStep(description = "I {enableDisable} deep JSON comparison logging")
+    public void setDeepLogging(String enableDisable) {
+        deepLogging = "enable".equalsIgnoreCase(enableDisable);
+        Reporter.log("Deep JSON comparison logging: " + (deepLogging ? "ENABLED" : "DISABLED"));
+    }
     
-    private boolean compareJson(JSONObject expected, JSONObject actual, String path) {
+    /**
+     * Generic comparison method that handles any JSON element type
+     */
+    private boolean compareJsonElements(Object expected, Object actual, String path) {
+        // Handle null cases
+        if (expected == null && actual == null) {
+            logComparison(path, "Both null", true);
+            return true;
+        }
+        
+        if (expected == null || actual == null) {
+            logComparison(path, "Null mismatch - Expected: " + expected + ", Actual: " + actual, false);
+            return false;
+        }
+        
+        // Handle JSONObject.NULL
+        if (expected == JSONObject.NULL && actual == JSONObject.NULL) {
+            logComparison(path, "Both JSON null", true);
+            return true;
+        }
+        
+        if ((expected == JSONObject.NULL && actual != JSONObject.NULL) || 
+            (expected != JSONObject.NULL && actual == JSONObject.NULL)) {
+            logComparison(path, "JSON null mismatch - Expected: " + expected + ", Actual: " + actual, false);
+            return false;
+        }
+        
+        // Determine type and compare accordingly
+        if (expected instanceof JSONObject && actual instanceof JSONObject) {
+            return compareJsonObjects((JSONObject) expected, (JSONObject) actual, path);
+        } else if (expected instanceof JSONArray && actual instanceof JSONArray) {
+            return compareJsonArrays((JSONArray) expected, (JSONArray) actual, path);
+        } else {
+            // Primitive comparison
+            return comparePrimitives(expected, actual, path);
+        }
+    }
+    
+    /**
+     * Compare two JSON objects
+     */
+    private boolean compareJsonObjects(JSONObject expected, JSONObject actual, String path) {
         boolean allMatch = true;
         
-        // Check all expected keys exist in actual
-        for (String key : expected.keySet()) {
-            String currentPath = path.isEmpty() ? key : path + "." + key;
+        Set<String> allKeys = new HashSet<>();
+        allKeys.addAll(expected.keySet());
+        allKeys.addAll(actual.keySet());
+        
+        for (String key : allKeys) {
+            String currentPath = path + "." + key;
+            
+            if (!expected.has(key)) {
+                logComparison(currentPath, "Extra key in actual (not in expected)", false);
+                // This might be acceptable, so we don't set allMatch = false
+                continue;
+            }
             
             if (!actual.has(key)) {
-                Reporter.log("Missing key at path: " + currentPath);
+                logComparison(currentPath, "Missing key in actual", false);
                 allMatch = false;
                 continue;
             }
@@ -162,149 +164,157 @@ public class GenericJsonValidationSteps {
             Object expectedValue = expected.get(key);
             Object actualValue = actual.get(key);
             
-            if (expectedValue instanceof JSONObject && actualValue instanceof JSONObject) {
-                if (!compareJson((JSONObject) expectedValue, (JSONObject) actualValue, currentPath)) {
-                    allMatch = false;
-                }
-            } else if (expectedValue instanceof JSONArray && actualValue instanceof JSONArray) {
-                if (!compareJsonArrays((JSONArray) expectedValue, (JSONArray) actualValue, currentPath)) {
-                    allMatch = false;
-                }
-            } else {
-                if (!compareValues(expectedValue, actualValue, currentPath)) {
-                    allMatch = false;
-                }
+            if (!compareJsonElements(expectedValue, actualValue, currentPath)) {
+                allMatch = false;
             }
         }
         
         return allMatch;
     }
     
+    /**
+     * Compare two JSON arrays - tries both ordered and unordered comparison
+     */
     private boolean compareJsonArrays(JSONArray expected, JSONArray actual, String path) {
         if (expected.length() != actual.length()) {
-            Reporter.log("Array length mismatch at " + path + " - Expected: " + expected.length() + ", Actual: " + actual.length());
+            logComparison(path, "Array length mismatch - Expected: " + expected.length() + ", Actual: " + actual.length(), false);
             return false;
         }
         
-        boolean allMatch = true;
-        for (int i = 0; i < expected.length(); i++) {
-            String currentPath = path + "[" + i + "]";
-            Object expectedItem = expected.get(i);
-            Object actualItem = actual.get(i);
-            
-            if (expectedItem instanceof JSONObject && actualItem instanceof JSONObject) {
-                if (!compareJson((JSONObject) expectedItem, (JSONObject) actualItem, currentPath)) {
-                    allMatch = false;
-                }
-            } else if (expectedItem instanceof JSONArray && actualItem instanceof JSONArray) {
-                if (!compareJsonArrays((JSONArray) expectedItem, (JSONArray) actualItem, currentPath)) {
-                    allMatch = false;
-                }
-            } else {
-                if (!compareValues(expectedItem, actualItem, currentPath)) {
-                    allMatch = false;
-                }
-            }
-        }
-        
-        return allMatch;
-    }
-    
-    private boolean compareValues(Object expected, Object actual, String path) {
-        // Handle null values
-        if (expected == JSONObject.NULL && actual == JSONObject.NULL) {
+        if (expected.length() == 0) {
+            logComparison(path, "Both arrays empty", true);
             return true;
         }
         
+        // First try ordered comparison
+        boolean orderedMatch = tryOrderedComparison(expected, actual, path);
+        
+        if (orderedMatch) {
+            logComparison(path, "Arrays match in order", true);
+            return true;
+        }
+        
+        // If ordered comparison fails and arrays contain objects, try unordered
+        if (expected.get(0) instanceof JSONObject) {
+            boolean unorderedMatch = tryUnorderedComparison(expected, actual, path);
+            if (unorderedMatch) {
+                logComparison(path, "Arrays match (unordered)", true);
+                return true;
+            }
+        }
+        
+        logComparison(path, "Arrays do not match (tried both ordered and unordered comparison)", false);
+        return false;
+    }
+    
+    /**
+     * Try comparing arrays in order
+     */
+    private boolean tryOrderedComparison(JSONArray expected, JSONArray actual, String path) {
+        for (int i = 0; i < expected.length(); i++) {
+            String currentPath = path + "[" + i + "]";
+            if (!compareJsonElements(expected.get(i), actual.get(i), currentPath + "(ordered)")) {
+                return false;
+            }
+        }
+        return true;
+    }
+    
+    /**
+     * Try comparing arrays unordered (for arrays of objects)
+     */
+    private boolean tryUnorderedComparison(JSONArray expected, JSONArray actual, String path) {
+        List<JSONObject> expectedList = new ArrayList<>();
+        List<JSONObject> actualList = new ArrayList<>();
+        
+        for (int i = 0; i < expected.length(); i++) {
+            expectedList.add(expected.getJSONObject(i));
+            actualList.add(actual.getJSONObject(i));
+        }
+        
+        List<JSONObject> unmatchedActual = new ArrayList<>(actualList);
+        
+        for (int i = 0; i < expectedList.size(); i++) {
+            JSONObject expectedObj = expectedList.get(i);
+            boolean foundMatch = false;
+            
+            for (int j = 0; j < unmatchedActual.size(); j++) {
+                JSONObject actualObj = unmatchedActual.get(j);
+                
+                // Try to match without logging each attempt
+                List<String> tempLogs = comparisonLogs;
+                comparisonLogs = new ArrayList<>();
+                
+                boolean matches = compareJsonObjects(expectedObj, actualObj, path + "[unordered-attempt]");
+                
+                comparisonLogs = tempLogs;
+                
+                if (matches) {
+                    foundMatch = true;
+                    unmatchedActual.remove(j);
+                    logComparison(path + "[unordered-match-" + i + "]", "Found matching object", true);
+                    break;
+                }
+            }
+            
+            if (!foundMatch) {
+                logComparison(path + "[unordered-" + i + "]", "No match found for expected object", false);
+                return false;
+            }
+        }
+        
+        return true;
+    }
+    
+    /**
+     * Compare primitive values
+     */
+    private boolean comparePrimitives(Object expected, Object actual, String path) {
         String expectedStr = String.valueOf(expected);
         String actualStr = String.valueOf(actual);
         
-        // Handle numeric comparisons with tolerance
+        // Try numeric comparison first
         if (isNumeric(expectedStr) && isNumeric(actualStr)) {
             try {
                 double expectedNum = Double.parseDouble(expectedStr);
                 double actualNum = Double.parseDouble(actualStr);
                 
-                if (Math.abs(expectedNum - actualNum) > 0.0001) {
-                    Reporter.log("Numeric value mismatch at " + path + " - Expected: " + expectedStr + ", Actual: " + actualStr);
-                    return false;
-                }
-                return true;
+                boolean matches = Math.abs(expectedNum - actualNum) < 0.0001;
+                logComparison(path, 
+                    matches ? "Numeric match: " + expectedStr 
+                            : "Numeric mismatch - Expected: " + expectedStr + ", Actual: " + actualStr, 
+                    matches);
+                return matches;
             } catch (NumberFormatException e) {
                 // Fall through to string comparison
             }
         }
         
         // String comparison
-        if (!expectedStr.equals(actualStr)) {
-            Reporter.log("Value mismatch at " + path + " - Expected: " + expectedStr + ", Actual: " + actualStr);
+        boolean matches = expectedStr.equals(actualStr);
+        logComparison(path, 
+            matches ? "Value match: " + expectedStr 
+                    : "Value mismatch - Expected: '" + expectedStr + "', Actual: '" + actualStr + "'", 
+            matches);
+        return matches;
+    }
+    
+    /**
+     * Log comparison result
+     */
+    private void logComparison(String path, String message, boolean success) {
+        String symbol = success ? "✓" : "✗";
+        String level = success ? "INFO" : "ERROR";
+        comparisonLogs.add(String.format("[%s] %s %s: %s", level, symbol, path, message));
+    }
+    
+    /**
+     * Check if string represents a number
+     */
+    private boolean isNumeric(String str) {
+        if (str == null || str.isEmpty()) {
             return false;
         }
-        
-        return true;
-    }
-    
-    private boolean validateJsonStructure(JSONObject expected, JSONObject actual, String path) {
-        for (String key : expected.keySet()) {
-            String currentPath = path.isEmpty() ? key : path + "." + key;
-            
-            if (!actual.has(key)) {
-                Reporter.log("Missing key in structure: " + currentPath);
-                return false;
-            }
-            
-            Object expectedValue = expected.get(key);
-            Object actualValue = actual.get(key);
-            
-            // Check type compatibility
-            if (expectedValue instanceof JSONObject && !(actualValue instanceof JSONObject)) {
-                Reporter.log("Type mismatch at " + currentPath + " - Expected: Object, Actual: " + actualValue.getClass().getSimpleName());
-                return false;
-            }
-            
-            if (expectedValue instanceof JSONArray && !(actualValue instanceof JSONArray)) {
-                Reporter.log("Type mismatch at " + currentPath + " - Expected: Array, Actual: " + actualValue.getClass().getSimpleName());
-                return false;
-            }
-            
-            // Recurse for nested structures
-            if (expectedValue instanceof JSONObject) {
-                if (!validateJsonStructure((JSONObject) expectedValue, (JSONObject) actualValue, currentPath)) {
-                    return false;
-                }
-            }
-        }
-        
-        return true;
-    }
-    
-    private Object getValueByPath(JSONObject json, String path) {
-        String[] parts = path.split("\\.");
-        Object current = json;
-        
-        for (String part : parts) {
-            if (current == null) return null;
-            
-            // Handle array notation like "tranches[0]"
-            if (part.contains("[")) {
-                String arrayName = part.substring(0, part.indexOf("["));
-                int index = Integer.parseInt(part.substring(part.indexOf("[") + 1, part.indexOf("]")));
-                
-                if (current instanceof JSONObject) {
-                    JSONArray array = ((JSONObject) current).getJSONArray(arrayName);
-                    current = array.get(index);
-                }
-            } else {
-                if (current instanceof JSONObject) {
-                    current = ((JSONObject) current).get(part);
-                }
-            }
-        }
-        
-        return current;
-    }
-    
-    private boolean isNumeric(String str) {
         try {
             Double.parseDouble(str);
             return true;
