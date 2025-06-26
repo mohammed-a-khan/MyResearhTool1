@@ -133,23 +133,3 @@
     private boolean isBoolean(String str) {
         return str != null && (str.equalsIgnoreCase("true") || str.equalsIgnoreCase("false"));
     }
-
-/**
-     * Check if an object is a numeric type
-     */
-    private boolean isNumericType(Object obj) {
-        return obj instanceof Number ||
-               (obj instanceof String && isNumeric((String) obj));
-    }
-    
-    /**
-     * Convert various numeric types to double
-     */
-    private double convertToDouble(Object obj) {
-        if (obj instanceof Number) {
-            return ((Number) obj).doubleValue();
-        } else if (obj instanceof String) {
-            return Double.parseDouble((String) obj);
-        }
-        throw new IllegalArgumentException("Cannot convert to double: " + obj);
-    }
