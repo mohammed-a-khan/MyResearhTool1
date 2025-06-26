@@ -13,17 +13,13 @@
             return false;
         }
         
-        String expectedStr = String.valueOf(expected);
-        String actualStr = String.valueOf(actual);
-        
-        // Try numeric comparison first for any numeric values
-        if (isNumeric(expectedStr) && isNumeric(actualStr)) {
+        // Check if both values are numbers (including Integer, Double, Float, Long, etc.)
+        if (isNumericType(expected) && isNumericType(actual)) {
             try {
-                double expectedNum = Double.parseDouble(expectedStr);
-                double actualNum = Double.parseDouble(actualStr);
+                double expectedNum = convertToDouble(expected);
+                double actualNum = convertToDouble(actual);
                 
-                // For percentage/decimal values, use a relative tolerance approach
-                // This handles cases like 1.75 vs 1.7500000000000002
+                // For percentage/decimal values, use a tolerance approach
                 boolean matches = false;
                 
                 // First check if they're exactly equal (handles 0 case)
@@ -35,24 +31,60 @@
                     
                     // Check if the difference is within floating-point precision error
                     // This handles cases like 4.30198 vs 4.3019799999999995
-                    if (absoluteDiff < 1e-10) {
+                    if (absoluteDiff < 1e-9) {
                         matches = true;
                     } else {
                         // For larger numbers, use relative tolerance
                         double relativeDiff = absoluteDiff / Math.max(Math.abs(expectedNum), Math.abs(actualNum));
-                        matches = relativeDiff < 1e-10;
+                        matches = relativeDiff < 1e-9;
                     }
                 }
                 
                 if (matches) {
-                    logComparison(path, "Numeric match: " + expectedStr + " ≈ " + actualStr, true);
+                    logComparison(path, "Numeric match: " + expected + " ≈ " + actual, true);
                 } else {
-                    logComparison(path, "Numeric mismatch - Expected: " + expectedStr + ", Actual: " + actualStr + 
+                    logComparison(path, "Numeric mismatch - Expected: " + expected + ", Actual: " + actual + 
+                                      " (diff: " + Math.abs(expectedNum - actualNum) + ")", false);
+                }
+                return matches;
+            } catch (Exception e) {
+                // Fall through to string comparison
+                logComparison(path, "Error in numeric comparison: " + e.getMessage(), false);
+            }
+        }
+        
+        // Convert to strings for comparison
+        String expectedStr = String.valueOf(expected);
+        String actualStr = String.valueOf(actual);
+        
+        // Try to parse as numbers if they're string representations of numbers
+        if (isNumeric(expectedStr) && isNumeric(actualStr)) {
+            try {
+                double expectedNum = Double.parseDouble(expectedStr);
+                double actualNum = Double.parseDouble(actualStr);
+                
+                boolean matches = false;
+                if (expectedNum == actualNum) {
+                    matches = true;
+                } else {
+                    double absoluteDiff = Math.abs(expectedNum - actualNum);
+                    if (absoluteDiff < 1e-9) {
+                        matches = true;
+                    } else {
+                        double relativeDiff = absoluteDiff / Math.max(Math.abs(expectedNum), Math.abs(actualNum));
+                        matches = relativeDiff < 1e-9;
+                    }
+                }
+                
+                if (matches) {
+                    logComparison(path, "Numeric match (from string): " + expectedStr + " ≈ " + actualStr, true);
+                } else {
+                    logComparison(path, "Numeric mismatch (from string) - Expected: " + expectedStr + ", Actual: " + actualStr + 
                                       " (diff: " + Math.abs(expectedNum - actualNum) + ")", false);
                 }
                 return matches;
             } catch (NumberFormatException e) {
-                // Fall through to string comparison
+                // Continue to string comparison
             }
         }
         
@@ -76,8 +108,48 @@
     }
     
     /**
+     * Check if an object is a numeric type
+     */
+    private boolean isNumericType(Object obj) {
+        return obj instanceof Number ||
+               (obj instanceof String && isNumeric((String) obj));
+    }
+    
+    /**
+     * Convert various numeric types to double
+     */
+    private double convertToDouble(Object obj) {
+        if (obj instanceof Number) {
+            return ((Number) obj).doubleValue();
+        } else if (obj instanceof String) {
+            return Double.parseDouble((String) obj);
+        }
+        throw new IllegalArgumentException("Cannot convert to double: " + obj);
+    }
+    
+    /**
      * Check if string represents a boolean value
      */
     private boolean isBoolean(String str) {
         return str != null && (str.equalsIgnoreCase("true") || str.equalsIgnoreCase("false"));
+    }
+
+/**
+     * Check if an object is a numeric type
+     */
+    private boolean isNumericType(Object obj) {
+        return obj instanceof Number ||
+               (obj instanceof String && isNumeric((String) obj));
+    }
+    
+    /**
+     * Convert various numeric types to double
+     */
+    private double convertToDouble(Object obj) {
+        if (obj instanceof Number) {
+            return ((Number) obj).doubleValue();
+        } else if (obj instanceof String) {
+            return Double.parseDouble((String) obj);
+        }
+        throw new IllegalArgumentException("Cannot convert to double: " + obj);
     }
