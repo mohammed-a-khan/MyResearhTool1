@@ -1,0 +1,41 @@
+private Object formatDbAmount(Object dbAmount, CommonFunctions commonFunctions) {
+    if (dbAmount == null) {
+        return JSONObject.NULL;
+    }
+    
+    // If it's a BigDecimal, handle it specially
+    if (dbAmount instanceof java.math.BigDecimal) {
+        java.math.BigDecimal bd = (java.math.BigDecimal) dbAmount;
+        
+        // For very small numbers, use toString() which already gives scientific notation
+        if (bd.abs().compareTo(new java.math.BigDecimal("0.0001")) < 0 && 
+            bd.compareTo(java.math.BigDecimal.ZERO) != 0) {
+            // Use toString() which gives us "1.0E-10"
+            String scientificNotation = bd.toString();
+            logger.debug("Returning scientific notation for " + dbAmount + ": " + scientificNotation);
+            return scientificNotation;
+        }
+        
+        // For other numbers, let commonFunctions handle it
+        String amountStr = bd.toPlainString();
+        try {
+            return commonFunctions.formatAmountValue(amountStr);
+        } catch (Exception e) {
+            logger.error("Error formatting amount: " + dbAmount, e);
+            return amountStr;
+        }
+    }
+    
+    // Handle other types
+    String amountStr = dbAmount.toString().trim();
+    if (amountStr.isEmpty()) {
+        return JSONObject.NULL;
+    }
+    
+    try {
+        return commonFunctions.formatAmountValue(amountStr);
+    } catch (Exception e) {
+        logger.error("Error formatting amount: " + dbAmount, e);
+        return amountStr;
+    }
+}
