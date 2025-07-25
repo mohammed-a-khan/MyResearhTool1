@@ -1,8 +1,104 @@
-// Pure Learning-Based Framework Converter
+// Pure Learning-Based Framework Converter - Fixed Version
 // NO HARDCODED PATTERNS - Everything is learned from examples
 
 import * as fs from 'fs';
 import * as path from 'path';
+
+// ==================== TYPES (Defined First) ====================
+interface Token {
+  type: string;
+  value: string;
+  position: number;
+  context?: TokenContext;
+}
+
+interface TokenContext {
+  line: string;
+  lineNumber: number;
+  columnNumber: number;
+  precedingTokens: string[];
+  followingTokens: string[];
+}
+
+interface TokenSequence {
+  tokens: Token[];
+  frequency: number;
+  positions: number[];
+  significance: number;
+}
+
+interface Structure {
+  tokens: Token[];
+  type: string;
+  frequency: number;
+  significance: number;
+  isSignificant: boolean;
+  characteristics: {
+    hasBlock: boolean;
+    hasParameters: boolean;
+    hasKeywords: boolean;
+    depth: number;
+  };
+}
+
+interface ExtractedPattern {
+  id: string;
+  tokens: Token[];
+  context: TokenContext;
+  frequency: number;
+  significance: number;
+}
+
+interface LearnedPattern {
+  pattern: ExtractedPattern;
+  transformsTo: ExtractedPattern;
+  rule: TransformationRule;
+}
+
+interface TransformationRule {
+  id: string;
+  sourcePattern: ExtractedPattern;
+  targetPattern: ExtractedPattern;
+  confidence: number;
+  transformation: Transformation;
+}
+
+interface Transformation {
+  tokenMappings: TokenMapping[];
+  contextChanges: ContextChange[];
+  apply: (input: string) => string;
+}
+
+interface TokenMapping {
+  sourceToken: Token | null;
+  targetToken: Token | null;
+  transform: TokenTransform;
+}
+
+interface TokenTransform {
+  type: 'keep' | 'replace' | 'delete' | 'insert';
+  from?: string;
+  to?: string;
+  value?: string;
+}
+
+interface ContextChange {
+  type: 'preceding' | 'following';
+  from?: string[];
+  to?: string[];
+}
+
+interface FilePair {
+  source: string;
+  target: string;
+}
+
+interface SemanticMapping {
+  id: string;
+  sourceSemantics: string;
+  targetSemantics: string;
+  mapping: any;
+}
 
 // ==================== CORE LEARNING ENGINE ====================
 class PureLearningConverter {
@@ -10,6 +106,7 @@ class PureLearningConverter {
   private learnedPatterns: Map<string, LearnedPattern> = new Map();
   private transformationRules: Map<string, TransformationRule> = new Map();
   private semanticMappings: Map<string, SemanticMapping> = new Map();
+  private learnedExtensionMapping = new Map<string, string>();
   
   // The main conversion method - learns everything from examples
   async convertFramework(
@@ -19,33 +116,46 @@ class PureLearningConverter {
     outputDir: string
   ): Promise<void> {
     console.log("🧠 Pure Learning-Based Converter Started");
-    console.log("📚 NO hardcoded patterns - learning everything from your examples\n");
+    console.log("📚 NO hardcoded patterns - learning everything from your example FILES\n");
     
-    // Step 1: Learn EVERYTHING from examples
+    // Step 1: Learn EVERYTHING from example files
     await this.learnFromExamples(exampleSource, exampleTarget);
     
     // Step 2: Apply learned patterns to convert
     await this.convertUsingLearnedPatterns(sourceFramework, outputDir);
   }
   
-  // Learn patterns by comparing examples
+  // Learn patterns by comparing example files
   private async learnFromExamples(exampleSource: string, exampleTarget: string) {
-    console.log("📖 Learning Phase - Analyzing your examples...\n");
+    console.log("📖 Learning Phase - Analyzing your example FILES...\n");
     
     const sourcePairs = await this.findFilePairs(exampleSource, exampleTarget);
+    
+    console.log(`Found ${sourcePairs.length} file pairs to learn from:`);
+    sourcePairs.forEach(pair => {
+      console.log(`  📄 ${path.basename(pair.source)} → ${path.basename(pair.target)}`);
+    });
+    console.log("");
     
     for (const pair of sourcePairs) {
       await this.learnFromPair(pair.source, pair.target);
     }
     
-    console.log(`✅ Learned ${this.learnedPatterns.size} unique patterns`);
+    console.log(`\n✅ Learned ${this.learnedPatterns.size} unique patterns`);
     console.log(`✅ Generated ${this.transformationRules.size} transformation rules`);
   }
   
   // Core learning algorithm - no hardcoding
   private async learnFromPair(sourceFile: string, targetFile: string) {
+    console.log(`Learning from: ${path.basename(sourceFile)} → ${path.basename(targetFile)}`);
+    
     const sourceCode = fs.readFileSync(sourceFile, 'utf-8');
     const targetCode = fs.readFileSync(targetFile, 'utf-8');
+    
+    // Learn file extension mapping
+    const sourceExt = path.extname(sourceFile);
+    const targetExt = path.extname(targetFile);
+    this.learnedExtensionMapping.set(sourceExt, targetExt);
     
     // Extract patterns using generic analysis
     const sourcePatterns = this.extractPatterns(sourceCode);
@@ -77,6 +187,22 @@ class PureLearningConverter {
     return patterns;
   }
   
+  // Extract context for a structure
+  private extractContext(structure: Structure, code: string): TokenContext {
+    const firstToken = structure.tokens[0];
+    if (!firstToken || !firstToken.context) {
+      // Create default context if not available
+      return {
+        line: '',
+        lineNumber: 0,
+        columnNumber: 0,
+        precedingTokens: [],
+        followingTokens: []
+      };
+    }
+    return firstToken.context;
+  }
+  
   // Tokenize without language-specific rules
   private tokenize(code: string): Token[] {
     const tokens: Token[] = [];
@@ -98,11 +224,11 @@ class PureLearningConverter {
     ];
     
     // Extract all tokens
-    let lastIndex = 0;
     const allMatches: Array<{type: string, value: string, index: number}> = [];
     
     tokenPatterns.forEach(({type, regex}) => {
       let match;
+      regex.lastIndex = 0; // Reset regex
       while ((match = regex.exec(code)) !== null) {
         allMatches.push({
           type,
@@ -141,7 +267,8 @@ class PureLearningConverter {
           sequences.set(key, {
             tokens: sequence,
             frequency: 0,
-            positions: []
+            positions: [],
+            significance: 0 // Initialize with 0
           });
         }
         
@@ -151,14 +278,15 @@ class PureLearningConverter {
       }
     }
     
+    // Calculate significance for each sequence
+    const sequencesArray = Array.from(sequences.values());
+    sequencesArray.forEach(seq => {
+      seq.significance = this.calculateSignificance(seq, tokens.length);
+    });
+    
     // Filter by statistical significance
-    return Array.from(sequences.values())
-      .filter(seq => seq.frequency > 1)
-      .map(seq => ({
-        ...seq,
-        significance: this.calculateSignificance(seq, tokens.length)
-      }))
-      .filter(seq => seq.significance > 0.1)
+    return sequencesArray
+      .filter(seq => seq.frequency > 1 && seq.significance > 0.1)
       .sort((a, b) => b.significance - a.significance);
   }
   
@@ -188,13 +316,14 @@ class PureLearningConverter {
     const hasKeywords = tokens.some(t => this.isLikelyKeyword(t));
     
     const structureType = this.inferStructureType(tokens);
+    const significance = sequence.significance; // This is now guaranteed to be a number
     
     return {
       tokens: tokens,
       type: structureType,
       frequency: sequence.frequency,
-      significance: sequence.significance,
-      isSignificant: sequence.significance > 0.2,
+      significance: significance,
+      isSignificant: significance > 0.2,
       characteristics: {
         hasBlock: hasOpenBrace && hasCloseBrace,
         hasParameters: hasParentheses,
@@ -270,6 +399,7 @@ class PureLearningConverter {
     console.log("\n🔄 Conversion Phase - Applying learned patterns...\n");
     
     const files = this.getAllFiles(sourceDir);
+    console.log(`Found ${files.length} files to convert\n`);
     
     for (const file of files) {
       const convertedContent = await this.convertFile(file);
@@ -391,7 +521,6 @@ class PureLearningConverter {
   
   private inferStructureType(tokens: Token[]): string {
     // Infer structure type from token patterns
-    const tokenTypes = tokens.map(t => t.type);
     const tokenValues = tokens.map(t => t.value);
     
     // Generic structure inference
@@ -619,8 +748,6 @@ class PureLearningConverter {
     return outputPath.replace(ext, newExt);
   }
   
-  private learnedExtensionMapping = new Map<string, string>();
-  
   private generatePatternId(structure: Structure): string {
     // Generate unique ID based on structure characteristics
     const chars = structure.characteristics;
@@ -739,102 +866,6 @@ class PureLearningConverter {
   }
 }
 
-// ==================== TYPES ====================
-interface Token {
-  type: string;
-  value: string;
-  position: number;
-  context: TokenContext;
-}
-
-interface TokenContext {
-  line: string;
-  lineNumber: number;
-  columnNumber: number;
-  precedingTokens: string[];
-  followingTokens: string[];
-}
-
-interface TokenSequence {
-  tokens: Token[];
-  frequency: number;
-  positions: number[];
-  significance?: number;
-}
-
-interface Structure {
-  tokens: Token[];
-  type: string;
-  frequency: number;
-  significance: number;
-  isSignificant: boolean;
-  characteristics: {
-    hasBlock: boolean;
-    hasParameters: boolean;
-    hasKeywords: boolean;
-    depth: number;
-  };
-}
-
-interface ExtractedPattern {
-  id: string;
-  tokens: Token[];
-  context: TokenContext;
-  frequency: number;
-  significance: number;
-}
-
-interface LearnedPattern {
-  pattern: ExtractedPattern;
-  transformsTo: ExtractedPattern;
-  rule: TransformationRule;
-}
-
-interface TransformationRule {
-  id: string;
-  sourcePattern: ExtractedPattern;
-  targetPattern: ExtractedPattern;
-  confidence: number;
-  transformation: Transformation;
-}
-
-interface Transformation {
-  tokenMappings: TokenMapping[];
-  contextChanges: ContextChange[];
-  apply: (input: string) => string;
-}
-
-interface TokenMapping {
-  sourceToken: Token | null;
-  targetToken: Token | null;
-  transform: TokenTransform;
-}
-
-interface TokenTransform {
-  type: 'keep' | 'replace' | 'delete' | 'insert';
-  from?: string;
-  to?: string;
-  value?: string;
-}
-
-interface ContextChange {
-  type: 'preceding' | 'following';
-  from?: string[];
-  to?: string[];
-}
-
-interface FilePair {
-  source: string;
-  target: string;
-}
-
-interface SemanticMapping {
-  id: string;
-  sourceSemantics: string;
-  targetSemantics: string;
-  mapping: any;
-}
-
 // ==================== CLI ====================
 class PureLearningCLI {
   private converter = new PureLearningConverter();
@@ -849,7 +880,7 @@ class PureLearningCLI {
     
     console.log("🚀 Pure Learning-Based Framework Converter");
     console.log("=" .repeat(60));
-    console.log("NO hardcoded patterns - learning everything from examples!");
+    console.log("NO hardcoded patterns - learning everything from example FILES!");
     console.log("=" .repeat(60) + "\n");
     
     try {
@@ -879,9 +910,20 @@ Example:
 
 This converter:
 - Has NO hardcoded patterns or rules
-- Learns everything from your provided examples
+- Learns everything from your provided example FILES
 - Uses statistical analysis to identify patterns
 - Applies learned transformations to convert your framework
+
+Example File Structure:
+  examples/
+  ├── selenium/
+  │   ├── LoginPage.java
+  │   ├── HomePage.java
+  │   └── SearchPage.java
+  └── playwright/
+      ├── login.page.ts
+      ├── home.page.ts
+      └── search.page.ts
     `);
   }
 }
