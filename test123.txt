@@ -1,941 +1,212 @@
-// Pure Learning-Based Framework Converter - Fixed Version
-// NO HARDCODED PATTERNS - Everything is learned from examples
-
-import * as fs from 'fs';
-import * as path from 'path';
-
-// ==================== TYPES (Defined First) ====================
-interface Token {
-  type: string;
-  value: string;
-  position: number;
-  context?: TokenContext;
-}
-
-interface TokenContext {
-  line: string;
-  lineNumber: number;
-  columnNumber: number;
-  precedingTokens: string[];
-  followingTokens: string[];
-}
-
-interface TokenSequence {
-  tokens: Token[];
-  frequency: number;
-  positions: number[];
-  significance: number;
-}
-
-interface Structure {
-  tokens: Token[];
-  type: string;
-  frequency: number;
-  significance: number;
-  isSignificant: boolean;
-  characteristics: {
-    hasBlock: boolean;
-    hasParameters: boolean;
-    hasKeywords: boolean;
-    depth: number;
-  };
-}
-
-interface ExtractedPattern {
-  id: string;
-  tokens: Token[];
-  context: TokenContext;
-  frequency: number;
-  significance: number;
-}
-
-interface LearnedPattern {
-  pattern: ExtractedPattern;
-  transformsTo: ExtractedPattern;
-  rule: TransformationRule;
-}
-
-interface TransformationRule {
-  id: string;
-  sourcePattern: ExtractedPattern;
-  targetPattern: ExtractedPattern;
-  confidence: number;
-  transformation: Transformation;
-}
-
-interface Transformation {
-  tokenMappings: TokenMapping[];
-  contextChanges: ContextChange[];
-  apply: (input: string) => string;
-}
-
-interface TokenMapping {
-  sourceToken: Token | null;
-  targetToken: Token | null;
-  transform: TokenTransform;
-}
-
-interface TokenTransform {
-  type: 'keep' | 'replace' | 'delete' | 'insert';
-  from?: string;
-  to?: string;
-  value?: string;
-}
-
-interface ContextChange {
-  type: 'preceding' | 'following';
-  from?: string[];
-  to?: string[];
-}
-
-interface FilePair {
-  source: string;
-  target: string;
-}
-
-interface SemanticMapping {
-  id: string;
-  sourceSemantics: string;
-  targetSemantics: string;
-  mapping: any;
-}
-
-// ==================== CORE LEARNING ENGINE ====================
-class PureLearningConverter {
-  // No hardcoded patterns - all patterns are learned
-  private learnedPatterns: Map<string, LearnedPattern> = new Map();
-  private transformationRules: Map<string, TransformationRule> = new Map();
-  private semanticMappings: Map<string, SemanticMapping> = new Map();
-  private learnedExtensionMapping = new Map<string, string>();
-  
-  // The main conversion method - learns everything from examples
-  async convertFramework(
-    sourceFramework: string,
-    exampleSource: string,
-    exampleTarget: string,
-    outputDir: string
-  ): Promise<void> {
-    console.log("🧠 Pure Learning-Based Converter Started");
-    console.log("📚 NO hardcoded patterns - learning everything from your example FILES\n");
-    
-    // Step 1: Learn EVERYTHING from example files
-    await this.learnFromExamples(exampleSource, exampleTarget);
-    
-    // Step 2: Apply learned patterns to convert
-    await this.convertUsingLearnedPatterns(sourceFramework, outputDir);
-  }
-  
-  // Learn patterns by comparing example files
-  private async learnFromExamples(exampleSource: string, exampleTarget: string) {
-    console.log("📖 Learning Phase - Analyzing your example FILES...\n");
-    
-    const sourcePairs = await this.findFilePairs(exampleSource, exampleTarget);
-    
-    console.log(`Found ${sourcePairs.length} file pairs to learn from:`);
-    sourcePairs.forEach(pair => {
-      console.log(`  📄 ${path.basename(pair.source)} → ${path.basename(pair.target)}`);
-    });
-    console.log("");
-    
-    for (const pair of sourcePairs) {
-      await this.learnFromPair(pair.source, pair.target);
-    }
-    
-    console.log(`\n✅ Learned ${this.learnedPatterns.size} unique patterns`);
-    console.log(`✅ Generated ${this.transformationRules.size} transformation rules`);
-  }
-  
-  // Core learning algorithm - no hardcoding
-  private async learnFromPair(sourceFile: string, targetFile: string) {
-    console.log(`Learning from: ${path.basename(sourceFile)} → ${path.basename(targetFile)}`);
-    
-    const sourceCode = fs.readFileSync(sourceFile, 'utf-8');
-    const targetCode = fs.readFileSync(targetFile, 'utf-8');
-    
-    // Learn file extension mapping
-    const sourceExt = path.extname(sourceFile);
-    const targetExt = path.extname(targetFile);
-    this.learnedExtensionMapping.set(sourceExt, targetExt);
-    
-    // Extract patterns using generic analysis
-    const sourcePatterns = this.extractPatterns(sourceCode);
-    const targetPatterns = this.extractPatterns(targetCode);
-    
-    // Learn mappings between patterns
-    this.learnMappings(sourcePatterns, targetPatterns);
-  }
-  
-  // Generic pattern extraction - no language-specific rules
-  private extractPatterns(code: string): ExtractedPattern[] {
-    const patterns: ExtractedPattern[] = [];
-    
-    // Generic pattern extraction using statistical analysis
-    const tokens = this.tokenize(code);
-    const sequences = this.findSignificantSequences(tokens);
-    const structures = this.identifyStructures(sequences);
-    
-    structures.forEach(structure => {
-      patterns.push({
-        id: this.generatePatternId(structure),
-        tokens: structure.tokens,
-        context: this.extractContext(structure, code),
-        frequency: structure.frequency,
-        significance: structure.significance
-      });
-    });
-    
-    return patterns;
-  }
-  
-  // Extract context for a structure
-  private extractContext(structure: Structure, code: string): TokenContext {
-    const firstToken = structure.tokens[0];
-    if (!firstToken || !firstToken.context) {
-      // Create default context if not available
-      return {
-        line: '',
-        lineNumber: 0,
-        columnNumber: 0,
-        precedingTokens: [],
-        followingTokens: []
-      };
-    }
-    return firstToken.context;
-  }
-  
-  // Tokenize without language-specific rules
-  private tokenize(code: string): Token[] {
-    const tokens: Token[] = [];
-    
-    // Generic tokenization based on common programming constructs
-    const tokenPatterns = [
-      // Identifiers (any word)
-      { type: 'IDENTIFIER', regex: /\b[a-zA-Z_]\w*\b/g },
-      // Numbers
-      { type: 'NUMBER', regex: /\b\d+\.?\d*\b/g },
-      // Strings
-      { type: 'STRING', regex: /"[^"]*"|'[^']*'/g },
-      // Operators
-      { type: 'OPERATOR', regex: /[+\-*/%=<>!&|^~?:]+/g },
-      // Delimiters
-      { type: 'DELIMITER', regex: /[{}()\[\];,\.]/g },
-      // Whitespace
-      { type: 'WHITESPACE', regex: /\s+/g }
-    ];
-    
-    // Extract all tokens
-    const allMatches: Array<{type: string, value: string, index: number}> = [];
-    
-    tokenPatterns.forEach(({type, regex}) => {
-      let match;
-      regex.lastIndex = 0; // Reset regex
-      while ((match = regex.exec(code)) !== null) {
-        allMatches.push({
-          type,
-          value: match[0],
-          index: match.index
-        });
-      }
-    });
-    
-    // Sort by position and create token stream
-    allMatches.sort((a, b) => a.index - b.index);
-    
-    allMatches.forEach(match => {
-      tokens.push({
-        type: match.type,
-        value: match.value,
-        position: match.index,
-        context: this.getTokenContext(code, match.index)
-      });
-    });
-    
-    return tokens;
-  }
-  
-  // Find patterns using statistical significance
-  private findSignificantSequences(tokens: Token[]): TokenSequence[] {
-    const sequences: Map<string, TokenSequence> = new Map();
-    
-    // Sliding window to find repeated sequences
-    for (let windowSize = 2; windowSize <= 20; windowSize++) {
-      for (let i = 0; i <= tokens.length - windowSize; i++) {
-        const sequence = tokens.slice(i, i + windowSize);
-        const key = this.sequenceToKey(sequence);
-        
-        if (!sequences.has(key)) {
-          sequences.set(key, {
-            tokens: sequence,
-            frequency: 0,
-            positions: [],
-            significance: 0 // Initialize with 0
-          });
-        }
-        
-        const seq = sequences.get(key)!;
-        seq.frequency++;
-        seq.positions.push(i);
-      }
-    }
-    
-    // Calculate significance for each sequence
-    const sequencesArray = Array.from(sequences.values());
-    sequencesArray.forEach(seq => {
-      seq.significance = this.calculateSignificance(seq, tokens.length);
-    });
-    
-    // Filter by statistical significance
-    return sequencesArray
-      .filter(seq => seq.frequency > 1 && seq.significance > 0.1)
-      .sort((a, b) => b.significance - a.significance);
-  }
-  
-  // Identify structures without hardcoding
-  private identifyStructures(sequences: TokenSequence[]): Structure[] {
-    const structures: Structure[] = [];
-    
-    sequences.forEach(seq => {
-      // Look for structural patterns
-      const structure = this.analyzeStructure(seq);
-      if (structure.isSignificant) {
-        structures.push(structure);
-      }
-    });
-    
-    return structures;
-  }
-  
-  // Analyze structure generically
-  private analyzeStructure(sequence: TokenSequence): Structure {
-    const tokens = sequence.tokens;
-    
-    // Generic structure detection
-    const hasOpenBrace = tokens.some(t => t.value === '{');
-    const hasCloseBrace = tokens.some(t => t.value === '}');
-    const hasParentheses = tokens.some(t => t.value === '(' || t.value === ')');
-    const hasKeywords = tokens.some(t => this.isLikelyKeyword(t));
-    
-    const structureType = this.inferStructureType(tokens);
-    const significance = sequence.significance; // This is now guaranteed to be a number
-    
-    return {
-      tokens: tokens,
-      type: structureType,
-      frequency: sequence.frequency,
-      significance: significance,
-      isSignificant: significance > 0.2,
-      characteristics: {
-        hasBlock: hasOpenBrace && hasCloseBrace,
-        hasParameters: hasParentheses,
-        hasKeywords,
-        depth: this.calculateNestingDepth(tokens)
-      }
-    };
-  }
-  
-  // Learn mappings between source and target patterns
-  private learnMappings(sourcePatterns: ExtractedPattern[], targetPatterns: ExtractedPattern[]) {
-    sourcePatterns.forEach(sourcePattern => {
-      // Find best matching pattern in target
-      let bestMatch: ExtractedPattern | null = null;
-      let bestSimilarity = 0;
-      
-      targetPatterns.forEach(targetPattern => {
-        const similarity = this.calculateSimilarity(sourcePattern, targetPattern);
-        if (similarity > bestSimilarity && similarity > 0.5) {
-          bestSimilarity = similarity;
-          bestMatch = targetPattern;
-        }
-      });
-      
-      if (bestMatch) {
-        // Create transformation rule
-        const rule: TransformationRule = {
-          id: `${sourcePattern.id}_to_${bestMatch.id}`,
-          sourcePattern: sourcePattern,
-          targetPattern: bestMatch,
-          confidence: bestSimilarity,
-          transformation: this.deriveTransformation(sourcePattern, bestMatch)
-        };
-        
-        this.transformationRules.set(rule.id, rule);
-        
-        // Store learned pattern
-        this.learnedPatterns.set(sourcePattern.id, {
-          pattern: sourcePattern,
-          transformsTo: bestMatch,
-          rule: rule
-        });
-      }
-    });
-  }
-  
-  // Calculate similarity without language knowledge
-  private calculateSimilarity(pattern1: ExtractedPattern, pattern2: ExtractedPattern): number {
-    // Pure statistical similarity
-    const tokenSimilarity = this.compareTokenSequences(pattern1.tokens, pattern2.tokens);
-    const contextSimilarity = this.compareContexts(pattern1.context, pattern2.context);
-    const structuralSimilarity = this.compareStructures(pattern1, pattern2);
-    
-    // Weighted average
-    return (tokenSimilarity * 0.4 + contextSimilarity * 0.3 + structuralSimilarity * 0.3);
-  }
-  
-  // Derive transformation from patterns
-  private deriveTransformation(source: ExtractedPattern, target: ExtractedPattern): Transformation {
-    // Learn the transformation by comparing patterns
-    const tokenMapping = this.createTokenMapping(source.tokens, target.tokens);
-    const contextChanges = this.identifyContextChanges(source.context, target.context);
-    
-    return {
-      tokenMappings: tokenMapping,
-      contextChanges: contextChanges,
-      apply: (input: string) => this.applyTransformation(input, tokenMapping, contextChanges)
-    };
-  }
-  
-  // Apply learned patterns to convert files
-  private async convertUsingLearnedPatterns(sourceDir: string, outputDir: string) {
-    console.log("\n🔄 Conversion Phase - Applying learned patterns...\n");
-    
-    const files = this.getAllFiles(sourceDir);
-    console.log(`Found ${files.length} files to convert\n`);
-    
-    for (const file of files) {
-      const convertedContent = await this.convertFile(file);
-      const outputPath = this.getOutputPath(file, sourceDir, outputDir);
-      
-      // Create directory if needed
-      fs.mkdirSync(path.dirname(outputPath), { recursive: true });
-      
-      // Write converted file
-      fs.writeFileSync(outputPath, convertedContent);
-      console.log(`✅ Converted: ${path.relative(sourceDir, file)}`);
-    }
-  }
-  
-  // Convert a single file using learned patterns
-  private async convertFile(filePath: string): Promise<string> {
-    const content = fs.readFileSync(filePath, 'utf-8');
-    
-    // Extract patterns from the file
-    const patterns = this.extractPatterns(content);
-    
-    // Apply transformations based on learned rules
-    let converted = content;
-    
-    patterns.forEach(pattern => {
-      // Find matching learned pattern
-      const learned = this.findMatchingLearnedPattern(pattern);
-      
-      if (learned && learned.rule) {
-        // Apply the transformation
-        converted = this.applyLearnedTransformation(converted, pattern, learned.rule);
-      }
-    });
-    
-    return converted;
-  }
-  
-  // Find matching pattern from learned patterns
-  private findMatchingLearnedPattern(pattern: ExtractedPattern): LearnedPattern | null {
-    let bestMatch: LearnedPattern | null = null;
-    let bestSimilarity = 0;
-    
-    this.learnedPatterns.forEach(learned => {
-      const similarity = this.calculateSimilarity(pattern, learned.pattern);
-      if (similarity > bestSimilarity && similarity > 0.7) {
-        bestSimilarity = similarity;
-        bestMatch = learned;
-      }
-    });
-    
-    return bestMatch;
-  }
-  
-  // Apply transformation based on learned rule
-  private applyLearnedTransformation(
-    content: string,
-    pattern: ExtractedPattern,
-    rule: TransformationRule
-  ): string {
-    return rule.transformation.apply(content);
-  }
-  
-  // Helper methods - all generic, no hardcoding
-  
-  private sequenceToKey(tokens: Token[]): string {
-    // Create a normalized key for the sequence
-    return tokens.map(t => `${t.type}:${this.normalizeValue(t.value)}`).join('|');
-  }
-  
-  private normalizeValue(value: string): string {
-    // Normalize identifiers to detect patterns
-    if (/^[a-zA-Z_]\w*$/.test(value)) {
-      return '<ID>';
-    }
-    if (/^\d+\.?\d*$/.test(value)) {
-      return '<NUM>';
-    }
-    if (/^["'].*["']$/.test(value)) {
-      return '<STR>';
-    }
-    return value;
-  }
-  
-  private calculateSignificance(sequence: TokenSequence, totalTokens: number): number {
-    // Statistical significance based on frequency and length
-    const frequencyScore = sequence.frequency / totalTokens;
-    const lengthScore = Math.log(sequence.tokens.length) / Math.log(20);
-    const distributionScore = this.calculateDistribution(sequence.positions, totalTokens);
-    
-    return (frequencyScore * 0.4 + lengthScore * 0.3 + distributionScore * 0.3);
-  }
-  
-  private calculateDistribution(positions: number[], total: number): number {
-    // How well distributed the pattern is
-    if (positions.length < 2) return 0;
-    
-    const gaps = positions.slice(1).map((pos, i) => pos - positions[i]);
-    const avgGap = gaps.reduce((a, b) => a + b, 0) / gaps.length;
-    const variance = gaps.reduce((sum, gap) => sum + Math.pow(gap - avgGap, 2), 0) / gaps.length;
-    
-    // Lower variance = better distribution
-    return 1 / (1 + Math.sqrt(variance) / avgGap);
-  }
-  
-  private isLikelyKeyword(token: Token): boolean {
-    // Generic keyword detection without language knowledge
-    const value = token.value.toLowerCase();
-    
-    // Common keywords across languages
-    const commonPatterns = [
-      /^(class|function|def|method|public|private|protected|static|const|let|var)$/,
-      /^(if|else|for|while|do|switch|case|return|break|continue)$/,
-      /^(import|export|package|module|require|from|extends|implements)$/,
-      /^(new|this|super|self)$/
-    ];
-    
-    return commonPatterns.some(pattern => pattern.test(value));
-  }
-  
-  private inferStructureType(tokens: Token[]): string {
-    // Infer structure type from token patterns
-    const tokenValues = tokens.map(t => t.value);
-    
-    // Generic structure inference
-    if (tokenValues.includes('class') || tokenValues.includes('interface')) {
-      return 'class-like';
-    }
-    if (tokenValues.includes('function') || tokenValues.includes('def') || 
-        (tokenValues.includes('(') && tokenValues.includes(')') && tokenValues.includes('{'))) {
-      return 'function-like';
-    }
-    if (tokenValues.includes('=') && !tokenValues.includes('{')) {
-      return 'assignment-like';
-    }
-    if (tokenValues.includes('@') || tokenValues.includes('[') && tokenValues.includes(']')) {
-      return 'annotation-like';
-    }
-    
-    return 'unknown';
-  }
-  
-  private getTokenContext(code: string, position: number): TokenContext {
-    // Get surrounding context
-    const lineStart = code.lastIndexOf('\n', position) + 1;
-    const lineEnd = code.indexOf('\n', position);
-    const line = code.substring(lineStart, lineEnd > 0 ? lineEnd : code.length);
-    
-    return {
-      line,
-      lineNumber: code.substring(0, position).split('\n').length,
-      columnNumber: position - lineStart,
-      precedingTokens: this.getTokensInRange(code, Math.max(0, position - 50), position),
-      followingTokens: this.getTokensInRange(code, position, Math.min(code.length, position + 50))
-    };
-  }
-  
-  private getTokensInRange(code: string, start: number, end: number): string[] {
-    const substring = code.substring(start, end);
-    return substring.match(/\S+/g) || [];
-  }
-  
-  private compareTokenSequences(tokens1: Token[], tokens2: Token[]): number {
-    // Dynamic programming to find longest common subsequence
-    const m = tokens1.length;
-    const n = tokens2.length;
-    const dp: number[][] = Array(m + 1).fill(0).map(() => Array(n + 1).fill(0));
-    
-    for (let i = 1; i <= m; i++) {
-      for (let j = 1; j <= n; j++) {
-        if (this.tokensMatch(tokens1[i - 1], tokens2[j - 1])) {
-          dp[i][j] = dp[i - 1][j - 1] + 1;
-        } else {
-          dp[i][j] = Math.max(dp[i - 1][j], dp[i][j - 1]);
-        }
-      }
-    }
-    
-    const lcs = dp[m][n];
-    return (2 * lcs) / (m + n);
-  }
-  
-  private tokensMatch(token1: Token, token2: Token): boolean {
-    // Flexible token matching
-    if (token1.type === token2.type) {
-      if (token1.type === 'IDENTIFIER') {
-        return true; // Any identifier matches
-      }
-      if (token1.type === 'NUMBER') {
-        return true; // Any number matches
-      }
-      if (token1.type === 'STRING') {
-        return true; // Any string matches
-      }
-      return token1.value === token2.value;
-    }
-    return false;
-  }
-  
-  private createTokenMapping(source: Token[], target: Token[]): TokenMapping[] {
-    const mappings: TokenMapping[] = [];
-    
-    // Align sequences and create mappings
-    let i = 0, j = 0;
-    while (i < source.length && j < target.length) {
-      if (this.tokensMatch(source[i], target[j])) {
-        mappings.push({
-          sourceToken: source[i],
-          targetToken: target[j],
-          transform: this.deriveTokenTransform(source[i], target[j])
-        });
-        i++;
-        j++;
-      } else {
-        // Handle mismatches
-        if (i < source.length - 1 && this.tokensMatch(source[i + 1], target[j])) {
-          // Source token deleted
-          mappings.push({
-            sourceToken: source[i],
-            targetToken: null,
-            transform: { type: 'delete' }
-          });
-          i++;
-        } else if (j < target.length - 1 && this.tokensMatch(source[i], target[j + 1])) {
-          // Target token inserted
-          mappings.push({
-            sourceToken: null,
-            targetToken: target[j],
-            transform: { type: 'insert', value: target[j].value }
-          });
-          j++;
-        } else {
-          // Replace
-          mappings.push({
-            sourceToken: source[i],
-            targetToken: target[j],
-            transform: { type: 'replace', from: source[i].value, to: target[j].value }
-          });
-          i++;
-          j++;
-        }
-      }
-    }
-    
-    return mappings;
-  }
-  
-  private deriveTokenTransform(source: Token, target: Token): TokenTransform {
-    if (source.value === target.value) {
-      return { type: 'keep' };
-    }
-    
-    return {
-      type: 'replace',
-      from: source.value,
-      to: target.value
-    };
-  }
-  
-  private applyTransformation(
-    input: string,
-    tokenMappings: TokenMapping[],
-    contextChanges: ContextChange[]
-  ): string {
-    let result = input;
-    
-    // Apply token mappings
-    tokenMappings.forEach(mapping => {
-      if (mapping.transform.type === 'replace' && mapping.transform.from && mapping.transform.to) {
-        const regex = new RegExp(this.escapeRegex(mapping.transform.from), 'g');
-        result = result.replace(regex, mapping.transform.to);
-      }
-    });
-    
-    // Apply context changes
-    contextChanges.forEach(change => {
-      result = this.applyContextChange(result, change);
-    });
-    
-    return result;
-  }
-  
-  private escapeRegex(str: string): string {
-    return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  }
-  
-  private findFilePairs(sourceDir: string, targetDir: string): FilePair[] {
-    const pairs: FilePair[] = [];
-    const sourceFiles = this.getAllFiles(sourceDir);
-    
-    sourceFiles.forEach(sourceFile => {
-      const relativePath = path.relative(sourceDir, sourceFile);
-      const baseName = path.basename(relativePath, path.extname(relativePath));
-      
-      // Find corresponding file in target directory
-      const targetFiles = this.getAllFiles(targetDir);
-      const targetFile = targetFiles.find(tf => {
-        const targetBase = path.basename(tf, path.extname(tf));
-        return this.filesCorrespond(baseName, targetBase);
-      });
-      
-      if (targetFile) {
-        pairs.push({ source: sourceFile, target: targetFile });
-      }
-    });
-    
-    return pairs;
-  }
-  
-  private filesCorrespond(name1: string, name2: string): boolean {
-    // Flexible file matching
-    const normalize = (s: string) => s.toLowerCase().replace(/[-_]/g, '');
-    return normalize(name1) === normalize(name2) ||
-           normalize(name1).includes(normalize(name2)) ||
-           normalize(name2).includes(normalize(name1));
-  }
-  
-  private getAllFiles(dir: string): string[] {
-    const files: string[] = [];
-    
-    const scan = (directory: string) => {
-      const items = fs.readdirSync(directory);
-      items.forEach(item => {
-        const fullPath = path.join(directory, item);
-        const stat = fs.statSync(fullPath);
-        
-        if (stat.isDirectory()) {
-          scan(fullPath);
-        } else if (stat.isFile()) {
-          files.push(fullPath);
-        }
-      });
-    };
-    
-    scan(dir);
-    return files;
-  }
-  
-  private getOutputPath(inputFile: string, sourceDir: string, outputDir: string): string {
-    const relativePath = path.relative(sourceDir, inputFile);
-    const outputPath = path.join(outputDir, relativePath);
-    
-    // Change extension based on learned patterns
-    const ext = path.extname(outputPath);
-    const newExt = this.learnedExtensionMapping.get(ext) || '.ts';
-    
-    return outputPath.replace(ext, newExt);
-  }
-  
-  private generatePatternId(structure: Structure): string {
-    // Generate unique ID based on structure characteristics
-    const chars = structure.characteristics;
-    return `pattern_${structure.type}_${chars.hasBlock ? 'block' : 'inline'}_${chars.depth}_${Date.now()}`;
-  }
-  
-  private compareContexts(context1: TokenContext, context2: TokenContext): number {
-    // Compare surrounding context
-    const before1 = context1.precedingTokens.join(' ');
-    const before2 = context2.precedingTokens.join(' ');
-    const after1 = context1.followingTokens.join(' ');
-    const after2 = context2.followingTokens.join(' ');
-    
-    const beforeSim = this.stringSimilarity(before1, before2);
-    const afterSim = this.stringSimilarity(after1, after2);
-    
-    return (beforeSim + afterSim) / 2;
-  }
-  
-  private stringSimilarity(str1: string, str2: string): number {
-    // Levenshtein distance normalized
-    const maxLen = Math.max(str1.length, str2.length);
-    if (maxLen === 0) return 1;
-    
-    const distance = this.levenshteinDistance(str1, str2);
-    return 1 - (distance / maxLen);
-  }
-  
-  private levenshteinDistance(str1: string, str2: string): number {
-    const m = str1.length;
-    const n = str2.length;
-    const dp: number[][] = Array(m + 1).fill(0).map(() => Array(n + 1).fill(0));
-    
-    for (let i = 0; i <= m; i++) dp[i][0] = i;
-    for (let j = 0; j <= n; j++) dp[0][j] = j;
-    
-    for (let i = 1; i <= m; i++) {
-      for (let j = 1; j <= n; j++) {
-        if (str1[i - 1] === str2[j - 1]) {
-          dp[i][j] = dp[i - 1][j - 1];
-        } else {
-          dp[i][j] = Math.min(
-            dp[i - 1][j] + 1,    // deletion
-            dp[i][j - 1] + 1,    // insertion
-            dp[i - 1][j - 1] + 1 // substitution
-          );
-        }
-      }
-    }
-    
-    return dp[m][n];
-  }
-  
-  private compareStructures(pattern1: ExtractedPattern, pattern2: ExtractedPattern): number {
-    // Structural comparison without language knowledge
-    const len1 = pattern1.tokens.length;
-    const len2 = pattern2.tokens.length;
-    const lenSim = 1 - Math.abs(len1 - len2) / Math.max(len1, len2);
-    
-    const type1 = pattern1.tokens.filter(t => t.type === 'DELIMITER').length;
-    const type2 = pattern2.tokens.filter(t => t.type === 'DELIMITER').length;
-    const typeSim = 1 - Math.abs(type1 - type2) / Math.max(type1, type2, 1);
-    
-    return (lenSim + typeSim) / 2;
-  }
-  
-  private identifyContextChanges(context1: TokenContext, context2: TokenContext): ContextChange[] {
-    const changes: ContextChange[] = [];
-    
-    // Identify what changed in the context
-    if (context1.precedingTokens.join(' ') !== context2.precedingTokens.join(' ')) {
-      changes.push({
-        type: 'preceding',
-        from: context1.precedingTokens,
-        to: context2.precedingTokens
-      });
-    }
-    
-    if (context1.followingTokens.join(' ') !== context2.followingTokens.join(' ')) {
-      changes.push({
-        type: 'following',
-        from: context1.followingTokens,
-        to: context2.followingTokens
-      });
-    }
-    
-    return changes;
-  }
-  
-  private applyContextChange(content: string, change: ContextChange): string {
-    // Apply context-based transformation
-    if (change.type === 'preceding' && change.from && change.to) {
-      const pattern = change.from.join('\\s*');
-      const replacement = change.to.join(' ');
-      const regex = new RegExp(pattern, 'g');
-      return content.replace(regex, replacement);
-    }
-    
-    return content;
-  }
-  
-  private calculateNestingDepth(tokens: Token[]): number {
-    let depth = 0;
-    let maxDepth = 0;
-    
-    tokens.forEach(token => {
-      if (token.value === '{' || token.value === '(' || token.value === '[') {
-        depth++;
-        maxDepth = Math.max(maxDepth, depth);
-      } else if (token.value === '}' || token.value === ')' || token.value === ']') {
-        depth--;
-      }
-    });
-    
-    return maxDepth;
-  }
-}
-
-// ==================== CLI ====================
-class PureLearningCLI {
-  private converter = new PureLearningConverter();
-  
-  async run(args: string[]) {
-    if (args.length < 4) {
-      this.showUsage();
-      return;
-    }
-    
-    const [sourceFramework, exampleSource, exampleTarget, outputDir] = args;
-    
-    console.log("🚀 Pure Learning-Based Framework Converter");
-    console.log("=" .repeat(60));
-    console.log("NO hardcoded patterns - learning everything from example FILES!");
-    console.log("=" .repeat(60) + "\n");
+/**
+ * Check if data exists using stored procedure.
+ * Parameters can include null values and numeric values.
+ * 
+ * @param procedureName the stored procedure name (without sp_ prefix)
+ * @param parameterList comma-separated list of parameter names or values (e.g., "dealId, null, 0, reportDate")
+ */
+@QAFTestStep(description = "user checks if data exists using stored procedure {procedureName} with parameters {parameterList}")
+public void checkDataExistsUsingStoredProcedure(String procedureName, String parameterList) {
+    logger.info("Checking data using stored procedure: " + procedureName);
     
     try {
-      await this.converter.convertFramework(
-        sourceFramework,
-        exampleSource,
-        exampleTarget,
-        outputDir
-      );
-      
-      console.log("\n✅ Conversion completed successfully!");
-    } catch (error) {
-      console.error("\n❌ Error:", error);
-      process.exit(1);
+        // Parse parameters
+        String[] params = parameterList.split(",");
+        List<Object> paramValues = new ArrayList<>();
+        
+        for (String param : params) {
+            param = param.trim();
+            
+            if ("null".equalsIgnoreCase(param)) {
+                // Handle null value
+                paramValues.add(null);
+                logger.debug("Parameter: null");
+            } else if (param.matches("-?\\d+")) {
+                // Handle numeric value
+                paramValues.add(Integer.parseInt(param));
+                logger.debug("Parameter (numeric): " + param);
+            } else if (param.matches("-?\\d*\\.\\d+")) {
+                // Handle decimal value
+                paramValues.add(Double.parseDouble(param));
+                logger.debug("Parameter (decimal): " + param);
+            } else {
+                // Handle as parameter name from test context
+                Object value = TestContextManager.getTestDataValue(param);
+                paramValues.add(value);
+                logger.debug("Parameter " + param + " = " + value);
+            }
+        }
+        
+        // Execute stored procedure - returns List<Map<String, Object>>
+        List<Map<String, Object>> results = DatabaseUtil.executeStoredProcedure(procedureName, paramValues);
+        
+        // Determine if data exists
+        boolean dataExists = false;
+        
+        // Check if we have any results
+        if (results != null && !results.isEmpty()) {
+            // If stored procedure returns a count or single value result
+            Map<String, Object> firstRow = results.get(0);
+            if (firstRow != null && !firstRow.isEmpty()) {
+                // Get the first value from the result (usually count or exists flag)
+                Object firstValue = firstRow.values().iterator().next();
+                
+                if (firstValue instanceof Boolean) {
+                    dataExists = (Boolean) firstValue;
+                } else if (firstValue instanceof Number) {
+                    dataExists = ((Number) firstValue).intValue() > 0;
+                } else if (firstValue instanceof String) {
+                    // Handle string results like "Y"/"N" or numeric strings
+                    String strValue = firstValue.toString();
+                    if ("Y".equalsIgnoreCase(strValue) || "YES".equalsIgnoreCase(strValue) || "TRUE".equalsIgnoreCase(strValue)) {
+                        dataExists = true;
+                    } else if (strValue.matches("\\d+")) {
+                        dataExists = Integer.parseInt(strValue) > 0;
+                    }
+                } else {
+                    // For any other non-null result, consider data exists
+                    dataExists = true;
+                }
+            }
+        }
+        
+        // Store result in context
+        TestContextManager.setTestData("data.exists", dataExists);
+        TestContextManager.setTestData("skip.ui.setup", dataExists);
+        
+        Reporter.log("Stored procedure check result: Data exists = " + dataExists);
+        
+        if (dataExists) {
+            Reporter.log("Test data already exists. UI setup can be skipped.");
+        } else {
+            Reporter.log("No test data found. UI setup is required.");
+        }
+        
+    } catch (Exception e) {
+        logger.error("Error checking data with stored procedure: " + procedureName, e);
+        Reporter.log("Error during stored procedure check: " + e.getMessage());
+        // On error, assume data doesn't exist
+        TestContextManager.setTestData("data.exists", false);
+        TestContextManager.setTestData("skip.ui.setup", false);
     }
-  }
-  
-  private showUsage() {
-    console.log(`
-Pure Learning-Based Framework Converter
-
-Usage:
-  npm run convert <source-framework> <example-source> <example-target> <output-dir>
-
-Example:
-  npm run convert ./my-selenium ./examples/selenium ./examples/playwright ./output
-
-This converter:
-- Has NO hardcoded patterns or rules
-- Learns everything from your provided example FILES
-- Uses statistical analysis to identify patterns
-- Applies learned transformations to convert your framework
-
-Example File Structure:
-  examples/
-  ├── selenium/
-  │   ├── LoginPage.java
-  │   ├── HomePage.java
-  │   └── SearchPage.java
-  └── playwright/
-      ├── login.page.ts
-      ├── home.page.ts
-      └── search.page.ts
-    `);
-  }
 }
 
-// ==================== EXPORTS ====================
-export {
-  PureLearningConverter,
-  PureLearningCLI
-};
+/**
+ * Check if data exists in database using a query from properties.
+ * 
+ * @param queryKey the property key for the query (e.g., "query.check.testdata")
+ * @param parameterList comma-separated list of parameter names or values
+ */
+@QAFTestStep(description = "user checks if data exists in database using query {queryKey} with parameters {parameterList}")
+public void checkDataExistsUsingQuery(String queryKey, String parameterList) {
+    logger.info("Checking data using query key: " + queryKey);
+    
+    try {
+        // Get query from properties
+        String query = ConfigurationManager.getBundle().getString(queryKey);
+        if (query == null || query.isEmpty()) {
+            throw new RuntimeException("Query not found for key: " + queryKey);
+        }
+        logger.info("Query: " + query);
+        
+        // Parse parameters
+        String[] params = parameterList.split(",");
+        List<Object> paramValues = new ArrayList<>();
+        
+        for (String param : params) {
+            param = param.trim();
+            
+            if ("null".equalsIgnoreCase(param)) {
+                // Handle null value
+                paramValues.add(null);
+                logger.debug("Parameter: null");
+            } else if (param.matches("-?\\d+")) {
+                // Handle numeric value
+                paramValues.add(Integer.parseInt(param));
+                logger.debug("Parameter (numeric): " + param);
+            } else if (param.matches("-?\\d*\\.\\d+")) {
+                // Handle decimal value
+                paramValues.add(Double.parseDouble(param));
+                logger.debug("Parameter (decimal): " + param);
+            } else {
+                // Handle as parameter name from test context
+                Object value = TestContextManager.getTestDataValue(param);
+                paramValues.add(value);
+                logger.debug("Parameter " + param + " = " + value);
+            }
+        }
+        
+        // Execute query - returns List<Map<String, Object>>
+        List<Map<String, Object>> results = DatabaseUtil.executeSelectQuery(query, paramValues);
+        
+        // Determine if data exists
+        boolean dataExists = false;
+        
+        // If query is COUNT query
+        if (query.toUpperCase().contains("COUNT(*)") || query.toUpperCase().contains("COUNT(1)")) {
+            if (results != null && !results.isEmpty()) {
+                Map<String, Object> firstRow = results.get(0);
+                if (firstRow != null && !firstRow.isEmpty()) {
+                    Object count = firstRow.values().iterator().next();
+                    if (count != null) {
+                        if (count instanceof Number) {
+                            dataExists = ((Number) count).intValue() > 0;
+                        } else {
+                            dataExists = Integer.parseInt(count.toString()) > 0;
+                        }
+                    }
+                }
+            }
+        } else {
+            // For regular SELECT queries, check if any rows returned
+            dataExists = results != null && !results.isEmpty();
+        }
+        
+        // Store result in context
+        TestContextManager.setTestData("data.exists", dataExists);
+        TestContextManager.setTestData("skip.ui.setup", dataExists);
+        
+        Reporter.log("Query check result: Data exists = " + dataExists);
+        
+        if (dataExists) {
+            Reporter.log("Test data already exists. UI setup can be skipped.");
+        } else {
+            Reporter.log("No test data found. UI setup is required.");
+        }
+        
+    } catch (Exception e) {
+        logger.error("Error checking data with query: " + queryKey, e);
+        Reporter.log("Error during query check: " + e.getMessage());
+        // On error, assume data doesn't exist
+        TestContextManager.setTestData("data.exists", false);
+        TestContextManager.setTestData("skip.ui.setup", false);
+    }
+}
 
-// Run if called directly
-if (require.main === module) {
-  const cli = new PureLearningCLI();
-  cli.run(process.argv.slice(2));
+/**
+ * Optional: A step to check if UI setup should be skipped based on data existence check.
+ */
+@QAFTestStep(description = "user skips UI setup if test data exists")
+public void skipUISetupIfDataExists() {
+    Object dataExists = TestContextManager.getTestDataValue("data.exists");
+    
+    if (dataExists != null && (Boolean) dataExists) {
+        logger.info("Skipping UI setup as test data already exists");
+        Reporter.log("Skipping UI setup - using existing test data");
+        
+        // This will skip the remaining steps in the scenario
+        throw new SkipException("Test data already exists in database, skipping UI setup");
+    }
+}
+
+/**
+ * Optional: A step to check if data exists (for conditional logic).
+ */
+@QAFTestStep(description = "user verifies if test data exists")
+public boolean verifyTestDataExists() {
+    Object dataExists = TestContextManager.getTestDataValue("data.exists");
+    boolean exists = dataExists != null && (Boolean) dataExists;
+    
+    Reporter.log("Test data exists: " + exists);
+    return exists;
 }
