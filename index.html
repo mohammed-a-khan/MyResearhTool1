@@ -1,0 +1,3755 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Automation Report - CSTestForge</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+:root {
+    --primary-color: #93186C;
+    --primary-dark: #6b1250;
+    --primary-light: #b54a94;
+    --primary-ultralight: #f5e6f1;
+    --sidebar-bg: #93186C;
+    --sidebar-hover: #b54a94;
+    --sidebar-active: #6b1250;
+    --bg-color: #f7f7f7;
+    --card-bg: #ffffff;
+    --text-primary: #1f2937;
+    --text-secondary: #6b7280;
+    --border-color: #e5e7eb;
+    --success-color: #10b981;
+    --danger-color: #ef4444;
+    --warning-color: #f59e0b;
+    --info-color: #3b82f6;
+    --purple-color: #8b5cf6;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+    background-color: var(--bg-color);
+    color: var(--text-primary);
+    font-size: 14px;
+    display: flex;
+    min-height: 100vh;
+}
+
+/* Sidebar */
+.sidebar {
+    width: 240px;
+    background-color: var(--sidebar-bg);
+    color: white;
+    position: fixed;
+    height: 100vh;
+    overflow-y: auto;
+    z-index: 1000;
+}
+
+.sidebar-header {
+    padding: 1.5rem;
+    background-color: var(--primary-dark);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.sidebar-logo {
+    font-size: 1.5rem;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.sidebar-menu {
+    list-style: none;
+    padding: 1rem 0;
+}
+
+.sidebar-menu-item {
+    position: relative;
+}
+
+.sidebar-menu-link {
+    display: flex;
+    align-items: center;
+    padding: 0.75rem 1.5rem;
+    color: rgba(255, 255, 255, 0.8);
+    text-decoration: none;
+    transition: all 0.2s;
+    cursor: pointer;
+}
+
+.sidebar-menu-link:hover {
+    background-color: var(--sidebar-hover);
+    color: white;
+}
+
+.sidebar-menu-link.active {
+    background-color: var(--sidebar-active);
+    color: white;
+}
+
+.sidebar-menu-link.active::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+    background-color: white;
+}
+
+.sidebar-menu-link i {
+    width: 20px;
+    margin-right: 0.75rem;
+    font-size: 1rem;
+}
+
+.sidebar-menu-badge {
+    margin-left: auto;
+    background-color: rgba(255, 255, 255, 0.2);
+    color: white;
+    padding: 0.125rem 0.5rem;
+    border-radius: 0.75rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.sidebar-footer {
+    padding: 1.5rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    margin-top: auto;
+}
+
+/* Main Content */
+.main-content {
+    margin-left: 240px;
+    flex: 1;
+    padding: 2rem;
+    max-width: calc(100vw - 240px);
+}
+
+/* Sections */
+.section {
+    display: none;
+}
+
+.section.active {
+    display: block;
+}
+
+/* Page Header */
+.page-header {
+    margin-bottom: 2rem;
+}
+
+.page-title {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 0.5rem;
+}
+
+.page-subtitle {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+}
+
+.page-subtitle-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+/* Cards */
+.card {
+    background-color: var(--card-bg);
+    border-radius: 0.5rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    margin-bottom: 1.5rem;
+    overflow: hidden;
+}
+
+.card-header {
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.card-title {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0;
+}
+
+.card-body {
+    padding: 1.5rem;
+}
+
+/* Metrics Grid */
+.metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.metric-card {
+    background-color: var(--card-bg);
+    border-radius: 0.5rem;
+    padding: 1.5rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.metric-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 0.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+}
+
+.metric-content {
+    flex: 1;
+}
+
+.metric-value {
+    font-size: 1.875rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    line-height: 1;
+    margin-bottom: 0.25rem;
+}
+
+.metric-label {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+}
+
+.metric-change {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+    margin-top: 0.5rem;
+}
+
+.metric-change i {
+    font-size: 0.625rem;
+}
+
+.trend-up {
+    color: var(--success-color);
+}
+
+.trend-down {
+    color: var(--danger-color);
+}
+
+.trend-neutral {
+    color: var(--text-secondary);
+}
+
+.metric-detail {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    margin-top: 0.25rem;
+    font-style: italic;
+}
+
+/* Charts */
+.chart-container {
+    position: relative;
+    height: 300px;
+    padding: 1rem;
+}
+
+.chart-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+/* Tables */
+.table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.table thead th {
+    text-align: left;
+    padding: 0.75rem 1rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    background-color: var(--bg-color);
+    border-bottom: 1px solid var(--border-color);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.table tbody td {
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--border-color);
+    color: var(--text-primary);
+}
+
+.table tbody tr:hover {
+    background-color: var(--bg-color);
+}
+
+/* Badges */
+.badge {
+    display: inline-block;
+    padding: 0.25rem 0.5rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    border-radius: 0.25rem;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+.badge-success {
+    background-color: #d1fae5;
+    color: #065f46;
+}
+
+.badge-danger {
+    background-color: #fee2e2;
+    color: #991b1b;
+}
+
+.badge-warning {
+    background-color: #fef3c7;
+    color: #92400e;
+}
+
+.badge-info {
+    background-color: #dbeafe;
+    color: #1e40af;
+}
+
+/* Tree View */
+.test-tree {
+    background-color: var(--bg-color);
+    border-radius: 0.5rem;
+    padding: 1rem;
+}
+
+.tree-item {
+    margin-bottom: 0.25rem;
+}
+
+.tree-item-content {
+    display: flex;
+    align-items: center;
+    padding: 0.75rem 0.5rem;
+    cursor: pointer;
+    border-radius: 0.375rem;
+    transition: all 0.2s ease;
+    min-height: 2.5rem;
+    border: 1px solid transparent;
+}
+
+.tree-item-content:hover {
+    background-color: rgba(147, 24, 108, 0.05);
+    border-color: rgba(147, 24, 108, 0.1);
+}
+
+.tree-item-icon {
+    width: 20px;
+    margin-right: 0.75rem;
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    flex-shrink: 0;
+}
+
+.tree-item-name {
+    flex: 1;
+    font-weight: 500;
+    color: var(--text-primary);
+    margin-right: 1rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.tree-item-status {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    font-size: 0.75rem;
+    flex-shrink: 0;
+    margin-left: auto;
+    flex-wrap: wrap;
+    max-width: 50%;
+    justify-content: flex-end;
+}
+
+.tree-children {
+    margin-left: 2rem;
+    display: none;
+}
+
+.tree-item.expanded > .tree-children {
+    display: block;
+}
+
+/* Feature Cards */
+.features-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1.5rem;
+    justify-content: start;
+    padding: 0 1rem;
+}
+
+.feature-card {
+    background-color: var(--card-bg);
+    border-radius: 0.75rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    padding: 1.25rem;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    border: 2px solid transparent;
+    text-align: left;
+    font-size: 0.875rem;
+}
+
+.feature-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(147, 24, 108, 0.15);
+    border-color: var(--primary-light);
+}
+
+.feature-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.feature-icon {
+    width: 40px;
+    height: 40px;
+    background: linear-gradient(135deg, #4caf50, #66bb6a);
+    border-radius: 0.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #4caf50;
+}
+
+.feature-title {
+    flex: 1;
+}
+
+.feature-name {
+    font-size: 0.95rem;
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+    color: var(--text-primary);
+}
+
+.feature-tags {
+    display: flex;
+    gap: 0.375rem;
+    flex-wrap: wrap;
+    margin-top: 0.25rem;
+}
+
+.feature-tag {
+    font-size: 0.7rem;
+    padding: 0.125rem 0.5rem;
+    background-color: var(--primary-ultralight);
+    color: var(--primary-color);
+    border-radius: 0.25rem;
+}
+
+.feature-metrics {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.feature-metric {
+    text-align: center;
+}
+
+.feature-metric-value {
+    font-size: 1.25rem;
+    font-weight: 700;
+    line-height: 1;
+    color: var(--text-primary);
+}
+
+.feature-metric-label {
+    font-size: 0.7rem;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    margin-top: 0.25rem;
+}
+
+.feature-scenarios {
+    margin-top: 1rem;
+}
+
+.scenario-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem;
+    border-radius: 0.25rem;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.scenario-item:hover {
+    background-color: var(--bg-color);
+}
+
+.scenario-status {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    color: white;
+}
+
+.scenario-status.passed {
+    background-color: var(--success-color);
+}
+
+.scenario-status.failed {
+    background-color: var(--danger-color);
+}
+
+.scenario-name {
+    flex: 1;
+    font-size: 0.875rem;
+}
+
+.scenario-duration {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+}
+
+/* Test Details Panel */
+.test-details-panel {
+    background-color: var(--bg-color);
+    border-radius: 0.5rem;
+    padding: 1.5rem;
+    margin-top: 1rem;
+}
+
+.test-info-grid {
+    display: grid;
+    grid-template-columns: max-content 1fr;
+    gap: 0.5rem 1rem;
+    font-size: 0.875rem;
+}
+
+.test-info-label {
+    font-weight: 600;
+    color: var(--text-secondary);
+}
+
+.metadata-section {
+    margin-bottom: 1.5rem;
+    background: white;
+    border-radius: 0.5rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+}
+
+.metadata-section-title {
+    background: linear-gradient(135deg, var(--primary-light), var(--primary-color));
+    color: white;
+    padding: 0.75rem 1rem;
+    margin: 0;
+    font-size: 0.95rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.test-metadata-sections {
+    display: grid;
+    gap: 1rem;
+}
+
+.test-details-header {
+    margin-bottom: 1.5rem;
+}
+
+.test-details-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
+
+.test-details-meta {
+    display: flex;
+    gap: 1rem;
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+}
+
+.test-steps {
+    margin-top: 1.5rem;
+}
+
+.step-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    padding: 0.75rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.step-icon {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+}
+
+.step-icon.passed {
+    background-color: #d1fae5;
+    color: #065f46;
+}
+
+.step-icon.failed {
+    background-color: #fee2e2;
+    color: #991b1b;
+}
+
+.step-content {
+    flex: 1;
+}
+
+.step-keyword {
+    font-weight: 600;
+    color: var(--primary-color);
+    margin-right: 0.5rem;
+}
+
+.step-text {
+    color: var(--text-primary);
+}
+
+.step-duration {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    margin-top: 0.25rem;
+}
+
+/* Timeline */
+.timeline-container {
+    background-color: var(--bg-color);
+    border-radius: 0.5rem;
+    padding: 1rem;
+    overflow-x: auto;
+}
+
+.timeline-header {
+    display: grid;
+    grid-template-columns: 200px 1fr;
+    margin-bottom: 1rem;
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    padding: 0.5rem;
+}
+
+.timeline-row {
+    display: grid;
+    grid-template-columns: 200px 1fr;
+    margin-bottom: 0.5rem;
+    align-items: center;
+}
+
+.timeline-label {
+    font-weight: 500;
+    padding: 0.5rem;
+}
+
+.timeline-bar-container {
+    position: relative;
+    height: 30px;
+}
+
+.timeline-bar {
+    position: absolute;
+    height: 100%;
+    border-radius: 0.25rem;
+    display: flex;
+    align-items: center;
+    padding: 0 0.5rem;
+    font-size: 0.75rem;
+    color: white;
+    cursor: pointer;
+    transition: opacity 0.2s;
+}
+
+.timeline-bar:hover {
+    opacity: 0.9;
+}
+
+.timeline-bar.passed {
+    background-color: var(--success-color);
+}
+
+.timeline-bar.failed {
+    background-color: var(--danger-color);
+}
+
+/* Environment Cards */
+.env-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.5rem;
+}
+
+.env-card {
+    background-color: var(--card-bg);
+    border-radius: 0.5rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    padding: 1.5rem;
+}
+
+.env-card-title {
+    font-size: 1.125rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.env-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.env-item:last-child {
+    border-bottom: none;
+}
+
+.env-label {
+    font-weight: 500;
+    color: var(--text-secondary);
+}
+
+.env-value {
+    color: var(--text-primary);
+    font-family: 'Courier New', monospace;
+    font-size: 0.875rem;
+}
+
+/* Modal */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 2000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    align-items: center;
+    justify-content: center;
+}
+
+.modal.show {
+    display: flex;
+}
+
+.modal-dialog {
+    background-color: white;
+    border-radius: 0.5rem;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+    max-width: 800px;
+    max-height: 90vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.modal-header {
+    padding: 1.5rem;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.modal-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    color: var(--text-secondary);
+    cursor: pointer;
+}
+
+.modal-body {
+    padding: 1.5rem;
+    overflow-y: auto;
+    flex: 1;
+}
+
+/* Screenshot */
+.screenshot-container {
+    margin-top: 1rem;
+    border: 2px solid var(--danger-color);
+    border-radius: 0.5rem;
+    overflow: hidden;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.screenshot-image {
+    width: 100%;
+    max-width: 800px;
+    height: auto;
+    border-radius: 0.375rem;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    cursor: pointer;
+    transition: transform 0.2s;
+}
+
+.screenshot-image:hover {
+    transform: scale(1.02);
+}
+
+.screenshot-header {
+    background-color: var(--danger-color);
+    color: white;
+    padding: 0.5rem 1rem;
+    font-weight: 600;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.screenshot-image {
+    max-width: 100%;
+    height: auto;
+    display: block;
+}
+
+/* Progress Bar */
+.progress {
+    height: 8px;
+    background-color: var(--border-color);
+    border-radius: 4px;
+    overflow: hidden;
+    margin-top: 0.5rem;
+}
+
+.progress-bar {
+    height: 100%;
+    background-color: var(--success-color);
+    transition: width 0.3s ease;
+}
+
+/* Utilities */
+.text-center { text-align: center; }
+.text-success { color: var(--success-color); }
+.text-danger { color: var(--danger-color); }
+.text-warning { color: var(--warning-color); }
+.text-info { color: var(--info-color); }
+.text-muted { color: var(--text-secondary); }
+.font-mono { font-family: 'Courier New', monospace; }
+
+/* Scrollbar */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--bg-color);
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--border-color);
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--text-secondary);
+}
+
+/* Grid layouts */
+.test-details {
+    display: grid;
+    grid-template-columns: 1fr 2fr;
+    gap: 1.5rem;
+}
+
+/* Execution Summary */
+.execution-info {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.execution-stat {
+    text-align: center;
+    padding: 1rem;
+    background: var(--primary-ultralight);
+    border-radius: 0.5rem;
+}
+
+.execution-stat-value {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--primary-color);
+    margin-bottom: 0.5rem;
+}
+
+.execution-stat-label {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+/* Environment Grid */
+.env-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.5rem;
+}
+
+.env-card {
+    background: var(--bg-color);
+    border-radius: 0.375rem;
+    padding: 1rem;
+}
+
+.env-card-title {
+    font-weight: 600;
+    margin-bottom: 1rem;
+    color: var(--text-primary);
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 0.5rem;
+}
+
+.env-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid rgba(0,0,0,0.05);
+}
+
+.env-item:last-child {
+    border-bottom: none;
+}
+
+.env-label {
+    font-weight: 500;
+    color: var(--text-secondary);
+}
+
+.env-value {
+    color: var(--text-primary);
+    font-family: monospace;
+    font-size: 0.875rem;
+}
+
+/* Modal Styles */
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 9999;
+}
+
+.modal-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.75);
+    cursor: pointer;
+}
+
+.modal-content {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: white;
+    border-radius: 0.5rem;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    max-width: 90vw;
+    max-height: 90vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.5rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.modal-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin: 0;
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    color: var(--text-secondary);
+    cursor: pointer;
+    padding: 0.5rem;
+    line-height: 1;
+    transition: color 0.2s;
+}
+
+.modal-close:hover {
+    color: var(--text-primary);
+}
+
+.modal-body {
+    padding: 1.5rem;
+    overflow: auto;
+    flex: 1;
+}
+
+.modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    padding: 1.5rem;
+    border-top: 1px solid var(--border-color);
+}
+
+.btn {
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: 0.375rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: opacity 0.2s;
+}
+
+.btn:hover {
+    opacity: 0.9;
+}
+
+.btn-primary {
+    background-color: var(--primary-color);
+    color: white;
+}
+
+.btn-secondary {
+    background-color: var(--text-secondary);
+    color: white;
+}
+
+/* Failure Details Styles */
+.failure-details {
+    padding: 1rem;
+}
+
+.failure-section {
+    margin-bottom: 1.5rem;
+}
+
+.failure-section h4 {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+    color: var(--text-primary);
+}
+
+.step-item {
+    font-family: monospace;
+    font-size: 0.875rem;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.step-item:last-child {
+    border-bottom: none;
+}
+
+/* Execution Timeline Styles */
+.execution-timeline {
+    position: relative;
+    padding-left: 2rem;
+}
+
+.execution-timeline::before {
+    content: '';
+    position: absolute;
+    left: 0.75rem;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background-color: var(--border-color);
+}
+
+.timeline-item {
+    position: relative;
+    padding-bottom: 2rem;
+}
+
+.timeline-item:last-child {
+    padding-bottom: 0;
+}
+
+.timeline-icon {
+    position: absolute;
+    left: -1.25rem;
+    width: 2rem;
+    height: 2rem;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 0.875rem;
+}
+
+.timeline-content {
+    margin-left: 1rem;
+}
+
+.timeline-title {
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 0.25rem;
+}
+
+.timeline-time {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+}
+
+/* Thread Timeline Styles */
+.timeline-scale {
+    display: flex;
+    align-items: center;
+    margin-bottom: 1rem;
+    padding: 0 1rem;
+}
+
+.timeline-scale-label {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+.timeline-scale-line {
+    flex: 1;
+    height: 1px;
+    background-color: var(--border-color);
+    margin: 0 1rem;
+}
+
+.thread-timeline-container {
+    background-color: #f9fafb;
+    border-radius: 0.5rem;
+    padding: 1rem;
+}
+
+.thread-timeline {
+    display: flex;
+    align-items: center;
+    margin-bottom: 1rem;
+    padding: 0.75rem;
+    background-color: white;
+    border-radius: 0.375rem;
+    border: 1px solid var(--border-color);
+}
+
+.thread-timeline:last-child {
+    margin-bottom: 0;
+}
+
+.thread-label {
+    min-width: 150px;
+    font-weight: 500;
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.thread-test-count {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    font-weight: normal;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 150px;
+}
+
+.thread-bar-container {
+    flex: 1;
+    height: 40px;
+    position: relative;
+    background-color: #f3f4f6;
+    border-radius: 0.25rem;
+    margin-left: 1rem;
+}
+
+.thread-test-bar {
+    position: absolute;
+    height: 30px;
+    top: 5px;
+    border-radius: 0.25rem;
+    cursor: pointer;
+    transition: opacity 0.2s, transform 0.2s;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.thread-test-bar:hover {
+    opacity: 0.9;
+    transform: translateY(-2px);
+    z-index: 10;
+}
+
+.thread-test-bar.passed {
+    background-color: var(--success-color);
+}
+
+.thread-test-bar.failed {
+    background-color: var(--danger-color);
+}
+
+.thread-test-bar.skipped {
+    background-color: var(--warning-color);
+}
+
+/* Resource Timeline Styles */
+.resource-timeline {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+}
+
+.resource-phase {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.resource-phase-icon {
+    width: 3rem;
+    height: 3rem;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    flex-shrink: 0;
+}
+
+.resource-phase-content {
+    flex: 1;
+}
+
+.resource-phase-title {
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 0.25rem;
+}
+
+.resource-phase-time {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+}
+
+@media (max-width: 768px) {
+    .test-details {
+        grid-template-columns: 1fr;
+    }
+
+    .modal-content {
+        max-width: 95vw;
+        max-height: 95vh;
+    }
+
+    .thread-label {
+        min-width: 100px;
+        font-size: 0.875rem;
+    }
+
+    .resource-timeline {
+        grid-template-columns: 1fr;
+    }
+}
+    </style>
+</head>
+<body>
+<div class="sidebar">
+    <div class="sidebar-header">
+        <div class="sidebar-logo">
+            <i class="fas fa-vial"></i>
+            <span>CS TestForge</span>
+        </div>
+    </div>
+    <ul class="sidebar-menu">
+        <li class="sidebar-menu-item">
+            <a href="javascript:void(0)" class="sidebar-menu-link active" onclick="showSection('overview')">
+                <i class="fas fa-chart-line"></i>
+                <span>Overview</span>
+            </a>
+        </li>
+        <li class="sidebar-menu-item">
+            <a href="javascript:void(0)" class="sidebar-menu-link" onclick="showSection('suites')">
+                <i class="fas fa-folder-tree"></i>
+                <span>Test Suites</span>
+            </a>
+        </li>
+        <li class="sidebar-menu-item">
+            <a href="javascript:void(0)" class="sidebar-menu-link" onclick="showSection('features')">
+                <i class="fas fa-cucumber"></i>
+                <span>BDD Features</span>
+            </a>
+        </li>
+        <li class="sidebar-menu-item">
+            <a href="javascript:void(0)" class="sidebar-menu-link" onclick="showSection('execution')">
+                <i class="fas fa-play-circle"></i>
+                <span>Execution Details</span>
+            </a>
+        </li>
+        <li class="sidebar-menu-item">
+            <a href="javascript:void(0)" class="sidebar-menu-link" onclick="showSection('failures')">
+                <i class="fas fa-exclamation-circle"></i>
+                <span>Failure Analysis</span>
+                <span class="sidebar-menu-badge">1</span>
+            </a>
+        </li>
+        <li class="sidebar-menu-item">
+            <a href="javascript:void(0)" class="sidebar-menu-link" onclick="showSection('timeline')">
+                <i class="fas fa-stream"></i>
+                <span>Timeline</span>
+            </a>
+        </li>
+        <li class="sidebar-menu-item">
+            <a href="javascript:void(0)" class="sidebar-menu-link" onclick="showSection('categories')">
+                <i class="fas fa-tags"></i>
+                <span>Categories</span>
+            </a>
+        </li>
+        <li class="sidebar-menu-item">
+            <a href="javascript:void(0)" class="sidebar-menu-link" onclick="showSection('packages')">
+                <i class="fas fa-box"></i>
+                <span>Packages</span>
+            </a>
+        </li>
+        <li class="sidebar-menu-item">
+            <a href="javascript:void(0)" class="sidebar-menu-link" onclick="showSection('environment')">
+                <i class="fas fa-server"></i>
+                <span>Environment</span>
+            </a>
+        </li>
+        <li class="sidebar-menu-item">
+            <a href="javascript:void(0)" class="sidebar-menu-link" onclick="showSection('trends')">
+                <i class="fas fa-chart-area"></i>
+                <span>Trends</span>
+            </a>
+        </li>
+    </ul>
+    <div class="sidebar-footer">
+        <div style="font-size: 0.75rem; color: rgba(255, 255, 255, 0.6); margin-bottom: 0.25rem;">Generated on</div>
+        <div style="font-size: 0.875rem; font-weight: 600;">2025-08-04 13:17:46</div>
+    </div>
+</div>
+<div class="main-content">
+<div id="overview" class="section active">
+    <div class="page-header">
+        <h1 class="page-title">Test Execution Overview</h1>
+        <div class="page-subtitle">
+            <div class="page-subtitle-item">
+                <i class="fas fa-calendar"></i>
+                <span>August 4, 2025</span>
+            </div>
+            <div class="page-subtitle-item">
+                <i class="fas fa-clock"></i>
+                <span>Duration: 23.9s</span>
+            </div>
+            <div class="page-subtitle-item">
+                <i class="fas fa-code-branch"></i>
+                <span>Branch: unknown</span>
+            </div>
+            <div class="page-subtitle-item">
+                <i class="fas fa-tag"></i>
+                <span>Build: #local</span>
+            </div>
+        </div>
+    </div>
+    <div class="metrics-grid">
+        <div class="metric-card">
+            <div class="metric-icon" style="background-color: #e0e7ff; color: var(--purple-color);">
+                <i class="fas fa-tasks"></i>
+            </div>
+            <div class="metric-content">
+                <div class="metric-value">2</div>
+                <div class="metric-label">Total Tests</div>
+                <div class="metric-change trend-neutral">
+                    <i class="fas fa-arrow-up"></i>
+                    <span>0% from last run</span>
+                </div>
+            </div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-icon" style="background-color: #d1fae5; color: var(--success-color);">
+                <i class="fas fa-check-circle"></i>
+            </div>
+            <div class="metric-content">
+                <div class="metric-value">1</div>
+                <div class="metric-label">Passed</div>
+                <div class="metric-change trend-neutral">
+                    <i class="fas fa-arrow-up"></i>
+                    <span>0% from last run</span>
+                </div>
+            </div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-icon" style="background-color: #fee2e2; color: var(--danger-color);">
+                <i class="fas fa-times-circle"></i>
+            </div>
+            <div class="metric-content">
+                <div class="metric-value">1</div>
+                <div class="metric-label">Failed</div>
+                <div class="metric-change trend-neutral">
+                    <i class="fas fa-arrow-down"></i>
+                    <span>0% from last run</span>
+                </div>
+            </div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-icon" style="background-color: #e5e7eb; color: #6b7280;">
+                <i class="fas fa-forward"></i>
+            </div>
+            <div class="metric-content">
+                <div class="metric-value">0</div>
+                <div class="metric-label">Skipped</div>
+            </div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-icon" style="background-color: #fef3c7; color: var(--warning-color);">
+                <i class="fas fa-percentage"></i>
+            </div>
+            <div class="metric-content">
+                <div class="metric-value">50.0%</div>
+                <div class="metric-label">Pass Rate</div>
+            </div>
+        </div>
+    </div>
+    <div class="chart-row">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">Current Run Status Distribution</h3>
+            </div>
+            <div class="card-body">
+                <div class="chart-container">
+                    <canvas id="statusChart"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">7 Day Test Execution Trend</h3>
+            </div>
+            <div class="card-body">
+                <div class="chart-container">
+                    <canvas id="trendChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">Failed Tests in Current Run</h3>
+        </div>
+        <div class="card-body">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Scenario</th>
+                        <th>Feature</th>
+                        <th>Error</th>
+                        <th>Duration</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Successful login with valid credentials</td>
+                        <td>simple-login.feature</td>
+                        <td>Step execution failed: I should see the user dropdown with text &quot;kamrul user&quot;</td>
+                        <td>10.3s</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">Test Reliability Metrics</h3>
+            <span class="badge badge-info">Real-time Analysis</span>
+        </div>
+        <div class="card-body">
+            <div class="metrics-grid">
+                <div class="metric-card">
+                    <div class="metric-icon" style="background-color: #d1fae5; color: var(--success-color);">
+                        <i class="fas fa-check-circle"></i>
+                    </div>
+                    <div class="metric-content">
+                        <div class="metric-value">1</div>
+                        <div class="metric-label">Stable Tests</div>
+                        <div class="metric-detail">Consistency > 90%</div>
+                    </div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-icon" style="background-color: #fef3c7; color: var(--warning-color);">
+                        <i class="fas fa-exclamation-triangle"></i>
+                    </div>
+                    <div class="metric-content">
+                        <div class="metric-value">0</div>
+                        <div class="metric-label">Flaky Tests</div>
+                        <div class="metric-detail">Intermittent failures</div>
+                    </div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-icon" style="background-color: #fee2e2; color: var(--danger-color);">
+                        <i class="fas fa-times-circle"></i>
+                    </div>
+                    <div class="metric-content">
+                        <div class="metric-value">1</div>
+                        <div class="metric-label">Broken Tests</div>
+                        <div class="metric-detail">Consistent failures</div>
+                    </div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-icon" style="background-color: #e0e7ff; color: var(--purple-color);">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                    <div class="metric-content">
+                        <div class="metric-value">50.0%</div>
+                        <div class="metric-label">Reliability Score</div>
+                        <div class="metric-detail">Overall test suite health</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<div id="suites" class="section">
+    <div class="page-header">
+        <h1 class="page-title">Test Suites Overview</h1>
+        <div class="page-subtitle">
+            <div class="page-subtitle-item">
+                <i class="fas fa-layer-group"></i>
+                <span>1 Test Classes</span>
+            </div>
+            <div class="page-subtitle-item">
+                <i class="fas fa-vial"></i>
+                <span>2 Test Methods</span>
+            </div>
+            <div class="page-subtitle-item">
+                <i class="fas fa-check-circle"></i>
+                <span>50.0% Pass Rate</span>
+            </div>
+        </div>
+    </div>
+    <div class="test-details">
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">TestNG Suite Hierarchy</h2>
+            </div>
+            <div class="test-tree" id="testTree">
+                <div class="tree-item expanded">
+                    <div style="cursor: pointer;" onclick="toggleTreeItem(this.parentElement)">
+                        <div class="tree-item-content" style="flex-wrap: nowrap;">
+                            <div style="display: flex; align-items: center; flex: 1; min-width: 0;">
+                                <i class="fas fa-chevron-down tree-item-icon"></i>
+                                <i class="fas fa-folder-open" style="color: var(--primary-color); margin-right: 0.5rem;"></i>
+                                <span class="tree-item-name" style="font-weight: 600;">Simple Sequential Test Suite</span>
+                            </div>
+                        </div>
+                        <div style="display: flex; gap: 0.5rem; margin-top: 0.25rem; margin-left: 3rem; flex-wrap: wrap;">
+                            <span class="badge badge-info" style="font-size: 0.7rem;">2 scenarios</span>
+                            <span class="badge badge-success" style="font-size: 0.7rem;">1 passed</span>
+                            <span class="badge badge-danger" style="font-size: 0.7rem;">1 failed</span>
+                            <span class="badge badge-warning" style="font-size: 0.7rem;">0 skipped</span>
+                        </div>
+                    </div>
+                    <div class="tree-children">
+                        <div class="tree-item expanded">
+                            <div class="tree-item-content" onclick="toggleTreeItem(this)">
+                                <i class="fas fa-chevron-down tree-item-icon"></i>
+                                <i class="fas fa-cucumber" style="color: #4caf50; margin-right: 0.5rem;"></i>
+                                <span class="tree-item-name">simple-login.feature</span>
+                                <div class="tree-item-status">
+                                    <span class="text-success">1 ✓</span>
+                                    <span class="text-danger">1 ✗</span>
+                                </div>
+                            </div>
+                            <div class="tree-children">
+                                <div class="tree-item">
+                                    <div class="tree-item-content" onclick="showTestDetails('bd533a8a-8acf-4d18-b4d2-a2ac2db6ee93')">
+                                        <i class="fas fa-times-circle text-danger" style="margin-right: 0.5rem;"></i>
+                                        <span class="tree-item-name">Successful login with valid credentials</span>
+                                        <div class="tree-item-status">
+                                            <span class="text-muted">10.3s</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="tree-item">
+                                    <div class="tree-item-content" onclick="showTestDetails('b71c089e-b418-467b-9c87-2dcfb41b1ea2')">
+                                        <i class="fas fa-check-circle text-success" style="margin-right: 0.5rem;"></i>
+                                        <span class="tree-item-name">Failed login with invalid credentials</span>
+                                        <div class="tree-item-status">
+                                            <span class="text-muted">8.4s</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">Test Details</h2>
+            </div>
+            <div id="testDetails">
+                <div class="text-muted" style="text-align: center; padding: 2rem;">
+                    Select a test from the tree to view details
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<div id="features" class="section">
+    <div class="page-header">
+        <h1 class="page-title">BDD Features</h1>
+        <div class="page-subtitle">
+            <span class="text-muted">Cucumber feature files and scenario execution results</span>
+        </div>
+    </div>
+    <div class="metrics-grid">
+        <div class="metric-card">
+            <div class="metric-icon" style="background-color: #e8f5e9; color: #4caf50;">
+                <i class="fas fa-file-code"></i>
+            </div>
+            <div class="metric-content">
+                <div class="metric-value">1</div>
+                <div class="metric-label">Feature Files</div>
+            </div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-icon" style="background-color: #e0e7ff; color: var(--purple-color);">
+                <i class="fas fa-list-check"></i>
+            </div>
+            <div class="metric-content">
+                <div class="metric-value">2</div>
+                <div class="metric-label">Total Scenarios</div>
+            </div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-icon" style="background-color: #d1fae5; color: var(--success-color);">
+                <i class="fas fa-check-double"></i>
+            </div>
+            <div class="metric-content">
+                <div class="metric-value">1</div>
+                <div class="metric-label">Passed</div>
+            </div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-icon" style="background-color: #fee2e2; color: var(--danger-color);">
+                <i class="fas fa-times-circle"></i>
+            </div>
+            <div class="metric-content">
+                <div class="metric-value">1</div>
+                <div class="metric-label">Failed</div>
+            </div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-icon" style="background-color: #fef3c7; color: var(--warning-color);">
+                <i class="fas fa-forward"></i>
+            </div>
+            <div class="metric-content">
+                <div class="metric-value">0</div>
+                <div class="metric-label">Skipped</div>
+            </div>
+        </div>
+    </div>
+    <div class="features-grid">
+        <div class="feature-card" onclick="showFeatureDetails('simple-login.feature')">
+            <div class="feature-header">
+                <div class="feature-icon">
+                    <i class="fas fa-cucumber" style="color: white; font-size: 1.25rem;"></i>
+                </div>
+                <div class="feature-title">
+                    <div class="feature-name">Simple Login</div>
+                    <div class="feature-tags">
+                        <span class="feature-tag">@positive</span>
+                        <span class="feature-tag">@negative</span>
+                        <span class="feature-tag">@sequential</span>
+                    </div>
+                </div>
+            </div>
+            <div class="feature-metrics">
+                <div class="feature-metric">
+                    <div class="feature-metric-value">2</div>
+                    <div class="feature-metric-label">Scenarios</div>
+                </div>
+                <div class="feature-metric">
+                    <div class="feature-metric-value">10</div>
+                    <div class="feature-metric-label">Steps</div>
+                </div>
+                <div class="feature-metric">
+                    <div class="feature-metric-value text-success">1</div>
+                    <div class="feature-metric-label">Passed</div>
+                </div>
+                <div class="feature-metric">
+                    <div class="feature-metric-value text-danger">1</div>
+                    <div class="feature-metric-label">Failed</div>
+                </div>
+                <div class="feature-metric">
+                    <div class="feature-metric-value">50%</div>
+                    <div class="feature-metric-label">Pass Rate</div>
+                </div>
+                <div class="feature-metric">
+                    <div class="feature-metric-value">18.7s</div>
+                    <div class="feature-metric-label">Duration</div>
+                </div>
+            </div>
+            <div class="progress" style="margin-bottom: 1rem;">
+                <div class="progress-bar" style="width: 50%"></div>
+            </div>
+            <div style="text-align: center; font-size: 0.875rem; color: var(--text-secondary);">
+                <i class="fas fa-mouse-pointer"></i> Click to view scenarios
+            </div>
+        </div>
+    </div>
+</div>
+<div id="execution" class="section">
+    <div class="page-header">
+        <h1 class="page-title">Execution Details</h1>
+        <div class="page-subtitle">
+            <span class="text-muted">Complete execution information and configuration</span>
+        </div>
+    </div>
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">Execution Summary</h2>
+        </div>
+        <div class="execution-info">
+            <div class="execution-stat">
+                <div class="execution-stat-value">10</div>
+                <div class="execution-stat-label">Total Steps Executed</div>
+            </div>
+            <div class="execution-stat">
+                <div class="execution-stat-value">1</div>
+                <div class="execution-stat-label">Test Suites</div>
+            </div>
+            <div class="execution-stat">
+                <div class="execution-stat-value">1</div>
+                <div class="execution-stat-label">Test Classes</div>
+            </div>
+            <div class="execution-stat">
+                <div class="execution-stat-value">1</div>
+                <div class="execution-stat-label">Feature Files</div>
+            </div>
+            <div class="execution-stat">
+                <div class="execution-stat-value">2</div>
+                <div class="execution-stat-label">Scenarios</div>
+            </div>
+            <div class="execution-stat">
+                <div class="execution-stat-value">1</div>
+                <div class="execution-stat-label">Parallel Threads</div>
+            </div>
+        </div>
+    </div>
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">Execution Configuration</h2>
+        </div>
+        <div class="env-grid">
+            <div class="env-card">
+                <div class="env-card-title">Test Configuration</div>
+                <div class="env-item">
+                    <span class="env-label">Test Type</span>
+                    <span class="env-value">Mixed (TestNG + Cucumber)</span>
+                </div>
+                <div class="env-item">
+                    <span class="env-label">Suite XML</span>
+                    <span class="env-value">Simple Sequential Test Suite</span>
+                </div>
+                <div class="env-item">
+                    <span class="env-label">Parallel Mode</span>
+                    <span class="env-value">none</span>
+                </div>
+                <div class="env-item">
+                    <span class="env-label">Thread Count</span>
+                    <span class="env-value">1</span>
+                </div>
+            </div>
+            <div class="env-card">
+                <div class="env-card-title">Environment Details</div>
+                <div class="env-item">
+                    <span class="env-label">Operating System</span>
+                    <span class="env-value">Linux</span>
+                </div>
+                <div class="env-item">
+                    <span class="env-label">Java Version</span>
+                    <span class="env-value">17.0.15</span>
+                </div>
+                <div class="env-item">
+                    <span class="env-label">Browser</span>
+                    <span class="env-value">chrome</span>
+                </div>
+                <div class="env-item">
+                    <span class="env-label">Headless Mode</span>
+                    <span class="env-value">false</span>
+                </div>
+            </div>
+            <div class="env-card">
+                <div class="env-card-title">Cucumber Configuration</div>
+                <div class="env-item">
+                    <span class="env-label">Feature Path</span>
+                    <span class="env-value">src/test/resources/features</span>
+                </div>
+                <div class="env-item">
+                    <span class="env-label">Glue Path</span>
+                    <span class="env-value">com.orangehrm.stepdefs</span>
+                </div>
+                <div class="env-item">
+                    <span class="env-label">Tags</span>
+                    <span class="env-value">@positive, @sequential</span>
+                </div>
+                <div class="env-item">
+                    <span class="env-label">Plugin</span>
+                    <span class="env-value">json, html</span>
+                </div>
+            </div>
+            <div class="env-card">
+                <div class="env-card-title">Execution Parameters</div>
+                <div class="env-item">
+                    <span class="env-label">Base URL</span>
+                    <span class="env-value">https://opensource-demo.orangehrmlive.com</span>
+                </div>
+                <div class="env-item">
+                    <span class="env-label">Timeout</span>
+                    <span class="env-value">30 seconds</span>
+                </div>
+                <div class="env-item">
+                    <span class="env-label">Retry Count</span>
+                    <span class="env-value">0</span>
+                </div>
+                <div class="env-item">
+                    <span class="env-label">Screenshot on Failure</span>
+                    <span class="env-value">true</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">Execution Command</h2>
+        </div>
+        <div style="background: #1f2937; color: #10b981; padding: 1rem; border-radius: 0.375rem; font-family: monospace; font-size: 0.875rem; overflow-x: auto;">
+            mvn test -Dbrowser=chrome -Denv=qa
+        </div>
+    </div>
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">Execution Timeline</h2>
+        </div>
+        <div class="card-body">
+            <div class="execution-timeline">
+                <div class="timeline-item">
+                    <div class="timeline-icon" style="background-color: var(--info-color);"><i class="fas fa-play"></i></div>
+                    <div class="timeline-content">
+                        <div class="timeline-title">Execution Started</div>
+                        <div class="timeline-time">2025-08-04 13:17:21</div>
+                    </div>
+                </div>
+                <div class="timeline-item">
+                    <div class="timeline-icon" style="background-color: var(--success-color);"><i class="fas fa-check"></i></div>
+                    <div class="timeline-content">
+                        <div class="timeline-title">Tests Executed</div>
+                        <div class="timeline-time">2 scenarios completed</div>
+                    </div>
+                </div>
+                <div class="timeline-item">
+                    <div class="timeline-icon" style="background-color: var(--purple-color);"><i class="fas fa-stop"></i></div>
+                    <div class="timeline-content">
+                        <div class="timeline-title">Execution Completed</div>
+                        <div class="timeline-time">2025-08-04 13:17:45</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<div id="failures" class="section">
+    <div class="page-header">
+        <h1 class="page-title">Comprehensive Failure Analysis</h1>
+        <div class="page-subtitle">
+            <span class="text-muted">Detailed investigation of test failures with root cause analysis and impact assessment</span>
+        </div>
+    </div>
+    <div class="metrics-grid">
+        <div class="metric-card">
+            <div class="metric-icon" style="background-color: #fee2e2; color: var(--danger-color);">
+                <i class="fas fa-times-circle"></i>
+            </div>
+            <div class="metric-content">
+                <div class="metric-value">1</div>
+                <div class="metric-label">Total Failures</div>
+            </div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-icon" style="background-color: #fef3c7; color: var(--warning-color);">
+                <i class="fas fa-exclamation-triangle"></i>
+            </div>
+            <div class="metric-content">
+                <div class="metric-value">1</div>
+                <div class="metric-label">Unique Error Types</div>
+            </div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-icon" style="background-color: #dbeafe; color: var(--info-color);">
+                <i class="fas fa-layer-group"></i>
+            </div>
+            <div class="metric-content">
+                <div class="metric-value">1</div>
+                <div class="metric-label">Affected Suites</div>
+            </div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-icon" style="background-color: #f3e5f5; color: var(--purple-color);">
+                <i class="fas fa-clock"></i>
+            </div>
+            <div class="metric-content">
+                <div class="metric-value">10.3s</div>
+                <div class="metric-label">Avg Failure Time</div>
+            </div>
+        </div>
+    </div>
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">Failures by Error Type</h2>
+        </div>
+        <div style="height: 300px;">
+            <canvas id="failureTypeChart" height="300"></canvas>
+        </div>
+    </div>
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">Failed Tests</h2>
+        </div>
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Test Name</th>
+                    <th>Feature</th>
+                    <th>Error Type</th>
+                    <th>Duration</th>
+                    <th>Time</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr onclick="showFailureDetails('bd533a8a-8acf-4d18-b4d2-a2ac2db6ee93')" style="cursor: pointer;">
+                    <td>
+                        <div style="font-weight: 500;">Successful login with valid credentials</div>
+                        <div class="text-small text-muted">com.testforge.cs.bdd.CSBDDRunner</div>
+                    </td>
+                    <td>simple-login.feature</td>
+                    <td>
+                        <span class="badge badge-danger">Assertion Failure</span>
+                        <div class="text-small text-muted">General Failure</div>
+                    </td>
+                    <td>10.3s</td>
+                    <td>
+                        <div>13:17:21</div>
+                        <div class="text-small text-muted">Aug 04</div>
+                    </td>
+                    <td>
+                        <button class="btn btn-sm" onclick="event.stopPropagation(); showFailureDetailsModal('bd533a8a-8acf-4d18-b4d2-a2ac2db6ee93')" style="padding: 0.25rem 0.5rem; font-size: 0.75rem; background: var(--primary-color); color: white; border: none; border-radius: 0.25rem; cursor: pointer;">
+                            <i class="fas fa-eye"></i> Details
+                        </button>
+                    </td>
+                </tr>
+                <tr id="failure-bd533a8a-8acf-4d18-b4d2-a2ac2db6ee93" style="display: none;">
+                    <td colspan="6" style="background: #f9fafb; padding: 1rem;">
+                        <div class="failure-details">
+                            <div class="failure-section">
+                                <h4 style="font-size: 0.875rem; font-weight: 600; margin-bottom: 0.5rem;"><i class="fas fa-exclamation-circle"></i> Error Message</h4>
+                                <pre style="background: #fee2e2; border: 1px solid #fecaca; padding: 0.75rem; border-radius: 0.375rem; font-size: 0.75rem; overflow-x: auto;">Step execution failed: I should see the user dropdown with text &quot;kamrul user&quot;</pre>
+                            </div>
+                            <div class="failure-section" style="margin-top: 1rem;">
+                                <h4 style="font-size: 0.875rem; font-weight: 600; margin-bottom: 0.5rem;"><i class="fas fa-lightbulb"></i> Root Cause Analysis</h4>
+                                <div style="background: #eff6ff; border: 1px solid #dbeafe; padding: 0.75rem; border-radius: 0.375rem;">
+                                    <div style="margin-bottom: 0.5rem;">
+                                        <strong style="color: var(--info-color);">Failure Type:</strong> General Failure
+                                    </div>
+                                    <div style="color: #1f2937; font-size: 0.875rem;">
+                                        <strong>Suggested Resolution:</strong> Review error details and stack trace for specific failure cause
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="failure-section" style="margin-top: 1rem;">
+                                <h4 style="font-size: 0.875rem; font-weight: 600; margin-bottom: 0.5rem;"><i class="fas fa-code"></i> Stack Trace</h4>
+                                <pre style="background: #f3f4f6; border: 1px solid #e5e7eb; padding: 0.75rem; border-radius: 0.375rem; font-size: 0.75rem; max-height: 200px; overflow: auto;">com.testforge.cs.exceptions.CSBddException [BDD_ERROR] in BDD: Step execution failed: I should see the user dropdown with text &quot;kamrul user&quot;
+	at com.testforge.cs.bdd.CSScenarioRunner.runStep(CSScenarioRunner.java:167)
+	at com.testforge.cs.bdd.CSScenarioRunner.executeFileStepWithResult(CSScenarioRunner.java:243)
+	at com.testforge.cs.bdd.CSScenarioRunner.runScenarioFromFile(CSScenarioRunner.java:216)
+	at com.testforge.cs.bdd.CSBDDRunner.executeBDDScenario(CSBDDRunner.java:219)
+	at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+	at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:77)
+	at java.base/jdk.internal.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:569)
+	at org.testng.internal.invokers.MethodInvocationHelper.invokeMethod(MethodInvocationHelper.java:141)
+	at org.testng.internal.invokers.TestInvoker.invokeMethod(TestInvoker.java:686)
+	at org.testng.internal.invokers.TestInvoker.invokeTestMethod(TestInvoker.java:230)
+	at org.testng.internal.invokers.MethodRunner.runInSequence(MethodRunner.java:63)
+	at org.testng.internal.invokers.TestInvoker$MethodInvocationAgent.invoke(TestInvoker.java:992)
+	at org.testng.internal.invokers.TestInvoker.invokeTestMethods(TestInvoker.java:203)
+	at org.testng.internal.invokers.TestMethodWorker.invokeTestMethods(TestMethodWorker.java:154)
+	at org.testng.internal.invokers.TestMethodWorker.run(TestMethodWorker.java:134)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+	at org.testng.TestRunner.privateRun(TestRunner.java:739)
+	at org.testng.TestRunner.run(TestRunner.java:614)
+	at org.testng.SuiteRunner.runTest(SuiteRunner.java:421)
+	at org.testng.SuiteRunner.runSequentially(SuiteRunner.java:413)
+	at org.testng.SuiteRunner.privateRun(SuiteRunner.java:373)
+	at org.testng.SuiteRunner.run(SuiteRunner.java:312)
+	at org.testng.SuiteRunnerWorker.runSuite(SuiteRunnerWorker.java:52)
+	at org.testng.SuiteRunnerWorker.run(SuiteRunnerWorker.java:95)
+	at org.testng.TestNG.runSuitesSequentially(TestNG.java:1274)
+	at org.testng.TestNG.runSuitesLocally(TestNG.java:1208)
+	at org.testng.TestNG.runSuites(TestNG.java:1112)
+	at org.testng.TestNG.run(TestNG.java:1079)
+	at org.apache.maven.surefire.testng.TestNGExecutor.run(TestNGExecutor.java:308)
+	at org.apache.maven.surefire.testng.TestNGXmlTestSuite.execute(TestNGXmlTestSuite.java:71)
+	at org.apache.maven.surefire.testng.TestNGProvider.invoke(TestNGProvider.java:113)
+	at org.apache.maven.surefire.booter.ForkedBooter.runSuitesInProcess(ForkedBooter.java:385)
+	at org.apache.maven.surefire.booter.ForkedBooter.execute(ForkedBooter.java:162)
+	at org.apache.maven.surefire.booter.ForkedBooter.run(ForkedBooter.java:507)
+	at org.apache.maven.surefire.booter.ForkedBooter.main(ForkedBooter.java:495)
+Caused by: com.testforge.cs.exceptions.CSBddException [BDD_ERROR] in BDD: Failed to execute step: I should see the user dropdown with text &quot;kamrul user&quot;
+	at com.testforge.cs.bdd.CSStepRegistry.executeStep(CSStepRegistry.java:118)
+	at com.testforge.cs.bdd.CSScenarioRunner.runStep(CSScenarioRunner.java:164)
+	at com.testforge.cs.bdd.CSScenarioRunner.executeFileStepWithResult(CSScenarioRunner.java:243)
+	at com.testforge.cs.bdd.CSScenarioRunner.runScenarioFromFile(CSScenarioRunner.java:216)
+	at com.testforge.cs.bdd.CSBDDRunner.executeBDDScenario(CSBDDRunner.java:219)
+	at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+	at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:77)
+	at java.base/jdk.internal.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:569)
+	at org.testng.internal.invokers.MethodInvocationHelper.invokeMethod(MethodInvocationHelper.java:141)
+	at org.testng.internal.invokers.TestInvoker.invokeMethod(TestInvoker.java:686)
+	at org.testng.internal.invokers.TestInvoker.invokeTestMethod(TestInvoker.java:230)
+	at org.testng.internal.invokers.MethodRunner.runInSequence(MethodRunner.java:63)
+	at org.testng.internal.invokers.TestInvoker$MethodInvocationAgent.invoke(TestInvoker.java:992)
+	at org.testng.internal.invokers.TestInvoker.invokeTestMethods(TestInvoker.java:203)
+	at org.testng.internal.invokers.TestMethodWorker.invokeTestMethods(TestMethodWorker.java:154)
+	at org.testng.internal.invokers.TestMethodWorker.run(TestMethodWorker.java:134)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+	at org.testng.TestRunner.privateRun(TestRunner.java:739)
+	at org.testng.TestRunner.run(TestRunner.java:614)
+	at org.testng.SuiteRunner.runTest(SuiteRunner.java:421)
+	at org.testng.SuiteRunner.runSequentially(SuiteRunner.java:413)
+	at org.testng.SuiteRunner.privateRun(SuiteRunner.java:373)
+	at org.testng.SuiteRunner.run(SuiteRunner.java:312)
+	at org.testng.SuiteRunnerWorker.runSuite(SuiteRunnerWorker.java:52)
+	at org.testng.SuiteRunnerWorker.run(SuiteRunnerWorker.java:95)
+	at org.testng.TestNG.runSuitesSequentially(TestNG.java:1274)
+	at org.testng.TestNG.runSuitesLocally(TestNG.java:1208)
+	at org.testng.TestNG.runSuites(TestNG.java:1112)
+	at org.testng.TestNG.run(TestNG.java:1079)
+	at org.apache.maven.surefire.testng.TestNGExecutor.run(TestNGExecutor.java:308)
+	at org.apache.maven.surefire.testng.TestNGXmlTestSuite.execute(TestNGXmlTestSuite.java:71)
+	at org.apache.maven.surefire.testng.TestNGProvider.invoke(TestNGProvider.java:113)
+	at org.apache.maven.surefire.booter.ForkedBooter.runSuitesInProcess(ForkedBooter.java:385)
+	at org.apache.maven.surefire.booter.ForkedBooter.execute(ForkedBooter.java:162)
+	at org.apache.maven.surefire.booter.ForkedBooter.run(ForkedBooter.java:507)
+	at org.apache.maven.surefire.booter.ForkedBooter.main(ForkedBooter.java:495)
+Caused by: java.lang.reflect.InvocationTargetException
+	at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+	at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:77)
+	at java.base/jdk.internal.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:569)
+	at com.testforge.cs.bdd.CSStepDefinition.execute(CSStepDefinition.java:100)
+	at com.testforge.cs.bdd.CSStepRegistry.executeStep(CSStepRegistry.java:116)
+	at com.testforge.cs.bdd.CSScenarioRunner.runStep(CSScenarioRunner.java:164)
+	at com.testforge.cs.bdd.CSScenarioRunner.executeFileStepWithResult(CSScenarioRunner.java:243)
+	at com.testforge.cs.bdd.CSScenarioRunner.runScenarioFromFile(CSScenarioRunner.java:216)
+	at com.testforge.cs.bdd.CSBDDRunner.executeBDDScenario(CSBDDRunner.java:219)
+	at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+	at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:77)
+	at java.base/jdk.internal.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:569)
+	at org.testng.internal.invokers.MethodInvocationHelper.invokeMethod(MethodInvocationHelper.java:141)
+	at org.testng.internal.invokers.TestInvoker.invokeMethod(TestInvoker.java:686)
+	at org.testng.internal.invokers.TestInvoker.invokeTestMethod(TestInvoker.java:230)
+	at org.testng.internal.invokers.MethodRunner.runInSequence(MethodRunner.java:63)
+	at org.testng.internal.invokers.TestInvoker$MethodInvocationAgent.invoke(TestInvoker.java:992)
+	at org.testng.internal.invokers.TestInvoker.invokeTestMethods(TestInvoker.java:203)
+	at org.testng.internal.invokers.TestMethodWorker.invokeTestMethods(TestMethodWorker.java:154)
+	at org.testng.internal.invokers.TestMethodWorker.run(TestMethodWorker.java:134)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+	at org.testng.TestRunner.privateRun(TestRunner.java:739)
+	at org.testng.TestRunner.run(TestRunner.java:614)
+	at org.testng.SuiteRunner.runTest(SuiteRunner.java:421)
+	at org.testng.SuiteRunner.runSequentially(SuiteRunner.java:413)
+	at org.testng.SuiteRunner.privateRun(SuiteRunner.java:373)
+	at org.testng.SuiteRunner.run(SuiteRunner.java:312)
+	at org.testng.SuiteRunnerWorker.runSuite(SuiteRunnerWorker.java:52)
+	at org.testng.SuiteRunnerWorker.run(SuiteRunnerWorker.java:95)
+	at org.testng.TestNG.runSuitesSequentially(TestNG.java:1274)
+	at org.testng.TestNG.runSuitesLocally(TestNG.java:1208)
+	at org.testng.TestNG.runSuites(TestNG.java:1112)
+	at org.testng.TestNG.run(TestNG.java:1079)
+	at org.apache.maven.surefire.testng.TestNGExecutor.run(TestNGExecutor.java:308)
+	at org.apache.maven.surefire.testng.TestNGXmlTestSuite.execute(TestNGXmlTestSuite.java:71)
+	at org.apache.maven.surefire.testng.TestNGProvider.invoke(TestNGProvider.java:113)
+	at org.apache.maven.surefire.booter.ForkedBooter.runSuitesInProcess(ForkedBooter.java:385)
+	at org.apache.maven.surefire.booter.ForkedBooter.execute(ForkedBooter.java:162)
+	at org.apache.maven.surefire.booter.ForkedBooter.run(ForkedBooter.java:507)
+	at org.apache.maven.surefire.booter.ForkedBooter.main(ForkedBooter.java:495)
+Caused by: java.lang.AssertionError: Logged in user mismatch. Expected: kamrul user, Actual: Кошелев Исай expected [kamrul user] but found [Кошелев Исай]
+	at org.testng.Assert.fail(Assert.java:111)
+	at org.testng.Assert.failNotEquals(Assert.java:1578)
+	at org.testng.Assert.assertEqualsImpl(Assert.java:150)
+	at org.testng.Assert.assertEquals(Assert.java:132)
+	at org.testng.Assert.assertEquals(Assert.java:656)
+	at com.orangehrm.pages.DashboardPageNew.assertUserLoggedIn(DashboardPageNew.java:78)
+	at com.orangehrm.stepdefs.LoginStepsNew.iShouldSeeUserDropdown(LoginStepsNew.java:59)
+	at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+	at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:77)
+	at java.base/jdk.internal.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:569)
+	at com.testforge.cs.bdd.CSStepDefinition.execute(CSStepDefinition.java:100)
+	at com.testforge.cs.bdd.CSStepRegistry.executeStep(CSStepRegistry.java:116)
+	at com.testforge.cs.bdd.CSScenarioRunner.runStep(CSScenarioRunner.java:164)
+	at com.testforge.cs.bdd.CSScenarioRunner.executeFileStepWithResult(CSScenarioRunner.java:243)
+	at com.testforge.cs.bdd.CSScenarioRunner.runScenarioFromFile(CSScenarioRunner.java:216)
+	at com.testforge.cs.bdd.CSBDDRunner.executeBDDScenario(CSBDDRunner.java:219)
+	at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+	at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:77)
+	at java.base/jdk.internal.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:569)
+	at org.testng.internal.invokers.MethodInvocationHelper.invokeMethod(MethodInvocationHelper.java:141)
+	at org.testng.internal.invokers.TestInvoker.invokeMethod(TestInvoker.java:686)
+	at org.testng.internal.invokers.TestInvoker.invokeTestMethod(TestInvoker.java:230)
+	at org.testng.internal.invokers.MethodRunner.runInSequence(MethodRunner.java:63)
+	at org.testng.internal.invokers.TestInvoker$MethodInvocationAgent.invoke(TestInvoker.java:992)
+	at org.testng.internal.invokers.TestInvoker.invokeTestMethods(TestInvoker.java:203)
+	at org.testng.internal.invokers.TestMethodWorker.invokeTestMethods(TestMethodWorker.java:154)
+	at org.testng.internal.invokers.TestMethodWorker.run(TestMethodWorker.java:134)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+	at org.testng.TestRunner.privateRun(TestRunner.java:739)
+	at org.testng.TestRunner.run(TestRunner.java:614)
+	at org.testng.SuiteRunner.runTest(SuiteRunner.java:421)
+	at org.testng.SuiteRunner.runSequentially(SuiteRunner.java:413)
+	at org.testng.SuiteRunner.privateRun(SuiteRunner.java:373)
+	at org.testng.SuiteRunner.run(SuiteRunner.java:312)
+	at org.testng.SuiteRunnerWorker.runSuite(SuiteRunnerWorker.java:52)
+	at org.testng.SuiteRunnerWorker.run(SuiteRunnerWorker.java:95)
+	at org.testng.TestNG.runSuitesSequentially(TestNG.java:1274)
+	at org.testng.TestNG.runSuitesLocally(TestNG.java:1208)
+	at org.testng.TestNG.runSuites(TestNG.java:1112)
+	at org.testng.TestNG.run(TestNG.java:1079)
+	at org.apache.maven.surefire.testng.TestNGExecutor.run(TestNGExecutor.java:308)
+	at org.apache.maven.surefire.testng.TestNGXmlTestSuite.execute(TestNGXmlTestSuite.java:71)
+	at org.apache.maven.surefire.testng.TestNGProvider.invoke(TestNGProvider.java:113)
+	at org.apache.maven.surefire.booter.ForkedBooter.runSuitesInProcess(ForkedBooter.java:385)
+	at org.apache.maven.surefire.booter.ForkedBooter.execute(ForkedBooter.java:162)
+	at org.apache.maven.surefire.booter.ForkedBooter.run(ForkedBooter.java:507)
+	at org.apache.maven.surefire.booter.ForkedBooter.main(ForkedBooter.java:495)
+</pre>
+                            </div>
+                            <div class="failure-section" style="margin-top: 1rem;">
+                                <h4 style="font-size: 0.875rem; font-weight: 600; margin-bottom: 0.5rem;"><i class="fas fa-list-ol"></i> Executed Steps</h4>
+                                <div class="steps-list">
+                                    <div class="step-item" style="display: flex; align-items: center; padding: 0.25rem 0; color: var(--success-color);">
+                                        <i class="fas fa-check-circle" style="margin-right: 0.5rem;"></i>
+                                        <span>Given I am on the OrangeHRM login page</span>
+                                    </div>
+                                    <div class="step-item" style="display: flex; align-items: center; padding: 0.25rem 0; color: var(--success-color);">
+                                        <i class="fas fa-check-circle" style="margin-right: 0.5rem;"></i>
+                                        <span>When I enter username "Admin" and password "admin123"</span>
+                                    </div>
+                                    <div class="step-item" style="display: flex; align-items: center; padding: 0.25rem 0; color: var(--success-color);">
+                                        <i class="fas fa-check-circle" style="margin-right: 0.5rem;"></i>
+                                        <span>And I click the login button</span>
+                                    </div>
+                                    <div class="step-item" style="display: flex; align-items: center; padding: 0.25rem 0; color: var(--success-color);">
+                                        <i class="fas fa-check-circle" style="margin-right: 0.5rem;"></i>
+                                        <span>Then I should be redirected to the dashboard</span>
+                                    </div>
+                                    <div class="step-item" style="display: flex; align-items: center; padding: 0.25rem 0; color: var(--success-color);">
+                                        <i class="fas fa-check-circle" style="margin-right: 0.5rem;"></i>
+                                        <span>And I should see "Dashboard" as page title</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+<div id="timeline" class="section">
+    <div class="page-header">
+        <h1 class="page-title">Execution Timeline</h1>
+        <div class="page-subtitle">
+            <span class="text-muted">Visual representation of test execution timeline with thread analysis and resource utilization</span>
+        </div>
+    </div>
+    <div class="metrics-grid" style="margin-bottom: 2rem;">
+        <div class="metric-card">
+            <div class="metric-icon" style="background-color: #dbeafe; color: var(--info-color);">
+                <i class="fas fa-layer-group"></i>
+            </div>
+            <div class="metric-content">
+                <div class="metric-value">1</div>
+                <div class="metric-label">Max Concurrent Tests</div>
+            </div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-icon" style="background-color: #fef3c7; color: var(--warning-color);">
+                <i class="fas fa-clock"></i>
+            </div>
+            <div class="metric-content">
+                <div class="metric-value">23.9s</div>
+                <div class="metric-label">Total Execution Time</div>
+            </div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-icon" style="background-color: #f3e5f5; color: var(--purple-color);">
+                <i class="fas fa-hourglass-half"></i>
+            </div>
+            <div class="metric-content">
+                <div class="metric-value">18.7s</div>
+                <div class="metric-label">Cumulative Test Time</div>
+            </div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-icon" style="background-color: #d1fae5; color: var(--success-color);">
+                <i class="fas fa-percentage"></i>
+            </div>
+            <div class="metric-content">
+                <div class="metric-value">78.2%</div>
+                <div class="metric-label">Parallel Efficiency</div>
+            </div>
+        </div>
+    </div>
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">Thread-based Execution Timeline</h3>
+        </div>
+        <div class="card-body">
+            <div class="timeline-scale">
+                <div class="timeline-scale-label">13:17:21</div>
+                <div class="timeline-scale-line"></div>
+                <div class="timeline-scale-label">13:17:45</div>
+            </div>
+            <div class="thread-timeline-container">
+                <div class="thread-timeline">
+                    <div class="thread-label">
+                        <i class="fas fa-stream"></i> main
+                        <span class="thread-test-count">(2 tests)</span>
+                    </div>
+                    <div class="thread-bar-container">
+                        <div class="thread-test-bar failed" style="left: 0.00%; width: 43.13%;" onclick="showTestDetails('bd533a8a-8acf-4d18-b4d2-a2ac2db6ee93')" title="Successful login with valid credentials - 10.3s">
+                        </div>
+                        <div class="thread-test-bar passed" style="left: 64.92%; width: 35.07%;" onclick="showTestDetails('b71c089e-b418-467b-9c87-2dcfb41b1ea2')" title="Failed login with invalid credentials - 8.4s">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">Resource Loading & Test Phases</h3>
+        </div>
+        <div class="card-body">
+            <div class="resource-timeline">
+                <div class="resource-phase">
+                    <div class="resource-phase-icon" style="background-color: var(--info-color);"><i class="fas fa-plug"></i></div>
+                    <div class="resource-phase-content">
+                        <div class="resource-phase-title">Framework Initialization</div>
+                        <div class="resource-phase-time">2.0s</div>
+                    </div>
+                </div>
+                <div class="resource-phase">
+                    <div class="resource-phase-icon" style="background-color: var(--warning-color);"><i class="fas fa-globe"></i></div>
+                    <div class="resource-phase-content">
+                        <div class="resource-phase-title">Browser Startup</div>
+                        <div class="resource-phase-time">1.9s</div>
+                    </div>
+                </div>
+                <div class="resource-phase">
+                    <div class="resource-phase-icon" style="background-color: var(--success-color);"><i class="fas fa-play"></i></div>
+                    <div class="resource-phase-content">
+                        <div class="resource-phase-title">Test Execution</div>
+                        <div class="resource-phase-time">18.7s</div>
+                    </div>
+                </div>
+                <div class="resource-phase">
+                    <div class="resource-phase-icon" style="background-color: var(--purple-color);"><i class="fas fa-broom"></i></div>
+                    <div class="resource-phase-content">
+                        <div class="resource-phase-title">Cleanup & Teardown</div>
+                        <div class="resource-phase-time">1.0s</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">Sequential Test Timeline</h3>
+        </div>
+        <div class="card-body">
+            <div class="timeline-container">
+                <div class="timeline-header">
+                    <div>Test Scenario</div>
+                    <div>Execution Time</div>
+                </div>
+                <div class="timeline-row">
+                    <div class="timeline-label">Successful login with valid credentials</div>
+                    <div class="timeline-bar-container">
+                        <div class="timeline-bar failed" style="left: 0.00%; width: 43.13%;" onclick="showTestDetails('bd533a8a-8acf-4d18-b4d2-a2ac2db6ee93')">
+                            10.3s
+                        </div>
+                    </div>
+                </div>
+                <div class="timeline-row">
+                    <div class="timeline-label">Failed login with invalid credentials</div>
+                    <div class="timeline-bar-container">
+                        <div class="timeline-bar passed" style="left: 64.92%; width: 35.07%;" onclick="showTestDetails('b71c089e-b418-467b-9c87-2dcfb41b1ea2')">
+                            8.4s
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<div id="categories" class="section">
+    <div class="page-header">
+        <h1 class="page-title">Test Categories</h1>
+        <div class="page-subtitle">
+            <span class="text-muted">Tests organized by categories and tags</span>
+        </div>
+    </div>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem;">
+        <div class="card">
+            <div class="card-header" style="background-color: var(--primary-ultralight);">
+                <h3 class="card-title" style="display: flex; align-items: center; gap: 0.5rem;">
+                    <i class="fas fa-tag" style="color: var(--primary-color);"></i>
+                    @negative
+                </h3>
+            </div>
+            <div class="card-body">
+                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; margin-bottom: 1rem;">
+                    <div style="text-align: center;">
+                        <div style="font-size: 1.5rem; font-weight: 700;">1</div>
+                        <div style="font-size: 0.75rem; color: var(--text-secondary);">Total Tests</div>
+                    </div>
+                    <div style="text-align: center;">
+                        <div style="font-size: 1.5rem; font-weight: 700;">100%</div>
+                        <div style="font-size: 0.75rem; color: var(--text-secondary);">Pass Rate</div>
+                    </div>
+                </div>
+                <div class="progress" style="margin-bottom: 1rem;">
+                    <div class="progress-bar" style="width: 100%"></div>
+                </div>
+                <button class="btn btn-primary btn-sm" style="width: 100%;" onclick="showCategoryDetails('@negative')">
+                    <i class="fas fa-eye" style="margin-right: 0.5rem;"></i> View Details
+                </button>
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-header" style="background-color: var(--primary-ultralight);">
+                <h3 class="card-title" style="display: flex; align-items: center; gap: 0.5rem;">
+                    <i class="fas fa-tag" style="color: var(--primary-color);"></i>
+                    @positive
+                </h3>
+            </div>
+            <div class="card-body">
+                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; margin-bottom: 1rem;">
+                    <div style="text-align: center;">
+                        <div style="font-size: 1.5rem; font-weight: 700;">1</div>
+                        <div style="font-size: 0.75rem; color: var(--text-secondary);">Total Tests</div>
+                    </div>
+                    <div style="text-align: center;">
+                        <div style="font-size: 1.5rem; font-weight: 700;">0%</div>
+                        <div style="font-size: 0.75rem; color: var(--text-secondary);">Pass Rate</div>
+                    </div>
+                </div>
+                <div class="progress" style="margin-bottom: 1rem;">
+                    <div class="progress-bar" style="width: 0%"></div>
+                </div>
+                <button class="btn btn-primary btn-sm" style="width: 100%;" onclick="showCategoryDetails('@positive')">
+                    <i class="fas fa-eye" style="margin-right: 0.5rem;"></i> View Details
+                </button>
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-header" style="background-color: var(--primary-ultralight);">
+                <h3 class="card-title" style="display: flex; align-items: center; gap: 0.5rem;">
+                    <i class="fas fa-tag" style="color: var(--primary-color);"></i>
+                    @sequential
+                </h3>
+            </div>
+            <div class="card-body">
+                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; margin-bottom: 1rem;">
+                    <div style="text-align: center;">
+                        <div style="font-size: 1.5rem; font-weight: 700;">2</div>
+                        <div style="font-size: 0.75rem; color: var(--text-secondary);">Total Tests</div>
+                    </div>
+                    <div style="text-align: center;">
+                        <div style="font-size: 1.5rem; font-weight: 700;">50%</div>
+                        <div style="font-size: 0.75rem; color: var(--text-secondary);">Pass Rate</div>
+                    </div>
+                </div>
+                <div class="progress" style="margin-bottom: 1rem;">
+                    <div class="progress-bar" style="width: 50%"></div>
+                </div>
+                <button class="btn btn-primary btn-sm" style="width: 100%;" onclick="showCategoryDetails('@sequential')">
+                    <i class="fas fa-eye" style="margin-right: 0.5rem;"></i> View Details
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+<div id="packages" class="section">
+    <div class="page-header">
+        <h1 class="page-title">Package Overview</h1>
+        <div class="page-subtitle">
+            <span class="text-muted">Test results organized by package structure</span>
+        </div>
+    </div>
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">Package Structure</h3>
+        </div>
+        <div class="card-body">
+            <div class="test-tree">
+                <div class="tree-item expanded">
+                    <div class="tree-item-content" onclick="toggleTreeItem(this)">
+                        <i class="fas fa-chevron-down tree-item-icon"></i>
+                        <i class="fas fa-folder" style="color: var(--primary-color); margin-right: 0.5rem;"></i>
+                        <span class="tree-item-name font-mono" title="com.testforge.cs.bdd">com.testforge....bdd</span>
+                        <div class="tree-item-status">
+                            <span class="badge badge-info">2 tests</span>
+                            <span class="text-success">1 ✓</span>
+                            <span class="text-danger">1 ✗</span>
+                        </div>
+                    </div>
+                    <div class="tree-children">
+                        <div class="tree-item">
+                            <div class="tree-item-content">
+                                <i class="fas fa-file-code" style="color: var(--info-color); margin-right: 0.5rem;"></i>
+                                <span class="tree-item-name">CSBDDRunner</span>
+                                <div class="tree-item-status">
+                                    <span class="badge badge-sm badge-info">2</span>
+                                    <span class="text-success" style="font-size: 0.875rem;">1 ✓</span>
+                                    <span class="text-danger" style="font-size: 0.875rem;">1 ✗</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<div id="environment" class="section">
+    <div class="page-header">
+        <h1 class="page-title">Environment Information</h1>
+        <div class="page-subtitle">
+            <span class="text-muted">System and test environment details</span>
+        </div>
+    </div>
+    <div class="env-grid">
+        <div class="env-card">
+            <div class="env-card-title">
+                <i class="fas fa-desktop"></i> System Information
+            </div>
+            <div class="env-item">
+                <span class="env-label">Operating System</span>
+                <span class="env-value">Linux</span>
+            </div>
+            <div class="env-item">
+                <span class="env-label">OS Version</span>
+                <span class="env-value">5.15.167.4-microsoft-standard-WSL2</span>
+            </div>
+            <div class="env-item">
+                <span class="env-label">Architecture</span>
+                <span class="env-value">amd64</span>
+            </div>
+            <div class="env-item">
+                <span class="env-label">Available Processors</span>
+                <span class="env-value">4</span>
+            </div>
+            <div class="env-item">
+                <span class="env-label">System Encoding</span>
+                <span class="env-value">UTF-8</span>
+            </div>
+            <div class="env-item">
+                <span class="env-label">User Name</span>
+                <span class="env-value">akhan</span>
+            </div>
+            <div class="env-item">
+                <span class="env-label">Timezone</span>
+                <span class="env-value">Etc/UTC</span>
+            </div>
+        </div>
+        <div class="env-card">
+            <div class="env-card-title">
+                <i class="fas fa-coffee"></i> Java Environment
+            </div>
+            <div class="env-item">
+                <span class="env-label">Java Version</span>
+                <span class="env-value">17.0.15</span>
+            </div>
+            <div class="env-item">
+                <span class="env-label">Java Vendor</span>
+                <span class="env-value">Ubuntu</span>
+            </div>
+            <div class="env-item">
+                <span class="env-label">Java Home</span>
+                <span class="env-value">/usr/lib/jvm/java-17-openjdk-amd64</span>
+            </div>
+            <div class="env-item">
+                <span class="env-label">JVM Name</span>
+                <span class="env-value">OpenJDK 64-Bit Server VM</span>
+            </div>
+            <div class="env-item">
+                <span class="env-label">JVM Version</span>
+                <span class="env-value">17.0.15+6-Ubuntu-0ubuntu124.04</span>
+            </div>
+            <div class="env-item">
+                <span class="env-label">JVM Vendor</span>
+                <span class="env-value">Ubuntu</span>
+            </div>
+        </div>
+        <div class="env-card">
+            <div class="env-card-title">
+                <i class="fas fa-cog"></i> Test Configuration
+            </div>
+            <div class="env-item">
+                <span class="env-label">Browser</span>
+                <span class="env-value">chrome</span>
+            </div>
+            <div class="env-item">
+                <span class="env-label">Environment</span>
+                <span class="env-value">qa</span>
+            </div>
+            <div class="env-item">
+                <span class="env-label">Execution Mode</span>
+                <span class="env-value">sequential</span>
+            </div>
+            <div class="env-item">
+                <span class="env-label">Suite Name</span>
+                <span class="env-value">Simple Sequential Test Suite</span>
+            </div>
+            <div class="env-item">
+                <span class="env-label">Start Time</span>
+                <span class="env-value">2025-08-04 13:17:21</span>
+            </div>
+            <div class="env-item">
+                <span class="env-label">Duration</span>
+                <span class="env-value">23.9s</span>
+            </div>
+        </div>
+        <div class="env-card">
+            <div class="env-card-title">
+                <i class="fas fa-tools"></i> Test Framework
+            </div>
+            <div class="env-item">
+                <span class="env-label">Framework Name</span>
+                <span class="env-value">CS Test Framework</span>
+            </div>
+            <div class="env-item">
+                <span class="env-label">Framework Version</span>
+                <span class="env-value">development</span>
+            </div>
+            <div class="env-item">
+                <span class="env-label">TestNG Version</span>
+                <span class="env-value">7.x</span>
+            </div>
+            <div class="env-item">
+                <span class="env-label">Selenium Version</span>
+                <span class="env-value">4.x</span>
+            </div>
+            <div class="env-item">
+                <span class="env-label">WebDriver Manager</span>
+                <span class="env-value">Enabled</span>
+            </div>
+            <div class="env-item">
+                <span class="env-label">Parallel Execution</span>
+                <span class="env-value">No</span>
+            </div>
+        </div>
+    </div>
+</div>
+<div id="trends" class="section">
+    <div class="page-header">
+        <h1 class="page-title">Test Trends Analysis</h1>
+        <div class="page-subtitle">
+            <span class="text-muted">Historical analysis and insights from your test executions</span>
+        </div>
+    </div>
+    <div class="chart-row">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">Pass Rate Trend (Last 7 Days)</h3>
+            </div>
+            <div class="card-body">
+                <div class="chart-container">
+                    <canvas id="passRateTrendChart"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">Execution Time Trend</h3>
+            </div>
+            <div class="card-body">
+                <div class="chart-container">
+                    <canvas id="executionTimeTrendChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">Test Suite Growth Over Time</h3>
+        </div>
+        <div class="card-body">
+            <div class="chart-container">
+                <canvas id="testGrowthChart"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">Historical Summary</h3>
+        </div>
+        <div class="card-body">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Total Tests</th>
+                        <th>Passed</th>
+                        <th>Failed</th>
+                        <th>Pass Rate</th>
+                        <th>Duration</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>2025-08-04 (Current)</td>
+                        <td>2</td>
+                        <td class="text-success">1</td>
+                        <td class="text-danger">1</td>
+                        <td>50.0%</td>
+                        <td>23.9s</td>
+                    </tr>
+                    <tr>
+                        <td>2025-08-03</td>
+                        <td>1</td>
+                        <td class="text-success">0</td>
+                        <td class="text-danger">1</td>
+                        <td>0.0%</td>
+                        <td>27.1s</td>
+                    </tr>
+                    <tr>
+                        <td>2025-08-02</td>
+                        <td>1</td>
+                        <td class="text-success">0</td>
+                        <td class="text-danger">1</td>
+                        <td>0.0%</td>
+                        <td>27.7s</td>
+                    </tr>
+                    <tr>
+                        <td>2025-08-01</td>
+                        <td>1</td>
+                        <td class="text-success">0</td>
+                        <td class="text-danger">1</td>
+                        <td>0.0%</td>
+                        <td>23.6s</td>
+                    </tr>
+                    <tr>
+                        <td>2025-07-31</td>
+                        <td>1</td>
+                        <td class="text-success">0</td>
+                        <td class="text-danger">1</td>
+                        <td>0.0%</td>
+                        <td>19.8s</td>
+                    </tr>
+                    <tr>
+                        <td>2025-07-30</td>
+                        <td>1</td>
+                        <td class="text-success">0</td>
+                        <td class="text-danger">1</td>
+                        <td>0.0%</td>
+                        <td>22.6s</td>
+                    </tr>
+                    <tr>
+                        <td>2025-07-29</td>
+                        <td>2</td>
+                        <td class="text-success">1</td>
+                        <td class="text-danger">1</td>
+                        <td>50.0%</td>
+                        <td>24.4s</td>
+                    </tr>
+                    <tr>
+                        <td>2025-07-28</td>
+                        <td>2</td>
+                        <td class="text-success">1</td>
+                        <td class="text-danger">1</td>
+                        <td>50.0%</td>
+                        <td>27.7s</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+</div>
+<!-- Screenshot Modal -->
+<div id="screenshotModal" class="modal" style="display: none;">
+    <div class="modal-overlay" onclick="closeScreenshotModal()"></div>
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 class="modal-title">Screenshot</h3>
+            <button class="modal-close" onclick="closeScreenshotModal()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <img id="modalScreenshot" src="" alt="Test Screenshot" style="max-width: 100%; height: auto;">
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-primary" onclick="downloadScreenshot()">
+                <i class="fas fa-download"></i> Download
+            </button>
+            <button class="btn btn-secondary" onclick="closeScreenshotModal()">Close</button>
+        </div>
+    </div>
+</div>
+<!-- Category Details Modal -->
+<div id="categoryDetailsModal" class="modal" style="display: none;">
+    <div class="modal-overlay" onclick="closeCategoryModal()"></div>
+    <div class="modal-content" style="max-width: 800px;">
+        <div class="modal-header">
+            <h3 class="modal-title" id="categoryModalTitle">Category Details</h3>
+            <button class="modal-close" onclick="closeCategoryModal()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-body" id="categoryModalBody">
+            <!-- Dynamic content will be inserted here -->
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeCategoryModal()">Close</button>
+        </div>
+    </div>
+</div>
+<!-- Feature Details Modal -->
+<div id="featureDetailsModal" class="modal" style="display: none;">
+    <div class="modal-overlay" onclick="closeFeatureModal()"></div>
+    <div class="modal-content" style="max-width: 900px;">
+        <div class="modal-header">
+            <h3 class="modal-title" id="featureModalTitle">Feature Details</h3>
+            <button class="modal-close" onclick="closeFeatureModal()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-body" id="featureModalBody">
+            <!-- Dynamic content will be inserted here -->
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeFeatureModal()">Close</button>
+        </div>
+    </div>
+</div>
+<div id="failureAnalysisModal" class="modal" style="display: none;">
+    <div class="modal-content" style="max-width: 900px;">
+        <div class="modal-header">
+            <h3 class="modal-title" id="failureAnalysisModalTitle">Failure Analysis</h3>
+            <button class="modal-close" onclick="closeFailureAnalysisModal()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-body" id="failureAnalysisModalBody">
+            <!-- Dynamic content will be inserted here -->
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeFailureAnalysisModal()">Close</button>
+        </div>
+    </div>
+</div>
+<!-- Failure Details Modal -->
+<div id="failureDetailsModal" class="modal" style="display: none;">
+    <div class="modal-overlay" onclick="closeFailureDetailsModal()"></div>
+    <div class="modal-content" style="max-width: 1000px; max-height: 90vh; overflow-y: auto;">
+        <div class="modal-header">
+            <h3 class="modal-title" id="failureDetailsModalTitle">Failure Details</h3>
+            <button class="modal-close" onclick="closeFailureDetailsModal()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-body" id="failureDetailsModalBody">
+            <!-- Dynamic content will be inserted here -->
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeFailureDetailsModal()">Close</button>
+        </div>
+    </div>
+</div>
+<script>
+const testData = {
+    'bd533a8a-8acf-4d18-b4d2-a2ac2db6ee93': {
+        name: 'Successful login with valid credentials',
+        feature: 'simple-login.feature',
+        status: 'FAILED',
+        duration: '10.3s',
+        startTime: '2025-08-04 13:17:21',
+        endTime: '2025-08-04 13:17:31',
+        tags: ['@positive', '@sequential'],
+        errorMessage: 'Step execution failed: I should see the user dropdown with text \"kamrul user\"',
+        stackTrace: 'com.testforge.cs.exceptions.CSBddException [BDD_ERROR] in BDD: Step execution failed: I should see the user dropdown with text \"kamrul user\"\n	at com.testforge.cs.bdd.CSScenarioRunner.runStep(CSScenarioRunner.java:167)\n	at com.testforge.cs.bdd.CSScenarioRunner.executeFileStepWithResult(CSScenarioRunner.java:243)\n	at com.testforge.cs.bdd.CSScenarioRunner.runScenarioFromFile(CSScenarioRunner.java:216)\n	at com.testforge.cs.bdd.CSBDDRunner.executeBDDScenario(CSBDDRunner.java:219)\n	at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke0(Native Method)\n	at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:77)\n	at java.base/jdk.internal.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)\n	at java.base/java.lang.reflect.Method.invoke(Method.java:569)\n	at org.testng.internal.invokers.MethodInvocationHelper.invokeMethod(MethodInvocationHelper.java:141)\n	at org.testng.internal.invokers.TestInvoker.invokeMethod(TestInvoker.java:686)\n	at org.testng.internal.invokers.TestInvoker.invokeTestMethod(TestInvoker.java:230)\n	at org.testng.internal.invokers.MethodRunner.runInSequence(MethodRunner.java:63)\n	at org.testng.internal.invokers.TestInvoker$MethodInvocationAgent.invoke(TestInvoker.java:992)\n	at org.testng.internal.invokers.TestInvoker.invokeTestMethods(TestInvoker.java:203)\n	at org.testng.internal.invokers.TestMethodWorker.invokeTestMethods(TestMethodWorker.java:154)\n	at org.testng.internal.invokers.TestMethodWorker.run(TestMethodWorker.java:134)\n	at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)\n	at org.testng.TestRunner.privateRun(TestRunner.java:739)\n	at org.testng.TestRunner.run(TestRunner.java:614)\n	at org.testng.SuiteRunner.runTest(SuiteRunner.java:421)\n	at org.testng.SuiteRunner.runSequentially(SuiteRunner.java:413)\n	at org.testng.SuiteRunner.privateRun(SuiteRunner.java:373)\n	at org.testng.SuiteRunner.run(SuiteRunner.java:312)\n	at org.testng.SuiteRunnerWorker.runSuite(SuiteRunnerWorker.java:52)\n	at org.testng.SuiteRunnerWorker.run(SuiteRunnerWorker.java:95)\n	at org.testng.TestNG.runSuitesSequentially(TestNG.java:1274)\n	at org.testng.TestNG.runSuitesLocally(TestNG.java:1208)\n	at org.testng.TestNG.runSuites(TestNG.java:1112)\n	at org.testng.TestNG.run(TestNG.java:1079)\n	at org.apache.maven.surefire.testng.TestNGExecutor.run(TestNGExecutor.java:308)\n	at org.apache.maven.surefire.testng.TestNGXmlTestSuite.execute(TestNGXmlTestSuite.java:71)\n	at org.apache.maven.surefire.testng.TestNGProvider.invoke(TestNGProvider.java:113)\n	at org.apache.maven.surefire.booter.ForkedBooter.runSuitesInProcess(ForkedBooter.java:385)\n	at org.apache.maven.surefire.booter.ForkedBooter.execute(ForkedBooter.java:162)\n	at org.apache.maven.surefire.booter.ForkedBooter.run(ForkedBooter.java:507)\n	at org.apache.maven.surefire.booter.ForkedBooter.main(ForkedBooter.java:495)\nCaused by: com.testforge.cs.exceptions.CSBddException [BDD_ERROR] in BDD: Failed to execute step: I should see the user dropdown with text \"kamrul user\"\n	at com.testforge.cs.bdd.CSStepRegistry.executeStep(CSStepRegistry.java:118)\n	at com.testforge.cs.bdd.CSScenarioRunner.runStep(CSScenarioRunner.java:164)\n	at com.testforge.cs.bdd.CSScenarioRunner.executeFileStepWithResult(CSScenarioRunner.java:243)\n	at com.testforge.cs.bdd.CSScenarioRunner.runScenarioFromFile(CSScenarioRunner.java:216)\n	at com.testforge.cs.bdd.CSBDDRunner.executeBDDScenario(CSBDDRunner.java:219)\n	at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke0(Native Method)\n	at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:77)\n	at java.base/jdk.internal.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)\n	at java.base/java.lang.reflect.Method.invoke(Method.java:569)\n	at org.testng.internal.invokers.MethodInvocationHelper.invokeMethod(MethodInvocationHelper.java:141)\n	at org.testng.internal.invokers.TestInvoker.invokeMethod(TestInvoker.java:686)\n	at org.testng.internal.invokers.TestInvoker.invokeTestMethod(TestInvoker.java:230)\n	at org.testng.internal.invokers.MethodRunner.runInSequence(MethodRunner.java:63)\n	at org.testng.internal.invokers.TestInvoker$MethodInvocationAgent.invoke(TestInvoker.java:992)\n	at org.testng.internal.invokers.TestInvoker.invokeTestMethods(TestInvoker.java:203)\n	at org.testng.internal.invokers.TestMethodWorker.invokeTestMethods(TestMethodWorker.java:154)\n	at org.testng.internal.invokers.TestMethodWorker.run(TestMethodWorker.java:134)\n	at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)\n	at org.testng.TestRunner.privateRun(TestRunner.java:739)\n	at org.testng.TestRunner.run(TestRunner.java:614)\n	at org.testng.SuiteRunner.runTest(SuiteRunner.java:421)\n	at org.testng.SuiteRunner.runSequentially(SuiteRunner.java:413)\n	at org.testng.SuiteRunner.privateRun(SuiteRunner.java:373)\n	at org.testng.SuiteRunner.run(SuiteRunner.java:312)\n	at org.testng.SuiteRunnerWorker.runSuite(SuiteRunnerWorker.java:52)\n	at org.testng.SuiteRunnerWorker.run(SuiteRunnerWorker.java:95)\n	at org.testng.TestNG.runSuitesSequentially(TestNG.java:1274)\n	at org.testng.TestNG.runSuitesLocally(TestNG.java:1208)\n	at org.testng.TestNG.runSuites(TestNG.java:1112)\n	at org.testng.TestNG.run(TestNG.java:1079)\n	at org.apache.maven.surefire.testng.TestNGExecutor.run(TestNGExecutor.java:308)\n	at org.apache.maven.surefire.testng.TestNGXmlTestSuite.execute(TestNGXmlTestSuite.java:71)\n	at org.apache.maven.surefire.testng.TestNGProvider.invoke(TestNGProvider.java:113)\n	at org.apache.maven.surefire.booter.ForkedBooter.runSuitesInProcess(ForkedBooter.java:385)\n	at org.apache.maven.surefire.booter.ForkedBooter.execute(ForkedBooter.java:162)\n	at org.apache.maven.surefire.booter.ForkedBooter.run(ForkedBooter.java:507)\n	at org.apache.maven.surefire.booter.ForkedBooter.main(ForkedBooter.java:495)\nCaused by: java.lang.reflect.InvocationTargetException\n	at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke0(Native Method)\n	at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:77)\n	at java.base/jdk.internal.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)\n	at java.base/java.lang.reflect.Method.invoke(Method.java:569)\n	at com.testforge.cs.bdd.CSStepDefinition.execute(CSStepDefinition.java:100)\n	at com.testforge.cs.bdd.CSStepRegistry.executeStep(CSStepRegistry.java:116)\n	at com.testforge.cs.bdd.CSScenarioRunner.runStep(CSScenarioRunner.java:164)\n	at com.testforge.cs.bdd.CSScenarioRunner.executeFileStepWithResult(CSScenarioRunner.java:243)\n	at com.testforge.cs.bdd.CSScenarioRunner.runScenarioFromFile(CSScenarioRunner.java:216)\n	at com.testforge.cs.bdd.CSBDDRunner.executeBDDScenario(CSBDDRunner.java:219)\n	at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke0(Native Method)\n	at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:77)\n	at java.base/jdk.internal.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)\n	at java.base/java.lang.reflect.Method.invoke(Method.java:569)\n	at org.testng.internal.invokers.MethodInvocationHelper.invokeMethod(MethodInvocationHelper.java:141)\n	at org.testng.internal.invokers.TestInvoker.invokeMethod(TestInvoker.java:686)\n	at org.testng.internal.invokers.TestInvoker.invokeTestMethod(TestInvoker.java:230)\n	at org.testng.internal.invokers.MethodRunner.runInSequence(MethodRunner.java:63)\n	at org.testng.internal.invokers.TestInvoker$MethodInvocationAgent.invoke(TestInvoker.java:992)\n	at org.testng.internal.invokers.TestInvoker.invokeTestMethods(TestInvoker.java:203)\n	at org.testng.internal.invokers.TestMethodWorker.invokeTestMethods(TestMethodWorker.java:154)\n	at org.testng.internal.invokers.TestMethodWorker.run(TestMethodWorker.java:134)\n	at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)\n	at org.testng.TestRunner.privateRun(TestRunner.java:739)\n	at org.testng.TestRunner.run(TestRunner.java:614)\n	at org.testng.SuiteRunner.runTest(SuiteRunner.java:421)\n	at org.testng.SuiteRunner.runSequentially(SuiteRunner.java:413)\n	at org.testng.SuiteRunner.privateRun(SuiteRunner.java:373)\n	at org.testng.SuiteRunner.run(SuiteRunner.java:312)\n	at org.testng.SuiteRunnerWorker.runSuite(SuiteRunnerWorker.java:52)\n	at org.testng.SuiteRunnerWorker.run(SuiteRunnerWorker.java:95)\n	at org.testng.TestNG.runSuitesSequentially(TestNG.java:1274)\n	at org.testng.TestNG.runSuitesLocally(TestNG.java:1208)\n	at org.testng.TestNG.runSuites(TestNG.java:1112)\n	at org.testng.TestNG.run(TestNG.java:1079)\n	at org.apache.maven.surefire.testng.TestNGExecutor.run(TestNGExecutor.java:308)\n	at org.apache.maven.surefire.testng.TestNGXmlTestSuite.execute(TestNGXmlTestSuite.java:71)\n	at org.apache.maven.surefire.testng.TestNGProvider.invoke(TestNGProvider.java:113)\n	at org.apache.maven.surefire.booter.ForkedBooter.runSuitesInProcess(ForkedBooter.java:385)\n	at org.apache.maven.surefire.booter.ForkedBooter.execute(ForkedBooter.java:162)\n	at org.apache.maven.surefire.booter.ForkedBooter.run(ForkedBooter.java:507)\n	at org.apache.maven.surefire.booter.ForkedBooter.main(ForkedBooter.java:495)\nCaused by: java.lang.AssertionError: Logged in user mismatch. Expected: kamrul user, Actual: Кошелев Исай expected [kamrul user] but found [Кошелев Исай]\n	at org.testng.Assert.fail(Assert.java:111)\n	at org.testng.Assert.failNotEquals(Assert.java:1578)\n	at org.testng.Assert.assertEqualsImpl(Assert.java:150)\n	at org.testng.Assert.assertEquals(Assert.java:132)\n	at org.testng.Assert.assertEquals(Assert.java:656)\n	at com.orangehrm.pages.DashboardPageNew.assertUserLoggedIn(DashboardPageNew.java:78)\n	at com.orangehrm.stepdefs.LoginStepsNew.iShouldSeeUserDropdown(LoginStepsNew.java:59)\n	at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke0(Native Method)\n	at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:77)\n	at java.base/jdk.internal.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)\n	at java.base/java.lang.reflect.Method.invoke(Method.java:569)\n	at com.testforge.cs.bdd.CSStepDefinition.execute(CSStepDefinition.java:100)\n	at com.testforge.cs.bdd.CSStepRegistry.executeStep(CSStepRegistry.java:116)\n	at com.testforge.cs.bdd.CSScenarioRunner.runStep(CSScenarioRunner.java:164)\n	at com.testforge.cs.bdd.CSScenarioRunner.executeFileStepWithResult(CSScenarioRunner.java:243)\n	at com.testforge.cs.bdd.CSScenarioRunner.runScenarioFromFile(CSScenarioRunner.java:216)\n	at com.testforge.cs.bdd.CSBDDRunner.executeBDDScenario(CSBDDRunner.java:219)\n	at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke0(Native Method)\n	at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:77)\n	at java.base/jdk.internal.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)\n	at java.base/java.lang.reflect.Method.invoke(Method.java:569)\n	at org.testng.internal.invokers.MethodInvocationHelper.invokeMethod(MethodInvocationHelper.java:141)\n	at org.testng.internal.invokers.TestInvoker.invokeMethod(TestInvoker.java:686)\n	at org.testng.internal.invokers.TestInvoker.invokeTestMethod(TestInvoker.java:230)\n	at org.testng.internal.invokers.MethodRunner.runInSequence(MethodRunner.java:63)\n	at org.testng.internal.invokers.TestInvoker$MethodInvocationAgent.invoke(TestInvoker.java:992)\n	at org.testng.internal.invokers.TestInvoker.invokeTestMethods(TestInvoker.java:203)\n	at org.testng.internal.invokers.TestMethodWorker.invokeTestMethods(TestMethodWorker.java:154)\n	at org.testng.internal.invokers.TestMethodWorker.run(TestMethodWorker.java:134)\n	at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)\n	at org.testng.TestRunner.privateRun(TestRunner.java:739)\n	at org.testng.TestRunner.run(TestRunner.java:614)\n	at org.testng.SuiteRunner.runTest(SuiteRunner.java:421)\n	at org.testng.SuiteRunner.runSequentially(SuiteRunner.java:413)\n	at org.testng.SuiteRunner.privateRun(SuiteRunner.java:373)\n	at org.testng.SuiteRunner.run(SuiteRunner.java:312)\n	at org.testng.SuiteRunnerWorker.runSuite(SuiteRunnerWorker.java:52)\n	at org.testng.SuiteRunnerWorker.run(SuiteRunnerWorker.java:95)\n	at org.testng.TestNG.runSuitesSequentially(TestNG.java:1274)\n	at org.testng.TestNG.runSuitesLocally(TestNG.java:1208)\n	at org.testng.TestNG.runSuites(TestNG.java:1112)\n	at org.testng.TestNG.run(TestNG.java:1079)\n	at org.apache.maven.surefire.testng.TestNGExecutor.run(TestNGExecutor.java:308)\n	at org.apache.maven.surefire.testng.TestNGXmlTestSuite.execute(TestNGXmlTestSuite.java:71)\n	at org.apache.maven.surefire.testng.TestNGProvider.invoke(TestNGProvider.java:113)\n	at org.apache.maven.surefire.booter.ForkedBooter.runSuitesInProcess(ForkedBooter.java:385)\n	at org.apache.maven.surefire.booter.ForkedBooter.execute(ForkedBooter.java:162)\n	at org.apache.maven.surefire.booter.ForkedBooter.run(ForkedBooter.java:507)\n	at org.apache.maven.surefire.booter.ForkedBooter.main(ForkedBooter.java:495)\n',
+        screenshotPath: 'screenshots/failure_executeBDDScenario_1754313452363_1754313452363.png',
+        consoleLogs: [],
+        errorDetails: null,
+        executedSteps: [{duration: 5557, text: 'I am on the OrangeHRM login page', keyword: 'Given', status: 'passed'}, {duration: 701, text: 'I enter username \"Admin\" and password \"admin123\"', keyword: 'When', status: 'passed'}, {duration: 2144, text: 'I click the login button', keyword: 'And', status: 'passed'}, {duration: 277, text: 'I should be redirected to the dashboard', keyword: 'Then', status: 'passed'}, {duration: 28, text: 'I should see \"Dashboard\" as page title', keyword: 'And', status: 'passed'}],
+        testData: {
+            username: 'Admin',
+            password: 'admin123',
+            dataSource: 'Feature File',
+            browser: 'chrome',
+            environment: 'qa',
+            baseUrl: 'https://opensource-demo.orangehrmlive.com/'
+        },
+        className: 'com.testforge.cs.bdd.CSBDDRunner'
+    },
+    'b71c089e-b418-467b-9c87-2dcfb41b1ea2': {
+        name: 'Failed login with invalid credentials',
+        feature: 'simple-login.feature',
+        status: 'PASSED',
+        duration: '8.4s',
+        startTime: '2025-08-04 13:17:36',
+        endTime: '2025-08-04 13:17:45',
+        tags: ['@negative', '@sequential'],
+        errorMessage: null,
+        stackTrace: null,
+        screenshotPath: null,
+        consoleLogs: [],
+        errorDetails: null,
+        executedSteps: [{duration: 4938, text: 'I am on the OrangeHRM login page', keyword: 'Given', status: 'passed'}, {duration: 784, text: 'I enter username \"invalid\" and password \"wrongpass\"', keyword: 'When', status: 'passed'}, {duration: 2277, text: 'I click the login button', keyword: 'And', status: 'passed'}, {duration: 166, text: 'I should see an error message \"Invalid credentials\"', keyword: 'Then', status: 'passed'}, {duration: 224, text: 'I should remain on the login page', keyword: 'And', status: 'passed'}],
+        testData: {
+            username: 'invalid',
+            password: 'wrongpass',
+            dataSource: 'Feature File',
+            browser: 'chrome',
+            environment: 'qa',
+            baseUrl: 'https://opensource-demo.orangehrmlive.com/'
+        },
+        className: 'com.testforge.cs.bdd.CSBDDRunner'
+    },
+};
+
+function showSection(sectionId) {
+    document.querySelectorAll('.section').forEach(section => {
+        section.classList.remove('active');
+    });
+    document.getElementById(sectionId).classList.add('active');
+    
+    document.querySelectorAll('.sidebar-menu-link').forEach(link => {
+        link.classList.remove('active');
+    });
+    event.target.closest('.sidebar-menu-link').classList.add('active');
+}
+
+function toggleTreeItem(element) {
+    const treeItem = element.closest('.tree-item');
+    treeItem.classList.toggle('expanded');
+    const icon = element.querySelector('.tree-item-icon');
+    if (icon) {
+        icon.className = treeItem.classList.contains('expanded') ? 'fas fa-chevron-down tree-item-icon' : 'fas fa-chevron-right tree-item-icon';
+    }
+}
+
+function showTestDetails(testId) {
+    const test = testData[testId];
+    if (!test) return;
+    
+    const detailsDiv = document.getElementById('testDetails');
+    if (!detailsDiv) return;
+    
+    // Enhanced Test Details Header
+    let detailsHtml = '<div class="test-details-header" style="margin-bottom: 1.5rem; padding: 1rem; background: linear-gradient(135deg, var(--primary-color), var(--primary-dark)); color: white; border-radius: 0.5rem;">';
+    detailsHtml += '<div style="display: flex; align-items: center; justify-content: between; margin-bottom: 0.5rem;">';
+    detailsHtml += '<h3 style="margin: 0; color: white;"><i class="fas fa-vial"></i> ' + test.name + '</h3>';
+    detailsHtml += '<span class="test-status-badge" style="margin-left: auto; padding: 0.25rem 0.75rem; background: ' + (test.status === 'PASSED' ? '#10b981' : test.status === 'FAILED' ? '#ef4444' : '#f59e0b') + '; color: white; border-radius: 1rem; font-size: 0.875rem; font-weight: 600;">';
+    detailsHtml += '<i class="fas fa-' + (test.status === 'PASSED' ? 'check' : test.status === 'FAILED' ? 'times' : 'forward') + '-circle"></i> ' + test.status + '</span>';
+    detailsHtml += '</div>';
+    detailsHtml += '<div style="font-size: 0.875rem; opacity: 0.9;">Feature: ' + test.feature + ' • Duration: ' + test.duration + '</div>';
+    detailsHtml += '</div>';
+    
+    // Detailed Test Metadata Grid
+    detailsHtml += '<div class="test-metadata-sections">';
+    
+    // Execution Information
+    detailsHtml += '<div class="metadata-section">';
+    detailsHtml += '<h4 class="metadata-section-title"><i class="fas fa-play-circle"></i> Execution Information</h4>';
+    detailsHtml += '<div class="test-info-grid">';
+    detailsHtml += '<span class="test-info-label">Test Method:</span><span>' + test.name + '</span>';
+    detailsHtml += '<span class="test-info-label">Test Class:</span><span>' + (test.className || 'CSBDDRunner') + '</span>';
+    detailsHtml += '<span class="test-info-label">Test Type:</span><span><i class="fas fa-cucumber"></i> BDD/Cucumber</span>';
+    detailsHtml += '<span class="test-info-label">Framework:</span><span><i class="fas fa-cog"></i> TestNG + Selenium</span>';
+    detailsHtml += '<span class="test-info-label">Execution Mode:</span><span>Sequential</span>';
+    detailsHtml += '<span class="test-info-label">Thread ID:</span><span>main</span>';
+    detailsHtml += '<span class="test-info-label">Priority:</span><span>Normal</span>';
+    detailsHtml += '<span class="test-info-label">Retry Count:</span><span>0 / 2</span>';
+    detailsHtml += '</div></div>';
+    
+    // Timing Information
+    detailsHtml += '<div class="metadata-section">';
+    detailsHtml += '<h4 class="metadata-section-title"><i class="fas fa-clock"></i> Timing Details</h4>';
+    detailsHtml += '<div class="test-info-grid">';
+    detailsHtml += '<span class="test-info-label">Start Time:</span><span>' + test.startTime + '</span>';
+    detailsHtml += '<span class="test-info-label">End Time:</span><span>' + test.endTime + '</span>';
+    detailsHtml += '<span class="test-info-label">Total Duration:</span><span><strong>' + test.duration + '</strong></span>';
+    detailsHtml += '<span class="test-info-label">Setup Time:</span><span>' + (test.setupTime || '0ms') + '</span>';
+    detailsHtml += '<span class="test-info-label">Execution Time:</span><span>' + test.duration + '</span>';
+    detailsHtml += '<span class="test-info-label">Teardown Time:</span><span>' + (test.teardownTime || '0ms') + '</span>';
+    detailsHtml += '</div></div>';
+    
+    // Test Data & Parameters
+    detailsHtml += '<div class="metadata-section">';
+    detailsHtml += '<h4 class="metadata-section-title"><i class="fas fa-database"></i> Test Data & Parameters</h4>';
+    detailsHtml += '<div class="test-info-grid">';
+    if (test.testData) {
+        detailsHtml += '<span class="test-info-label">Username:</span><span><i class="fas fa-user"></i> ' + test.testData.username + '</span>';
+        detailsHtml += '<span class="test-info-label">Password:</span><span><i class="fas fa-key"></i> ' + (test.testData.password ? '******' : 'N/A') + '</span>';
+        detailsHtml += '<span class="test-info-label">Data Source:</span><span><i class="fas fa-file-code"></i> ' + test.testData.dataSource + '</span>';
+        detailsHtml += '<span class="test-info-label">Base URL:</span><span><i class="fas fa-globe"></i> ' + test.testData.baseUrl + '</span>';
+        detailsHtml += '<span class="test-info-label">Environment:</span><span><i class="fas fa-server"></i> ' + test.testData.environment.toUpperCase() + '</span>';
+        detailsHtml += '<span class="test-info-label">Browser:</span><span><i class="fab fa-' + test.testData.browser + '"></i> ' + test.testData.browser.charAt(0).toUpperCase() + test.testData.browser.slice(1) + '</span>';
+    } else {
+        detailsHtml += '<span class="test-info-label">Data Provider:</span><span>None</span>';
+        detailsHtml += '<span class="test-info-label">Test Parameters:</span><span>N/A</span>';
+    }
+    detailsHtml += '<span class="test-info-label">OS Platform:</span><span><i class="fas fa-desktop"></i> ' + navigator.platform + '</span>';
+    detailsHtml += '<span class="test-info-label">User Agent:</span><span style="font-size: 0.75rem;">' + navigator.userAgent.split(' ').slice(-2).join(' ') + '</span>';
+    detailsHtml += '</div></div>';
+    
+    // Tags
+    if (test.tags && test.tags.length > 0) {
+        detailsHtml += '<span class="test-info-label">Tags:</span>';
+        detailsHtml += '<span>';
+        test.tags.forEach(tag => {
+            detailsHtml += '<span class="feature-tag">' + tag + '</span> ';
+        });
+        detailsHtml += '</span>';
+        detailsHtml += '</div>';
+    }
+    
+    // Error Message
+    if (test.errorMessage) {
+        detailsHtml += '<div style="margin-bottom: 1rem;">';
+        detailsHtml += '<h4 style="font-size: 1rem; font-weight: 600; margin-bottom: 0.5rem;">Error Message:</h4>';
+        detailsHtml += '<div style="background-color: #fef2f2; border: 1px solid #fecaca; border-radius: 0.375rem; padding: 1rem;">';
+        detailsHtml += '<code style="color: #991b1b;">' + test.errorMessage + '</code>';
+        detailsHtml += '</div></div>';
+    }
+    
+    // Executed Steps
+    if (test.executedSteps && test.executedSteps.length > 0) {
+        const failedSteps = test.executedSteps.filter(step => step.status !== 'passed');
+        const passedSteps = test.executedSteps.filter(step => step.status === 'passed');
+        
+        // Show failed steps first if any
+        if (failedSteps.length > 0) {
+            detailsHtml += '<div style="margin-bottom: 1rem;">';
+            detailsHtml += '<h4 style="font-size: 1rem; font-weight: 600; margin-bottom: 0.5rem; color: #ef4444;"><i class="fas fa-exclamation-triangle"></i> Failed Steps (' + failedSteps.length + '):</h4>';
+            detailsHtml += '<div class="test-steps">';
+            failedSteps.forEach(step => {
+                detailsHtml += '<div class="step-item" style="border-left: 3px solid #ef4444; background-color: #fef2f2; padding: 0.75rem; margin-bottom: 0.5rem; border-radius: 0.375rem;">';
+                detailsHtml += '<div class="step-icon failed"><i class="fas fa-times"></i></div>';
+                detailsHtml += '<div class="step-content">';
+                detailsHtml += '<span class="step-keyword" style="color: #dc2626; font-weight: 600;">' + step.keyword + '</span>';
+                detailsHtml += '<span class="step-text" style="color: #991b1b;">' + step.text + '</span>';
+                if (step.errorMessage) {
+                    detailsHtml += '<div style="background: #fee2e2; border: 1px solid #fecaca; padding: 0.5rem; border-radius: 0.25rem; margin-top: 0.5rem; font-size: 0.875rem;">' + step.errorMessage + '</div>';
+                }
+                detailsHtml += '<div class="step-duration" style="color: #dc2626;">' + formatDuration(step.duration) + '</div>';
+                detailsHtml += '</div></div>';
+            });
+            detailsHtml += '</div></div>';
+        }
+        
+        // Show all executed steps
+        detailsHtml += '<div style="margin-bottom: 1rem;">';
+        detailsHtml += '<h4 style="font-size: 1rem; font-weight: 600; margin-bottom: 0.5rem;">All Executed Steps (' + test.executedSteps.length + '):</h4>';
+        detailsHtml += '<div class="test-steps">';
+        test.executedSteps.forEach(step => {
+            const passed = step.status === 'passed';
+            detailsHtml += '<div class="step-item">';
+            detailsHtml += '<div class="step-icon ' + (passed ? 'passed' : 'failed') + '"><i class="fas fa-' + (passed ? 'check' : 'times') + '"></i></div>';
+            detailsHtml += '<div class="step-content">';
+            detailsHtml += '<span class="step-keyword">' + step.keyword + '</span>';
+            detailsHtml += '<span class="step-text">' + step.text + '</span>';
+            detailsHtml += '<div class="step-duration">' + formatDuration(step.duration) + '</div>';
+            detailsHtml += '</div></div>';
+        });
+        detailsHtml += '</div></div>';
+    }
+    
+    // Screenshot
+    if (test.screenshotPath) {
+        detailsHtml += '<div class="screenshot-container">';
+        detailsHtml += '<div class="screenshot-header"><span><i class="fas fa-camera"></i> Screenshot</span></div>';
+        detailsHtml += '<img src="' + test.screenshotPath + '" class="screenshot-image" onclick="openImageModal(\'' + test.screenshotPath + '\')" style="cursor: pointer;" alt="Test failure screenshot" onerror="this.style.display=\'none\'" />';
+        detailsHtml += '</div>';
+    }
+    
+    detailsHtml += '</div>';
+    
+    // Display in the Test Details card instead of modal
+    detailsDiv.innerHTML = detailsHtml;
+}
+
+function formatDuration(millis) {
+    if (millis < 1000) return millis + 'ms';
+    else if (millis < 60000) return (millis / 1000).toFixed(1) + 's';
+    else {
+        const minutes = Math.floor(millis / 60000);
+        const seconds = Math.floor((millis % 60000) / 1000);
+        return minutes + 'm ' + seconds + 's';
+    }
+}
+
+let currentScreenshotSrc = '';
+
+function openImageModal(src) {
+    currentScreenshotSrc = src;
+    const modal = document.getElementById('screenshotModal');
+    const img = document.getElementById('modalScreenshot');
+    img.src = src;
+    modal.style.display = 'block';
+    document.body.style.overflow = 'hidden';
+}
+
+function closeScreenshotModal() {
+    const modal = document.getElementById('screenshotModal');
+    modal.style.display = 'none';
+    document.body.style.overflow = 'auto';
+}
+
+function downloadScreenshot() {
+    if (currentScreenshotSrc) {
+        const link = document.createElement('a');
+        link.href = currentScreenshotSrc;
+        link.download = 'screenshot_' + new Date().getTime() + '.png';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+}
+
+function showFailureDetails(testId) {
+    const detailsRow = document.getElementById('failure-' + testId);
+    if (detailsRow) {
+        if (detailsRow.style.display === 'none') {
+            detailsRow.style.display = 'table-row';
+        } else {
+            detailsRow.style.display = 'none';
+        }
+    }
+}
+
+const categoryTests = {};
+
+categoryTests['@negative'] = [
+    testData['b71c089e-b418-467b-9c87-2dcfb41b1ea2'],
+];
+categoryTests['@positive'] = [
+    testData['bd533a8a-8acf-4d18-b4d2-a2ac2db6ee93'],
+];
+categoryTests['@sequential'] = [
+    testData['bd533a8a-8acf-4d18-b4d2-a2ac2db6ee93'],
+    testData['b71c089e-b418-467b-9c87-2dcfb41b1ea2'],
+];
+
+function showCategoryDetails(category) {
+    const modal = document.getElementById('categoryDetailsModal');
+    const modalTitle = document.getElementById('categoryModalTitle');
+    const modalBody = document.getElementById('categoryModalBody');
+    
+    modalTitle.innerHTML = '<i class="fas fa-tag"></i> ' + category + ' - Test Details';
+    
+    const tests = categoryTests[category] || [];
+    const passed = tests.filter(t => t.status === 'PASSED').length;
+    const failed = tests.filter(t => t.status === 'FAILED').length;
+    const skipped = tests.filter(t => t.status === 'SKIPPED').length;
+    const passRate = tests.length > 0 ? (passed * 100 / tests.length).toFixed(1) : 0;
+    
+    let bodyHtml = '<div class="category-details">';
+    
+    // Summary
+    bodyHtml += '<div class="category-summary" style="background: var(--primary-ultralight); padding: 1rem; border-radius: 0.5rem; margin-bottom: 1rem;">';
+    bodyHtml += '<div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; text-align: center;">';
+    bodyHtml += '<div><div style="font-size: 1.5rem; font-weight: 700;">' + tests.length + '</div><div style="font-size: 0.75rem; color: var(--text-secondary);">Total Tests</div></div>';
+    bodyHtml += '<div><div style="font-size: 1.5rem; font-weight: 700; color: #10b981;">' + passed + '</div><div style="font-size: 0.75rem; color: var(--text-secondary);">Passed</div></div>';
+    bodyHtml += '<div><div style="font-size: 1.5rem; font-weight: 700; color: #ef4444;">' + failed + '</div><div style="font-size: 0.75rem; color: var(--text-secondary);">Failed</div></div>';
+    bodyHtml += '<div><div style="font-size: 1.5rem; font-weight: 700;">' + passRate + '%</div><div style="font-size: 0.75rem; color: var(--text-secondary);">Pass Rate</div></div>';
+    bodyHtml += '</div></div>';
+    
+    // Test List
+    bodyHtml += '<div class="test-list">';
+    bodyHtml += '<h4 style="margin-bottom: 1rem;"><i class="fas fa-list"></i> Test Cases</h4>';
+    bodyHtml += '<table class="test-table" style="width: 100%; border-collapse: collapse;">';
+    bodyHtml += '<thead><tr style="background: #f3f4f6;">';
+    bodyHtml += '<th style="padding: 0.5rem; text-align: left; border-bottom: 1px solid #e5e7eb;">Test Name</th>';
+    bodyHtml += '<th style="padding: 0.5rem; text-align: left; border-bottom: 1px solid #e5e7eb;">Status</th>';
+    bodyHtml += '<th style="padding: 0.5rem; text-align: left; border-bottom: 1px solid #e5e7eb;">Duration</th>';
+    bodyHtml += '<th style="padding: 0.5rem; text-align: left; border-bottom: 1px solid #e5e7eb;">Actions</th>';
+    bodyHtml += '</tr></thead><tbody>';
+    
+    tests.forEach((test, index) => {
+        const statusColor = test.status === 'PASSED' ? '#10b981' : test.status === 'FAILED' ? '#ef4444' : '#f59e0b';
+        const statusIcon = test.status === 'PASSED' ? 'check-circle' : test.status === 'FAILED' ? 'times-circle' : 'forward';
+        
+        bodyHtml += '<tr style="border-bottom: 1px solid #e5e7eb;">';
+        bodyHtml += '<td style="padding: 0.75rem;">' + test.name + '</td>';
+        bodyHtml += '<td style="padding: 0.75rem;"><span style="color: ' + statusColor + ';"><i class="fas fa-' + statusIcon + '"></i> ' + test.status + '</span></td>';
+        bodyHtml += '<td style="padding: 0.75rem;">' + test.duration + '</td>';
+        bodyHtml += '<td style="padding: 0.75rem;">';
+        bodyHtml += '<button class="btn btn-sm btn-primary" onclick="closeCategoryModal(); showTestDetails(\'' + Object.keys(testData).find(key => testData[key] === test) + '\')" style="margin-right: 0.25rem;"><i class="fas fa-info-circle"></i> Details</button>';
+        if (test.screenshotPath) {
+            bodyHtml += '<button class="btn btn-sm btn-secondary" onclick="openImageModal(\'' + test.screenshotPath + '\')"><i class="fas fa-camera"></i> Screenshot</button>';
+        }
+        bodyHtml += '</td></tr>';
+    });
+    
+    bodyHtml += '</tbody></table></div></div>';
+    
+    modalBody.innerHTML = bodyHtml;
+    modal.style.display = 'block';
+    document.body.style.overflow = 'hidden';
+}
+
+function closeCategoryModal() {
+    const modal = document.getElementById('categoryDetailsModal');
+    modal.style.display = 'none';
+    document.body.style.overflow = 'auto';
+}
+
+const featureTests = {
+    'simple-login.feature': [
+        testData['bd533a8a-8acf-4d18-b4d2-a2ac2db6ee93'],
+        testData['b71c089e-b418-467b-9c87-2dcfb41b1ea2'],
+    ],
+};
+
+function showFeatureDetails(featureFile) {
+    const modal = document.getElementById('featureDetailsModal');
+    const modalTitle = document.getElementById('featureModalTitle');
+    const modalBody = document.getElementById('featureModalBody');
+    
+    const featureName = featureFile.replace('.feature', '').split('/').pop().split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+    modalTitle.innerHTML = '<i class="fas fa-cucumber"></i> ' + featureName;
+    
+    const scenarios = featureTests[featureFile] || [];
+    const passed = scenarios.filter(t => t.status === 'PASSED').length;
+    const failed = scenarios.filter(t => t.status === 'FAILED').length;
+    const skipped = scenarios.filter(t => t.status === 'SKIPPED').length;
+    const passRate = scenarios.length > 0 ? (passed * 100 / scenarios.length).toFixed(1) : 0;
+    
+    let bodyHtml = '<div class="feature-details">';
+    
+    // Feature Summary
+    bodyHtml += '<div class="feature-summary" style="background: linear-gradient(135deg, #e8f5e9, #c8e6c9); padding: 1.5rem; border-radius: 0.5rem; margin-bottom: 1.5rem;">';
+    bodyHtml += '<div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem;">';
+    bodyHtml += '<div style="width: 50px; height: 50px; background: #4caf50; color: white; border-radius: 0.5rem; display: flex; align-items: center; justify-content: center; font-size: 1.5rem;"><i class="fas fa-cucumber"></i></div>';
+    bodyHtml += '<div><h3 style="margin: 0; color: #2e7d32;">' + featureName + '</h3><div style="color: #388e3c; font-size: 0.875rem;">' + featureFile + '</div></div>';
+    bodyHtml += '</div>';
+    bodyHtml += '<div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 1rem; text-align: center;">';
+    bodyHtml += '<div><div style="font-size: 1.75rem; font-weight: 700; color: #1b5e20;">' + scenarios.length + '</div><div style="font-size: 0.75rem; color: #2e7d32;">Total Scenarios</div></div>';
+    bodyHtml += '<div><div style="font-size: 1.75rem; font-weight: 700; color: #2e7d32;">' + passed + '</div><div style="font-size: 0.75rem; color: #388e3c;">Passed</div></div>';
+    bodyHtml += '<div><div style="font-size: 1.75rem; font-weight: 700; color: #c62828;">' + failed + '</div><div style="font-size: 0.75rem; color: #388e3c;">Failed</div></div>';
+    bodyHtml += '<div><div style="font-size: 1.75rem; font-weight: 700; color: #f57c00;">' + skipped + '</div><div style="font-size: 0.75rem; color: #388e3c;">Skipped</div></div>';
+    bodyHtml += '<div><div style="font-size: 1.75rem; font-weight: 700; color: #1b5e20;">' + passRate + '%</div><div style="font-size: 0.75rem; color: #388e3c;">Pass Rate</div></div>';
+    bodyHtml += '</div></div>';
+    
+    // Scenarios Table
+    bodyHtml += '<div class="scenarios-table">';
+    bodyHtml += '<h4 style="margin-bottom: 1rem;"><i class="fas fa-list-check"></i> Scenarios</h4>';
+    bodyHtml += '<table style="width: 100%; border-collapse: collapse;">';
+    bodyHtml += '<thead><tr style="background: #f5f5f5;">';
+    bodyHtml += '<th style="padding: 0.75rem; text-align: left; border-bottom: 2px solid #e0e0e0;">Scenario</th>';
+    bodyHtml += '<th style="padding: 0.75rem; text-align: left; border-bottom: 2px solid #e0e0e0;">Status</th>';
+    bodyHtml += '<th style="padding: 0.75rem; text-align: left; border-bottom: 2px solid #e0e0e0;">Duration</th>';
+    bodyHtml += '<th style="padding: 0.75rem; text-align: left; border-bottom: 2px solid #e0e0e0;">Steps</th>';
+    bodyHtml += '<th style="padding: 0.75rem; text-align: left; border-bottom: 2px solid #e0e0e0;">Actions</th>';
+    bodyHtml += '</tr></thead><tbody>';
+    
+    scenarios.forEach((scenario, index) => {
+        const statusColor = scenario.status === 'PASSED' ? '#2e7d32' : scenario.status === 'FAILED' ? '#c62828' : '#f57c00';
+        const statusIcon = scenario.status === 'PASSED' ? 'check-circle' : scenario.status === 'FAILED' ? 'times-circle' : 'forward';
+        const bgColor = index % 2 === 0 ? '#ffffff' : '#fafafa';
+        
+        bodyHtml += '<tr style="background: ' + bgColor + '; border-bottom: 1px solid #e0e0e0;">';
+        bodyHtml += '<td style="padding: 0.75rem;">';
+        bodyHtml += '<div style="font-weight: 500;">' + scenario.name + '</div>';
+        if (scenario.tags && scenario.tags.length > 0) {
+            bodyHtml += '<div style="margin-top: 0.25rem;">';
+            scenario.tags.forEach(tag => {
+                bodyHtml += '<span style="font-size: 0.75rem; padding: 0.125rem 0.5rem; background: #e8f5e9; color: #2e7d32; border-radius: 0.25rem; margin-right: 0.25rem;">' + tag + '</span>';
+            });
+            bodyHtml += '</div>';
+        }
+        bodyHtml += '</td>';
+        bodyHtml += '<td style="padding: 0.75rem;"><span style="color: ' + statusColor + '; font-weight: 500;"><i class="fas fa-' + statusIcon + '"></i> ' + scenario.status + '</span></td>';
+        bodyHtml += '<td style="padding: 0.75rem;">' + scenario.duration + '</td>';
+        bodyHtml += '<td style="padding: 0.75rem;">' + (scenario.executedSteps ? scenario.executedSteps.length : 0) + '</td>';
+        bodyHtml += '<td style="padding: 0.75rem;">';
+        bodyHtml += '<button class="btn btn-sm btn-primary" onclick="event.stopPropagation(); showTestDetailsFromFeatureModal(\'' + Object.keys(testData).find(key => testData[key] === scenario) + '\')" style="margin-right: 0.25rem;"><i class="fas fa-info-circle"></i> Details</button>';
+        if (scenario.screenshotPath) {
+            bodyHtml += '<button class="btn btn-sm btn-secondary" onclick="event.stopPropagation(); showScreenshotInFeatureModal(\'' + scenario.screenshotPath + '\')"><i class="fas fa-camera"></i></button>';
+        }
+        bodyHtml += '</td></tr>';
+    });
+    
+    bodyHtml += '</tbody></table></div></div>';
+    
+    modalBody.innerHTML = bodyHtml;
+    modal.style.display = 'block';
+    document.body.style.overflow = 'hidden';
+    
+    // Add scroll to top
+    modal.scrollTop = 0;
+}
+
+function closeFeatureModal() {
+    const modal = document.getElementById('featureDetailsModal');
+    modal.style.display = 'none';
+    document.body.style.overflow = 'auto';
+}
+
+function showTestDetailsFromFeatureModal(testId) {
+    // Close feature modal first
+    closeFeatureModal();
+    // Small delay to ensure modal is closed
+    setTimeout(() => {
+        showTestDetails(testId);
+        // Switch to Test Suites tab
+        showSection('suites');
+    }, 300);
+}
+
+function showScreenshotInFeatureModal(screenshotPath) {
+    // Ensure feature modal has higher z-index
+    const featureModal = document.getElementById('featureDetailsModal');
+    featureModal.style.zIndex = '1000';
+    // Open screenshot modal with even higher z-index
+    openImageModal(screenshotPath);
+    const screenshotModal = document.getElementById('screenshotModal');
+    if (screenshotModal) {
+        screenshotModal.style.zIndex = '2000';
+    }
+}
+
+function showFailureAnalysisModal() {
+    const modal = document.getElementById('failureAnalysisModal');
+    const modalTitle = document.getElementById('failureAnalysisModalTitle');
+    const modalBody = document.getElementById('failureAnalysisModalBody');
+    
+    modalTitle.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Failure Analysis Report';
+    
+    const failedTests = Object.values(testData).filter(test => test.status === 'FAILED');
+    
+    let bodyHtml = '<div class="failure-analysis">';
+    
+    if (failedTests.length === 0) {
+        bodyHtml += '<div style="text-align: center; padding: 2rem; color: #10b981;">';
+        bodyHtml += '<i class="fas fa-check-circle" style="font-size: 3rem; margin-bottom: 1rem;"></i>';
+        bodyHtml += '<h3>No Failures Found!</h3>';
+        bodyHtml += '<p>All tests passed successfully.</p>';
+        bodyHtml += '</div>';
+    } else {
+        // Failure Categories
+        const categories = {};
+        failedTests.forEach(test => {
+            const category = categorizeFailureJS(test.errorMessage || 'Unknown Error');
+            if (!categories[category]) categories[category] = [];
+            categories[category].push(test);
+        });
+        
+        bodyHtml += '<div style="margin-bottom: 2rem;">';
+        bodyHtml += '<h4 style="color: #ef4444; margin-bottom: 1rem;"><i class="fas fa-chart-bar"></i> Failure Distribution</h4>';
+        bodyHtml += '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">';
+        
+        Object.keys(categories).forEach(category => {
+            const count = categories[category].length;
+            const percentage = ((count / failedTests.length) * 100).toFixed(1);
+            bodyHtml += '<div style="background: #fef2f2; border: 1px solid #fecaca; padding: 1rem; border-radius: 0.5rem; text-align: center;">';
+            bodyHtml += '<div style="font-size: 1.5rem; font-weight: 700; color: #dc2626;">' + count + '</div>';
+            bodyHtml += '<div style="font-size: 0.875rem; color: #991b1b; margin-bottom: 0.5rem;">' + category + '</div>';
+            bodyHtml += '<div style="font-size: 0.75rem; color: #6b7280;">' + percentage + '%</div>';
+            bodyHtml += '</div>';
+        });
+        
+        bodyHtml += '</div></div>';
+        
+        // Detailed Failures
+        bodyHtml += '<h4 style="color: #ef4444; margin-bottom: 1rem;"><i class="fas fa-list"></i> Failed Test Details</h4>';
+        bodyHtml += '<div class="failure-details" style="max-height: 400px; overflow-y: auto;">';
+        
+        failedTests.forEach(test => {
+            bodyHtml += '<div style="background: #fef2f2; border-left: 4px solid #ef4444; padding: 1rem; margin-bottom: 1rem; border-radius: 0.375rem;">';
+            bodyHtml += '<div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 0.5rem;">';
+            bodyHtml += '<h5 style="margin: 0; color: #dc2626;">' + test.testName + '</h5>';
+            bodyHtml += '<span style="background: #dc2626; color: white; padding: 0.25rem 0.5rem; border-radius: 0.25rem; font-size: 0.75rem;">FAILED</span>';
+            bodyHtml += '</div>';
+            bodyHtml += '<div style="font-size: 0.875rem; color: #6b7280; margin-bottom: 0.5rem;">Feature: ' + test.feature + ' • Duration: ' + test.duration + '</div>';
+            if (test.errorMessage) {
+                bodyHtml += '<div style="background: #fee2e2; border: 1px solid #fecaca; padding: 0.75rem; border-radius: 0.25rem; margin-top: 0.5rem;">';
+                bodyHtml += '<div style="font-size: 0.75rem; font-weight: 600; color: #991b1b; margin-bottom: 0.25rem;">Error Message:</div>';
+                bodyHtml += '<code style="font-size: 0.75rem; color: #dc2626; display: block; white-space: pre-wrap;">' + test.errorMessage + '</code>';
+                bodyHtml += '</div>';
+            }
+            bodyHtml += '</div>';
+        });
+        
+        bodyHtml += '</div>';
+    }
+    
+    bodyHtml += '</div>';
+    
+    modalBody.innerHTML = bodyHtml;
+    modal.style.display = 'block';
+    document.body.style.overflow = 'hidden';
+}
+
+function closeFailureAnalysisModal() {
+    const modal = document.getElementById('failureAnalysisModal');
+    modal.style.display = 'none';
+    document.body.style.overflow = 'auto';
+}
+
+function showFailureDetailsModal(testId) {
+    console.log('showFailureDetailsModal called with testId:', testId);
+    const test = testData[testId];
+    console.log('Test data:', test);
+    if (!test) {
+        console.error('Test not found:', testId);
+        return;
+    }
+    // Check for both uppercase and lowercase status
+    if (test.status !== 'FAILED' && test.status !== 'failed' && test.status !== 'fail') {
+        console.error('Test not failed. Status is:', test.status);
+        return;
+    }
+    
+    const modal = document.getElementById('failureDetailsModal');
+    const modalTitle = document.getElementById('failureDetailsModalTitle');
+    const modalBody = document.getElementById('failureDetailsModalBody');
+    
+    if (!modal || !modalTitle || !modalBody) {
+        console.error('Modal elements not found');
+        return;
+    }
+    
+    modalTitle.innerHTML = '<i class="fas fa-exclamation-triangle" style="color: var(--danger-color);"></i> ' + test.name;
+    
+    let bodyHtml = '<div class="failure-details-content">';
+    
+    // Error Message Section
+    if (test.errorMessage) {
+        bodyHtml += '<div class="failure-section" style="margin-bottom: 1rem;">';
+        bodyHtml += '<h4 style="margin-bottom: 0.5rem; color: var(--danger-color);"><i class="fas fa-exclamation-circle"></i> Error Message</h4>';
+        bodyHtml += '<pre style="background: #fee2e2; border: 1px solid #fecaca; padding: 1rem; border-radius: 0.375rem; font-size: 0.875rem; overflow-x: auto; white-space: pre-wrap;">' + escapeHtml(test.errorMessage) + '</pre>';
+        bodyHtml += '</div>';
+    }
+    
+    // Stack Trace Section
+    if (test.stackTrace) {
+        bodyHtml += '<div class="failure-section" style="margin-bottom: 1rem;">';
+        bodyHtml += '<h4 style="margin-bottom: 0.5rem; color: var(--danger-color);"><i class="fas fa-bug"></i> Stack Trace</h4>';
+        bodyHtml += '<pre style="background: #1e1e1e; color: #f8f8f2; border: 1px solid #333; padding: 1rem; border-radius: 0.375rem; font-size: 0.75rem; max-height: 400px; overflow: auto; font-family: \"Consolas\", \"Monaco\", monospace;">' + escapeHtml(test.stackTrace) + '</pre>';
+        bodyHtml += '</div>';
+    }
+    
+    // Console Logs Section
+    if (test.consoleLogs && test.consoleLogs.length > 0) {
+        bodyHtml += '<div class="failure-section" style="margin-bottom: 1rem;">';
+        bodyHtml += '<h4 style="margin-bottom: 0.5rem; color: var(--warning-color);"><i class="fas fa-terminal"></i> Console Logs</h4>';
+        bodyHtml += '<div style="background: #1e1e1e; color: #f8f8f2; border: 1px solid #333; padding: 1rem; border-radius: 0.375rem; font-size: 0.75rem; max-height: 300px; overflow: auto; font-family: \"Consolas\", \"Monaco\", monospace;">';
+        test.consoleLogs.forEach(log => {
+            const logLevel = log.level || 'INFO';
+            let logColor = '#f8f8f2';
+            if (logLevel === 'ERROR') logColor = '#ff5555';
+            else if (logLevel === 'WARN') logColor = '#ffb86c';
+            else if (logLevel === 'DEBUG') logColor = '#6272a4';
+            bodyHtml += '<div style="margin-bottom: 0.25rem;"><span style="color: ' + logColor + ';">[' + logLevel + ']</span> <span style="color: #6272a4;">' + (log.timestamp || '') + '</span> ' + escapeHtml(log.message) + '</div>';
+        });
+        bodyHtml += '</div></div>';
+    }
+    
+    // Failed Step Details (only show the failed step)
+    if (test.executedSteps && test.executedSteps.length > 0) {
+        const failedStep = test.executedSteps.find(step => step.status === 'failed');
+        if (failedStep) {
+            bodyHtml += '<div class="failure-section" style="margin-bottom: 1rem;">';
+            bodyHtml += '<h4 style="margin-bottom: 0.5rem; color: var(--danger-color);"><i class="fas fa-exclamation-triangle"></i> Failed Step</h4>';
+            bodyHtml += '<div style="background: #fee2e2; border-left: 4px solid var(--danger-color); padding: 1rem; border-radius: 0.375rem;">';
+            bodyHtml += '<div style="font-weight: 600; margin-bottom: 0.5rem;">' + failedStep.keyword + ' ' + failedStep.text + '</div>';
+            if (failedStep.error) {
+                bodyHtml += '<div style="font-size: 0.875rem; color: #dc2626; margin-top: 0.5rem;">' + escapeHtml(failedStep.error) + '</div>';
+            }
+            if (failedStep.duration) {
+                bodyHtml += '<div style="font-size: 0.75rem; color: #6b7280; margin-top: 0.5rem;">Failed after: ' + formatDuration(failedStep.duration) + '</div>';
+            }
+            bodyHtml += '</div></div>';
+        }
+    }
+    
+    // Additional Error Details
+    if (test.errorDetails) {
+        bodyHtml += '<div class="failure-section" style="margin-bottom: 1rem;">';
+        bodyHtml += '<h4 style="margin-bottom: 0.5rem; color: var(--danger-color);"><i class="fas fa-info-circle"></i> Additional Error Information</h4>';
+        bodyHtml += '<div style="background: #f9fafb; border: 1px solid #e5e7eb; padding: 1rem; border-radius: 0.375rem; font-size: 0.875rem;">';
+        if (test.errorDetails.rootCause) {
+            bodyHtml += '<div style="margin-bottom: 0.5rem;"><strong>Root Cause:</strong> ' + escapeHtml(test.errorDetails.rootCause) + '</div>';
+        }
+        if (test.errorDetails.failureType) {
+            bodyHtml += '<div style="margin-bottom: 0.5rem;"><strong>Failure Type:</strong> ' + escapeHtml(test.errorDetails.failureType) + '</div>';
+        }
+        if (test.errorDetails.httpStatus) {
+            bodyHtml += '<div style="margin-bottom: 0.5rem;"><strong>HTTP Status:</strong> ' + test.errorDetails.httpStatus + '</div>';
+        }
+        if (test.errorDetails.apiResponse) {
+            bodyHtml += '<div style="margin-bottom: 0.5rem;"><strong>API Response:</strong><pre style="margin-top: 0.25rem; background: #f3f4f6; padding: 0.5rem; border-radius: 0.25rem; overflow: auto;">' + escapeHtml(JSON.stringify(test.errorDetails.apiResponse, null, 2)) + '</pre></div>';
+        }
+        bodyHtml += '</div></div>';
+    }
+    
+    // Screenshot Section
+    if (test.screenshotPath) {
+        bodyHtml += '<div class="failure-section">';
+        bodyHtml += '<h4 style="margin-bottom: 0.5rem;"><i class="fas fa-camera"></i> Screenshot at Failure</h4>';
+        bodyHtml += '<img src="' + test.screenshotPath + '" style="max-width: 100%; border: 2px solid var(--danger-color); border-radius: 0.5rem; cursor: pointer;" onclick="openImageModal(\'' + test.screenshotPath + '\')" alt="Failure screenshot" />';
+        bodyHtml += '</div>';
+    }
+    
+    bodyHtml += '</div>';
+    
+    modalBody.innerHTML = bodyHtml;
+    console.log('Setting modal display to block');
+    modal.style.display = 'block';
+    modal.style.zIndex = '10000'; // Ensure modal is on top
+    document.body.style.overflow = 'hidden';
+    console.log('Modal should now be visible');
+}
+
+function closeFailureDetailsModal() {
+    const modal = document.getElementById('failureDetailsModal');
+    modal.style.display = 'none';
+    document.body.style.overflow = 'auto';
+}
+
+function escapeHtml(text) {
+    const map = {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#039;'
+    };
+    return text ? text.replace(/[&<>"']/g, m => map[m]) : '';
+}
+
+function categorizeFailureJS(errorMessage) {
+    if (!errorMessage) return 'Unknown';
+    
+    const lowerMessage = errorMessage.toLowerCase();
+    
+    if (lowerMessage.includes('timeout') || lowerMessage.includes('wait')) {
+        return 'Timing Issue';
+    } else if (lowerMessage.includes('element') && (lowerMessage.includes('not found') || lowerMessage.includes('no such'))) {
+        return 'Element Not Found';
+    } else if (lowerMessage.includes('stale') || lowerMessage.includes('detached')) {
+        return 'DOM Synchronization';
+    } else if (lowerMessage.includes('click') && lowerMessage.includes('intercept')) {
+        return 'Element Interaction';
+    } else if (lowerMessage.includes('network') || lowerMessage.includes('connection')) {
+        return 'Network Issue';
+    } else if (lowerMessage.includes('assertion') || lowerMessage.includes('expected')) {
+        return 'Assertion Failure';
+    } else if (lowerMessage.includes('null') || lowerMessage.includes('undefined')) {
+        return 'Null Reference';
+    } else if (lowerMessage.includes('permission') || lowerMessage.includes('access')) {
+        return 'Permission Issue';
+    }
+    
+    return 'General Failure';
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Wait for Chart.js to be fully loaded
+    if (typeof Chart === 'undefined') {
+        console.error('Chart.js is not loaded');
+        return;
+    }
+    try {
+        const statusCtx = document.getElementById('statusChart');
+        if (statusCtx) {
+        new Chart(statusCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Passed', 'Failed', 'Skipped'],
+                datasets: [{
+                    data: [1, 1, 0],
+                    backgroundColor: ['#10b981', '#ef4444', '#f59e0b']
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    },
+                    title: {
+                        display: false
+                    }
+                }
+            }
+        });
+    }
+        const trendCtx = document.getElementById('trendChart');
+        if (trendCtx) {
+        new Chart(trendCtx, {
+            type: 'line',
+            data: {
+                labels: ['Jul 29', 'Jul 30', 'Jul 31', 'Aug 1', 'Aug 2', 'Aug 3', 'Today'],
+                datasets: [{
+                    label: 'Pass Rate %',
+                    data: [56, 45, 53, 42, 45, 44, 50],
+                    borderColor: '#93186C',
+                    backgroundColor: 'rgba(147, 24, 108, 0.1)',
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 100,
+                        ticks: {
+                            callback: function(value) {
+                                return value + '%';
+                            }
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: true
+                    }
+                }
+            }
+        });
+        }
+        const passRateTrendCtx = document.getElementById('passRateTrendChart');
+        if (passRateTrendCtx) {
+        new Chart(passRateTrendCtx, {
+            type: 'bar',
+            data: {
+                labels: ['Jul 30', 'Jul 31', 'Aug 1', 'Aug 2', 'Aug 3', 'Aug 4'],
+                datasets: [{
+                    label: 'Passed',
+                    data: [0, 1, 1, 1, 1, 1],
+                    backgroundColor: '#10b981'
+                }, {
+                    label: 'Failed',
+                    data: [2, 2, 2, 1, 2, 1],
+                    backgroundColor: '#ef4444'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: { stacked: true },
+                    y: { stacked: true, beginAtZero: true }
+                }
+            }
+        });
+        }
+        const execTimeTrendCtx = document.getElementById('executionTimeTrendChart');
+        if (execTimeTrendCtx) {
+        new Chart(execTimeTrendCtx, {
+            type: 'line',
+            data: {
+                labels: ['Jul 30', 'Jul 31', 'Aug 1', 'Aug 2', 'Aug 3', 'Aug 4'],
+                datasets: [{
+                    label: 'Execution Time (seconds)',
+                    data: [18.5, 22.4, 28.5, 20.7, 25.7, 23.9],
+                    borderColor: '#3b82f6',
+                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: function(value) {
+                                return value + 's';
+                            }
+                        }
+                    }
+                }
+            }
+        });
+        }
+        const testGrowthCtx = document.getElementById('testGrowthChart');
+        if (testGrowthCtx) {
+        new Chart(testGrowthCtx, {
+            type: 'line',
+            data: {
+                labels: ['Jul 30', 'Jul 31', 'Aug 1', 'Aug 2', 'Aug 3', 'Aug 4'],
+                datasets: [{
+                    label: 'Total Scenarios',
+                    data: [2, 3, 3, 3, 2, 2],
+                    borderColor: '#8b5cf6',
+                    backgroundColor: 'rgba(139, 92, 246, 0.1)',
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            stepSize: 1
+                        }
+                    }
+                }
+            }
+        });
+        }
+        const failureTypeCtx = document.getElementById('failureTypeChart');
+        if (failureTypeCtx) {
+        new Chart(failureTypeCtx, {
+            type: 'bar',
+            data: {
+                labels: ['General Failure'],
+                datasets: [{
+                    label: 'Failure Count',
+                    data: [1],
+                    backgroundColor: [
+'#ef4444'                    ]
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            stepSize: 1
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                }
+            }
+        });
+        }
+    } catch (error) {
+        console.error('Error initializing charts:', error);
+    }
+});
+</script>
+</body>
+</html>
