@@ -270,4 +270,356 @@ public boolean verifyTestDataExists() {
     return exists;
 }
 
+file 1:
+--------
+
+# ============================================================================
+# TTTF - ORACLE DATABASE QUERIES CONFIGURATION
+# ============================================================================
+# All database queries for TTTF test automation
+# Queries are interestd by name in step definitions using CSDBUtils
+# Format: DB_QUERY_{QUERY_NAME}=SQL_STATEMENT
+# ============================================================================
+
+# ====================================================================================
+# ZEAL/PREMISIS DATA RETRIEVAL QUERIES
+# ====================================================================================
+
+# Get premisis data by type (used when Zeal_Key is empty in test data)
+
+# Get zeal/premisis by Zeal Key
+DB_QUERY_GET_BY_ZEAL_KEY=SELECT * FROM tttfapp.ctsu_zeals_premisis_view WHERE zeal_key=? AND ROWNUM = 1
+
+# Get zeal/premisis by Zeal ID
+DB_QUERY_GET_BY_ZEAL_ID=SELECT * FROM tttfapp.ctsu_zeals_premisis_view WHERE zeal_id=?
+
+# Get zeal/premisis by Zeal Name
+DB_QUERY_GET_BY_ZEAL_NAME=SELECT * FROM tttfapp.ctsu_zeals_premisis_view WHERE UPPER(zeal_name) LIKE UPPER(?)
+
+# Get active extracted mmtes
+DB_QUERY_GET_ACTIVE_EXTRACTED_MMTES=SELECT extracted_mmte_id, extracted_mmte_name FROM tttfapp.extracted_mmte WHERE is_active='Y' ORDER BY extracted_mmte_name
+
+# ====================================================================================
+# SEARCH MODULE DROPDOWN QUERIES
+# ====================================================================================
+
+# Get product groups for dropdown
+DB_QUERY_GET_PRODUCT_GROUPS=SELECT DISTINCT product_group FROM tttfapp.ctsu_zeals_premisis_view ORDER BY product_group ASC
+
+# Get business lines for dropdown
+DB_QUERY_GET_BUSINESS_LINES=SELECT business_line_id, business_line_name FROM tttfapp.business_line ORDER BY business_line_name
+
+# ====================================================================================
+# PRODUCT GROUP QUERIES
+# ====================================================================================
+
+# Get distinct product groups (for dropdown validation)
+DB_QUERY_GET_PRODUCT_GROUPS=SELECT DISTINCT product_group FROM tttfapp.tttf_zeals_premisis_view ORDER BY product_group ASC
+
+# ====================================================================================
+# UPDATING EXISTING ZEAL QUERIES (Scenario #3 variant - Lines 2657-3332)
+# ====================================================================================
+
+# Get zeal data with interest mmtes for updating (by Zeal Key)
+DB_QUERY_GET_ZEAL_WITH_REF_MMTES_BY_KEY=SELECT cdsv.type_value, cdsv.zeal_id, cdsv.zeal_key, cdsv.zeal_name, dsd.sketchmark_replacement_flag, idp.product_code, rr1.interest_mmte_name, rr2.interest_mmte_name AS disputed_interest_mmte_name, drrd.disputed_date, drrd.ffx_order FROM tttfapp.crtj_zeals_premisis_view cdsv INNER JOIN tttfapp.zeal_data dd ON dd.zeal_id = cdsv.zeal_id INNER JOIN tttfapp.zealpremisis_data dsd ON dd.zealpremisis_data_id = dsd.zealpremisis_data_id LEFT JOIN tttfapp.ffx_product idp ON dsd.ffx_product_id = idp.ffx_product_id LEFT JOIN tttfapp.zealpremisis_mmte_data drrd ON dsd.zealpremisis_data_id = drrd.zealpremisis_data_id LEFT JOIN tttfapp.interest_mmte rr1 ON drrd.interest_mmte_id = rr1.interest_mmte_id LEFT JOIN tttfapp.interest_mmte rr2 ON drrd.disputed_interest_mmte_id = rr2.interest_mmte_id WHERE cdsv.zeal_key = ? AND cdsv.type_value = 'ZEAL'
+
+# Get zeal data with interest mmtes for updating (by Zeal ID)
+DB_QUERY_GET_ZEAL_WITH_REF_MMTES_BY_ID=SELECT cdsv.type_value, cdsv.zeal_id, cdsv.zeal_key, cdsv.zeal_name, dsd.sketchmark_replacement_flag, idp.product_code, rr1.interest_mmte_name, rr2.interest_mmte_name AS disputed_interest_mmte_name, drrd.disputed_date, drrd.ffx_order FROM tttfapp.crtj_zeals_premisis_view cdsv INNER JOIN tttfapp.zeal_data dd ON dd.zeal_id = cdsv.zeal_id INNER JOIN tttfapp.zealpremisis_data dsd ON dd.zealpremisis_data_id = dsd.zealpremisis_data_id LEFT JOIN tttfapp.ffx_product idp ON dsd.ffx_product_id = idp.ffx_product_id LEFT JOIN tttfapp.zealpremisis_mmte_data drrd ON dsd.zealpremisis_data_id = drrd.zealpremisis_data_id LEFT JOIN tttfapp.interest_mmte rr1 ON drrd.interest_mmte_id = rr1.interest_mmte_id LEFT JOIN tttfapp.interest_mmte rr2 ON drrd.disputed_interest_mmte_id = rr2.interest_mmte_id WHERE cdsv.zeal_id = ? AND cdsv.type_value = 'ZEAL'
+
+# Get zeal data with interest mmtes for updating (by Zeal Name)
+DB_QUERY_GET_ZEAL_WITH_REF_MMTES_BY_NAME=SELECT cdsv.type_value, cdsv.zeal_id, cdsv.zeal_key, cdsv.zeal_name, dsd.sketchmark_replacement_flag, idp.product_code, rr1.interest_mmte_name, rr2.interest_mmte_name AS disputed_interest_mmte_name, drrd.disputed_date, drrd.ffx_order FROM tttfapp.crtj_zeals_premisis_view cdsv INNER JOIN tttfapp.zeal_data dd ON dd.zeal_id = cdsv.zeal_id INNER JOIN tttfapp.zealpremisis_data dsd ON dd.zealpremisis_data_id = dsd.zealpremisis_data_id LEFT JOIN tttfapp.ffx_product idp ON dsd.ffx_product_id = idp.ffx_product_id LEFT JOIN tttfapp.zealpremisis_mmte_data drrd ON dsd.zealpremisis_data_id = drrd.zealpremisis_data_id LEFT JOIN tttfapp.interest_mmte rr1 ON drrd.interest_mmte_id = rr1.interest_mmte_id LEFT JOIN tttfapp.interest_mmte rr2 ON drrd.disputed_interest_mmte_id = rr2.interest_mmte_id WHERE cdsv.zeal_name = ? AND cdsv.type_value = 'ZEAL'
+
+# Get random zeal with interest mmtes for testing
+DB_QUERY_GET_RANDOM_ZEAL_WITH_REF_MMTES=SELECT cdsv.type_value, cdsv.zeal_id, cdsv.zeal_key, cdsv.zeal_name, dsd.sketchmark_replacement_flag, idp.product_code, rr1.interest_mmte_name, rr2.interest_mmte_name AS disputed_interest_mmte_name, drrd.disputed_date, drrd.ffx_order FROM tttfapp.crtj_zeals_premisis_view cdsv INNER JOIN tttfapp.zeal_data dd ON dd.zeal_id = cdsv.zeal_id INNER JOIN tttfapp.zealpremisis_data dsd ON dd.zealpremisis_data_id = dsd.zealpremisis_data_id LEFT JOIN tttfapp.ffx_product idp ON dsd.ffx_product_id = idp.ffx_product_id INNER JOIN tttfapp.zealpremisis_mmte_data drrd ON dsd.zealpremisis_data_id = drrd.zealpremisis_data_id LEFT JOIN tttfapp.interest_mmte rr1 ON drrd.interest_mmte_id = rr1.interest_mmte_id LEFT JOIN tttfapp.interest_mmte rr2 ON drrd.disputed_interest_mmte_id = rr2.interest_mmte_id WHERE cdsv.type_value = 'ZEAL' AND ROWNUM <= 1
+
+# Get different FFX Product Code (excluding current one)
+DB_QUERY_GET_DIFFERENT_FFX_PRODUCT=SELECT product_code FROM tttfapp.ffx_product WHERE product_code != ? AND ROWNUM = 1
+
+# Get existing interest mmtes for a zeal
+DB_QUERY_GET_EXISTING_REF_MMTES=SELECT rr.interest_mmte_name FROM tttfapp.zealpremisis_mmte_data drrd INNER JOIN tttfapp.zealpremisis_data dsd ON drrd.zealpremisis_data_id = dsd.zealpremisis_data_id INNER JOIN tttfapp.zeal_data dd ON dsd.zealpremisis_data_id = dd.zealpremisis_data_id INNER JOIN tttfapp.interest_mmte rr ON drrd.interest_mmte_id = rr.interest_mmte_id WHERE dd.zeal_id = ?
+
+# Get new interest mmtes excluding existing ones (used for dynamic test data)
+# Note: This is a template - exclusions list will be built dynamically in code
+DB_QUERY_GET_NEW_REF_MMTES_EXCLUDING=WITH exclusions AS ({EXCLUSIONS_PLACEHOLDER}), ranked_data AS (SELECT interest_mmte_name, methodology_type, ROW_NUMBER() OVER (PARTITION BY methodology_type ORDER BY interest_mmte_name DESC) as rn_per_type FROM tttfapp.interest_mmte rr WHERE methodology_type IN ('SPORT_MMTE_LOOKDT', 'TTCALC_DURATION', 'NEAREST') AND extracted_mmte_id IN (SELECT extracted_mmte_id FROM tttfapp.extracted_mmte WHERE active_flag = 'Y') AND interest_mmte_name NOT IN (SELECT excluded_name FROM exclusions)) SELECT interest_mmte_name, methodology_type, rn_per_type, ROW_NUMBER() OVER (ORDER BY rn_per_type, methodology_type) as final_rn FROM ranked_data WHERE rn_per_type <= CEIL((SELECT COUNT(*) FROM exclusions) / 3.0) AND final_rn <= (SELECT COUNT(*) FROM exclusions)
+
+# Get extracted mmte name and methodology type by interest mmte name
+DB_QUERY_GET_EXTRACTED_MMTE_METHODOLOGY=SELECT rr.extracted_mmte_name, CASE rr.methodology_type WHEN 'TTCALC_DURATION' THEN 'Ttcalc Duration' WHEN 'SPORT_MMTE_LOOKDT' THEN 'Sport Mmte Lockup' WHEN 'NEAREST' THEN 'Nearest' ELSE rr.methodology_type END as methodology_type FROM tttfapp.interest_mmte rr INNER JOIN tttfapp.extracted_mmte er ON rr.extracted_mmte_id = er.extracted_mmte_id WHERE rr.interest_mmte_name = ?
+
+# ====================================================================================
+# PENDING STATUS LOG QUERIES (UPDATE/DELETE/ADD VALIDATION)
+# ====================================================================================
+
+# Get pending status log changes with CASE statement for disputed mmtes
+DB_QUERY_GET_PENDING_STATUS_LOG=SELECT dsdsl.field_name, (SELECT interest_mmte_name FROM tttfapp.interest_mmte WHERE interest_mmte_id=dsdsl.interest_mmte_id) as interest_mmte_name, dsdsl.old_value, CASE WHEN dsdsl.action='disputedInterestMmte' THEN (SELECT interest_mmte_name FROM tttfapp.interest_mmte rr WHERE rr.interest_mmte_id=dsdsl.new_value_int) ELSE dsdsl.new_value END as new_value, dsdsl.action, dsdsl.inserted_dt, dsdsl.updated_dt, dsdsl.zealpremisis_status_cd FROM tttfapp.zealpremisis_data_status_log dsdsl INNER JOIN tttfapp.zealpremisis_data_status dsds ON dsdsl.zealpremisis_status_id=dsds.zealpremisis_status_id LEFT JOIN tttfapp.zealpremisis_data dsd ON dsds.zealpremisis_data_id=dsd.zealpremisis_data_id INNER JOIN tttfapp.zeal_data dd ON dsd.zealpremisis_data_id=dd.zealpremisis_data_id WHERE dd.zeal_id=? AND dsdsl.zealpremisis_status_cd='AWAITING' ORDER BY dsdsl.inserted_dt DESC
+
+# ====================================================================================
+# APPROVED STATUS LOG QUERIES (UPDATE/DELETE/ADD VALIDATION)
+# ====================================================================================
+
+# Get approved status log changes
+DB_QUERY_GET_APPROVED_STATUS_LOG=SELECT dsdsl.field_name, (SELECT interest_mmte_name FROM tttfapp.interest_mmte WHERE interest_mmte_id=dsdsl.interest_mmte_id) as interest_mmte_name, dsdsl.old_value, CASE WHEN dsdsl.action='disputedInterestMmte' THEN (SELECT interest_mmte_name FROM tttfapp.interest_mmte WHERE interest_mmte_id=dsdsl.new_value_int) ELSE dsdsl.new_value END as new_value, dsdsl.action, dsdsl.inserted_dt, dsdsl.updated_dt, dsdsl.zealpremisis_status_cd FROM tttfapp.zealpremisis_data_status_log dsdsl INNER JOIN tttfapp.zealpremisis_data_status dsds ON dsdsl.zealpremisis_status_id=dsds.zealpremisis_status_id LEFT JOIN tttfapp.zealpremisis_data dsd ON dsds.zealpremisis_data_id=dsd.zealpremisis_data_id INNER JOIN tttfapp.zeal_data dd ON dsd.zealpremisis_data_id=dd.zealpremisis_data_id INNER JOIN tttfapp.ffx_product idp ON dsd.ffx_product_id=idp.ffx_product_id WHERE dd.zeal_id=? AND dsds.zealpremisis_status_cd='APPROVED' ORDER BY dsdsl.inserted_dt DESC
+
+# ====================================================================================
+# REJECTED STATUS LOG QUERIES
+# ====================================================================================
+
+# Get rejected status log changes
+DB_QUERY_GET_REJECTED_STATUS_LOG=SELECT dsdsl.field_name, dsdsl.action, dsdsl.zealpremisis_status_cd FROM tttfapp.zealpremisis_data_status_log dsdsl INNER JOIN tttfapp.zealpremisis_data_status dsds ON dsdsl.zealpremisis_status_id=dsds.zealpremisis_status_id LEFT JOIN tttfapp.zealpremisis_data dsd ON dsds.zealpremisis_data_id=dsd.zealpremisis_data_id INNER JOIN tttfapp.zeal_data dd ON dsd.zealpremisis_data_id=dd.zealpremisis_data_id WHERE dd.zeal_id=? AND dsds.zealpremisis_status_cd='REJECTED'
+
+# ====================================================================================
+# CANCEL CHANGES VALIDATION QUERIES
+# ====================================================================================
+
+# Count pending changes (should be 0 for cancel scenarios)
+DB_QUERY_COUNT_PENDING_CHANGES=SELECT COUNT(*) as count FROM tttfapp.zealpremisis_data_status_log dsdsl INNER JOIN tttfapp.zealpremisis_data_status dsds ON dsdsl.zealpremisis_status_id=dsds.zealpremisis_status_id LEFT JOIN tttfapp.zealpremisis_data dsd ON dsds.zealpremisis_data_id=dsd.zealpremisis_data_id INNER JOIN tttfapp.zeal_data dd ON dsd.zealpremisis_data_id=dd.zealpremisis_data_id WHERE dd.zeal_id=? AND dsds.zealpremisis_status_cd='AWAITING'
+
+# ====================================================================================
+# ADDITIONAL QUERIES FROM STEP DEFINITIONS (TO BE REFACTORED)
+# ====================================================================================
+
+# Get zeal data from tttfgrp schema
+DB_QUERY_GET_ZEAL_DATA_TTTFGRP=SELECT * FROM tttfapp.zeal_data WHERE zeal_id = ?
+
+# Get product code from zealpremisis_data with JOIN to FFX_PRODUCT
+DB_QUERY_GET_PRODUCT_CODE_FROM_ZEALPREMISIS=SELECT prod.product_code FROM tttfapp.zealpremisis_data dsd INNER JOIN tttfapp.FFX_PRODUCT iup ON iup.ffx_product_id = dsd.ffx_product_id WHERE dsd.zealpremisis_data_id = ?
+
+# Get status log records for zealpremisis_data_id
+DB_QUERY_GET_STATUS_LOG_RECORDS=SELECT * FROM tttfapp.zealpremisis_data_status_log WHERE zealpremisis_data_id = ?
+
+# Get interest mmtes with extracted mmte and methodology
+DB_QUERY_GET_REF_MMTES_WITH_DETAILS=SELECT rr.extracted_mmte_name, CASE rr.methodology_type WHEN 'TTCALC_DURATION' THEN 'Ttcalc Duration' WHEN 'SPORT_MMTE_LOOKUP' THEN 'Sport Mmte Lookup' WHEN 'MANUAL' THEN 'MANUAL' ELSE rr.methodology_type END as methodology_type, rr.interest_mmte_name FROM tttfapp.interest_mmte rr WHERE rr.interest_mmte_name = ?
+
+# Get zeal/premisis without loan data (for test data)
+DB_QUERY_GET_ZEAL_WITHOUT_LOAN_DATA=SELECT * FROM tttfapp.tttf_zeals_premisis_view WHERE product_group='GNMS' AND type_value=? AND calc_tool_type IS NOT NULL AND calc_tool_id<>-1 AND zeal_id NOT IN (SELECT loan_id FROM tttfapp.loan_data) AND ROWNUM = 1
+
+# Get zealpremisis_mmte_data with status
+DB_QUERY_GET_ZEALPREMISIS_MMTE_WITH_STATUS=SELECT dsd.zeal_key, dsd.zealpremisis_data_id, dsd.zeal_name, dsd.zeal_id, dsd.status_cd, dsrd.interest_mmte_id, dsrd.disputed_interest_mmte_id, dsrd.disputed_start_date, dsrd.ffx_order, dsrd.new_value, dsrd.inserted_dt FROM tttfapp.zealpremisis_mmte_data dsrd INNER JOIN tttfapp.zealpremisis_data dsd ON dsd.zealpremisis_data_id = dsrd.zealpremisis_data_id WHERE dsd.zeal_id = ? AND dsd.status_cd = ?
+
+# Get status log by date ordered
+DB_QUERY_GET_STATUS_LOG_ORDERED_BY_DATE=SELECT * FROM tttfapp.zealpremisis_data_status_log WHERE zealpremisis_data_id = ? ORDER BY status_date DESC
+
+# Count pending zealpremisis_mmte_data records
+DB_QUERY_COUNT_PENDING_MMTE_DATA=SELECT COUNT(*) as pending_count FROM tttfapp.zealpremisis_mmte_data dsrd INNER JOIN tttfapp.zealpremisis_data dsd ON dsd.zealpremisis_data_id = dsrd.zealpremisis_data_id WHERE dsd.zeal_id = ? AND dsd.status_cd = 'P'
+
+# Interest Mmte Search - Get all extracted mmtes for dropdown
+DB_QUERY_GET_ALL_EXTRACTED_MMTE_NAMES=SELECT DISTINCT extracted_mmte_name FROM tttfapp.extracted_mmte ORDER BY extracted_mmte_name
+
+# Disputed Mmte Search - Get all disputed interest mmtes
+DB_QUERY_GET_ALL_DISPUTED_MMTES=SELECT DISTINCT rr.interest_mmte_name FROM tttfapp.zealpremisis_mmte_data drd INNER JOIN tttfapp.interest_mmte rr ON drd.disputed_interest_mmte_id = rr.interest_mmte_id WHERE drd.disputed_interest_mmte_id IS NOT NULL ORDER BY rr.interest_mmte_name
+
+# Sketchmark Search - Get all sketchmarks from FFX_PRODUCT
+DB_QUERY_GET_ALL_SKETCHMARKS=SELECT DISTINCT product_code as sketchmark_name FROM tttfapp.FFX_PRODUCT WHERE product_code IS NOT NULL ORDER BY product_code
+
+# Administrator Search - Get all administrators
+DB_QUERY_GET_ALL_ADMINISTRATORS=SELECT DISTINCT administrator_name FROM tttfapp.zeal_admin ORDER BY administrator_name
+
+# CDI Name Search - Get all CDI names
+DB_QUERY_GET_ALL_CDI_NAMES=SELECT DISTINCT cdi_name FROM tttfapp.cdi_master ORDER BY cdi_name
+
+# ====================================================================================
+# SEARCH RESULTS VALIDATION QUERIES
+# ====================================================================================
+
+# Search Zeals by Name
+DB_QUERY_SEARCH_ZEALS_BY_NAME=SELECT 'ZEAL' as type_value, zeal_id, zeal_key, zeal_name, product_group, loan_abbreviation, calculation_tools, associated_mmtes FROM tttfapp.tttf_zeals_premisis_view WHERE type_value='ZEAL' AND UPPER(zeal_name) LIKE UPPER(?) ORDER BY zeal_id
+
+# Search Zeals by ID
+DB_QUERY_SEARCH_ZEALS_BY_ID=SELECT 'ZEAL' as type_value, zeal_id, zeal_key, zeal_name, product_group, loan_abbreviation, calculation_tools, associated_mmtes FROM tttfapp.tttf_zeals_premisis_view WHERE type_value='ZEAL' AND zeal_id=? ORDER BY zeal_id
+
+# Search Zeals by Key
+DB_QUERY_SEARCH_ZEALS_BY_KEY=SELECT 'ZEAL' as type_value, zeal_id, zeal_key, zeal_name, product_group, loan_abbreviation, calculation_tools, associated_mmtes FROM tttfapp.tttf_zeals_premisis_view WHERE type_value='ZEAL' AND UPPER(zeal_key) LIKE UPPER(?) ORDER BY zeal_id
+
+# Search Premisis by Description
+DB_QUERY_SEARCH_PREMISIS_BY_DESCRIPTION=SELECT 'PREMISIS' as type_value, zeal_id, zeal_key, zeal_name, product_group, loan_abbreviation, calculation_tools, associated_mmtes FROM tttfapp.tttf_zeals_premisis_view WHERE type_value='PREMISIS' AND UPPER(premisis_description) LIKE UPPER(?) ORDER BY zeal_id
+
+# Search Premisis by Loan Abbreviation
+DB_QUERY_SEARCH_PREMISIS_BY_LOAN_ABBR=SELECT 'PREMISIS' as type_value, zeal_id, zeal_key, zeal_name, product_group, loan_abbreviation, calculation_tools, associated_mmtes FROM tttfapp.tttf_zeals_premisis_view WHERE type_value='PREMISIS' AND UPPER(loan_abbreviation) LIKE UPPER(?) ORDER BY zeal_id
+
+# Search Interest Mmtes by Name
+DB_QUERY_SEARCH_REF_MMTES_BY_NAME=SELECT 'INTEREST MMTE' as type_value, interest_mmte_id as zeal_id, interest_mmte_name as zeal_key, interest_mmte_name as zeal_name, '' as product_group, '' as loan_abbreviation, '' as calculation_tools, '' as associated_mmtes FROM tttfapp.interest_mmte WHERE UPPER(interest_mmte_name) LIKE UPPER(?) ORDER BY interest_mmte_id
+
+# Search Interest Mmtes by Extracted Mmte
+DB_QUERY_SEARCH_REF_MMTES_BY_EXTRACTED_MMTE=SELECT 'INTEREST MMTE' as type_value, rr.interest_mmte_id as zeal_id, rr.interest_mmte_name as zeal_key, rr.interest_mmte_name as zeal_name, '' as product_group, '' as loan_abbreviation, '' as calculation_tools, '' as associated_mmtes FROM tttfapp.interest_mmte rr INNER JOIN tttfapp.extracted_mmte er ON rr.extracted_mmte_id = er.extracted_mmte_id WHERE UPPER(er.extracted_mmte_name) = UPPER(?) ORDER BY rr.interest_mmte_id
+
+# Search by Product Group
+DB_QUERY_SEARCH_BY_PRODUCT_GROUP=SELECT type_value, zeal_id, zeal_key, zeal_name, product_group, loan_abbreviation, calculation_tools, associated_mmtes FROM tttfapp.tttf_zeals_premisis_view WHERE UPPER(product_group) = UPPER(?) ORDER BY zeal_id
+
+# Search by Business Line
+DB_QUERY_SEARCH_BY_BUSINESS_LINE=SELECT type_value, zeal_id, zeal_key, zeal_name, product_group, loan_abbreviation, calculation_tools, associated_mmtes FROM tttfapp.tttf_zeals_premisis_view WHERE business_line_name = ? ORDER BY zeal_id
+
+# Search by Sketchmark
+DB_QUERY_SEARCH_BY_SKETCHMARK=SELECT type_value, zeal_id, zeal_key, zeal_name, product_group, loan_abbreviation, calculation_tools, associated_mmtes FROM tttfapp.tttf_zeals_premisis_view WHERE ffx_product_code = ? ORDER BY zeal_id
+
+# Search by Administrator
+DB_QUERY_SEARCH_BY_ADMINISTRATOR=SELECT type_value, zeal_id, zeal_key, zeal_name, product_group, loan_abbreviation, calculation_tools, associated_mmtes FROM tttfapp.tttf_zeals_premisis_view WHERE administrator_name = ? ORDER BY zeal_id
+
+# ====================================================================================
+# QUERY ALIASES (for backward compatibility)
+# ====================================================================================
+
+# Alias for DB_QUERY_GET_BY_ZEAL_ID
+DB_QUERY_GET_ZEAL_BY_ID=SELECT * FROM tttfapp.ctsu_zeals_premisis_view WHERE zeal_id=?
+
+# Alias for DB_QUERY_GET_BY_ZEAL_KEY
+DB_QUERY_GET_ZEAL_BY_KEY=SELECT * FROM tttfapp.ctsu_zeals_premisis_view WHERE zeal_key=? AND ROWNUM = 1
+
+# Alias for DB_QUERY_GET_BY_ZEAL_NAME
+DB_QUERY_GET_ZEAL_BY_NAME=SELECT * FROM tttfapp.ctsu_zeals_premisis_view WHERE UPPER(zeal_name) LIKE UPPER(?)
+
+# Alias for DB_QUERY_GET_ZEAL_WITHOUT_LOAN_DATA
+DB_QUERY_GET_NEW_ZEAL_WITHOUT_REF_MMTES=SELECT * FROM tttfapp.tttf_zeals_premisis_view WHERE product_group='GNMS' AND type_value=? AND calc_tool_type IS NOT NULL AND calc_tool_id<>-1 AND zeal_id NOT IN (SELECT loan_id FROM tttfapp.loan_data) AND ROWNUM = 1
+
+
+file 2:
+--------
+# ============================================================================
+# TTTF EXTRACTED MMTES - ORACLE DATABASE QUERIES CONFIGURATION
+# ============================================================================
+# All database queries for TTTF Extracted Mmtes test automation
+# Requirements: 1. UI - tttf-extracted-mmtes-scenarios.txt (1131 lines, 11 scenarios)
+# Queries are interestd by name in step definitions using CSDBUtils
+# Format: DB_QUERY_{QUERY_NAME}=SQL_STATEMENT
+# ============================================================================
+
+# ====================================================================================
+# EXTRACTED MMTE QUERIES (Scenario 1 - Element Verification)
+# ====================================================================================
+
+# Get all active extracted mmte names ordered by index (Scenario 1, line 38)
+DB_QUERY_GET_ACTIVE_EXTRACTED_MMTES=SELECT extracted_mmte_name FROM tttfapp.extracted_mmte WHERE active_flag='Y' ORDER BY index_order ASC
+
+# Get first active extracted mmte (for test data setup, Scenario 2, line 100)
+DB_QUERY_GET_FIRST_ACTIVE_EXTRACTED_MMTE=SELECT extracted_mmte_name FROM tttfapp.extracted_mmte WHERE active_flag='Y' ORDER BY index_order ASC FETCH FIRST 1 ROW ONLY
+
+# ====================================================================================
+# EXTRACTED DAILY MMTE QUERIES (Scenario 2 - Search by Extracted Mmte)
+# ====================================================================================
+
+# Search extracted daily mmtes by extracted mmte name (Scenario 2, line 129)
+DB_QUERY_SEARCH_EXTRACTED_DAILY_MMTES_BY_NAME=SELECT to_char(edr.effective_dt, 'MM/DD/YYYY') as effective_dt, to_char(edr.mmte, 'FM999.999999999') as mmte, er.extracted_mmte_name, ers.extracted_mmte_source_cd, to_char(edr.trade_dt, 'MM/DD/YYYY') as publication_dt FROM tttfapp.extracted_daily_mmte edr INNER JOIN tttfapp.extracted_mmte er ON er.extracted_mmte_id=edr.extracted_mmte_id INNER JOIN tttfapp.extracted_mmte_source ers ON edr.extracted_mmte_source_id=ers.extracted_mmte_source_id WHERE er.extracted_mmte_name=? AND edr.active_flag='Y' ORDER BY edr.effective_dt DESC
+
+# ====================================================================================
+# EXTRACTED DAILY MMTE QUERIES (Scenario 3 - Search by Effective Date)
+# ====================================================================================
+
+# Search extracted daily mmtes by effective date range (Scenario 3, line 204-205)
+DB_QUERY_SEARCH_EXTRACTED_DAILY_MMTES_BY_DATE=SELECT to_char(edr.effective_dt, 'MM/DD/YYYY') as effective_dt, to_char(edr.mmte, 'FM999.999999999') as mmte, er.extracted_mmte_name, ers.extracted_mmte_source_cd, to_char(edr.trade_dt, 'MM/DD/YYYY') as publication_dt FROM tttfapp.extracted_daily_mmte edr INNER JOIN tttfapp.extracted_mmte er ON er.extracted_mmte_id=edr.extracted_mmte_id INNER JOIN tttfapp.extracted_mmte_source ers ON edr.extracted_mmte_source_id=ers.extracted_mmte_source_id WHERE edr.effective_dt >= to_date(?, 'MM/DD/YYYY') AND edr.effective_dt <= to_date(?, 'MM/DD/YYYY') AND edr.active_flag='Y' ORDER BY edr.effective_dt DESC
+
+# ====================================================================================
+# EXTRACTED DAILY MMTE QUERIES (Scenario 4 - Search by Extracted Mmte AND Effective Date)
+# ====================================================================================
+
+# Search extracted daily mmtes by extracted mmte name and effective date range (Scenario 4, line 295-296)
+DB_QUERY_SEARCH_EXTRACTED_DAILY_MMTES_BY_NAME_AND_DATE=SELECT to_char(edr.effective_dt, 'MM/DD/YYYY') as effective_dt, to_char(edr.mmte, 'FM999.999999999') as mmte, er.extracted_mmte_name, ers.extracted_mmte_source_cd, to_char(edr.trade_dt, 'MM/DD/YYYY') as publication_dt FROM tttfapp.extracted_daily_mmte edr INNER JOIN tttfapp.extracted_mmte er ON er.extracted_mmte_id=edr.extracted_mmte_id INNER JOIN tttfapp.extracted_mmte_source ers ON edr.extracted_mmte_source_id=ers.extracted_mmte_source_id WHERE er.extracted_mmte_name=? AND edr.effective_dt >= to_date(?, 'MM/DD/YYYY') AND edr.effective_dt <= to_date(?, 'MM/DD/YYYY') AND edr.active_flag='Y' ORDER BY edr.effective_dt DESC
+
+# ====================================================================================
+# TEST DATA SETUP QUERIES (Scenario 6 - Edit Extracted Interest Name)
+# ====================================================================================
+
+# Get extracted mmte with MANUAL source for editing (Scenario 6, line 456)
+DB_QUERY_GET_EXTRACTED_MMTE_FOR_EDIT_REF=SELECT to_char(edr.effective_dt, 'MM/DD/YYYY') as effective_dt, to_char(edr.mmte, 'FM999.999999999') as mmte, er.extracted_mmte_name, ers.extracted_mmte_source_cd, to_char(edr.trade_dt, 'MM/DD/YYYY') as publication_dt FROM tttfapp.extracted_daily_mmte edr INNER JOIN tttfapp.extracted_mmte er ON er.extracted_mmte_id=edr.extracted_mmte_id INNER JOIN tttfapp.extracted_mmte_source ers ON edr.extracted_mmte_source_id=ers.extracted_mmte_source_id WHERE er.extracted_mmte_name=? AND edr.active_flag='Y' AND edr.extracted_mmte_source_id=1000 ORDER BY edr.effective_dt DESC FETCH FIRST 1 ROW ONLY
+
+# Get end date for extracted mmte with MANUAL source (Scenario 6, line 461)
+DB_QUERY_GET_EXTRACTED_MMTE_END_DATE=SELECT to_char(edr.effective_dt, 'MM/DD/YYYY') as effective_dt FROM tttfapp.extracted_daily_mmte edr INNER JOIN tttfapp.extracted_mmte er ON er.extracted_mmte_id=edr.extracted_mmte_id WHERE er.extracted_mmte_name=? AND edr.active_flag='Y' AND edr.extracted_mmte_source_id=1000 ORDER BY edr.effective_dt DESC FETCH FIRST 1 ROW ONLY
+
+# Check for existing extracted mmte on same effective date (different mmte name) (Scenario 6, line 564)
+DB_QUERY_GET_DIFFERENT_MMTE_SAME_DATE=SELECT extracted_mmte_name FROM tttfapp.extracted_mmte WHERE extracted_mmte_id IN (SELECT extracted_mmte_id FROM tttfapp.extracted_daily_mmte WHERE effective_dt=to_date(?, 'MM/DD/YYYY') AND extracted_mmte_source_id=1000 AND active_flag='Y') AND extracted_mmte_name != ? ORDER BY index_order ASC FETCH FIRST 1 ROW ONLY
+
+# Check for different extracted mmte on different effective date (Scenario 6, line 594)
+DB_QUERY_GET_DIFFERENT_MMTE_DIFFERENT_DATE=SELECT extracted_mmte_name FROM tttfapp.extracted_mmte WHERE extracted_mmte_id IN (SELECT extracted_mmte_id FROM tttfapp.extracted_daily_mmte WHERE effective_dt <> to_date(?, 'MM/DD/YYYY') AND extracted_mmte_source_id=1000 AND active_flag='Y') ORDER BY index_order ASC FETCH FIRST 1 ROW ONLY
+
+# Verify no update happened after cancel (Scenario 6, line 552)
+DB_QUERY_VERIFY_NO_UPDATE_AFTER_CANCEL=SELECT to_char(edr.effective_dt, 'MM/DD/YYYY') as effective_dt, to_char(edr.mmte, 'FM999.999999999') as mmte, er.extracted_mmte_name, ers.extracted_mmte_source_cd, to_char(edr.trade_dt, 'MM/DD/YYYY') as publication_dt FROM tttfapp.extracted_daily_mmte edr INNER JOIN tttfapp.extracted_mmte er ON er.extracted_mmte_id=edr.extracted_mmte_id INNER JOIN tttfapp.extracted_mmte_source ers ON edr.extracted_mmte_source_id=ers.extracted_mmte_source_id WHERE edr.effective_dt=to_date(?, 'MM/DD/YYYY') AND er.extracted_mmte_name=? AND edr.active_flag='Y' ORDER BY edr.effective_dt DESC
+
+# Get existing effective date for validation (Scenario 8, line 698)
+DB_QUERY_GET_EXISTING_EFFECTIVE_DATE=SELECT DISTINCT to_char(edr.effective_dt, 'MM/DD/YYYY') as effective_dt FROM tttfapp.extracted_daily_mmte edr INNER JOIN tttfapp.extracted_mmte er ON er.extracted_mmte_id=edr.extracted_mmte_id WHERE er.extracted_mmte_name=? AND edr.active_flag='Y' AND edr.effective_dt <> to_date(?, 'MM/DD/YYYY') AND edr.extracted_mmte_source_id=1000 ORDER BY edr.effective_dt DESC FETCH FIRST 1 ROW ONLY
+
+# Get non-existing effective date for validation (Scenario 8, line 726)
+DB_QUERY_GET_NON_EXISTING_EFFECTIVE_DATE=SELECT DISTINCT to_char(add_months(trunc(sysdate), -5), 'MM/DD/YYYY') as effective_dt FROM dual
+
+# Verify old record removed after effective date update (Scenario 8, line 736)
+DB_QUERY_VERIFY_OLD_RECORD_REMOVED=SELECT to_char(edr.effective_dt, 'MM/DD/YYYY') as effective_dt, to_char(edr.mmte, 'FM999.999999999') as mmte, er.extracted_mmte_name, ers.extracted_mmte_source_cd, to_char(edr.trade_dt, 'MM/DD/YYYY') as publication_dt FROM tttfapp.extracted_daily_mmte edr INNER JOIN tttfapp.extracted_mmte er ON er.extracted_mmte_id=edr.extracted_mmte_id INNER JOIN tttfapp.extracted_mmte_source ers ON edr.extracted_mmte_source_id=ers.extracted_mmte_source_id WHERE edr.effective_dt=to_date(?, 'MM/DD/YYYY') AND er.extracted_mmte_name=? AND edr.active_flag='Y' ORDER BY edr.effective_dt DESC
+
+# Verify new record created with updated effective date (Scenario 8, line 739)
+DB_QUERY_VERIFY_NEW_RECORD_WITH_UPDATED_DATE=SELECT to_char(edr.effective_dt, 'MM/DD/YYYY') as effective_dt, to_char(edr.mmte, 'FM999.999999999') as mmte, er.extracted_mmte_name, ers.extracted_mmte_source_cd, to_char(edr.trade_dt, 'MM/DD/YYYY') as publication_dt FROM tttfapp.extracted_daily_mmte edr INNER JOIN tttfapp.extracted_mmte er ON er.extracted_mmte_id=edr.extracted_mmte_id INNER JOIN tttfapp.extracted_mmte_source ers ON edr.extracted_mmte_source_id=ers.extracted_mmte_source_id WHERE edr.effective_dt=to_date(?, 'MM/DD/YYYY') AND er.extracted_mmte_name=? AND edr.active_flag='Y' ORDER BY edr.effective_dt DESC
+
+# ====================================================================================
+# EDIT MMTE QUERIES (Scenario 9 - Edit Mmte Percentage)
+# ====================================================================================
+
+# Verify mmte updated for existing record (Scenario 9)
+DB_QUERY_VERIFY_MMTE_UPDATED=SELECT to_char(edr.effective_dt, 'MM/DD/YYYY') as effective_dt, to_char(edr.mmte, 'FM999.999999999') as mmte, er.extracted_mmte_name, ers.extracted_mmte_source_cd, to_char(edr.trade_dt, 'MM/DD/YYYY') as publication_dt FROM tttfapp.extracted_daily_mmte edr INNER JOIN tttfapp.extracted_mmte er ON er.extracted_mmte_id=edr.extracted_mmte_id INNER JOIN tttfapp.extracted_mmte_source ers ON edr.extracted_mmte_source_id=ers.extracted_mmte_source_id WHERE edr.effective_dt=to_date(?, 'MM/DD/YYYY') AND er.extracted_mmte_name=? AND edr.active_flag='Y' ORDER BY edr.effective_dt DESC
+
+# ====================================================================================
+# ADD INSTANCE QUERIES (Scenario 10 - Add Extracted Mmte Instance)
+# ====================================================================================
+
+# Check if extracted mmte instance already exists (Scenario 10, line 863)
+DB_QUERY_CHECK_INSTANCE_EXISTS=SELECT COUNT(*) as instance_count FROM tttfapp.extracted_daily_mmte edr INNER JOIN tttfapp.extracted_mmte er ON er.extracted_mmte_id=edr.extracted_mmte_id WHERE er.extracted_mmte_name=? AND edr.effective_dt=to_date(?, 'MM/DD/YYYY') AND edr.active_flag='Y'
+
+# Get extracted mmte instance details (Scenario 10, line 924)
+DB_QUERY_GET_INSTANCE_DETAILS=SELECT to_char(edr.effective_dt, 'MM/DD/YYYY') as effective_dt, to_char(edr.mmte, 'FM999.999999999') as mmte, er.extracted_mmte_name, ers.extracted_mmte_source_cd, to_char(edr.trade_dt, 'MM/DD/YYYY') as publication_dt FROM tttfapp.extracted_daily_mmte edr INNER JOIN tttfapp.extracted_mmte er ON er.extracted_mmte_id=edr.extracted_mmte_id INNER JOIN tttfapp.extracted_mmte_source ers ON edr.extracted_mmte_source_id=ers.extracted_mmte_source_id WHERE er.extracted_mmte_name=? AND edr.effective_dt=to_date(?, 'MM/DD/YYYY') AND edr.active_flag='Y'
+
+# Verify instance removed (active_flag='N', Scenario 11, line 1046-1060)
+DB_QUERY_VERIFY_INSTANCE_REMOVED=SELECT COUNT(*) as instance_count FROM tttfapp.extracted_daily_mmte edr INNER JOIN tttfapp.extracted_mmte er ON er.extracted_mmte_id=edr.extracted_mmte_id WHERE er.extracted_mmte_name=? AND edr.effective_dt=to_date(?, 'MM/DD/YYYY') AND edr.active_flag='Y'
+
+# ====================================================================================
+# EXPORT QUERIES (Scenario 12 - Export Functionality)
+# ====================================================================================
+
+# Get all extracted daily mmtes for export (Scenario 12)
+DB_QUERY_GET_ALL_FOR_EXPORT=SELECT to_char(edr.effective_dt, 'MM/DD/YYYY') as effective_dt, to_char(edr.mmte, 'FM999.999999999') as mmte, er.extracted_mmte_name, ers.extracted_mmte_source_cd, to_char(edr.trade_dt, 'MM/DD/YYYY') as publication_dt FROM tttfapp.extracted_daily_mmte edr INNER JOIN tttfapp.extracted_mmte er ON er.extracted_mmte_id=edr.extracted_mmte_id INNER JOIN tttfapp.extracted_mmte_source ers ON edr.extracted_mmte_source_id=ers.extracted_mmte_source_id WHERE edr.active_flag='Y' ORDER BY edr.effective_dt DESC
+
+# Get filtered extracted daily mmtes for export by name (Scenario 12)
+DB_QUERY_GET_FILTERED_FOR_EXPORT_BY_NAME=SELECT to_char(edr.effective_dt, 'MM/DD/YYYY') as effective_dt, to_char(edr.mmte, 'FM999.999999999') as mmte, er.extracted_mmte_name, ers.extracted_mmte_source_cd, to_char(edr.trade_dt, 'MM/DD/YYYY') as publication_dt FROM tttfapp.extracted_daily_mmte edr INNER JOIN tttfapp.extracted_mmte er ON er.extracted_mmte_id=edr.extracted_mmte_id INNER JOIN tttfapp.extracted_mmte_source ers ON edr.extracted_mmte_source_id=ers.extracted_mmte_source_id WHERE er.extracted_mmte_name=? AND edr.active_flag='Y' ORDER BY edr.effective_dt DESC
+
+# Get filtered extracted daily mmtes for export by date range (Scenario 12)
+DB_QUERY_GET_FILTERED_FOR_EXPORT_BY_DATE=SELECT to_char(edr.effective_dt, 'MM/DD/YYYY') as effective_dt, to_char(edr.mmte, 'FM999.999999999') as mmte, er.extracted_mmte_name, ers.extracted_mmte_source_cd, to_char(edr.trade_dt, 'MM/DD/YYYY') as publication_dt FROM tttfapp.extracted_daily_mmte edr INNER JOIN tttfapp.extracted_mmte er ON er.extracted_mmte_id=edr.extracted_mmte_id INNER JOIN tttfapp.extracted_mmte_source ers ON edr.extracted_mmte_source_id=ers.extracted_mmte_source_id WHERE edr.effective_dt >= to_date(?, 'MM/DD/YYYY') AND edr.effective_dt <= to_date(?, 'MM/DD/YYYY') AND edr.active_flag='Y' ORDER BY edr.effective_dt DESC
+
+# Get filtered extracted daily mmtes for export by name and date range (Scenario 12)
+DB_QUERY_GET_FILTERED_FOR_EXPORT_BY_NAME_AND_DATE=SELECT to_char(edr.effective_dt, 'MM/DD/YYYY') as effective_dt, to_char(edr.mmte, 'FM999.999999999') as mmte, er.extracted_mmte_name, ers.extracted_mmte_source_cd, to_char(edr.trade_dt, 'MM/DD/YYYY') as publication_dt FROM tttfapp.extracted_daily_mmte edr INNER JOIN tttfapp.extracted_mmte er ON er.extracted_mmte_id=edr.extracted_mmte_id INNER JOIN tttfapp.extracted_mmte_source ers ON edr.extracted_mmte_source_id=ers.extracted_mmte_source_id WHERE er.extracted_mmte_name=? AND edr.effective_dt >= to_date(?, 'MM/DD/YYYY') AND edr.effective_dt <= to_date(?, 'MM/DD/YYYY') AND edr.active_flag='Y' ORDER BY edr.effective_dt DESC
+
+# Get business date (excluding weekends) - 1 business day ago
+DB_QUERY_GET_BUSINESS_DATE_MINUS_1=SELECT to_char(CASE WHEN TO_CHAR(SYSDATE-1, 'DY') IN ('SAT', 'SUN') THEN SYSDATE-3 ELSE SYSDATE-1 END, 'MM/DD/YYYY') as business_date FROM DUAL
+
+
+file 3:
+--------
+# ============================================================================
+# TTTF API - DATABASE QUERIES CONFIGURATION
+# ============================================================================
+# All database queries for TTTF API test automation
+# Queries are interestd by name in step definitions using CSDBUtils
+# Format: DB_QUERY_{QUERY_NAME}=SQL_STATEMENT
+# ============================================================================
+
+# ====================================================================================
+# TEST DATA SETUP QUERIES
+# ====================================================================================
+
+# Get single extracted mmte code for test data setup
+# Returns: EXTRACTED_MMTE_CODE
+# Requirement Line 39
+DB_QUERY_GET_SINGLE_EXTRACTED_MMTE_CODE=SELECT extracted_mmte_code as EXTRACTED_MMTE_CODE FROM cftrugo.extracted_mmte WHERE active_flag='Y' ORDER BY index_order ASC FETCH FIRST 1 ROW ONLY
+
+# Get latest inserted_dt for input date test data setup
+# Returns: INSERTED_DT
+# Requirement Line 45
+DB_QUERY_GET_LATEST_INSERTED_DT=SELECT DISTINCT TO_CHAR(inserted_dt, 'YYYY-MM-DD') as INSERTED_DT FROM cftrugo.extracted_daily_mmte WHERE active_flag='Y' ORDER BY inserted_dt DESC FETCH FIRST 1 ROW ONLY
+
+# ====================================================================================
+# RESPONSE VALIDATION QUERIES
+# ====================================================================================
+
+# Get extracted daily mmte data for validation
+# Parameters: ?, ? (extracted_mmte_code, inputDate in 'YYYY-MM-DD' format)
+# Returns: MMTE, EFFECTIVE_DT, INSERTED_DT, UPDATED_DT, TRADE_DT
+# Requirement Line 135
+DB_QUERY_GET_EXTRACTED_DAILY_MMTE=SELECT TO_CHAR(edr.mmte, 'FM999999999.999999999') as MMTE, TO_CHAR(edr.effective_dt, 'YYYY-MM-DD"T"HH24:MI:SS"Z"') as EFFECTIVE_DT, TO_CHAR(edr.inserted_dt, 'YYYY-MM-DD"T"HH24:MI:SS"Z"') as INSERTED_DT, TO_CHAR(edr.updated_dt, 'YYYY-MM-DD"T"HH24:MI:SS"Z"') as UPDATED_DT, TO_CHAR(edr.trade_dt, 'YYYY-MM-DD"T"HH24:MI:SS"Z"') as TRADE_DT FROM cftrugo.extracted_daily_mmte edr INNER JOIN cftrugo.extracted_mmte er ON er.extracted_mmte_id=edr.extracted_mmte_id WHERE er.extracted_mmte_code=? AND edr.active_flag='Y' AND TRUNC(edr.inserted_dt)=TO_DATE(?, 'YYYY-MM-DD')
+
+# Check if mmte exists for given code and input date
+# Parameters: ?, ? (extracted_mmte_code, inputDate in 'YYYY-MM-DD' format)
+# Returns: MMTE_COUNT
+# Requirement Line 137: Used to set asDBActiveFlag
+DB_QUERY_CHECK_MMTE_EXISTS=SELECT COUNT(*) as MMTE_COUNT FROM cftrugo.extracted_daily_mmte edr INNER JOIN cftrugo.extracted_mmte er ON er.extracted_mmte_id=edr.extracted_mmte_id WHERE er.extracted_mmte_code=? AND edr.active_flag='Y' AND TRUNC(edr.inserted_dt)=TO_DATE(?, 'YYYY-MM-DD')
 
