@@ -1,54 +1,99 @@
-// Check Node.js and system environment
-console.log('=== Environment Check ===\n');
+// Check available ODBC drivers on Windows
+console.log('=== ODBC Driver Detection ===\n');
 
-console.log('Node.js Information:');
-console.log('  Version:', process.version);
-console.log('  Architecture:', process.arch);
-console.log('  Platform:', process.platform);
-console.log('  Executable:', process.execPath);
+const { execSync } = require('child_process');
 
-console.log('\nEnvironment Variables:');
-console.log('  USERNAME:', process.env.USERNAME || process.env.USER);
-console.log('  USERDOMAIN:', process.env.USERDOMAIN);
-console.log('  COMPUTERNAME:', process.env.COMPUTERNAME);
-console.log('  OS:', process.env.OS);
-console.log('  PROCESSOR_ARCHITECTURE:', process.env.PROCESSOR_ARCHITECTURE);
+// Method 1: Check via PowerShell registry
+console.log('--- Method 1: Check Registry (PowerShell) ---');
+try {
+  const output = execSync(
+    'powershell -Command "Get-ItemProperty -Path \'HKLM:\\SOFTWARE\\ODBC\\ODBCINST.INI\\ODBC Drivers\' | Select-Object * -ExcludeProperty PS*"',
+    { encoding: 'utf8' }
+  );
+  console.log(output);
+} catch (e) {
+  console.log('Could not read registry:', e.message);
+}
 
-console.log('\nWSL Detection:');
-if (process.platform === 'linux') {
-  const fs = require('fs');
+// Method 2: List all installed ODBC drivers
+console.log('\n--- Method 2: List All ODBC Drivers (via odbcad32) ---');
+try {
+  const output = execSync(
+    'powershell -Command "Get-OdbcDriver | Where-Object {$_.Name -like \'*SQL Server*\'} | Format-Table Name, Platform, Attribute -AutoSize"',
+    { encoding: 'utf8' }
+  );
+  console.log(output);
+} catch (e) {
+  console.log('Could not list ODBC drivers:', e.message);
+}
+
+// Method 3: Test each driver name with msnodesqlv8
+console.log('\n--- Method 3: Test Driver Names with msnodesqlv8 ---');
+
+const driverNames = [
+  'ODBC Driver 18 for SQL Server',
+  'ODBC Driver 17 for SQL Server',
+  'ODBC Driver 13 for SQL Server',
+  'ODBC Driver 11 for SQL Server',
+  'SQL Server Native Client 11.0',
+  'SQL Server Native Client 10.0',
+  'SQL Server',
+];
+
+async function testDriverName(driverName) {
   try {
-    const version = fs.readFileSync('/proc/version', 'utf8');
-    console.log('  Running in WSL:', version.includes('Microsoft') || version.includes('WSL'));
-    console.log('  /proc/version:', version.trim());
+    const sql = require('msnodesqlv8');
+
+    // Use a very simple connection string with localhost
+    const connString = `Driver={${driverName}};Server=localhost;Timeout=1;`;
+
+    return new Promise((resolve) => {
+      // Try to open - we expect timeout, but we're checking if driver is recognized
+      const timeout = setTimeout(() => {
+        resolve({ driver: driverName, status: 'timeout (driver recognized)' });
+      }, 2000);
+
+      sql.open(connString, (err, conn) => {
+        clearTimeout(timeout);
+        if (err) {
+          // Check error message
+          if (err.message && err.message.includes('Data source name not found')) {
+            resolve({ driver: driverName, status: 'NOT FOUND' });
+          } else if (err.message && err.message.includes('Login')) {
+            resolve({ driver: driverName, status: 'FOUND (login failed - expected)' });
+          } else {
+            resolve({ driver: driverName, status: `Error: ${err.message}` });
+          }
+        } else {
+          conn.close(() => {
+            resolve({ driver: driverName, status: 'FOUND (connected!)' });
+          });
+        }
+      });
+    });
   } catch (e) {
-    console.log('  Not WSL or cannot read /proc/version');
+    return { driver: driverName, status: `Exception: ${e.message}` };
   }
-} else {
-  console.log('  Platform is not Linux');
 }
 
-console.log('\nODBC Driver Check:');
-console.log('  Note: ODBC drivers are Windows-specific');
-console.log('  If running in WSL, ODBC drivers from Windows are NOT accessible');
-console.log('  msnodesqlv8 requires native Windows ODBC drivers');
+async function testAllDrivers() {
+  console.log('Testing each driver name...\n');
 
-if (process.platform === 'linux') {
-  console.log('\n⚠️  CRITICAL: You are running on Linux (probably WSL)');
-  console.log('  Problem: msnodesqlv8 cannot access Windows ODBC drivers from WSL');
-  console.log('  Solution 1: Run Node.js from Windows (not WSL)');
-  console.log('  Solution 2: Use SQL Authentication instead of Windows Auth');
-  console.log('  Solution 3: Install unixODBC and SQL Server ODBC driver for Linux');
+  for (const driverName of driverNames) {
+    const result = await testDriverName(driverName);
+    const status = result.status.includes('FOUND') ? '✅' :
+                   result.status.includes('NOT FOUND') ? '❌' : '⚠️';
+    console.log(`${status} ${result.driver}`);
+    console.log(`   Status: ${result.status}\n`);
+  }
+
+  console.log('\n=== Summary ===');
+  console.log('Drivers marked with ✅ are installed and recognized');
+  console.log('Drivers marked with ❌ are NOT installed');
+  console.log('Use the exact name of a ✅ driver in your connection string');
 }
 
-console.log('\n=== Recommendation ===');
-if (process.platform === 'linux') {
-  console.log('Run this test from Windows PowerShell or CMD, not WSL!');
-  console.log('Command: node.exe check-environment.js');
-} else if (process.arch === 'ia32') {
-  console.log('You are running 32-bit Node.js');
-  console.log('Make sure to use 32-bit ODBC Driver 17 for SQL Server');
-} else {
-  console.log('Environment looks good for Windows Authentication');
-  console.log('Node.js is 64-bit, should work with 64-bit ODBC drivers');
-}
+// Run the test
+testAllDrivers().catch(err => {
+  console.error('Error:', err);
+});
