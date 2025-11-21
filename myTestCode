@@ -1,801 +1,443 @@
-// src/utils/CSDateTimeUtility.ts
-
+import * as fs from 'fs';
+import * as path from 'path';
+import { execSync } from 'child_process';
+import archiver from 'archiver';
 import { CSConfigurationManager } from '../core/CSConfigurationManager';
+import { CSReporter } from './CSReporter';
 
-/**
- * Comprehensive DateTime Utility Class
- * Provides extensive date/time parsing, formatting, manipulation, and comparison methods
- */
-export class CSDateTimeUtility {
+export type CaptureMode = 'always' | 'on-failure' | 'on-success' | 'never';
 
-    // Default locale for date/time formatting (Americas)
-    private static defaultLocale = 'en-US';
+export interface TestResultsConfig {
+    baseDir: string;
+    createTimestampFolder: boolean;
+    zipResults: boolean;
+    keepUnzipped: boolean;
+    captureSettings: {
+        video: CaptureMode;
+        screenshot: CaptureMode;
+        trace: CaptureMode;
+        har: CaptureMode;
+        consoleLog: boolean;
+    };
+}
+
+export class CSTestResultsManager {
+    private static instance: CSTestResultsManager;
+    private config: CSConfigurationManager;
+    private currentTestRunDir: string = '';
+    private finalizedZipPath: string | null = null;
+    private timestamp: string = '';
+    private consoleLogs: any[] = [];
+    
+    private constructor() {
+        this.config = CSConfigurationManager.getInstance();
+    }
+    
+    public static getInstance(): CSTestResultsManager {
+        if (!CSTestResultsManager.instance) {
+            CSTestResultsManager.instance = new CSTestResultsManager();
+        }
+        return CSTestResultsManager.instance;
+    }
+    
+    /**
+     * Initialize test results directory for current test run
+     */
+    public initializeTestRun(project?: string): string {
+        // Check if we're a worker and should use parent's test results directory
+        const existingTestResultsDir = this.config.get('TEST_RESULTS_DIR') || process.env.TEST_RESULTS_DIR;
+        if (existingTestResultsDir && process.env.IS_WORKER === 'true') {
+            this.currentTestRunDir = existingTestResultsDir;
+            CSReporter.debug(`[Worker ${process.env.WORKER_ID}] Using parent test results directory: ${this.currentTestRunDir}`);
+            return this.currentTestRunDir;
+        }
+
+        const baseDir = this.config.get('REPORTS_BASE_DIR', './reports');
+        const createTimestampFolder = this.config.getBoolean('REPORTS_CREATE_TIMESTAMP_FOLDER', true);
+
+        // Ensure base directory exists
+        if (!fs.existsSync(baseDir)) {
+            fs.mkdirSync(baseDir, { recursive: true });
+        }
+
+        // Create timestamp folder
+        if (createTimestampFolder) {
+            this.timestamp = new Date().toISOString().replace(/[:.]/g, '-').replace('T', '_').slice(0, -5);
+            this.currentTestRunDir = path.join(baseDir, `test-results-${this.timestamp}`);
+        } else {
+            this.currentTestRunDir = baseDir;
+        }
+
+        // Create directory structure
+        this.createDirectoryStructure();
+
+        // Store the directory in config so it can be accessed by other components
+        CSConfigurationManager.getInstance().set('TEST_RESULTS_DIR', this.currentTestRunDir);
+
+        CSReporter.info(`Test results directory initialized: ${this.currentTestRunDir}`);
+        return this.currentTestRunDir;
+    }
+    
+    /**
+     * Create standard directory structure for test results
+     */
+    private createDirectoryStructure(): void {
+        const directories = [
+            this.currentTestRunDir,
+            path.join(this.currentTestRunDir, 'videos'),
+            path.join(this.currentTestRunDir, 'screenshots'),
+            path.join(this.currentTestRunDir, 'traces'),
+            path.join(this.currentTestRunDir, 'har'),
+            path.join(this.currentTestRunDir, 'console-logs'),
+            path.join(this.currentTestRunDir, 'reports')
+        ];
+        
+        directories.forEach(dir => {
+            if (!fs.existsSync(dir)) {
+                fs.mkdirSync(dir, { recursive: true });
+            }
+        });
+    }
+    
+    /**
+     * Get directory paths for different artifact types
+     */
+    public getDirectories() {
+        // Use currentTestRunDir if available, otherwise get from config (for worker processes)
+        let baseDir = this.currentTestRunDir;
+        if (!baseDir) {
+            baseDir = this.config.get('TEST_RESULTS_DIR', '');
+            if (!baseDir) {
+                // Fallback: create a default directory if none exists
+                const timestamp = new Date().toISOString().replace(/[:.]/g, '-').replace('T', '_').slice(0, -5);
+                baseDir = path.join(process.cwd(), 'reports', `test-results-${timestamp}`);
+                CSReporter.debug(`Test results directory not set, using fallback: ${baseDir}`);
+            }
+        }
+
+        return {
+            base: baseDir,
+            videos: path.join(baseDir, 'videos'),
+            screenshots: path.join(baseDir, 'screenshots'),
+            traces: path.join(baseDir, 'traces'),
+            har: path.join(baseDir, 'har'),
+            consoleLogs: path.join(baseDir, 'console-logs'),
+            reports: path.join(baseDir, 'reports')
+        };
+    }
+    
+    /**
+     * Get artifact paths with proper naming
+     */
+    public getArtifactPath(type: 'video' | 'screenshot' | 'trace' | 'har', scenarioName: string, status?: 'pass' | 'fail'): string {
+        const dirs = this.getDirectories();
+        const sanitizedName = scenarioName.replace(/[^a-zA-Z0-9]/g, '-').substring(0, 50);
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+        const statusPrefix = status ? `${status}-` : '';
+        
+        switch (type) {
+            case 'video':
+                return path.join(dirs.videos, `${statusPrefix}${sanitizedName}-${timestamp}.webm`);
+            case 'screenshot':
+                return path.join(dirs.screenshots, `${statusPrefix}${sanitizedName}-${timestamp}.png`);
+            case 'trace':
+                return path.join(dirs.traces, `${statusPrefix}${sanitizedName}-${timestamp}.zip`);
+            case 'har':
+                return path.join(dirs.har, `${statusPrefix}${sanitizedName}-${timestamp}.har`);
+            default:
+                return path.join(this.currentTestRunDir, `${statusPrefix}${sanitizedName}-${timestamp}`);
+        }
+    }
+    
+    /**
+     * Determine if artifact should be captured based on mode and test status
+     */
+    public shouldCaptureArtifact(artifactType: 'video' | 'screenshot' | 'trace' | 'har', testPassed: boolean): boolean {
+        const modeConfig = {
+            video: this.config.get('BROWSER_VIDEO', 'on-failure'),
+            screenshot: this.config.get('SCREENSHOT_CAPTURE_MODE', 'on-failure'),
+            trace: this.config.get('TRACE_CAPTURE_MODE', 'on-failure'),
+            har: this.config.get('HAR_CAPTURE_MODE', 'never')
+        };
+        
+        const mode = modeConfig[artifactType] as CaptureMode;
+        
+        switch (mode) {
+            case 'always':
+                return true;
+            case 'on-failure':
+                return !testPassed;
+            case 'on-success':
+                return testPassed;
+            case 'never':
+                return false;
+            default:
+                return !testPassed; // Default to on-failure
+        }
+    }
+    
+    /**
+     * Add console log entry
+     */
+    public addConsoleLog(type: string, message: string, timestamp?: Date): void {
+        if (this.config.getBoolean('CONSOLE_LOG_CAPTURE', true)) {
+            this.consoleLogs.push({
+                timestamp: timestamp || new Date(),
+                type,
+                message
+            });
+        }
+    }
+    
+    /**
+     * Save console logs to file
+     */
+    public saveConsoleLogs(scenarioName?: string): void {
+        if (this.consoleLogs.length === 0) return;
+        
+        const dirs = this.getDirectories();
+        const filename = scenarioName 
+            ? `${scenarioName.replace(/[^a-zA-Z0-9]/g, '-')}-console.log`
+            : 'console.log';
+        const filepath = path.join(dirs.consoleLogs, filename);
+        
+        const content = this.consoleLogs
+            .map(log => `[${log.timestamp.toISOString()}] [${log.type.toUpperCase()}] ${log.message}`)
+            .join('\n');
+        
+        fs.writeFileSync(filepath, content);
+        CSReporter.debug(`Console logs saved: ${filepath}`);
+        
+        // Clear logs after saving
+        this.consoleLogs = [];
+    }
+    
+    
+    /**
+     * Finalize test run and optionally zip results
+     */
+    /**
+     * Create a zip archive of the test results
+     * @returns Path to the created zip file
+     */
+    public async createTestResultsZip(): Promise<string> {
+        // If already zipped, return the existing path
+        if (this.finalizedZipPath) {
+            CSReporter.debug(`Zip already exists: ${this.finalizedZipPath}`);
+            return this.finalizedZipPath;
+        }
+
+        const zipPath = `${this.currentTestRunDir}.zip`;
+
+        // Check if zip already exists
+        if (fs.existsSync(zipPath)) {
+            CSReporter.info(`Zip file already exists: ${zipPath}`);
+            this.finalizedZipPath = zipPath;
+            return zipPath;
+        }
+
+        // Check if directory has any meaningful content before zipping
+        const hasContent = this.directoryHasContent(this.currentTestRunDir);
+        if (!hasContent) {
+            CSReporter.warn(`[ResultsManager] Test results directory is empty - skipping zip creation`);
+            return ''; // Return empty string to signal no zip
+        }
+
+        CSReporter.info(`Creating zip archive: ${zipPath}`);
+        await this.zipDirectory(this.currentTestRunDir, zipPath);
+
+        // Verify zip has meaningful size (>1KB, empty zips are ~22 bytes)
+        if (fs.existsSync(zipPath)) {
+            const stats = fs.statSync(zipPath);
+            if (stats.size < 1024) {
+                CSReporter.warn(`[ResultsManager] Zip file is too small (${stats.size} bytes) - likely empty, skipping`);
+                fs.unlinkSync(zipPath); // Delete empty zip
+                return ''; // Return empty string to signal no meaningful content
+            }
+        }
+
+        this.finalizedZipPath = zipPath;
+        CSReporter.info(`✅ Test results zipped successfully: ${zipPath}`);
+
+        return zipPath;
+    }
 
     /**
-     * Get the locale to use for formatting
-     * Priority: 1. User-specified locale, 2. Config LOCALE, 3. Default (en-US)
+     * Finalize test run - handles zipping based on configuration
      */
-    private static getLocale(locale?: string): string {
-        if (locale) {
-            return locale;
+    public async finalizeTestRun(): Promise<string> {
+        const zipResults = this.config.getBoolean('REPORTS_ZIP_RESULTS', false);
+        const keepUnzipped = this.config.getBoolean('REPORTS_KEEP_UNZIPPED', true);
+
+        CSReporter.debug(`Finalize test run - zipResults: ${zipResults}`);
+
+        if (!zipResults) {
+            CSReporter.info(`Test results available at: ${this.currentTestRunDir}`);
+            return this.currentTestRunDir;
+        }
+
+        // Create zip file
+        const zipPath = await this.createTestResultsZip();
+
+        // Remove unzipped folder if configured
+        if (!keepUnzipped) {
+            this.removeDirectory(this.currentTestRunDir);
+            CSReporter.info(`Original test results folder removed (keepUnzipped=false)`);
+        } else {
+            CSReporter.info(`Original results folder kept: ${this.currentTestRunDir}`);
+        }
+
+        return zipPath;
+    }
+    
+    /**
+     * Zip a directory (cross-platform using archiver library)
+     */
+    private zipDirectory(sourceDir: string, outPath: string): Promise<void> {
+        return new Promise((resolve, reject) => {
+            try {
+                // Create write stream for output file
+                const output = fs.createWriteStream(outPath);
+
+                // Use store mode (no compression) for Windows compatibility
+                // High compression (level 9) can cause issues with Windows zip extraction
+                const archive = archiver('zip', {
+                    zlib: { level: 6 }, // Moderate compression for better compatibility
+                    store: false // Use DEFLATE compression (standard)
+                });
+
+                // Track if any files were added
+                let filesAdded = 0;
+                archive.on('entry', (entry: any) => {
+                    filesAdded++;
+                    CSReporter.debug(`Added to zip: ${entry.name} (${entry.stats?.size || 0} bytes)`);
+                });
+
+                // Listen for errors
+                output.on('error', (err: any) => {
+                    CSReporter.error(`Output stream error: ${err}`);
+                    reject(err);
+                });
+
+                archive.on('error', (err: any) => {
+                    CSReporter.error(`Archive error: ${err}`);
+                    reject(err);
+                });
+
+                // Listen for warnings (non-blocking errors)
+                archive.on('warning', (err: any) => {
+                    if (err.code === 'ENOENT') {
+                        CSReporter.warn(`Archive warning (file not found): ${err.message}`);
+                    } else {
+                        CSReporter.error(`Archive warning: ${err}`);
+                        reject(err);
+                    }
+                });
+
+                // Listen for completion
+                output.on('close', () => {
+                    const stats = fs.statSync(outPath);
+                    CSReporter.info(`✅ Zip finalized: ${stats.size} bytes, ${filesAdded} files/folders added`);
+                    resolve();
+                });
+
+                // Pipe archive data to the file
+                archive.pipe(output);
+
+                // Add directory contents to archive
+                // Second parameter 'false' means don't create a root folder, add contents directly
+                // This makes the zip structure cleaner and more compatible
+                archive.directory(sourceDir, false);
+
+                // Finalize the archive (this triggers the writing)
+                CSReporter.debug(`Finalizing archive for: ${sourceDir}`);
+                archive.finalize();
+            } catch (error) {
+                CSReporter.error(`Failed to create zip: ${error}`);
+                reject(error);
+            }
+        });
+    }
+    
+    /**
+     * Remove directory recursively
+     */
+    private removeDirectory(dir: string): void {
+        if (fs.existsSync(dir)) {
+            fs.readdirSync(dir).forEach(file => {
+                const curPath = path.join(dir, file);
+                if (fs.lstatSync(curPath).isDirectory()) {
+                    this.removeDirectory(curPath);
+                } else {
+                    fs.unlinkSync(curPath);
+                }
+            });
+            fs.rmdirSync(dir);
+        }
+    }
+    
+    /**
+     * Check if directory has meaningful content (files other than just empty subdirectories)
+     */
+    private directoryHasContent(dir: string): boolean {
+        if (!fs.existsSync(dir)) {
+            return false;
         }
 
         try {
-            const config = CSConfigurationManager.getInstance();
-            const configLocale = config.get('LOCALE') || config.get('DATE_LOCALE');
-            if (configLocale) {
-                return configLocale;
+            const files = fs.readdirSync(dir);
+
+            for (const file of files) {
+                const filePath = path.join(dir, file);
+                const stat = fs.statSync(filePath);
+
+                if (stat.isFile() && stat.size > 0) {
+                    // Found a non-empty file
+                    return true;
+                } else if (stat.isDirectory()) {
+                    // Recursively check subdirectories
+                    if (this.directoryHasContent(filePath)) {
+                        return true;
+                    }
+                }
             }
+
+            return false; // No meaningful content found
         } catch (error) {
-            // Config not available, use default
+            CSReporter.debug(`Error checking directory content: ${error}`);
+            return false;
         }
-
-        return this.defaultLocale;
-    }
-
-    // ===============================
-    // DATE PARSING & CREATION
-    // ===============================
-
-    /**
-     * Parse date from various string formats
-     */
-    static parse(dateString: string): Date | null {
-        const date = new Date(dateString);
-        return isNaN(date.getTime()) ? null : date;
-    }
-
-    /**
-     * Create date from components
-     */
-    static create(year: number, month: number, day: number = 1, hour: number = 0, minute: number = 0, second: number = 0, millisecond: number = 0): Date {
-        return new Date(year, month - 1, day, hour, minute, second, millisecond);
-    }
-
-    /**
-     * Get current date/time
-     */
-    static now(): Date {
-        return new Date();
-    }
-
-    /**
-     * Get current timestamp in milliseconds
-     */
-    static timestamp(): number {
-        return Date.now();
-    }
-
-    /**
-     * Get current Unix timestamp in seconds
-     */
-    static unixTimestamp(): number {
-        return Math.floor(Date.now() / 1000);
-    }
-
-    /**
-     * Create date from Unix timestamp (seconds)
-     */
-    static fromUnixTimestamp(timestamp: number): Date {
-        return new Date(timestamp * 1000);
-    }
-
-    /**
-     * Create date from milliseconds timestamp
-     */
-    static fromTimestamp(timestamp: number): Date {
-        return new Date(timestamp);
-    }
-
-    // ===============================
-    // DATE FORMATTING
-    // ===============================
-
-    /**
-     * Format date to ISO 8601 string (YYYY-MM-DDTHH:mm:ss.sssZ)
-     */
-    static toISO(date: Date): string {
-        return date.toISOString();
-    }
-
-    /**
-     * Format date to YYYY-MM-DD
-     */
-    static toDateString(date: Date): string {
-        const year = date.getFullYear();
-        const month = String(date.getMonth() + 1).padStart(2, '0');
-        const day = String(date.getDate()).padStart(2, '0');
-        return `${year}-${month}-${day}`;
-    }
-
-    /**
-     * Format date to MM/DD/YYYY
-     */
-    static toUSDateString(date: Date): string {
-        const month = String(date.getMonth() + 1).padStart(2, '0');
-        const day = String(date.getDate()).padStart(2, '0');
-        const year = date.getFullYear();
-        return `${month}/${day}/${year}`;
-    }
-
-    /**
-     * Format date to DD/MM/YYYY
-     */
-    static toEUDateString(date: Date): string {
-        const day = String(date.getDate()).padStart(2, '0');
-        const month = String(date.getMonth() + 1).padStart(2, '0');
-        const year = date.getFullYear();
-        return `${day}/${month}/${year}`;
-    }
-
-    /**
-     * Format time to HH:mm:ss
-     */
-    static toTimeString(date: Date): string {
-        const hours = String(date.getHours()).padStart(2, '0');
-        const minutes = String(date.getMinutes()).padStart(2, '0');
-        const seconds = String(date.getSeconds()).padStart(2, '0');
-        return `${hours}:${minutes}:${seconds}`;
-    }
-
-    /**
-     * Format date/time to YYYY-MM-DD HH:mm:ss
-     */
-    static toDateTimeString(date: Date): string {
-        return `${this.toDateString(date)} ${this.toTimeString(date)}`;
-    }
-
-    /**
-     * Format date with custom format
-     * Supported tokens: YYYY, MM, DD, HH, mm, ss, SSS
-     */
-    static format(date: Date, format: string): string {
-        const tokens: Record<string, string> = {
-            'YYYY': String(date.getFullYear()),
-            'YY': String(date.getFullYear()).slice(-2),
-            'MM': String(date.getMonth() + 1).padStart(2, '0'),
-            'M': String(date.getMonth() + 1),
-            'DD': String(date.getDate()).padStart(2, '0'),
-            'D': String(date.getDate()),
-            'HH': String(date.getHours()).padStart(2, '0'),
-            'H': String(date.getHours()),
-            'hh': String(date.getHours() % 12 || 12).padStart(2, '0'),
-            'h': String(date.getHours() % 12 || 12),
-            'mm': String(date.getMinutes()).padStart(2, '0'),
-            'm': String(date.getMinutes()),
-            'ss': String(date.getSeconds()).padStart(2, '0'),
-            's': String(date.getSeconds()),
-            'SSS': String(date.getMilliseconds()).padStart(3, '0'),
-            'A': date.getHours() >= 12 ? 'PM' : 'AM',
-            'a': date.getHours() >= 12 ? 'pm' : 'am'
-        };
-
-        let result = format;
-        for (const [token, value] of Object.entries(tokens)) {
-            result = result.replace(new RegExp(token, 'g'), value);
-        }
-        return result;
-    }
-
-    /**
-     * Format date to human-readable string
-     * Example: "January 1, 2024" (en-US), "1 janvier 2024" (fr-FR)
-     * @param date - Date to format
-     * @param locale - Optional locale (defaults to en-US or LOCALE from config)
-     */
-    static toHumanString(date: Date, locale?: string): string {
-        const targetLocale = this.getLocale(locale);
-        return date.toLocaleDateString(targetLocale, {
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric'
-        });
-    }
-
-    /**
-     * Format date to locale-aware date string
-     * Example: "1/15/2024" (en-US), "15/1/2024" (en-GB)
-     * @param date - Date to format
-     * @param locale - Optional locale (defaults to en-US or LOCALE from config)
-     */
-    static toLocaleDate(date: Date, locale?: string): string {
-        const targetLocale = this.getLocale(locale);
-        return date.toLocaleDateString(targetLocale);
-    }
-
-    /**
-     * Format time to locale-aware time string
-     * Example: "3:30 PM" (en-US), "15:30" (en-GB)
-     * @param date - Date to format
-     * @param locale - Optional locale (defaults to en-US or LOCALE from config)
-     */
-    static toLocaleTime(date: Date, locale?: string): string {
-        const targetLocale = this.getLocale(locale);
-        return date.toLocaleTimeString(targetLocale);
-    }
-
-    /**
-     * Format date and time to locale-aware string
-     * Example: "1/15/2024, 3:30:45 PM" (en-US)
-     * @param date - Date to format
-     * @param locale - Optional locale (defaults to en-US or LOCALE from config)
-     */
-    static toLocaleDateTime(date: Date, locale?: string): string {
-        const targetLocale = this.getLocale(locale);
-        return date.toLocaleString(targetLocale);
-    }
-
-    /**
-     * Format date to relative time
-     * Example: "2 hours ago", "in 3 days"
-     */
-    static toRelative(date: Date, baseDate: Date = new Date()): string {
-        const diff = baseDate.getTime() - date.getTime();
-        const seconds = Math.abs(Math.floor(diff / 1000));
-        const minutes = Math.floor(seconds / 60);
-        const hours = Math.floor(minutes / 60);
-        const days = Math.floor(hours / 24);
-        const months = Math.floor(days / 30);
-        const years = Math.floor(days / 365);
-
-        const suffix = diff > 0 ? 'ago' : 'from now';
-        const prefix = diff > 0 ? '' : 'in ';
-
-        if (seconds < 60) return `${prefix}${seconds} ${this.pluralize(seconds, 'second')} ${suffix}`;
-        if (minutes < 60) return `${prefix}${minutes} ${this.pluralize(minutes, 'minute')} ${suffix}`;
-        if (hours < 24) return `${prefix}${hours} ${this.pluralize(hours, 'hour')} ${suffix}`;
-        if (days < 30) return `${prefix}${days} ${this.pluralize(days, 'day')} ${suffix}`;
-        if (months < 12) return `${prefix}${months} ${this.pluralize(months, 'month')} ${suffix}`;
-        return `${prefix}${years} ${this.pluralize(years, 'year')} ${suffix}`;
-    }
-
-    private static pluralize(count: number, singular: string): string {
-        return count === 1 ? singular : singular + 's';
-    }
-
-    // ===============================
-    // DATE MANIPULATION
-    // ===============================
-
-    /**
-     * Add years to date
-     */
-    static addYears(date: Date, years: number): Date {
-        const result = new Date(date);
-        result.setFullYear(result.getFullYear() + years);
-        return result;
-    }
-
-    /**
-     * Add months to date
-     */
-    static addMonths(date: Date, months: number): Date {
-        const result = new Date(date);
-        result.setMonth(result.getMonth() + months);
-        return result;
-    }
-
-    /**
-     * Add days to date
-     */
-    static addDays(date: Date, days: number): Date {
-        const result = new Date(date);
-        result.setDate(result.getDate() + days);
-        return result;
-    }
-
-    /**
-     * Add hours to date
-     */
-    static addHours(date: Date, hours: number): Date {
-        const result = new Date(date);
-        result.setHours(result.getHours() + hours);
-        return result;
-    }
-
-    /**
-     * Add minutes to date
-     */
-    static addMinutes(date: Date, minutes: number): Date {
-        const result = new Date(date);
-        result.setMinutes(result.getMinutes() + minutes);
-        return result;
-    }
-
-    /**
-     * Add seconds to date
-     */
-    static addSeconds(date: Date, seconds: number): Date {
-        const result = new Date(date);
-        result.setSeconds(result.getSeconds() + seconds);
-        return result;
-    }
-
-    /**
-     * Add milliseconds to date
-     */
-    static addMilliseconds(date: Date, milliseconds: number): Date {
-        return new Date(date.getTime() + milliseconds);
-    }
-
-    /**
-     * Subtract years from date
-     */
-    static subtractYears(date: Date, years: number): Date {
-        return this.addYears(date, -years);
-    }
-
-    /**
-     * Subtract months from date
-     */
-    static subtractMonths(date: Date, months: number): Date {
-        return this.addMonths(date, -months);
-    }
-
-    /**
-     * Subtract days from date
-     */
-    static subtractDays(date: Date, days: number): Date {
-        return this.addDays(date, -days);
-    }
-
-    /**
-     * Subtract hours from date
-     */
-    static subtractHours(date: Date, hours: number): Date {
-        return this.addHours(date, -hours);
-    }
-
-    /**
-     * Subtract minutes from date
-     */
-    static subtractMinutes(date: Date, minutes: number): Date {
-        return this.addMinutes(date, -minutes);
-    }
-
-    /**
-     * Subtract seconds from date
-     */
-    static subtractSeconds(date: Date, seconds: number): Date {
-        return this.addSeconds(date, -seconds);
-    }
-
-    /**
-     * Get start of day (00:00:00)
-     */
-    static startOfDay(date: Date): Date {
-        const result = new Date(date);
-        result.setHours(0, 0, 0, 0);
-        return result;
-    }
-
-    /**
-     * Get end of day (23:59:59.999)
-     */
-    static endOfDay(date: Date): Date {
-        const result = new Date(date);
-        result.setHours(23, 59, 59, 999);
-        return result;
-    }
-
-    /**
-     * Get start of week (Monday 00:00:00)
-     */
-    static startOfWeek(date: Date): Date {
-        const result = new Date(date);
-        const day = result.getDay();
-        const diff = day === 0 ? -6 : 1 - day; // Adjust when day is Sunday
-        result.setDate(result.getDate() + diff);
-        return this.startOfDay(result);
-    }
-
-    /**
-     * Get end of week (Sunday 23:59:59.999)
-     */
-    static endOfWeek(date: Date): Date {
-        const result = this.startOfWeek(date);
-        result.setDate(result.getDate() + 6);
-        return this.endOfDay(result);
-    }
-
-    /**
-     * Get start of month
-     */
-    static startOfMonth(date: Date): Date {
-        const result = new Date(date);
-        result.setDate(1);
-        return this.startOfDay(result);
-    }
-
-    /**
-     * Get end of month
-     */
-    static endOfMonth(date: Date): Date {
-        const result = new Date(date);
-        result.setMonth(result.getMonth() + 1, 0);
-        return this.endOfDay(result);
-    }
-
-    /**
-     * Get start of year
-     */
-    static startOfYear(date: Date): Date {
-        const result = new Date(date);
-        result.setMonth(0, 1);
-        return this.startOfDay(result);
-    }
-
-    /**
-     * Get end of year
-     */
-    static endOfYear(date: Date): Date {
-        const result = new Date(date);
-        result.setMonth(11, 31);
-        return this.endOfDay(result);
-    }
-
-    // ===============================
-    // DATE COMPARISON
-    // ===============================
-
-    /**
-     * Check if two dates are equal
-     */
-    static equals(date1: Date, date2: Date): boolean {
-        return date1.getTime() === date2.getTime();
-    }
-
-    /**
-     * Check if date1 is before date2
-     */
-    static isBefore(date1: Date, date2: Date): boolean {
-        return date1.getTime() < date2.getTime();
-    }
-
-    /**
-     * Check if date1 is after date2
-     */
-    static isAfter(date1: Date, date2: Date): boolean {
-        return date1.getTime() > date2.getTime();
-    }
-
-    /**
-     * Check if date is between two dates (inclusive)
-     */
-    static isBetween(date: Date, start: Date, end: Date): boolean {
-        const time = date.getTime();
-        return time >= start.getTime() && time <= end.getTime();
-    }
-
-    /**
-     * Check if two dates are on the same day
-     */
-    static isSameDay(date1: Date, date2: Date): boolean {
-        return this.toDateString(date1) === this.toDateString(date2);
-    }
-
-    /**
-     * Check if two dates are in the same week
-     */
-    static isSameWeek(date1: Date, date2: Date): boolean {
-        const week1 = this.getWeekOfYear(date1);
-        const week2 = this.getWeekOfYear(date2);
-        return week1 === week2 && date1.getFullYear() === date2.getFullYear();
-    }
-
-    /**
-     * Check if two dates are in the same month
-     */
-    static isSameMonth(date1: Date, date2: Date): boolean {
-        return date1.getFullYear() === date2.getFullYear() &&
-               date1.getMonth() === date2.getMonth();
-    }
-
-    /**
-     * Check if two dates are in the same year
-     */
-    static isSameYear(date1: Date, date2: Date): boolean {
-        return date1.getFullYear() === date2.getFullYear();
-    }
-
-    /**
-     * Check if date is today
-     */
-    static isToday(date: Date): boolean {
-        return this.isSameDay(date, new Date());
-    }
-
-    /**
-     * Check if date is yesterday
-     */
-    static isYesterday(date: Date): boolean {
-        const yesterday = this.subtractDays(new Date(), 1);
-        return this.isSameDay(date, yesterday);
-    }
-
-    /**
-     * Check if date is tomorrow
-     */
-    static isTomorrow(date: Date): boolean {
-        const tomorrow = this.addDays(new Date(), 1);
-        return this.isSameDay(date, tomorrow);
-    }
-
-    /**
-     * Check if date is a weekend
-     */
-    static isWeekend(date: Date): boolean {
-        const day = date.getDay();
-        return day === 0 || day === 6;
-    }
-
-    /**
-     * Check if date is a weekday
-     */
-    static isWeekday(date: Date): boolean {
-        return !this.isWeekend(date);
-    }
-
-    /**
-     * Check if date is in the past
-     */
-    static isPast(date: Date): boolean {
-        return this.isBefore(date, new Date());
-    }
-
-    /**
-     * Check if date is in the future
-     */
-    static isFuture(date: Date): boolean {
-        return this.isAfter(date, new Date());
-    }
-
-    /**
-     * Check if year is a leap year
-     */
-    static isLeapYear(year: number): boolean {
-        return (year % 4 === 0 && year % 100 !== 0) || (year % 400 === 0);
-    }
-
-    // ===============================
-    // DATE DIFFERENCE CALCULATIONS
-    // ===============================
-
-    /**
-     * Get difference in milliseconds
-     */
-    static diffInMilliseconds(date1: Date, date2: Date): number {
-        return Math.abs(date1.getTime() - date2.getTime());
-    }
-
-    /**
-     * Get difference in seconds
-     */
-    static diffInSeconds(date1: Date, date2: Date): number {
-        return Math.floor(this.diffInMilliseconds(date1, date2) / 1000);
-    }
-
-    /**
-     * Get difference in minutes
-     */
-    static diffInMinutes(date1: Date, date2: Date): number {
-        return Math.floor(this.diffInSeconds(date1, date2) / 60);
-    }
-
-    /**
-     * Get difference in hours
-     */
-    static diffInHours(date1: Date, date2: Date): number {
-        return Math.floor(this.diffInMinutes(date1, date2) / 60);
-    }
-
-    /**
-     * Get difference in days
-     */
-    static diffInDays(date1: Date, date2: Date): number {
-        return Math.floor(this.diffInHours(date1, date2) / 24);
-    }
-
-    /**
-     * Get difference in weeks
-     */
-    static diffInWeeks(date1: Date, date2: Date): number {
-        return Math.floor(this.diffInDays(date1, date2) / 7);
-    }
-
-    /**
-     * Get difference in months (approximate)
-     */
-    static diffInMonths(date1: Date, date2: Date): number {
-        const yearDiff = date1.getFullYear() - date2.getFullYear();
-        const monthDiff = date1.getMonth() - date2.getMonth();
-        return Math.abs(yearDiff * 12 + monthDiff);
-    }
-
-    /**
-     * Get difference in years
-     */
-    static diffInYears(date1: Date, date2: Date): number {
-        return Math.abs(date1.getFullYear() - date2.getFullYear());
-    }
-
-    /**
-     * Get age from birthdate
-     */
-    static getAge(birthdate: Date, referenceDate: Date = new Date()): number {
-        let age = referenceDate.getFullYear() - birthdate.getFullYear();
-        const monthDiff = referenceDate.getMonth() - birthdate.getMonth();
-        if (monthDiff < 0 || (monthDiff === 0 && referenceDate.getDate() < birthdate.getDate())) {
-            age--;
-        }
-        return age;
-    }
-
-    // ===============================
-    // DATE INFORMATION
-    // ===============================
-
-    /**
-     * Get day of week (0-6, Sunday-Saturday)
-     */
-    static getDayOfWeek(date: Date): number {
-        return date.getDay();
-    }
-
-    /**
-     * Get day of week name
-     */
-    static getDayOfWeekName(date: Date, short: boolean = false): string {
-        const days = short
-            ? ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
-            : ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-        return days[date.getDay()];
-    }
-
-    /**
-     * Get month name
-     */
-    static getMonthName(date: Date, short: boolean = false): string {
-        const months = short
-            ? ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-            : ['January', 'February', 'March', 'April', 'May', 'June',
-               'July', 'August', 'September', 'October', 'November', 'December'];
-        return months[date.getMonth()];
-    }
-
-    /**
-     * Get day of year (1-366)
-     */
-    static getDayOfYear(date: Date): number {
-        const start = new Date(date.getFullYear(), 0, 0);
-        const diff = date.getTime() - start.getTime();
-        const oneDay = 1000 * 60 * 60 * 24;
-        return Math.floor(diff / oneDay);
-    }
-
-    /**
-     * Get week of year (1-53)
-     */
-    static getWeekOfYear(date: Date): number {
-        const firstDay = new Date(date.getFullYear(), 0, 1);
-        const pastDays = this.diffInDays(date, firstDay);
-        return Math.ceil((pastDays + firstDay.getDay() + 1) / 7);
-    }
-
-    /**
-     * Get days in month
-     */
-    static getDaysInMonth(date: Date): number {
-        return new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
-    }
-
-    /**
-     * Get days in year
-     */
-    static getDaysInYear(year: number): number {
-        return this.isLeapYear(year) ? 366 : 365;
-    }
-
-    /**
-     * Get quarter (1-4)
-     */
-    static getQuarter(date: Date): number {
-        return Math.floor(date.getMonth() / 3) + 1;
-    }
-
-    // ===============================
-    // TIMEZONE OPERATIONS
-    // ===============================
-
-    /**
-     * Get timezone offset in minutes
-     */
-    static getTimezoneOffset(date: Date = new Date()): number {
-        return date.getTimezoneOffset();
-    }
-
-    /**
-     * Convert date to UTC
-     */
-    static toUTC(date: Date): Date {
-        return new Date(date.getTime() + date.getTimezoneOffset() * 60000);
-    }
-
-    /**
-     * Convert date from UTC to local time
-     */
-    static fromUTC(date: Date): Date {
-        return new Date(date.getTime() - date.getTimezoneOffset() * 60000);
     }
 
-    // ===============================
-    // VALIDATION
-    // ===============================
-
     /**
-     * Check if date is valid
+     * Get current test run directory
      */
-    static isValid(date: any): boolean {
-        return date instanceof Date && !isNaN(date.getTime());
+    public getCurrentTestRunDir(): string {
+        return this.currentTestRunDir;
     }
-
-    /**
-     * Validate date string format (YYYY-MM-DD)
-     */
-    static isValidDateString(dateString: string): boolean {
-        const regex = /^\d{4}-\d{2}-\d{2}$/;
-        if (!regex.test(dateString)) return false;
 
-        const date = new Date(dateString);
-        return this.isValid(date);
+    public getFinalizedPath(): string | null {
+        return this.finalizedZipPath || this.currentTestRunDir;
     }
 
     /**
-     * Validate datetime string format (YYYY-MM-DD HH:mm:ss)
+     * Get the zip path if it exists, otherwise null
      */
-    static isValidDateTimeString(dateTimeString: string): boolean {
-        const regex = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/;
-        if (!regex.test(dateTimeString)) return false;
-
-        const date = new Date(dateTimeString.replace(' ', 'T'));
-        return this.isValid(date);
+    public getZipPath(): string | null {
+        return this.finalizedZipPath;
     }
 
-    // ===============================
-    // BUSINESS DATE CALCULATIONS
-    // ===============================
-
     /**
-     * Add business days (excluding weekends)
+     * Check if test results have been zipped
      */
-    static addBusinessDays(date: Date, days: number): Date {
-        let result = new Date(date);
-        let addedDays = 0;
-
-        while (addedDays < Math.abs(days)) {
-            result = this.addDays(result, days > 0 ? 1 : -1);
-            if (this.isWeekday(result)) {
-                addedDays++;
-            }
-        }
-
-        return result;
+    public isZipped(): boolean {
+        return this.finalizedZipPath !== null;
     }
-
+    
     /**
-     * Count business days between two dates
+     * Get timestamp of current test run
      */
-    static countBusinessDays(startDate: Date, endDate: Date): number {
-        let count = 0;
-        let current = new Date(startDate);
-
-        while (current <= endDate) {
-            if (this.isWeekday(current)) {
-                count++;
-            }
-            current = this.addDays(current, 1);
-        }
-
-        return count;
+    public getTimestamp(): string {
+        return this.timestamp;
     }
 }
