@@ -840,21 +840,37 @@ export class CSBDDEngine {
             // ts-node transpilation is slow (can take 1-2 seconds per file)
             // Compiled JS files load in milliseconds
             if (filePath.endsWith('.ts')) {
-                // Check if compiled JS version exists in dist folder
-                const jsPath = filePath.replace('/src/', '/dist/').replace('.ts', '.js');
-                // Also handle Windows paths
-                const jsPathWin = filePath.replace('\\src\\', '\\dist\\').replace('.ts', '.js');
+                const cwd = process.cwd();
+                const jsFileName = path.basename(filePath).replace('.ts', '.js');
 
-                if (fs.existsSync(jsPath)) {
-                    fileToLoad = jsPath;
-                    CSReporter.debug(`Using compiled JS: ${path.basename(jsPath)} (faster)`);
-                } else if (fs.existsSync(jsPathWin)) {
-                    fileToLoad = jsPathWin;
-                    CSReporter.debug(`Using compiled JS: ${path.basename(jsPathWin)} (faster)`);
-                } else {
-                    // No compiled version, use ts-node (slower)
-                    fileToLoad = filePath;
-                    CSReporter.debug(`Loading TypeScript via ts-node: ${path.basename(filePath)} (no compiled JS found)`);
+                // Case 1: src/ paths -> dist/ (e.g., src/steps/file.ts -> dist/steps/file.js)
+                if (filePath.includes(`${path.sep}src${path.sep}`) || filePath.includes('/src/')) {
+                    const jsPath = filePath
+                        .replace(`${path.sep}src${path.sep}`, `${path.sep}dist${path.sep}`)
+                        .replace('/src/', '/dist/')
+                        .replace('.ts', '.js');
+                    if (fs.existsSync(jsPath)) {
+                        fileToLoad = jsPath;
+                        CSReporter.debug(`Using compiled: ${path.basename(jsPath)}`);
+                    }
+                }
+
+                // Case 2: Consumer project - test/project/steps/file.ts -> dist/test/project/steps/file.js
+                // Get relative path from CWD
+                if (fileToLoad === filePath) {
+                    const relativePath = path.relative(cwd, filePath);
+                    if (relativePath.startsWith('test') || relativePath.startsWith(`test${path.sep}`)) {
+                        const distPath = path.join(cwd, 'dist', relativePath.replace('.ts', '.js'));
+                        if (fs.existsSync(distPath)) {
+                            fileToLoad = distPath;
+                            CSReporter.debug(`Using compiled: ${path.basename(distPath)}`);
+                        }
+                    }
+                }
+
+                // Still .ts file - will use ts-node (slower)
+                if (fileToLoad === filePath) {
+                    CSReporter.debug(`Loading via ts-node: ${path.basename(filePath)} (no compiled JS found)`);
                 }
             }
             // For .js files, use them directly (already compiled)
