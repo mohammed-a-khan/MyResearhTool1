@@ -1,895 +1,1005 @@
-import * as fs from 'fs';
-import * as path from 'path';
-// Lazy load cucumber/gherkin for performance (saves 4s)
-let gherkinModule: any = null;
-const getGherkin = () => {
-    if (!gherkinModule) {
-        gherkinModule = require('@cucumber/gherkin');
-    }
-    return gherkinModule;
-};
+// src/utils/CSDateTimeUtility.ts
 
-import { CSReporter } from '../reporter/CSReporter';
-import { CSConfigurationManager } from '../core/CSConfigurationManager';
+/**
+ * Comprehensive DateTime Utility class
+ * Provides extensive date/time parsing, formatting, manipulation, and comparison methods
+ * Supports locale-aware and timezone-aware operations with default Americas locale (en-US)
+ * and default Americas timezone (America/New_York)
+ */
+export class CSDateTimeUtility {
 
-//Import types from CSBDDTypes
-import type {
-    ParsedFeature,
-    ParsedScenario,
-    ParsedStep,
-    ParsedBackground,
-    ParsedRule,
-    ParsedExamples,
-    ExternalDataSource
-} from './CSBDDTypes';
+    // Default locale for all operations
+    private static defaultLocale: string = 'en-US';
 
-//Re-export types fro backward compatibility
-export type {
-    ParsedFeature,
-    ParsedScenario,
-    ParsedStep,
-    ParsedBackground,
-    ParsedRule,
-    ParsedExamples,
-    ExternalDataSource
-} from './CSBDDTypes';
+    // Default timezone for all operations (Americas timezone)
+    private static defaultTimezone: string = 'America/New_York';
 
-// Simple UUID function for AstBuilder
-function uuidFn(): string {
-    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-        const r = Math.random() * 16 | 0;
-        const v = c === 'x' ? r : (r & 0x3 | 0x8);
-        return v.toString(16);
-    });
-}
-
-export class CSBDDEngine {
-    private static instance: CSBDDEngine;
-    private config: CSConfigurationManager;
-    private features: Map<string, ParsedFeature> = new Map();
-    private stepDefinitionPaths: string[] = [];
-    private dataProviderConfigs: Map<string, string> = new Map();
-    private tsNodeRegistered: boolean = false;
-
-    private constructor() {
-        this.config = CSConfigurationManager.getInstance();
-        this.initializeStepDefinitionPaths();
-        this.registerTsNode();
+    /**
+     * Set the default locale for all date operations
+     * @param locale - Locale string (e.g., 'en-US', 'en-GB', 'fr-FR', 'de-DE', 'ja-JP')
+     */
+    static setDefaultLocale(locale: string): void {
+        this.defaultLocale = locale;
     }
 
     /**
-     * Register ts-node to enable loading TypeScript step definition files
+     * Get the current default locale
      */
-    private registerTsNode(): void {
-        if (this.tsNodeRegistered) return;
-
-        try {
-            // Check if we're running in a TypeScript environment
-            const hasTsFiles = this.stepDefinitionPaths.some(p => {
-                if (fs.existsSync(p)) {
-                    const stat = fs.statSync(p);
-                    if (stat.isDirectory()) {
-                        return fs.readdirSync(p).some(f => f.endsWith('.ts'));
-                    }
-                    return p.endsWith('.ts');
-                }
-                return false;
-            });
-
-            if (hasTsFiles) {
-                // Register ts-node to handle TypeScript files with inline source maps for debugging
-                require('ts-node').register({
-                    transpileOnly: true,
-                    compilerOptions: {
-                        module: 'commonjs',
-                        target: 'es2017',
-                        esModuleInterop: true,
-                        skipLibCheck: true,
-                        experimentalDecorators: true,
-                        emitDecoratorMetadata: true,
-                        sourceMap: true,
-                        inlineSourceMap: true,
-                        inlineSources: true
-                    }
-                });
-                this.tsNodeRegistered = true;
-                CSReporter.debug('ts-node registered for TypeScript step definition loading with source map support');
-            }
-        } catch (error: any) {
-            // ts-node may not be available, which is fine if only JS files are used
-            CSReporter.debug(`ts-node not available: ${error.message}`);
-        }
-    }
-
-    public static getInstance(): CSBDDEngine {
-        if (!CSBDDEngine.instance) {
-            CSBDDEngine.instance = new CSBDDEngine();
-        }
-        return CSBDDEngine.instance;
-    }
-
-    private initializeStepDefinitionPaths(): void {
-        const pathsConfig = this.config.get('STEP_DEFINITIONS_PATH', 'test/common/steps;test/{project}/steps;src/steps');
-        const project = this.config.get('PROJECT', 'common');
-
-        // Parse and expand paths
-        const paths: string[] = [];
-
-        for (let p of pathsConfig.split(';')) {
-            // Replace {project} placeholder
-            p = p.replace('{project}', project);
-
-            // Resolve relative to CWD
-            const resolvedPath = path.resolve(process.cwd(), p);
-
-            // PERFORMANCE: Prefer compiled JS (dist/) over TypeScript source
-            // This avoids slow ts-node transpilation (1-2 seconds per file)
-
-            // Case 1: src/ paths -> check dist/ (e.g., src/steps -> dist/steps)
-            if (p.includes('/src/') || p.includes('\\src\\') || p.startsWith('src/') || p.startsWith('src\\')) {
-                const distPath = resolvedPath.replace(/[/\\]src[/\\]/, '/dist/').replace(/[/\\]src$/, '/dist');
-                if (fs.existsSync(distPath)) {
-                    paths.push(distPath);
-                    CSReporter.debug(`Using compiled: ${distPath}`);
-                    continue;
-                }
-            }
-
-            // Case 2: Consumer project pattern - test/{project}/steps -> dist/test/{project}/steps
-            // When tsconfig has outDir: "./dist" and rootDir: ".", compiled files go to dist/test/...
-            if (p.startsWith('test/') || p.startsWith('test\\')) {
-                const distPath = path.resolve(process.cwd(), 'dist', p);
-                if (fs.existsSync(distPath)) {
-                    paths.push(distPath);
-                    CSReporter.debug(`Using compiled: ${distPath}`);
-                    continue;
-                }
-            }
-
-            paths.push(resolvedPath);
-        }
-
-        this.stepDefinitionPaths = paths;
-    }
-
-    // Public method to set step definition paths explicitly
-    public setStepDefinitionPaths(paths: string[]): void {
-        // Resolve relative to CWD
-        this.stepDefinitionPaths = paths.map(p => path.resolve(process.cwd(), p));
-        CSReporter.debug(`Step definition paths set to: ${this.stepDefinitionPaths.join(', ')}`);
-    }
-
-    // Parse single feature file
-    public parseFeature(featurePath: string): ParsedFeature {
-        const fullPath = path.resolve(process.cwd(), featurePath);
-
-        if (!fs.existsSync(fullPath)) {
-            throw new Error(`Feature file not found: ${fullPath}`);
-        }
-
-        const content = fs.readFileSync(fullPath, 'utf8');
-        // Pass the full path instead of relative path
-        return this.parseGherkin(content, fullPath);
-    }
-
-    // Parse feature with validation
-    public parseFeatureWithValidation(featurePath: string): ParsedFeature {
-        const feature = this.parseFeature(featurePath);
-        this.validateFeature(feature);
-        return feature;
-    }
-
-    // Parse directory of features
-    public parseDirectory(dirPath: string): ParsedFeature[] {
-        const fullPath = path.resolve(process.cwd(), dirPath);
-        const features: ParsedFeature[] = [];
-
-        if (!fs.existsSync(fullPath)) {
-            CSReporter.warn(`Feature directory not found: ${fullPath}`);
-            return features;
-        }
-
-        const files = this.findFeatureFiles(fullPath);
-
-        for (const file of files) {
-            try {
-                const feature = this.parseFeature(file);
-                features.push(feature);
-                this.features.set(file, feature);
-            } catch (error: any) {
-                CSReporter.error(`Failed to parse feature: ${file} - ${error.message}`);
-            }
-        }
-
-        return features;
-    }
-
-    // Parse with filters
-    public parseWithFilters(dirPath: string, filters: {
-        tags?: string;
-        excludeTags?: string;
-        scenario?: string;
-    }): ParsedFeature[] {
-        const features = this.parseDirectory(dirPath);
-
-        if (!filters) return features;
-
-        return features.map(feature => {
-            const filteredScenarios = feature.scenarios.filter(scenario => {
-                // Tag filtering
-                if (filters.tags) {
-                    const requiredTags = filters.tags.split(',').map(t => t.trim());
-                    const scenarioTags = [...feature.tags, ...scenario.tags];
-
-                    if (!requiredTags.some(tag => scenarioTags.includes(tag))) {
-                        return false;
-                    }
-                }
-
-                // Exclude tags
-                if (filters.excludeTags) {
-                    const excludedTags = filters.excludeTags.split(',').map(t => t.trim());
-                    const scenarioTags = [...feature.tags, ...scenario.tags];
-
-                    if (excludedTags.some(tag => scenarioTags.includes(tag))) {
-                        return false;
-                    }
-                }
-
-                // Scenario name filter
-                if (filters.scenario) {
-                    if (!scenario.name.includes(filters.scenario)) {
-                        return false;
-                    }
-                }
-
-                return true;
-            });
-
-            return {
-                ...feature,
-                scenarios: filteredScenarios
-            };
-        }).filter(feature => feature.scenarios.length > 0);
-    }
-
-    // Parse Gherkin text
-    public parseGherkin(gherkinText: string, sourcePath?: string): ParsedFeature {
-        try {
-            // Preprocess the gherkin text to handle @DataProvider tags
-            const processedText = this.preprocessDataProviderTags(gherkinText);
-
-            const { Parser, AstBuilder, GherkinClassicTokenMatcher } = getGherkin();
-        const parser = new Parser(new AstBuilder(uuidFn), new GherkinClassicTokenMatcher());
-            const ast = parser.parse(processedText);
-
-            if (!ast.feature) {
-                throw new Error('No feature found in Gherkin text');
-            }
-
-            const feature = ast.feature;
-
-            const featureTags = (feature.tags || []).map((t: any) => t.name);
-            const parsedFeature: ParsedFeature = {
-                name: feature.name || 'Unnamed Feature',
-                description: feature.description,
-                tags: featureTags,
-                scenarios: [],
-                uri: sourcePath,  // Add the source path
-                background: undefined,
-                rules: [],
-                gherkinDocument: ast  // Store the raw gherkin document for scenario outline expansion
-            } as any;
-
-            // Check for feature-level @DataProvider tag
-            const featureDataProviderTag = featureTags.find((tag: string) => tag.startsWith('@DataProvider'));
-
-            // Parse children (background, scenarios, rules)
-            for (const child of feature.children || []) {
-                if (child.background) {
-                    parsedFeature.background = {
-                        name: child.background.name || 'Background',
-                        steps: this.parseSteps([...child.background.steps])
-                    };
-                } else if (child.scenario) {
-                    const scenario = this.parseScenario(child.scenario);
-
-                    // If feature has @DataProvider and scenario doesn't have examples, apply feature-level data provider
-                    if (featureDataProviderTag && !scenario.examples) {
-                        scenario.examples = this.parseDataProviderTag(featureDataProviderTag);
-                        scenario.type = 'ScenarioOutline';
-                    }
-
-                    // IMPORTANT: Do NOT expand scenario outlines at parse time!
-                    // The orchestrator/runner will handle expansion into iterations with proper aggregation
-                    // Always push the scenario as-is with its examples data
-                    parsedFeature.scenarios.push(scenario);
-                } else if (child.rule) {
-                    parsedFeature.rules?.push(this.parseRule(child.rule));
-                }
-            }
-
-            return parsedFeature;
-
-        } catch (error: any) {
-            throw new Error(`Failed to parse Gherkin: ${error.message}`);
-        }
-    }
-
-    // Get AST
-    public getAST(featurePath: string): any {
-        const fullPath = path.resolve(process.cwd(), featurePath);
-        const content = fs.readFileSync(fullPath, 'utf8');
-        const { Parser, AstBuilder, GherkinClassicTokenMatcher } = getGherkin();
-        const parser = new Parser(new AstBuilder(uuidFn), new GherkinClassicTokenMatcher());
-        return parser.parse(content);
-    }
-
-    private parseScenario(scenario: any): ParsedScenario {
-        const tags = (scenario.tags || []).map((t: any) => t.name);
-
-        // Look for data provider configuration
-        let dataProviderConfig: ExternalDataSource | null = null;
-
-        // First check for @data-config tag (base64 encoded config)
-        const configTag = tags.find((tag: string) => tag.startsWith('@data-config:'));
-        if (configTag) {
-            const base64Config = configTag.substring('@data-config:'.length);
-            const configStr = Buffer.from(base64Config, 'base64').toString('utf-8');
-            CSReporter.debug(`Extracted DataProvider config string from tag: ${configStr}`);
-            dataProviderConfig = this.parseDataProviderString(configStr);
-            CSReporter.debug(`Parsed DataProvider config object: ${JSON.stringify(dataProviderConfig)}`);
-        }
-
-        // If not found, try other methods
-        if (!dataProviderConfig) {
-            dataProviderConfig = this.extractDataProviderConfig(scenario);
-        }
-
-        // Check for @data-provider tag
-        const hasDataProviderTag = tags.some((tag: string) =>
-            tag === '@data-provider' ||
-            tag === '@DataProvider' ||
-            tag.includes('data-source') ||
-            tag.includes('data-provider')
-        );
-
-        let examples = scenario.examples ? this.parseExamples(scenario.examples[0]) : undefined;
-
-        CSReporter.debug(`Before creating examples - hasDataProviderTag: ${hasDataProviderTag}, dataProviderConfig: ${JSON.stringify(dataProviderConfig)}, examples: ${JSON.stringify(examples)}`);
-
-        // If we have data provider configuration, create examples from it (override any empty examples)
-        if (hasDataProviderTag && dataProviderConfig) {
-            // Check if examples is empty or doesn't have a dataSource
-            const hasEmptyExamples = !examples || (examples.headers.length === 0 && examples.rows.length === 0 && !examples.dataSource);
-
-            if (hasEmptyExamples) {
-                CSReporter.debug(`Creating examples from DataProvider config: ${JSON.stringify(dataProviderConfig)}`);
-                examples = this.createExamplesFromConfig(dataProviderConfig);
-                CSReporter.debug(`Created examples: ${JSON.stringify(examples)}`);
-            }
-        } else if (hasDataProviderTag && !dataProviderConfig) {
-            CSReporter.warn(`@data-provider tag found but no configuration extracted`);
-            CSReporter.debug(`hasDataProviderTag: ${hasDataProviderTag}, dataProviderConfig: ${JSON.stringify(dataProviderConfig)}`);
-        }
-
-        // Only include examples if they actually have data or a dataSource
-        const hasActualExamples = examples && (
-            (examples.rows.length > 0) ||
-            examples.dataSource ||
-            (examples.headers.length > 0)
-        );
-
-        return {
-            name: scenario.name || 'Unnamed Scenario',
-            tags,
-            steps: this.parseSteps(scenario.steps),
-            examples: hasActualExamples ? examples : undefined,
-            type: (hasActualExamples || (hasDataProviderTag && dataProviderConfig)) ? 'ScenarioOutline' : 'Scenario'
-        };
-    }
-
-    private expandScenarioOutline(scenario: any): ParsedScenario[] {
-        const expandedScenarios: ParsedScenario[] = [];
-
-        if (!scenario.examples || scenario.examples.length === 0) {
-            return [this.parseScenario(scenario)];
-        }
-
-        for (const example of scenario.examples) {
-            if (!example.tableBody || example.tableBody.length === 0) continue;
-
-            const headers = example.tableHeader?.cells?.map((c: any) => c.value) || [];
-
-            for (const row of example.tableBody) {
-                const values = row.cells.map((c: any) => c.value);
-                const exampleData: Record<string, string> = {};
-
-                headers.forEach((header: string, index: number) => {
-                    exampleData[header] = values[index] || '';
-                });
-
-                // Create a scenario name with example values
-                const exampleValues = values.join(', ');
-                const scenarioName = `${scenario.name} [${exampleValues}]`;
-
-                // Replace placeholders in steps
-                const expandedSteps = scenario.steps.map((step: any) => {
-                    let text = step.text;
-                    headers.forEach((header: string, index: number) => {
-                        const placeholder = `<${header}>`;
-                        const value = values[index] || '';
-                        text = text.replace(new RegExp(placeholder, 'g'), value);
-                    });
-
-                    return {
-                        keyword: step.keyword,
-                        text: text,
-                        dataTable: step.dataTable,
-                        docString: step.docString
-                    };
-                });
-
-                expandedScenarios.push({
-                    name: scenarioName,
-                    tags: (scenario.tags || []).map((t: any) => t.name),
-                    steps: this.parseSteps(expandedSteps),
-                    type: 'Scenario',  // Expanded scenarios are regular scenarios
-                    exampleData: exampleData  // Store the example data for reference
-                } as any);
-            }
-        }
-
-        return expandedScenarios.length > 0 ? expandedScenarios : [this.parseScenario(scenario)];
-    }
-
-    private parseRule(rule: any): ParsedRule {
-        return {
-            name: rule.name || 'Unnamed Rule',
-            scenarios: (rule.children || [])
-                .filter((child: any) => child.scenario)
-                .map((child: any) => this.parseScenario(child.scenario))
-        };
-    }
-
-    private parseSteps(steps: any[]): ParsedStep[] {
-        return (steps || []).map(step => ({
-            keyword: step.keyword.trim(),
-            text: step.text,
-            dataTable: step.dataTable ? this.parseDataTable(step.dataTable) : undefined,
-            docString: step.docString ? step.docString.content : undefined
-        }));
-    }
-
-    private parseDataTable(dataTable: any): any[][] {
-        return dataTable.rows.map((row: any) =>
-            row.cells.map((cell: any) => cell.value)
-        );
-    }
-
-    private parseExamples(examples: any): ParsedExamples {
-        if (!examples) return { headers: [], rows: [] };
-
-        // Check if examples has external data source configuration
-        // Format: Examples: {"type": "excel", "source": "testdata/users.xlsx", "sheet": "LoginData"}
-        if (examples.name && examples.name.startsWith('{')) {
-            try {
-                const dataSource = JSON.parse(examples.name) as ExternalDataSource;
-                return {
-                    name: examples.name,
-                    headers: [],  // Will be populated from external source
-                    rows: [],     // Will be populated from external source
-                    dataSource
-                };
-            } catch (error) {
-                CSReporter.warn(`Failed to parse external data source config: ${examples.name}`);
-            }
-        }
-
-        // Standard inline examples table
-        const headers = examples.tableHeader
-            ? examples.tableHeader.cells.map((cell: any) => cell.value)
-            : [];
-
-        const rows = (examples.tableBody || []).map((row: any) =>
-            row.cells.map((cell: any) => cell.value)
-        );
-
-        return {
-            name: examples.name,
-            headers,
-            rows
-        };
-    }
-
-    private parseDataProviderTag(tag: string): ParsedExamples | undefined {
-        // Parse @DataProvider(source="file.xlsx", type="excel", sheet="Sheet1", filter="active=true")
-        const match = tag.match(/@DataProvider\((.*)\)/);
-        if (!match) return undefined;
-
-        try {
-            // Parse the parameters
-            const paramsStr = match[1];
-            const params: any = {};
-
-            // Simple regex to extract key-value pairs
-            const paramRegex = /(\w+)="([^"]*)"/g;
-            let paramMatch;
-            while ((paramMatch = paramRegex.exec(paramsStr)) !== null) {
-                params[paramMatch[1]] = paramMatch[2];
-            }
-
-            // Create ExternalDataSource from parsed params
-            const dataSource: ExternalDataSource = {
-                type: params.type || this.inferTypeFromSource(params.source),
-                source: params.source,
-                sheet: params.sheet,
-                delimiter: params.delimiter,
-                path: params.path,
-                xpath: params.xpath,
-                filter: params.filter,
-                query: params.query,
-                connection: params.connection
-            };
-
-            return {
-                name: tag,
-                headers: [],  // Will be populated from external source
-                rows: [],     // Will be populated from external source
-                dataSource
-            };
-        } catch (error) {
-            CSReporter.warn(`Failed to parse @DataProvider tag: ${tag}`);
-            return undefined;
-        }
-    }
-
-    private inferTypeFromSource(source: string): 'excel' | 'csv' | 'json' | 'xml' | 'database' | 'api' {
-        if (source.endsWith('.xlsx') || source.endsWith('.xls')) return 'excel';
-        if (source.endsWith('.csv')) return 'csv';
-        if (source.endsWith('.json')) return 'json';
-        if (source.endsWith('.xml')) return 'xml';
-        return 'csv'; // Default
-    }
-
-    private extractDataProviderConfig(scenario: any): ExternalDataSource | null {
-        // First check if scenario has dataProviderConfig property (set during preprocessing)
-        if ((scenario as any).dataProviderConfig) {
-            return (scenario as any).dataProviderConfig;
-        }
-
-        // Look for data provider configuration in scenario description or docString
-        // The preprocessing adds it as a docString: """DataProvider: ..."""
-        let configString = '';
-
-        // Check if first step has a docString with DataProvider config
-        if (scenario.steps && scenario.steps.length > 0) {
-            const firstStep = scenario.steps[0];
-            if (firstStep.docString && firstStep.docString.content) {
-                const content = firstStep.docString.content;
-                const match = content.match(/DataProvider:\s*(.+)/);
-                if (match) {
-                    configString = match[1];
-                    // Remove this special docString from steps
-                    scenario.steps = scenario.steps.slice(1);
-                }
-            }
-        }
-
-        // Also check description field
-        if (!configString) {
-            const description = scenario.description || '';
-            const descriptionMatch = description.match(/DataProvider:\s*(.+)/);
-            if (descriptionMatch) {
-                configString = descriptionMatch[1];
-            }
-        }
-
-        // Check if we have stored configuration from preprocessing
-        if (!configString && this.dataProviderConfigs && scenario.name) {
-            const storedConfig = this.dataProviderConfigs.get(scenario.name);
-            if (storedConfig) {
-                CSReporter.debug(`Found stored DataProvider config for ${scenario.name}: ${storedConfig}`);
-                configString = storedConfig;
-            }
-        }
-
-        if (configString) {
-            return this.parseDataProviderString(configString);
-        }
-
-        return null;
-    }
-
-    private parseDataProviderString(configStr: string): ExternalDataSource | null {
-        try {
-            const params: any = {};
-
-            // Parse key="value" pairs
-            const paramRegex = /(\w+)="([^"]*)"/g;
-            let match;
-            while ((match = paramRegex.exec(configStr)) !== null) {
-                params[match[1]] = match[2];
-            }
-
-            if (!params.source) return null;
-
-            return {
-                type: params.type || this.inferTypeFromSource(params.source),
-                source: params.source,
-                sheet: params.sheet,
-                delimiter: params.delimiter,
-                path: params.path,
-                xpath: params.xpath,
-                filter: params.filter,
-                query: params.query,
-                connection: params.connection
-            };
-        } catch {
-            return null;
-        }
-    }
-
-    private createExamplesFromConfig(config: ExternalDataSource): ParsedExamples {
-        return {
-            name: `DataProvider: ${config.source}`,
-            headers: [],  // Will be populated from external source
-            rows: [],     // Will be populated from external source
-            dataSource: config
-        };
-    }
-
-    private preprocessDataProviderTags(gherkinText: string): string {
-        // Store DataProvider configurations and replace with simple tags
-        const lines = gherkinText.split('\n');
-        const processedLines: string[] = [];
-        this.dataProviderConfigs = new Map<string, string>();
-        let pendingConfig: string | null = null;
-
-        for (let i = 0; i < lines.length; i++) {
-            const line = lines[i];
-            const trimmedLine = line.trim();
-
-            // Check if line contains @DataProvider(...)
-            const dataProviderMatch = line.match(/@DataProvider\([^)]+\)/g);
-
-            if (dataProviderMatch) {
-                // Extract configuration
-                dataProviderMatch.forEach(match => {
-                    pendingConfig = match.substring('@DataProvider('.length, match.length - 1);
-                });
-
-                // Replace @DataProvider(...) with @data-provider tag and add config as comment
-                let processedLine = line;
-                dataProviderMatch.forEach(match => {
-                    // Add config as a comment tag
-                    processedLine = processedLine.replace(match, `@data-provider @data-config:${Buffer.from(pendingConfig || '').toString('base64')}`);
-                });
-
-                processedLines.push(processedLine);
-                CSReporter.debug(`Found @DataProvider tag, storing config: ${pendingConfig}`);
-                pendingConfig = null; // Reset after use
-            } else {
-                processedLines.push(line);
-            }
-        }
-
-        const processedText = processedLines.join('\n');
-        // CSReporter.debug(`Preprocessed Gherkin:\n${processedText}`);
-        return processedText;
-    }
-
-    private findFeatureFiles(dirPath: string): string[] {
-        const files: string[] = [];
-
-        const items = fs.readdirSync(dirPath);
-
-        for (const item of items) {
-            const fullPath = path.join(dirPath, item);
-            const stat = fs.statSync(fullPath);
-
-            if (stat.isDirectory()) {
-                files.push(...this.findFeatureFiles(fullPath));
-            } else if (item.endsWith('.feature')) {
-                files.push(fullPath);
-            }
-        }
-
-        return files;
-    }
-
-    private validateFeature(feature: ParsedFeature): void {
-        // Validate all steps have definitions
-        for (const scenario of feature.scenarios) {
-            for (const step of scenario.steps) {
-                // This would check against registered step definitions
-                // For now, just log
-                CSReporter.debug(`Validating step: ${step.keyword} ${step.text}`);
-            }
-        }
-    }
-
-    // Selective step loading based on features
-    // OPTIMIZED: Removed expensive file content analysis - loads all discovered step files
-    public async loadRequiredStepDefinitions(features: ParsedFeature[]): Promise<void> {
-        const startTime = Date.now();
-
-        // Discover all step files from configured paths (excluding framework dist/steps which is handled by CSStepLoader)
-        const stepFiles: string[] = [];
-
-        for (const stepPath of this.stepDefinitionPaths) {
-            // Skip framework paths - they are handled by CSStepLoader
-            if (stepPath.includes('node_modules') && stepPath.includes('cs-playwright-test-framework')) {
-                CSReporter.debug(`[StepLoading] Skipping framework path (handled by CSStepLoader): ${stepPath}`);
-                continue;
-            }
-
-            if (fs.existsSync(stepPath)) {
-                const stat = fs.statSync(stepPath);
-
-                if (stat.isDirectory()) {
-                    const files = this.findStepFiles(stepPath);
-                    stepFiles.push(...files);
-                } else if (this.isStepFile(stepPath)) {
-                    stepFiles.push(stepPath);
-                }
-            }
-        }
-
-        if (stepFiles.length === 0) {
-            CSReporter.debug('[StepLoading] No consumer step files found in configured paths');
-            return;
-        }
-
-        CSReporter.info(`[StepLoading] Found ${stepFiles.length} consumer step files to load`);
-
-        // Load all step files - no content analysis needed (VDI optimization)
-        // The decorator registration happens during require() and handles step matching
-        const loadedFiles: string[] = [];
-        const errors: string[] = [];
-
-        for (const file of stepFiles) {
-            try {
-                await this.loadStepFile(file);
-                loadedFiles.push(file);
-            } catch (error: any) {
-                errors.push(`${path.basename(file)}: ${error.message}`);
-            }
-        }
-
-        const loadTime = Date.now() - startTime;
-
-        if (errors.length > 0) {
-            CSReporter.warn(`[StepLoading] ${errors.length} files failed to load: ${errors.join('; ')}`);
-        }
-
-        CSReporter.info(`[StepLoading] ✅ Loaded ${loadedFiles.length} consumer step files in ${loadTime}ms`);
+    static getDefaultLocale(): string {
+        return this.defaultLocale;
     }
 
     /**
-     * Check if a file is a step definition file
+     * Set the default timezone for all date operations
+     * @param timezone - IANA timezone string (e.g., 'America/New_York', 'America/Los_Angeles', 'Europe/London')
      */
-    private isStepFile(filePath: string): boolean {
-        const fileName = path.basename(filePath);
-        return (
-            fileName.endsWith('.steps.ts') ||
-            fileName.endsWith('.steps.js') ||
-            fileName.endsWith('.step.ts') ||
-            fileName.endsWith('.step.js') ||
-            fileName.endsWith('Steps.ts') ||
-            fileName.endsWith('Steps.js')
-        ) && !fileName.includes('.spec.') && !fileName.includes('.test.');
+    static setDefaultTimezone(timezone: string): void {
+        this.defaultTimezone = timezone;
     }
 
-    private async loadAllStepDefinitions(): Promise<void> {
-        for (const stepPath of this.stepDefinitionPaths) {
-            if (fs.existsSync(stepPath)) {
-                const stat = fs.statSync(stepPath);
+    /**
+     * Get the current default timezone
+     */
+    static getDefaultTimezone(): string {
+        return this.defaultTimezone;
+    }
 
-                if (stat.isDirectory()) {
-                    const files = this.findStepFiles(stepPath);
-                    for (const file of files) {
-                        await this.loadStepFile(file);
-                    }
-                } else {
-                    await this.loadStepFile(stepPath);
-                }
+    // ===============================
+    // DATE PARSING & CREATION
+    // ===============================
+
+    /**
+     * Parse date from various string formats
+     */
+    static parse(dateString: string): Date | null {
+        const date = new Date(dateString);
+        return isNaN(date.getTime()) ? null : date;
+    }
+
+    /**
+     * Create date from components
+     */
+    static create(year: number, month: number, day: number = 1, hour: number = 0, minute: number = 0, second: number = 0, millisecond: number = 0): Date {
+        return new Date(year, month - 1, day, hour, minute, second, millisecond);
+    }
+
+    /**
+     * Get current date/time
+     */
+    static now(): Date {
+        return new Date();
+    }
+
+    /**
+     * Get current timestamp in milliseconds
+     */
+    static timestamp(): number {
+        return Date.now();
+    }
+
+    /**
+     * Get current Unix timestamp in seconds
+     */
+    static unixTimestamp(): number {
+        return Math.floor(Date.now() / 1000);
+    }
+
+    /**
+     * Create date from Unix timestamp (seconds)
+     */
+    static fromUnixTimestamp(timestamp: number): Date {
+        return new Date(timestamp * 1000);
+    }
+
+    /**
+     * Create date from milliseconds timestamp
+     */
+    static fromTimestamp(timestamp: number): Date {
+        return new Date(timestamp);
+    }
+
+    // ===============================
+    // DATE FORMATTING
+    // ===============================
+
+    /**
+     * Format date to ISO 8601 string (YYYY-MM-DDTHH:mm:ss.sssZ)
+     */
+    static toISO(date: Date): string {
+        return date.toISOString();
+    }
+
+    /**
+     * Format date to YYYY-MM-DD
+     */
+    static toDateString(date: Date): string {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    }
+
+    /**
+     * Format date to MM/DD/YYYY
+     */
+    static toUSDateString(date: Date): string {
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        const year = date.getFullYear();
+        return `${month}/${day}/${year}`;
+    }
+
+    /**
+     * Format date to DD/MM/YYYY
+     */
+    static toEUDateString(date: Date): string {
+        const day = String(date.getDate()).padStart(2, '0');
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const year = date.getFullYear();
+        return `${day}/${month}/${year}`;
+    }
+
+    /**
+     * Format time to HH:mm:ss
+     */
+    static toTimeString(date: Date): string {
+        const hours = String(date.getHours()).padStart(2, '0');
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+        const seconds = String(date.getSeconds()).padStart(2, '0');
+        return `${hours}:${minutes}:${seconds}`;
+    }
+
+    /**
+     * Format date/time to YYYY-MM-DD HH:mm:ss
+     */
+    static toDateTimeString(date: Date): string {
+        return `${this.toDateString(date)} ${this.toTimeString(date)}`;
+    }
+
+    /**
+     * Format date with custom format
+     * Supported tokens: YYYY, MM, DD, HH, mm, ss, SSS
+     */
+    static format(date: Date, format: string): string {
+        const tokens: Record<string, string> = {
+            'YYYY': String(date.getFullYear()),
+            'YY': String(date.getFullYear()).slice(-2),
+            'MM': String(date.getMonth() + 1).padStart(2, '0'),
+            'M': String(date.getMonth() + 1),
+            'DD': String(date.getDate()).padStart(2, '0'),
+            'D': String(date.getDate()),
+            'HH': String(date.getHours()).padStart(2, '0'),
+            'H': String(date.getHours()),
+            'hh': String(date.getHours() % 12 || 12).padStart(2, '0'),
+            'h': String(date.getHours() % 12 || 12),
+            'mm': String(date.getMinutes()).padStart(2, '0'),
+            'm': String(date.getMinutes()),
+            'ss': String(date.getSeconds()).padStart(2, '0'),
+            's': String(date.getSeconds()),
+            'SSS': String(date.getMilliseconds()).padStart(3, '0'),
+            'A': date.getHours() >= 12 ? 'PM' : 'AM',
+            'a': date.getHours() >= 12 ? 'pm' : 'am'
+        };
+
+        let result = format;
+        for (const [token, value] of Object.entries(tokens)) {
+            result = result.replace(new RegExp(token, 'g'), value);
+        }
+        return result;
+    }
+
+    /**
+     * Format date to human-readable string
+     * Example: "January 1, 2024" (en-US) or "1 janvier 2024" (fr-FR)
+     * @param date - Date to format
+     * @param locale - Locale string (defaults to Americas locale)
+     */
+    static toHumanString(date: Date, locale?: string): string {
+        const targetLocale = locale || this.defaultLocale;
+        return date.toLocaleDateString(targetLocale, {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+        });
+    }
+
+    /**
+     * Format date to relative time
+     * Example: "2 hours ago", "in 3 days" (en-US) or uses Intl.RelativeTimeFormat for locale support
+     * @param date - Date to format
+     * @param baseDate - Reference date (defaults to now)
+     * @param locale - Locale string (defaults to Americas locale)
+     */
+    static toRelative(date: Date, baseDate: Date = new Date(), locale?: string): string {
+        const targetLocale = locale || this.defaultLocale;
+        const diff = baseDate.getTime() - date.getTime();
+        const seconds = Math.abs(Math.floor(diff / 1000));
+        const minutes = Math.floor(seconds / 60);
+        const hours = Math.floor(minutes / 60);
+        const days = Math.floor(hours / 24);
+        const months = Math.floor(days / 30);
+        const years = Math.floor(days / 365);
+
+        const rtf = new Intl.RelativeTimeFormat(targetLocale, { numeric: 'auto' });
+        const isPast = diff > 0;
+
+        if (seconds < 60) return rtf.format(isPast ? -seconds : seconds, 'second');
+        if (minutes < 60) return rtf.format(isPast ? -minutes : minutes, 'minute');
+        if (hours < 24) return rtf.format(isPast ? -hours : hours, 'hour');
+        if (days < 30) return rtf.format(isPast ? -days : days, 'day');
+        if (months < 12) return rtf.format(isPast ? -months : months, 'month');
+        return rtf.format(isPast ? -years : years, 'year');
+    }
+
+    private static pluralize(count: number, singular: string): string {
+        return count === 1 ? singular : singular + 's';
+    }
+
+    // ===============================
+    // DATE MANIPULATION
+    // ===============================
+
+    /**
+     * Add years to date
+     */
+    static addYears(date: Date, years: number): Date {
+        const result = new Date(date);
+        result.setFullYear(result.getFullYear() + years);
+        return result;
+    }
+
+    /**
+     * Add months to date
+     */
+    static addMonths(date: Date, months: number): Date {
+        const result = new Date(date);
+        result.setMonth(result.getMonth() + months);
+        return result;
+    }
+
+    /**
+     * Add days to date
+     */
+    static addDays(date: Date, days: number): Date {
+        const result = new Date(date);
+        result.setDate(result.getDate() + days);
+        return result;
+    }
+
+    /**
+     * Add hours to date
+     */
+    static addHours(date: Date, hours: number): Date {
+        const result = new Date(date);
+        result.setHours(result.getHours() + hours);
+        return result;
+    }
+
+    /**
+     * Add minutes to date
+     */
+    static addMinutes(date: Date, minutes: number): Date {
+        const result = new Date(date);
+        result.setMinutes(result.getMinutes() + minutes);
+        return result;
+    }
+
+    /**
+     * Add seconds to date
+     */
+    static addSeconds(date: Date, seconds: number): Date {
+        const result = new Date(date);
+        result.setSeconds(result.getSeconds() + seconds);
+        return result;
+    }
+
+    /**
+     * Add milliseconds to date
+     */
+    static addMilliseconds(date: Date, milliseconds: number): Date {
+        return new Date(date.getTime() + milliseconds);
+    }
+
+    /**
+     * Subtract years from date
+     */
+    static subtractYears(date: Date, years: number): Date {
+        return this.addYears(date, -years);
+    }
+
+    /**
+     * Subtract months from date
+     */
+    static subtractMonths(date: Date, months: number): Date {
+        return this.addMonths(date, -months);
+    }
+
+    /**
+     * Subtract days from date
+     */
+    static subtractDays(date: Date, days: number): Date {
+        return this.addDays(date, -days);
+    }
+
+    /**
+     * Subtract hours from date
+     */
+    static subtractHours(date: Date, hours: number): Date {
+        return this.addHours(date, -hours);
+    }
+
+    /**
+     * Subtract minutes from date
+     */
+    static subtractMinutes(date: Date, minutes: number): Date {
+        return this.addMinutes(date, -minutes);
+    }
+
+    /**
+     * Subtract seconds from date
+     */
+    static subtractSeconds(date: Date, seconds: number): Date {
+        return this.addSeconds(date, -seconds);
+    }
+
+    /**
+     * Get start of day (00:00:00)
+     */
+    static startOfDay(date: Date): Date {
+        const result = new Date(date);
+        result.setHours(0, 0, 0, 0);
+        return result;
+    }
+
+    /**
+     * Get end of day (23:59:59.999)
+     */
+    static endOfDay(date: Date): Date {
+        const result = new Date(date);
+        result.setHours(23, 59, 59, 999);
+        return result;
+    }
+
+    /**
+     * Get start of week (Monday 00:00:00)
+     */
+    static startOfWeek(date: Date): Date {
+        const result = new Date(date);
+        const day = result.getDay();
+        const diff = day === 0 ? -6 : 1 - day; // Adjust when day is Sunday
+        result.setDate(result.getDate() + diff);
+        return this.startOfDay(result);
+    }
+
+    /**
+     * Get end of week (Sunday 23:59:59.999)
+     */
+    static endOfWeek(date: Date): Date {
+        const result = this.startOfWeek(date);
+        result.setDate(result.getDate() + 6);
+        return this.endOfDay(result);
+    }
+
+    /**
+     * Get start of month
+     */
+    static startOfMonth(date: Date): Date {
+        const result = new Date(date);
+        result.setDate(1);
+        return this.startOfDay(result);
+    }
+
+    /**
+     * Get end of month
+     */
+    static endOfMonth(date: Date): Date {
+        const result = new Date(date);
+        result.setMonth(result.getMonth() + 1, 0);
+        return this.endOfDay(result);
+    }
+
+    /**
+     * Get start of year
+     */
+    static startOfYear(date: Date): Date {
+        const result = new Date(date);
+        result.setMonth(0, 1);
+        return this.startOfDay(result);
+    }
+
+    /**
+     * Get end of year
+     */
+    static endOfYear(date: Date): Date {
+        const result = new Date(date);
+        result.setMonth(11, 31);
+        return this.endOfDay(result);
+    }
+
+    // ===============================
+    // DATE COMPARISON
+    // ===============================
+
+    /**
+     * Check if two dates are equal
+     */
+    static equals(date1: Date, date2: Date): boolean {
+        return date1.getTime() === date2.getTime();
+    }
+
+    /**
+     * Check if date1 is before date2
+     */
+    static isBefore(date1: Date, date2: Date): boolean {
+        return date1.getTime() < date2.getTime();
+    }
+
+    /**
+     * Check if date1 is after date2
+     */
+    static isAfter(date1: Date, date2: Date): boolean {
+        return date1.getTime() > date2.getTime();
+    }
+
+    /**
+     * Check if date is between two dates (inclusive)
+     */
+    static isBetween(date: Date, start: Date, end: Date): boolean {
+        const time = date.getTime();
+        return time >= start.getTime() && time <= end.getTime();
+    }
+
+    /**
+     * Check if two dates are on the same day
+     */
+    static isSameDay(date1: Date, date2: Date): boolean {
+        return this.toDateString(date1) === this.toDateString(date2);
+    }
+
+    /**
+     * Check if two dates are in the same week
+     */
+    static isSameWeek(date1: Date, date2: Date): boolean {
+        const week1 = this.getWeekOfYear(date1);
+        const week2 = this.getWeekOfYear(date2);
+        return week1 === week2 && date1.getFullYear() === date2.getFullYear();
+    }
+
+    /**
+     * Check if two dates are in the same month
+     */
+    static isSameMonth(date1: Date, date2: Date): boolean {
+        return date1.getFullYear() === date2.getFullYear() &&
+               date1.getMonth() === date2.getMonth();
+    }
+
+    /**
+     * Check if two dates are in the same year
+     */
+    static isSameYear(date1: Date, date2: Date): boolean {
+        return date1.getFullYear() === date2.getFullYear();
+    }
+
+    /**
+     * Check if date is today
+     */
+    static isToday(date: Date): boolean {
+        return this.isSameDay(date, new Date());
+    }
+
+    /**
+     * Check if date is yesterday
+     */
+    static isYesterday(date: Date): boolean {
+        const yesterday = this.subtractDays(new Date(), 1);
+        return this.isSameDay(date, yesterday);
+    }
+
+    /**
+     * Check if date is tomorrow
+     */
+    static isTomorrow(date: Date): boolean {
+        const tomorrow = this.addDays(new Date(), 1);
+        return this.isSameDay(date, tomorrow);
+    }
+
+    /**
+     * Check if date is a weekend
+     */
+    static isWeekend(date: Date): boolean {
+        const day = date.getDay();
+        return day === 0 || day === 6;
+    }
+
+    /**
+     * Check if date is a weekday
+     */
+    static isWeekday(date: Date): boolean {
+        return !this.isWeekend(date);
+    }
+
+    /**
+     * Check if date is in the past
+     */
+    static isPast(date: Date): boolean {
+        return this.isBefore(date, new Date());
+    }
+
+    /**
+     * Check if date is in the future
+     */
+    static isFuture(date: Date): boolean {
+        return this.isAfter(date, new Date());
+    }
+
+    /**
+     * Check if year is a leap year
+     */
+    static isLeapYear(year: number): boolean {
+        return (year % 4 === 0 && year % 100 !== 0) || (year % 400 === 0);
+    }
+
+    // ===============================
+    // DATE DIFFERENCE CALCULATIONS
+    // ===============================
+
+    /**
+     * Get difference in milliseconds
+     */
+    static diffInMilliseconds(date1: Date, date2: Date): number {
+        return Math.abs(date1.getTime() - date2.getTime());
+    }
+
+    /**
+     * Get difference in seconds
+     */
+    static diffInSeconds(date1: Date, date2: Date): number {
+        return Math.floor(this.diffInMilliseconds(date1, date2) / 1000);
+    }
+
+    /**
+     * Get difference in minutes
+     */
+    static diffInMinutes(date1: Date, date2: Date): number {
+        return Math.floor(this.diffInSeconds(date1, date2) / 60);
+    }
+
+    /**
+     * Get difference in hours
+     */
+    static diffInHours(date1: Date, date2: Date): number {
+        return Math.floor(this.diffInMinutes(date1, date2) / 60);
+    }
+
+    /**
+     * Get difference in days
+     */
+    static diffInDays(date1: Date, date2: Date): number {
+        return Math.floor(this.diffInHours(date1, date2) / 24);
+    }
+
+    /**
+     * Get difference in weeks
+     */
+    static diffInWeeks(date1: Date, date2: Date): number {
+        return Math.floor(this.diffInDays(date1, date2) / 7);
+    }
+
+    /**
+     * Get difference in months (approximate)
+     */
+    static diffInMonths(date1: Date, date2: Date): number {
+        const yearDiff = date1.getFullYear() - date2.getFullYear();
+        const monthDiff = date1.getMonth() - date2.getMonth();
+        return Math.abs(yearDiff * 12 + monthDiff);
+    }
+
+    /**
+     * Get difference in years
+     */
+    static diffInYears(date1: Date, date2: Date): number {
+        return Math.abs(date1.getFullYear() - date2.getFullYear());
+    }
+
+    /**
+     * Get age from birthdate
+     */
+    static getAge(birthdate: Date, referenceDate: Date = new Date()): number {
+        let age = referenceDate.getFullYear() - birthdate.getFullYear();
+        const monthDiff = referenceDate.getMonth() - birthdate.getMonth();
+        if (monthDiff < 0 || (monthDiff === 0 && referenceDate.getDate() < birthdate.getDate())) {
+            age--;
+        }
+        return age;
+    }
+
+    // ===============================
+    // DATE INFORMATION
+    // ===============================
+
+    /**
+     * Get day of week (0-6, Sunday-Saturday)
+     */
+    static getDayOfWeek(date: Date): number {
+        return date.getDay();
+    }
+
+    /**
+     * Get day of week name
+     * @param date - Date to get day name from
+     * @param short - Return short format (Mon) vs long format (Monday)
+     * @param locale - Locale string (defaults to Americas locale)
+     */
+    static getDayOfWeekName(date: Date, short: boolean = false, locale?: string): string {
+        const targetLocale = locale || this.defaultLocale;
+        return date.toLocaleDateString(targetLocale, { weekday: short ? 'short' : 'long' });
+    }
+
+    /**
+     * Get month name
+     * @param date - Date to get month name from
+     * @param short - Return short format (Jan) vs long format (January)
+     * @param locale - Locale string (defaults to Americas locale)
+     */
+    static getMonthName(date: Date, short: boolean = false, locale?: string): string {
+        const targetLocale = locale || this.defaultLocale;
+        return date.toLocaleDateString(targetLocale, { month: short ? 'short' : 'long' });
+    }
+
+    /**
+     * Get day of year (1-366)
+     */
+    static getDayOfYear(date: Date): number {
+        const start = new Date(date.getFullYear(), 0, 0);
+        const diff = date.getTime() - start.getTime();
+        const oneDay = 1000 * 60 * 60 * 24;
+        return Math.floor(diff / oneDay);
+    }
+
+    /**
+     * Get week of year (1-53)
+     */
+    static getWeekOfYear(date: Date): number {
+        const firstDay = new Date(date.getFullYear(), 0, 1);
+        const pastDays = this.diffInDays(date, firstDay);
+        return Math.ceil((pastDays + firstDay.getDay() + 1) / 7);
+    }
+
+    /**
+     * Get days in month
+     */
+    static getDaysInMonth(date: Date): number {
+        return new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
+    }
+
+    /**
+     * Get days in year
+     */
+    static getDaysInYear(year: number): number {
+        return this.isLeapYear(year) ? 366 : 365;
+    }
+
+    /**
+     * Get quarter (1-4)
+     */
+    static getQuarter(date: Date): number {
+        return Math.floor(date.getMonth() / 3) + 1;
+    }
+
+    // ===============================
+    // TIMEZONE OPERATIONS
+    // ===============================
+
+    /**
+     * Get timezone offset in minutes
+     */
+    static getTimezoneOffset(date: Date = new Date()): number {
+        return date.getTimezoneOffset();
+    }
+
+    /**
+     * Convert date to UTC
+     */
+    static toUTC(date: Date): Date {
+        return new Date(date.getTime() + date.getTimezoneOffset() * 60000);
+    }
+
+    /**
+     * Convert date from UTC to local time
+     */
+    static fromUTC(date: Date): Date {
+        return new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+    }
+
+    /**
+     * Get date components (year, month, day, hour, minute, second) in a specific timezone
+     * @param date - Date to get components from
+     * @param timezone - IANA timezone string (defaults to defaultTimezone)
+     * @returns Object with year, month (1-12), day, hour, minute, second
+     */
+    static getDateComponentsInTimezone(date: Date, timezone?: string): { year: number; month: number; day: number; hour: number; minute: number; second: number; millisecond: number } {
+        const tz = timezone || this.defaultTimezone;
+        const formatter = new Intl.DateTimeFormat('en-US', {
+            timeZone: tz,
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: false
+        });
+
+        const parts = formatter.formatToParts(date);
+        const getValue = (type: string): number => {
+            const part = parts.find(p => p.type === type);
+            return part ? parseInt(part.value, 10) : 0;
+        };
+
+        return {
+            year: getValue('year'),
+            month: getValue('month'),
+            day: getValue('day'),
+            hour: getValue('hour') === 24 ? 0 : getValue('hour'), // Handle midnight edge case
+            minute: getValue('minute'),
+            second: getValue('second'),
+            millisecond: date.getMilliseconds() // Milliseconds are the same across timezones
+        };
+    }
+
+    /**
+     * Format date to YYYY-MM-DD in the default timezone (Americas)
+     * This ensures dates are always in Americas timezone regardless of system timezone
+     * @param date - Date to format
+     * @param timezone - IANA timezone string (defaults to defaultTimezone - America/New_York)
+     */
+    static toDateStringInTimezone(date: Date, timezone?: string): string {
+        const components = this.getDateComponentsInTimezone(date, timezone);
+        return `${components.year}-${String(components.month).padStart(2, '0')}-${String(components.day).padStart(2, '0')}`;
+    }
+
+    /**
+     * Format date to MM/DD/YYYY in the default timezone (Americas)
+     * @param date - Date to format
+     * @param timezone - IANA timezone string (defaults to defaultTimezone)
+     */
+    static toUSDateStringInTimezone(date: Date, timezone?: string): string {
+        const components = this.getDateComponentsInTimezone(date, timezone);
+        return `${String(components.month).padStart(2, '0')}/${String(components.day).padStart(2, '0')}/${components.year}`;
+    }
+
+    /**
+     * Format time to HH:mm:ss in the default timezone (Americas)
+     * @param date - Date to format
+     * @param timezone - IANA timezone string (defaults to defaultTimezone)
+     */
+    static toTimeStringInTimezone(date: Date, timezone?: string): string {
+        const components = this.getDateComponentsInTimezone(date, timezone);
+        return `${String(components.hour).padStart(2, '0')}:${String(components.minute).padStart(2, '0')}:${String(components.second).padStart(2, '0')}`;
+    }
+
+    /**
+     * Format date/time to YYYY-MM-DD HH:mm:ss in the default timezone (Americas)
+     * @param date - Date to format
+     * @param timezone - IANA timezone string (defaults to defaultTimezone)
+     */
+    static toDateTimeStringInTimezone(date: Date, timezone?: string): string {
+        return `${this.toDateStringInTimezone(date, timezone)} ${this.toTimeStringInTimezone(date, timezone)}`;
+    }
+
+    /**
+     * Format date with custom format in the default timezone (Americas)
+     * Supported tokens: YYYY, MM, DD, HH, mm, ss, SSS
+     * @param date - Date to format
+     * @param format - Format string
+     * @param timezone - IANA timezone string (defaults to defaultTimezone)
+     */
+    static formatInTimezone(date: Date, format: string, timezone?: string): string {
+        const c = this.getDateComponentsInTimezone(date, timezone);
+
+        const tokens: Record<string, string> = {
+            'YYYY': String(c.year),
+            'YY': String(c.year).slice(-2),
+            'MM': String(c.month).padStart(2, '0'),
+            'M': String(c.month),
+            'DD': String(c.day).padStart(2, '0'),
+            'D': String(c.day),
+            'HH': String(c.hour).padStart(2, '0'),
+            'H': String(c.hour),
+            'hh': String(c.hour % 12 || 12).padStart(2, '0'),
+            'h': String(c.hour % 12 || 12),
+            'mm': String(c.minute).padStart(2, '0'),
+            'm': String(c.minute),
+            'ss': String(c.second).padStart(2, '0'),
+            's': String(c.second),
+            'SSS': String(c.millisecond).padStart(3, '0'),
+            'A': c.hour >= 12 ? 'PM' : 'AM',
+            'a': c.hour >= 12 ? 'pm' : 'am'
+        };
+
+        let result = format;
+        // Sort tokens by length descending to avoid partial replacements (e.g., 'MM' before 'M')
+        const sortedTokens = Object.keys(tokens).sort((a, b) => b.length - a.length);
+        for (const token of sortedTokens) {
+            result = result.replace(new RegExp(token, 'g'), tokens[token]);
+        }
+        return result;
+    }
+
+    /**
+     * Get current date string in Americas timezone (YYYY-MM-DD)
+     * This is a convenience method to get today's date in Americas timezone
+     * regardless of the system's local timezone
+     */
+    static getTodayInAmericasTimezone(): string {
+        return this.toDateStringInTimezone(new Date());
+    }
+
+    /**
+     * Get current datetime string in Americas timezone (YYYY-MM-DD HH:mm:ss)
+     */
+    static getNowInAmericasTimezone(): string {
+        return this.toDateTimeStringInTimezone(new Date());
+    }
+
+    /**
+     * Check if date is today in the default timezone (Americas)
+     * @param date - Date to check
+     * @param timezone - IANA timezone string (defaults to defaultTimezone)
+     */
+    static isTodayInTimezone(date: Date, timezone?: string): boolean {
+        const dateStr = this.toDateStringInTimezone(date, timezone);
+        const todayStr = this.toDateStringInTimezone(new Date(), timezone);
+        return dateStr === todayStr;
+    }
+
+    // ===============================
+    // VALIDATION
+    // ===============================
+
+    /**
+     * Check if date is valid
+     */
+    static isValid(date: any): boolean {
+        return date instanceof Date && !isNaN(date.getTime());
+    }
+
+    /**
+     * Validate date string format (YYYY-MM-DD)
+     */
+    static isValidDateString(dateString: string): boolean {
+        const regex = /^\d{4}-\d{2}-\d{2}$/;
+        if (!regex.test(dateString)) return false;
+
+        const date = new Date(dateString);
+        return this.isValid(date);
+    }
+
+    /**
+     * Validate datetime string format (YYYY-MM-DD HH:mm:ss)
+     */
+    static isValidDateTimeString(dateTimeString: string): boolean {
+        const regex = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/;
+        if (!regex.test(dateTimeString)) return false;
+
+        const date = new Date(dateTimeString.replace(' ', 'T'));
+        return this.isValid(date);
+    }
+
+    // ===============================
+    // BUSINESS DATE CALCULATIONS
+    // ===============================
+
+    /**
+     * Add business days (excluding weekends)
+     */
+    static addBusinessDays(date: Date, days: number): Date {
+        let result = new Date(date);
+        let addedDays = 0;
+
+        while (addedDays < Math.abs(days)) {
+            result = this.addDays(result, days > 0 ? 1 : -1);
+            if (this.isWeekday(result)) {
+                addedDays++;
             }
         }
+
+        return result;
     }
 
-    private findStepFiles(dirPath: string): string[] {
-        const files: string[] = [];
-        const items = fs.readdirSync(dirPath);
-        const seenBasenames = new Set<string>();
+    /**
+     * Count business days between two dates
+     */
+    static countBusinessDays(startDate: Date, endDate: Date): number {
+        let count = 0;
+        let current = new Date(startDate);
 
-        for (const item of items) {
-            const fullPath = path.join(dirPath, item);
-            const stat = fs.statSync(fullPath);
-
-            if (stat.isDirectory()) {
-                files.push(...this.findStepFiles(fullPath));
-            } else if (item.endsWith('.js') || item.endsWith('.ts')) {
-                // PERFORMANCE: Prefer .js files over .ts files to avoid ts-node transpilation
-                // If both .ts and .js exist, only include .js
-                const basename = item.replace(/\.(ts|js)$/, '');
-
-                if (!seenBasenames.has(basename)) {
-                    // Check if .js version exists (prefer it)
-                    const jsVersion = path.join(dirPath, basename + '.js');
-                    const tsVersion = path.join(dirPath, basename + '.ts');
-
-                    if (fs.existsSync(jsVersion)) {
-                        files.push(jsVersion);
-                    } else if (fs.existsSync(tsVersion)) {
-                        files.push(tsVersion);
-                    }
-                    seenBasenames.add(basename);
-                }
+        while (current <= endDate) {
+            if (this.isWeekday(current)) {
+                count++;
             }
+            current = this.addDays(current, 1);
         }
 
-        return files;
+        return count;
     }
 
-    private async loadStepFile(filePath: string): Promise<void> {
-        try {
-            let fileToLoad = filePath;
+    // ===================================
+    // LOCALE-AWARE FORMATTING
+    // ===================================
 
-            // PERFORMANCE OPTIMIZATION: Prefer compiled JS files over TypeScript transpilation
-            // ts-node transpilation is slow (can take 1-2 seconds per file)
-            // Compiled JS files load in milliseconds
-            if (filePath.endsWith('.ts')) {
-                const cwd = process.cwd();
-                const jsFileName = path.basename(filePath).replace('.ts', '.js');
-
-                // Case 1: src/ paths -> dist/ (e.g., src/steps/file.ts -> dist/steps/file.js)
-                if (filePath.includes(`${path.sep}src${path.sep}`) || filePath.includes('/src/')) {
-                    const jsPath = filePath
-                        .replace(`${path.sep}src${path.sep}`, `${path.sep}dist${path.sep}`)
-                        .replace('/src/', '/dist/')
-                        .replace('.ts', '.js');
-                    if (fs.existsSync(jsPath)) {
-                        fileToLoad = jsPath;
-                        CSReporter.debug(`Using compiled: ${path.basename(jsPath)}`);
-                    }
-                }
-
-                // Case 2: Consumer project - test/project/steps/file.ts -> dist/test/project/steps/file.js
-                // Get relative path from CWD
-                if (fileToLoad === filePath) {
-                    const relativePath = path.relative(cwd, filePath);
-                    if (relativePath.startsWith('test') || relativePath.startsWith(`test${path.sep}`)) {
-                        const distPath = path.join(cwd, 'dist', relativePath.replace('.ts', '.js'));
-                        if (fs.existsSync(distPath)) {
-                            fileToLoad = distPath;
-                            CSReporter.debug(`Using compiled: ${path.basename(distPath)}`);
-                        }
-                    }
-                }
-
-                // Still .ts file - will use ts-node (slower)
-                if (fileToLoad === filePath) {
-                    CSReporter.debug(`Loading via ts-node: ${path.basename(filePath)} (no compiled JS found)`);
-                }
-            }
-            // For .js files, use them directly (already compiled)
-
-            // Load and register the step definitions
-            require(fileToLoad);
-            CSReporter.debug(`Loaded: ${path.basename(fileToLoad)}`);
-        } catch (error: any) {
-            CSReporter.error(`Failed to load step file: ${filePath} - ${error.message}`);
-        }
+    /**
+     * Format date with locale-specific formatting
+     * @param date - Date to format
+     * @param options - Intl.DateTimeFormatOptions
+     * @param locale - Locale string (defaults to Americas locale)
+     */
+    static toLocaleString(date: Date, options?: Intl.DateTimeFormatOptions, locale?: string): string {
+        const targetLocale = locale || this.defaultLocale;
+        return date.toLocaleString(targetLocale, options);
     }
 
-    // Get all loaded features
-    public getFeatures(): Map<string, ParsedFeature> {
-        return this.features;
+    /**
+     * Format date (date only) with locale-specific formatting
+     * @param date - Date to format
+     * @param options - Intl.DateTimeFormatOptions
+     * @param locale - Locale string (defaults to Americas locale)
+     */
+    static toLocaleDateString(date: Date, options?: Intl.DateTimeFormatOptions, locale?: string): string {
+        const targetLocale = locale || this.defaultLocale;
+        return date.toLocaleDateString(targetLocale, options);
     }
 
-    // Clear cached features
-    public clearFeatures(): void {
-        this.features.clear();
+    /**
+     * Format time with locale-specific formatting
+     * @param date - Date to format
+     * @param options - Intl.DateTimeFormatOptions
+     * @param locale - Locale string (defaults to Americas locale)
+     */
+    static toLocaleTimeString(date: Date, options?: Intl.DateTimeFormatOptions, locale?: string): string {
+        const targetLocale = locale || this.defaultLocale;
+        return date.toLocaleTimeString(targetLocale, options);
+    }
+
+    /**
+     * Format number with locale-specific formatting (useful for dates with numbers)
+     * @param value - Number to format
+     * @param locale - Locale string (defaults to Americas locale)
+     */
+    static formatNumber(value: number, locale?: string): string {
+        const targetLocale = locale || this.defaultLocale;
+        return new Intl.NumberFormat(targetLocale).format(value);
+    }
+
+    /**
+     * Get locale-specific date format pattern
+     * @param locale - Locale string (defaults to Americas locale)
+     * @returns Example: "MM/DD/YYYY" for en-US, "DD/MM/YYYY" for en-GB
+     */
+    static getLocaleDateFormat(locale?: string): string {
+        const targetLocale = locale || this.defaultLocale;
+        const formatter = new Intl.DateTimeFormat(targetLocale);
+        const parts = formatter.formatToParts(new Date(2024, 0, 15)); // Jan 15, 2024
+
+        return parts
+            .map(part => {
+                if (part.type === 'month') return 'MM';
+                if (part.type === 'day') return 'DD';
+                if (part.type === 'year') return 'YYYY';
+                return part.value;
+            })
+            .join('');
+    }
+
+    /**
+     * Get first day of week for locale (0 = Sunday, 1 = Monday)
+     * @param locale - Locale string (defaults to Americas locale)
+     */
+    static getFirstDayOfWeek(locale?: string): number {
+        const targetLocale = locale || this.defaultLocale;
+        // Most Americas locales start with Sunday (0), Europe with Monday (1)
+        const europeanLocales = ['de', 'fr', 'es', 'it', 'nl', 'pl', 'pt', 'ru', 'sv', 'fi', 'no', 'da'];
+        const lang = targetLocale.split('-')[0];
+        return europeanLocales.includes(lang) ? 1 : 0;
     }
 }
