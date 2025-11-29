@@ -1,332 +1,335 @@
-import { CSConfigurationManager } from '@mdakhan.mak/cs-playwright-test-framework/core';
-import { CSReporter } from '@mdakhan.mak/cs-playwright-test-framework/reporting';
-import { CSAssert } from '@mdakhan.mak/cs-playwright-test-framework/assertions';
-import { CSDBUtils } from '@mdakhan.mak/cs-playwright-test-framework/database';
-import { CSDateTimeUtility } from '@mdakhan.mak/cs-playwright-test-framework/utilities';
+# ==============================================================================
+# TTTF ZEALS/PREMISIS MODULE - DATABASE QUERIES
+# ==============================================================================
+# Query naming convention: DB_QUERY_<QUERY_NAME>
+# Placeholder format: ? for parameters (positional, in order)
+# ==============================================================================
 
-/**
- * API Response Validator
- * TTTF-specific database validation logic for ffff details
- * Uses CS Playwright Framework utilities for database operations and assertions
- *
- * Updated for NEW API Response Structure (November 2025):
- * - Ffff data moved from flat fields to nested `ffffs` array
- * - Each ffffDetail now contains: ffffRrrr, inputDate, ffffs[], systemError, statusMessages
- * - ffffs[] can contain multiple ffff objects (for composite ffffs like MMMM)
- * - Each ffff object contains: ffff, cumulativeDate, insertedDate, updateDate, mutativeDate
- */
-export class ApiResponseValidator {
-    private static instance: ApiResponseValidator;
-    private config = CSConfigurationManager.getInstance();
-    private assert = CSAssert.getInstance();
+# ==============================================================================
+# DROPDOWN OPTIONS QUERIES
+# ==============================================================================
 
-    private constructor() {}
+# Get all active cumulative mmte names for Scattered Mmte/Disputed Mmte search dropdowns
+DB_QUERY_GET_CUMULATIVE_MMTE_OPTIONS=SELECT cumulative_mmte_name FROM tttfapp.cumulative_mmte WHERE active_flag='Y' ORDER BY index_order ASC
 
-    public static getInstance(): ApiResponseValidator {
-        if (!ApiResponseValidator.instance) {
-            ApiResponseValidator.instance = new ApiResponseValidator();
-        }
-        return ApiResponseValidator.instance;
-    }
+# Get all distinct inductor groups for Inductor Group search dropdown
+DB_QUERY_GET_INDUCTOR_GROUP_OPTIONS=SELECT DISTINCT inductor_group FROM ttsginfo.tttf_zeals_premisis_view ORDER BY inductor_group ASC
 
-    /**
-     * Get all expected ffff data from database for a given ffff rrrr and input date
-     * Returns all matching records (for composite ffffs that may have multiple entries)
-     *
-     * NEW STRUCTURE (November 2025): This is the ONLY method to use for DB queries.
-     * Multi-ffff rrrrs like MMMM can have multiple records with different cumulativeDates.
-     */
-    public async getAllExpectedFfffDataFromDB(ffffRrrr: string, inputDate: string): Promise<any[]> {
-        try {
-            const queryKey = 'DB_QUERY_GET_EXTERNAL_DAILY_FFFF';
-            const query = this.config.get(queryKey) as string;
+# Get all distinct kindness circles for Kindness Circle search dropdown
+DB_QUERY_GET_KINDNESS_CIRCLE_OPTIONS=SELECT DISTINCT kindness_circle FROM ttsginfo.tttf_zeals_premisis_view ORDER BY kindness_circle ASC
 
-            if (!query) {
-                throw new Error(`Query not found: ${queryKey}`);
-            }
+# ==============================================================================
+# SEARCH QUERIES - ZEAL SEARCHES
+# ==============================================================================
 
-            const result = await CSDBUtils.executeQuery('TTTF_ORACLE', query, [ffffRrrr, inputDate]);
+# Search Zeal by Name (without Premisis)
+DB_QUERY_SEARCH_ZEAL_BY_NAME=SELECT type_value as Type, zeal_id as "Zeal ID", zeal_key as "Zeal Key", zeal_name as "Zeal Name", inductor_group as "Inductor Group", COALESCE(zzzt_seggregation, '') as "Zzzt Seggregation", CASE WHEN calc_shool_name IS NULL THEN '' WHEN calc_shool_name = 'N/A' THEN 'N/A (N/A)' ELSE calc_shool_name || ' ' || '(GGG File Name)' END as "Ttcalc Shool", (SELECT COUNT(*) FROM tttfapp.zeal_data dd INNER JOIN tttfapp.zealpremisis_data dsd ON dd.zealpremisis_data_id = dsd.zealpremisis_data_id INNER JOIN tttfapp.zealpremisis_mmte_data dsrd ON dsrd.zealpremisis_data_id = dsd.zealpremisis_data_id WHERE dd.zeal_id = main.zeal_id) as "Associated Mmtes" FROM ttsginfo.tttf_zeals_premisis_view main WHERE zeal_name LIKE '%' || ? || '%' AND type_value = 'ZEAL' ORDER BY zeal_key DESC
 
-            if (result.rowCount === 0) {
-                CSReporter.info(`No database records found for ${ffffRrrr} on ${inputDate}`);
-                return [];
-            }
+# Search Zeal by Name (with Premisis)
+DB_QUERY_SEARCH_ZEAL_BY_NAME_WITH_PREMISIS=SELECT type_value as Type, zeal_id as "Zeal ID", zeal_key as "Zeal Key", zeal_name as "Zeal Name", inductor_group as "Inductor Group", COALESCE(zzzt_seggregation, '') as "Zzzt Seggregation", CASE WHEN calc_shool_name IS NULL THEN '' WHEN calc_shool_name = 'N/A' THEN 'N/A (N/A)' ELSE calc_shool_name || ' ' || '(GGG File Name)' END as "Ttcalc Shool", CASE WHEN type_value = 'ZEAL' THEN (SELECT COUNT(*) FROM tttfapp.zeal_data dd INNER JOIN tttfapp.zealpremisis_data dsd ON dd.zealpremisis_data_id = dsd.zealpremisis_data_id INNER JOIN tttfapp.zealpremisis_mmte_data dsrd ON dsrd.zealpremisis_data_id = dsd.zealpremisis_data_id WHERE dd.zeal_id = main.zeal_id) WHEN type_value = 'PREMISIS' THEN (SELECT COUNT(*) FROM tttfapp.zzzt_data ld INNER JOIN tttfapp.zealpremisis_data dsd ON ld.zealpremisis_data_id = dsd.zealpremisis_data_id INNER JOIN tttfapp.zealpremisis_mmte_data dsrd ON dsrd.zealpremisis_data_id = dsd.zealpremisis_data_id WHERE ld.zzzt_id = main.zeal_id) ELSE 0 END as "Associated Mmtes" FROM ttsginfo.tttf_zeals_premisis_view main WHERE zeal_name LIKE '%' || ? || '%' AND type_value IN ('ZEAL', 'PREMISIS') ORDER BY zeal_key DESC
 
-            CSReporter.info(`Found ${result.rowCount} database record(s) for ${ffffRrrr}`);
-            return result.rows;
-        } catch (error) {
-            CSReporter.fail(`Failed to get ffff data from database: ${error}`);
-            throw error;
-        }
-    }
+# Search Zeal by ID (without Premisis)
+DB_QUERY_SEARCH_ZEAL_BY_ID=SELECT type_value as Type, zeal_id as "Zeal ID", zeal_key as "Zeal Key", zeal_name as "Zeal Name", inductor_group as "Inductor Group", COALESCE(zzzt_seggregation, '') as "Zzzt Seggregation", CASE WHEN calc_shool_name IS NULL THEN '' WHEN calc_shool_name = 'N/A' THEN 'N/A (N/A)' ELSE calc_shool_name || ' ' || '(GGG File Name)' END as "Ttcalc Shool", (SELECT COUNT(*) FROM tttfapp.zeal_data dd INNER JOIN tttfapp.zealpremisis_data dsd ON dd.zealpremisis_data_id = dsd.zealpremisis_data_id INNER JOIN tttfapp.zealpremisis_mmte_data dsrd ON dsrd.zealpremisis_data_id = dsd.zealpremisis_data_id WHERE dd.zeal_id = main.zeal_id) as "Associated Mmtes" FROM ttsginfo.tttf_zeals_premisis_view main WHERE zeal_id = ? AND type_value = 'ZEAL' ORDER BY zeal_key DESC
 
-    /**
-     * Validate no-data scenario (ffff not available)
-     * NEW STRUCTURE: Check that ffffs[] is empty instead of checking individual null fields
-     */
-    public async validateNoDataScenario(ffffDetail: any): Promise<void> {
-        const ffffRrrr = ffffDetail.ffffRrrr;
-        CSReporter.info(`Validating no-data scenario for ${ffffRrrr}`);
+# Search Zeal by ID (with Premisis)
+DB_QUERY_SEARCH_ZEAL_BY_ID_WITH_PREMISIS=SELECT type_value as Type, zeal_id as "Zeal ID", zeal_key as "Zeal Key", zeal_name as "Zeal Name", inductor_group as "Inductor Group", COALESCE(zzzt_seggregation, '') as "Zzzt Seggregation", CASE WHEN calc_shool_name IS NULL THEN '' WHEN calc_shool_name = 'N/A' THEN 'N/A (N/A)' ELSE calc_shool_name || ' ' || '(GGG File Name)' END as "Ttcalc Shool", CASE WHEN type_value = 'ZEAL' THEN (SELECT COUNT(*) FROM tttfapp.zeal_data dd INNER JOIN tttfapp.zealpremisis_data dsd ON dd.zealpremisis_data_id = dsd.zealpremisis_data_id INNER JOIN tttfapp.zealpremisis_mmte_data dsrd ON dsrd.zealpremisis_data_id = dsd.zealpremisis_data_id WHERE dd.zeal_id = main.zeal_id) WHEN type_value = 'PREMISIS' THEN (SELECT COUNT(*) FROM tttfapp.zzzt_data ld INNER JOIN tttfapp.zealpremisis_data dsd ON ld.zealpremisis_data_id = dsd.zealpremisis_data_id INNER JOIN tttfapp.zealpremisis_mmte_data dsrd ON dsrd.zealpremisis_data_id = dsd.zealpremisis_data_id WHERE ld.zzzt_id = main.zeal_id) ELSE 0 END as "Associated Mmtes" FROM ttsginfo.tttf_zeals_premisis_view main WHERE zeal_id = ? AND type_value IN ('ZEAL', 'PREMISIS') ORDER BY zeal_key DESC
 
-        // NEW STRUCTURE: Validate ffffs array is empty
-        if (!ffffDetail.ffffs) {
-            throw new Error(`ffffs array should be present for ${ffffRrrr}`);
-        }
+# Search Zeal by Key (without Premisis)
+DB_QUERY_SEARCH_ZEAL_BY_KEY=SELECT type_value as Type, zeal_id as "Zeal ID", zeal_key as "Zeal Key", zeal_name as "Zeal Name", inductor_group as "Inductor Group", COALESCE(zzzt_seggregation, '') as "Zzzt Seggregation", CASE WHEN calc_shool_name IS NULL THEN '' WHEN calc_shool_name = 'N/A' THEN 'N/A (N/A)' ELSE calc_shool_name || ' ' || '(GGG File Name)' END as "Ttcalc Shool", (SELECT COUNT(*) FROM tttfapp.zeal_data dd INNER JOIN tttfapp.zealpremisis_data dsd ON dd.zealpremisis_data_id = dsd.zealpremisis_data_id INNER JOIN tttfapp.zealpremisis_mmte_data dsrd ON dsrd.zealpremisis_data_id = dsd.zealpremisis_data_id WHERE dd.zeal_id = main.zeal_id) as "Associated Mmtes" FROM ttsginfo.tttf_zeals_premisis_view main WHERE zeal_key = ? AND type_value = 'ZEAL' ORDER BY zeal_key DESC
 
-        await this.assert.assertEqual(
-            ffffDetail.ffffs.length,
-            0,
-            `ffffs array should be empty for ${ffffRrrr} when no data available`
-        );
+# ==============================================================================
+# SEARCH QUERIES - PREMISIS SEARCHES
+# ==============================================================================
 
-        CSReporter.pass(`✓ ffffs array is empty for ${ffffRrrr}`);
+# Search Premisis by Description
+DB_QUERY_SEARCH_PREMISIS_BY_DESCRIPTION=SELECT type_value as Type, zeal_id as "Zeal ID", zeal_key as "Zeal Key", zeal_name as "Zeal Name", inductor_group as "Inductor Group", COALESCE(zzzt_seggregation, '') as "Zzzt Seggregation", CASE WHEN calc_shool_name IS NULL THEN '' WHEN calc_shool_name = 'N/A' THEN 'N/A (N/A)' ELSE calc_shool_name || ' ' || '(GGG File Name)' END as "Ttcalc Shool", (SELECT COUNT(*) FROM tttfapp.zzzt_data ld INNER JOIN tttfapp.zealpremisis_data dsd ON ld.zealpremisis_data_id = dsd.zealpremisis_data_id INNER JOIN tttfapp.zealpremisis_mmte_data dsrd ON dsrd.zealpremisis_data_id = dsd.zealpremisis_data_id WHERE ld.zzzt_id = main.zeal_id) as "Associated Mmtes" FROM ttsginfo.tttf_zeals_premisis_view main WHERE type_value = 'PREMISIS' AND premisis_description LIKE '%' || ? || '%' ORDER BY zeal_key DESC
 
-        // Validate systemError
-        if (!ffffDetail.systemError) {
-            throw new Error(`systemError should be present for ${ffffRrrr} when ffff is not available`);
-        }
+# Search Premisis by Zzzt Seggregation
+DB_QUERY_SEARCH_PREMISIS_BY_ZZZT_ABBR=SELECT type_value as Type, zeal_id as "Zeal ID", zeal_key as "Zeal Key", zeal_name as "Zeal Name", inductor_group as "Inductor Group", COALESCE(zzzt_seggregation, '') as "Zzzt Seggregation", CASE WHEN calc_shool_name IS NULL THEN '' WHEN calc_shool_name = 'N/A' THEN 'N/A (N/A)' ELSE calc_shool_name || ' ' || '(GGG File Name)' END as "Ttcalc Shool", (SELECT COUNT(*) FROM tttfapp.zzzt_data ld INNER JOIN tttfapp.zealpremisis_data dsd ON ld.zealpremisis_data_id = dsd.zealpremisis_data_id INNER JOIN tttfapp.zealpremisis_mmte_data dsrd ON dsrd.zealpremisis_data_id = dsd.zealpremisis_data_id WHERE ld.zzzt_id = main.zeal_id) as "Associated Mmtes" FROM ttsginfo.tttf_zeals_premisis_view main WHERE type_value = 'PREMISIS' AND zzzt_seggregation LIKE '%' || ? || '%' ORDER BY zeal_key DESC
 
-        await this.assert.assertEqual(
-            ffffDetail.systemError.rrrr,
-            '204',
-            `systemError.rrrr should be "204" for ${ffffRrrr}`
-        );
+# ==============================================================================
+# SEARCH QUERIES - SCATTERED MMTE SEARCHES
+# ==============================================================================
 
-        await this.assert.assertEqual(
-            ffffDetail.systemError.subRrrr,
-            '5003',
-            `systemError.subRrrr should be "5003" for ${ffffRrrr}`
-        );
+# Search by Scattered Mmte Name
+DB_QUERY_SEARCH_BY_SCATTERED_MMTE_NAME=SELECT DISTINCT d.type_value as Type, d.zeal_id as "Zeal ID", d.zeal_key as "Zeal Key", d.zeal_name as "Zeal Name", d.inductor_group as "Inductor Group", COALESCE(d.zzzt_seggregation, '') as "Zzzt Seggregation", CASE WHEN d.calc_shool_name IS NULL THEN '' WHEN d.calc_shool_name = 'N/A' THEN 'N/A (N/A)' ELSE d.calc_shool_name || ' ' || '(GGG File Name)' END as "Ttcalc Shool" FROM ttsginfo.tttf_zeals_premisis_view d INNER JOIN tttfapp.zealpremisis_data dsd ON d.zealpremisis_data_id = dsd.zealpremisis_data_id INNER JOIN tttfapp.zealpremisis_mmte_data dsrd ON dsrd.zealpremisis_data_id = dsd.zealpremisis_data_id INNER JOIN tttfapp.scattered_mmte rr ON dsrd.scattered_mmte_id = rr.scattered_mmte_id WHERE rr.scattered_mmte_name LIKE '%' || ? || '%' AND d.type_value = 'ZEAL' ORDER BY d.zeal_key DESC
 
-        await this.assert.assertEqual(
-            ffffDetail.systemError.message,
-            'No Content',
-            `systemError.message should be "No Content" for ${ffffRrrr}`
-        );
+# Search by Scattered Mmte Cumulative Mmte
+DB_QUERY_SEARCH_BY_SCATTERED_MMTE_CUMULATIVE=SELECT DISTINCT d.type_value as Type, d.zeal_id as "Zeal ID", d.zeal_key as "Zeal Key", d.zeal_name as "Zeal Name", d.inductor_group as "Inductor Group", COALESCE(d.zzzt_seggregation, '') as "Zzzt Seggregation", CASE WHEN d.calc_shool_name IS NULL THEN '' WHEN d.calc_shool_name = 'N/A' THEN 'N/A (N/A)' ELSE d.calc_shool_name || ' ' || '(GGG File Name)' END as "Ttcalc Shool" FROM ttsginfo.tttf_zeals_premisis_view d INNER JOIN tttfapp.zealpremisis_data dsd ON d.zealpremisis_data_id = dsd.zealpremisis_data_id INNER JOIN tttfapp.zealpremisis_mmte_data dsrd ON dsrd.zealpremisis_data_id = dsd.zealpremisis_data_id INNER JOIN tttfapp.scattered_mmte rr ON dsrd.scattered_mmte_id = rr.scattered_mmte_id INNER JOIN tttfapp.cumulative_mmte er ON rr.cumulative_mmte_id = er.cumulative_mmte_id WHERE er.cumulative_mmte_name = ? AND d.type_value = 'ZEAL' ORDER BY d.zeal_key DESC
 
-        await this.assert.assertEqual(
-            ffffDetail.systemError.cause,
-            'Ffff not available for the given input date. Please contact TTTF Team.',
-            `systemError.cause validation for ${ffffRrrr}`
-        );
+# Search by Scattered Mmte Has Disputed
+DB_QUERY_SEARCH_BY_SCATTERED_MMTE_HAS_DISPUTED=SELECT DISTINCT d.type_value as Type, d.zeal_id as "Zeal ID", d.zeal_key as "Zeal Key", d.zeal_name as "Zeal Name", d.inductor_group as "Inductor Group", COALESCE(d.zzzt_seggregation, '') as "Zzzt Seggregation", CASE WHEN d.calc_shool_name IS NULL THEN '' WHEN d.calc_shool_name = 'N/A' THEN 'N/A (N/A)' ELSE d.calc_shool_name || ' ' || '(GGG File Name)' END as "Ttcalc Shool" FROM ttsginfo.tttf_zeals_premisis_view d INNER JOIN tttfapp.zealpremisis_data dsd ON d.zealpremisis_data_id = dsd.zealpremisis_data_id INNER JOIN tttfapp.zealpremisis_mmte_data dsrd ON dsrd.zealpremisis_data_id = dsd.zealpremisis_data_id WHERE dsrd.disputed_mmte_id IS NOT NULL AND d.type_value = 'ZEAL' ORDER BY d.zeal_key DESC
 
-        if (ffffDetail.systemError.diagnostics && ffffDetail.systemError.diagnostics['5003']) {
-            await this.assert.assertEqual(
-                ffffDetail.systemError.diagnostics['5003'],
-                'Ffff not found for the given rrrr and input date.',
-                `systemError.diagnostics["5003"] validation for ${ffffRrrr}`
-            );
-        }
+# ==============================================================================
+# SEARCH QUERIES - DISPUTED MMTE SEARCHES
+# ==============================================================================
 
-        // Validate statusMessages is null
-        await this.assert.assertEqual(
-            ffffDetail.statusMessages,
-            null,
-            `statusMessages should be null for ${ffffRrrr}`
-        );
+# Search by Disputed Mmte Name
+DB_QUERY_SEARCH_BY_DISPUTED_MMTE_NAME=SELECT DISTINCT d.type_value as Type, d.zeal_id as "Zeal ID", d.zeal_key as "Zeal Key", d.zeal_name as "Zeal Name", d.inductor_group as "Inductor Group", COALESCE(d.zzzt_seggregation, '') as "Zzzt Seggregation", CASE WHEN d.calc_shool_name IS NULL THEN '' WHEN d.calc_shool_name = 'N/A' THEN 'N/A (N/A)' ELSE d.calc_shool_name || ' ' || '(GGG File Name)' END as "Ttcalc Shool" FROM ttsginfo.tttf_zeals_premisis_view d INNER JOIN tttfapp.zealpremisis_data dsd ON d.zealpremisis_data_id = dsd.zealpremisis_data_id INNER JOIN tttfapp.zealpremisis_mmte_data dsrd ON dsrd.zealpremisis_data_id = dsd.zealpremisis_data_id INNER JOIN tttfapp.scattered_mmte fr ON dsrd.disputed_mmte_id = fr.scattered_mmte_id WHERE fr.scattered_mmte_name LIKE '%' || ? || '%' AND d.type_value = 'ZEAL' ORDER BY d.zeal_key DESC
 
-        CSReporter.pass(`No-data scenario validated for ${ffffRrrr}`);
-    }
+# Search by Disputed Mmte Date
+DB_QUERY_SEARCH_BY_DISPUTED_DATE=SELECT DISTINCT d.type_value as Type, d.zeal_id as "Zeal ID", d.zeal_key as "Zeal Key", d.zeal_name as "Zeal Name", d.inductor_group as "Inductor Group", COALESCE(d.zzzt_seggregation, '') as "Zzzt Seggregation", CASE WHEN d.calc_shool_name IS NULL THEN '' WHEN d.calc_shool_name = 'N/A' THEN 'N/A (N/A)' ELSE d.calc_shool_name || ' ' || '(GGG File Name)' END as "Ttcalc Shool" FROM ttsginfo.tttf_zeals_premisis_view d INNER JOIN tttfapp.zealpremisis_data dsd ON d.zealpremisis_data_id = dsd.zealpremisis_data_id INNER JOIN tttfapp.zealpremisis_mmte_data dsrd ON dsrd.zealpremisis_data_id = dsd.zealpremisis_data_id WHERE dsrd.disputed_start_dt = TO_DATE(?, 'MM/DD/YYYY') AND d.type_value = 'ZEAL' ORDER BY d.zeal_key DESC
 
-    /**
-     * Validate success scenario (ffff data available)
-     * NEW STRUCTURE (November 2025): Validates ALL ffffs in ffffs[] array against ALL database records
-     *
-     * @param ffffDetail - The ffff detail from API response containing ffffs[] array
-     * @param dbDataArray - Array of ALL database records for this ffffRrrr (can be 1 or many)
-     *
-     * Works for both:
-     * - Single-ffff rrrrs (1 ffff in response, 1 DB record)
-     * - Multi-ffff rrrrs like MMMM (N ffffs in response, N DB records)
-     */
-    public async validateSuccessScenario(ffffDetail: any, dbDataArray: any[]): Promise<void> {
-        const ffffRrrr = ffffDetail.ffffRrrr;
-        CSReporter.info(`Validating success scenario for ${ffffRrrr}`);
+# Search by Disputed Mmte Cumulative Mmte
+DB_QUERY_SEARCH_BY_DISPUTED_CUMULATIVE=SELECT DISTINCT d.type_value as Type, d.zeal_id as "Zeal ID", d.zeal_key as "Zeal Key", d.zeal_name as "Zeal Name", d.inductor_group as "Inductor Group", COALESCE(d.zzzt_seggregation, '') as "Zzzt Seggregation", CASE WHEN d.calc_shool_name IS NULL THEN '' WHEN d.calc_shool_name = 'N/A' THEN 'N/A (N/A)' ELSE d.calc_shool_name || ' ' || '(GGG File Name)' END as "Ttcalc Shool" FROM ttsginfo.tttf_zeals_premisis_view d INNER JOIN tttfapp.zealpremisis_data dsd ON d.zealpremisis_data_id = dsd.zealpremisis_data_id INNER JOIN tttfapp.zealpremisis_mmte_data dsrd ON dsrd.zealpremisis_data_id = dsd.zealpremisis_data_id INNER JOIN tttfapp.scattered_mmte fr ON dsrd.disputed_mmte_id = fr.scattered_mmte_id INNER JOIN tttfapp.cumulative_mmte er ON fr.cumulative_mmte_id = er.cumulative_mmte_id WHERE er.cumulative_mmte_name = ? AND d.type_value = 'ZEAL' ORDER BY d.zeal_key DESC
 
-        // NEW STRUCTURE: Get all ffffs from ffffs array
-        if (!ffffDetail.ffffs || !Array.isArray(ffffDetail.ffffs)) {
-            throw new Error(`ffffs array should be present for ${ffffRrrr}`);
-        }
+# ==============================================================================
+# SEARCH QUERIES - OTHER SEARCH TYPES
+# ==============================================================================
 
-        const responseFfffs = ffffDetail.ffffs;
-        CSReporter.info(`Response contains ${responseFfffs.length} ffff(s), Database has ${dbDataArray.length} record(s)`);
+# Search by Inductor Group
+DB_QUERY_SEARCH_BY_INDUCTOR_GROUP=SELECT type_value as Type, zeal_id as "Zeal ID", zeal_key as "Zeal Key", zeal_name as "Zeal Name", inductor_group as "Inductor Group", COALESCE(zzzt_seggregation, '') as "Zzzt Seggregation", CASE WHEN calc_shool_name IS NULL THEN '' WHEN calc_shool_name = 'N/A' THEN 'N/A (N/A)' ELSE calc_shool_name || ' ' || '(GGG File Name)' END as "Ttcalc Shool" FROM ttsginfo.tttf_zeals_premisis_view WHERE inductor_group = ? AND type_value = 'ZEAL' ORDER BY zeal_key DESC
 
-        // Validate count matches
-        await this.assert.assertEqual(
-            responseFfffs.length,
-            dbDataArray.length,
-            `Number of ffffs should match database records for ${ffffRrrr}`
-        );
+# Search by Kindness Circle
+DB_QUERY_SEARCH_BY_KINDNESS_CIRCLE=SELECT type_value as Type, zeal_id as "Zeal ID", zeal_key as "Zeal Key", zeal_name as "Zeal Name", inductor_group as "Inductor Group", COALESCE(zzzt_seggregation, '') as "Zzzt Seggregation", CASE WHEN calc_shool_name IS NULL THEN '' WHEN calc_shool_name = 'N/A' THEN 'N/A (N/A)' ELSE calc_shool_name || ' ' || '(GGG File Name)' END as "Ttcalc Shool" FROM ttsginfo.tttf_zeals_premisis_view WHERE kindness_circle = ? AND type_value = 'ZEAL' ORDER BY zeal_key DESC
 
-        // Validate each ffff against corresponding database record
-        // Match by cumulativeDate since ffffs can be in different order
-        for (let i = 0; i < responseFfffs.length; i++) {
-            const ffffObj = responseFfffs[i];
+# Search by Sketchmark Flag
+DB_QUERY_SEARCH_BY_SKETCHMARK=SELECT type_value as Type, zeal_id as "Zeal ID", zeal_key as "Zeal Key", zeal_name as "Zeal Name", inductor_group as "Inductor Group", COALESCE(zzzt_seggregation, '') as "Zzzt Seggregation", CASE WHEN calc_shool_name IS NULL THEN '' WHEN calc_shool_name = 'N/A' THEN 'N/A (N/A)' ELSE calc_shool_name || ' ' || '(GGG File Name)' END as "Ttcalc Shool" FROM ttsginfo.tttf_zeals_premisis_view d INNER JOIN tttfapp.zealpremisis_data dsd ON d.zealpremisis_data_id = dsd.zealpremisis_data_id WHERE dsd.sketchmark_flag = ? AND d.type_value = 'ZEAL' ORDER BY d.zeal_key DESC
 
-            // Find matching database record by cumulativeDate
-            const matchingDbRecord = this.findMatchingDbRecord(ffffObj, dbDataArray);
+# Search by Administrator Name
+DB_QUERY_SEARCH_BY_ADMINISTRATOR_NAME=SELECT type_value as Type, zeal_id as "Zeal ID", zeal_key as "Zeal Key", zeal_name as "Zeal Name", inductor_group as "Inductor Group", COALESCE(zzzt_seggregation, '') as "Zzzt Seggregation", CASE WHEN calc_shool_name IS NULL THEN '' WHEN calc_shool_name = 'N/A' THEN 'N/A (N/A)' ELSE calc_shool_name || ' ' || '(GGG File Name)' END as "Ttcalc Shool" FROM ttsginfo.tttf_zeals_premisis_view WHERE acct_manager LIKE '%' || ? || '%' AND type_value = 'ZEAL' ORDER BY zeal_key DESC
 
-            if (!matchingDbRecord) {
-                throw new Error(
-                    `No matching database record found for ffff at index ${i} with cumulativeDate ${ffffObj.cumulativeDate}\n` +
-                    `  Available DB cumulativeDates: ${dbDataArray.map(r => r.CUMULATIVE_DT).join(', ')}`
-                );
-            }
+# Search by Administrator Email
+DB_QUERY_SEARCH_BY_ADMINISTRATOR_EMAIL=SELECT type_value as Type, zeal_id as "Zeal ID", zeal_key as "Zeal Key", zeal_name as "Zeal Name", inductor_group as "Inductor Group", COALESCE(zzzt_seggregation, '') as "Zzzt Seggregation", CASE WHEN calc_shool_name IS NULL THEN '' WHEN calc_shool_name = 'N/A' THEN 'N/A (N/A)' ELSE calc_shool_name || ' ' || '(GGG File Name)' END as "Ttcalc Shool" FROM ttsginfo.tttf_zeals_premisis_view WHERE acct_manager_email LIKE '%' || ? || '%' AND type_value = 'ZEAL' ORDER BY zeal_key DESC
 
-            CSReporter.info(`Validating ffff ${i + 1}/${responseFfffs.length}: cumulativeDate=${ffffObj.cumulativeDate}`);
+# Search by GGG Name (Calc Shool Name)
+DB_QUERY_SEARCH_BY_GGG_NAME=SELECT type_value as Type, zeal_id as "Zeal ID", zeal_key as "Zeal Key", zeal_name as "Zeal Name", inductor_group as "Inductor Group", COALESCE(zzzt_seggregation, '') as "Zzzt Seggregation", CASE WHEN calc_shool_name IS NULL THEN '' WHEN calc_shool_name = 'N/A' THEN 'N/A (N/A)' ELSE calc_shool_name || ' ' || '(GGG File Name)' END as "Ttcalc Shool" FROM ttsginfo.tttf_zeals_premisis_view WHERE calc_shool_name LIKE '%' || ? || '%' AND type_value = 'ZEAL' ORDER BY zeal_key DESC
 
-            // Validate ffff value with precision tolerance
-            const dbFfff = parseFloat(matchingDbRecord.FFFF);
-            const responseFfff = parseFloat(ffffObj.ffff);
-            const difference = Math.abs(dbFfff - responseFfff);
+# ==============================================================================
+# NEW ZEAL SETUP QUERIES
+# ==============================================================================
 
-            if (difference >= 0.0001) {
-                throw new Error(`Ffff mismatch for ${ffffRrrr} at index ${i}: Expected ${dbFfff}, got ${responseFfff}`);
-            }
-            CSReporter.pass(`  ✓ Ffff value validated: ${responseFfff}`);
+# Find Zeal with no scattered mmtes (for new zeal setup)
+DB_QUERY_GET_ZEAL_WITHOUT_SCATTERED_MMTES=SELECT d.zeal_id, d.zeal_key, d.zeal_name FROM ttsginfo.tttf_zeals_premisis_view d WHERE d.type_value = 'ZEAL' AND NOT EXISTS (SELECT 1 FROM tttfapp.zeal_data dd INNER JOIN tttfapp.zealpremisis_data dsd ON dd.zealpremisis_data_id = dsd.zealpremisis_data_id INNER JOIN tttfapp.zealpremisis_mmte_data dsrd ON dsrd.zealpremisis_data_id = dsd.zealpremisis_data_id WHERE dd.zeal_id = d.zeal_id) AND ROWNUM <= 1 ORDER BY d.zeal_id
 
-            // Validate dates (comparing date portions only, ignoring time)
-            await this.validateDateField(ffffObj.insertedDate, matchingDbRecord.INSERTED_DT, 'insertedDate', `${ffffRrrr}[${i}]`);
-            await this.validateDateField(ffffObj.cumulativeDate, matchingDbRecord.CUMULATIVE_DT, 'cumulativeDate', `${ffffRrrr}[${i}]`);
-            await this.validateDateField(ffffObj.updateDate, matchingDbRecord.UPDATED_DT, 'updateDate', `${ffffRrrr}[${i}]`);
-            await this.validateDateField(ffffObj.mutativeDate, matchingDbRecord.MUTATIVE_DT, 'mutativeDate', `${ffffRrrr}[${i}]`);
+# Get available scattered mmtes for adding
+DB_QUERY_GET_AVAILABLE_SCATTERED_MMTES=SELECT scattered_mmte_name FROM tttfapp.scattered_mmte WHERE active_flag = 'Y' ORDER BY scattered_mmte_name
 
-            CSReporter.pass(`  ✓ Ffff ${i + 1} validated for ${ffffRrrr}`);
-        }
+# Get zeal details by zeal ID
+DB_QUERY_GET_ZEAL_DETAILS=SELECT zeal_id, zeal_key, zeal_name, inductor_group, kindness_circle, zzzt_seggregation, premisis_description, calc_shool_name, acct_manager FROM ttsginfo.tttf_zeals_premisis_view WHERE zeal_id = ? AND type_value = 'ZEAL'
 
-        // Validate systemError is null (at ffffDetail level)
-        await this.assert.assertEqual(
-            ffffDetail.systemError,
-            null,
-            `systemError should be null for ${ffffRrrr}`
-        );
+# Get associated scattered mmtes for a zeal
+DB_QUERY_GET_ZEAL_SCATTERED_MMTES=SELECT dsrd.ffx_order, rr.scattered_mmte_name, er.cumulative_mmte_name, rr.methodology_type, fr.scattered_mmte_name as disputed_mmte_name, TO_CHAR(dsrd.disputed_start_dt, 'MM/DD/YYYY') as disputed_start_date FROM tttfapp.zeal_data dd INNER JOIN tttfapp.zealpremisis_data dsd ON dd.zealpremisis_data_id = dsd.zealpremisis_data_id INNER JOIN tttfapp.zealpremisis_mmte_data dsrd ON dsrd.zealpremisis_data_id = dsd.zealpremisis_data_id INNER JOIN tttfapp.scattered_mmte rr ON dsrd.scattered_mmte_id = rr.scattered_mmte_id LEFT JOIN tttfapp.cumulative_mmte er ON rr.cumulative_mmte_id = er.cumulative_mmte_id LEFT JOIN tttfapp.scattered_mmte fr ON dsrd.disputed_mmte_id = fr.scattered_mmte_id WHERE dd.zeal_id = ? ORDER BY dsrd.ffx_order
 
-        // Validate statusMessages (at ffffDetail level)
-        if (!ffffDetail.statusMessages) {
-            throw new Error(`statusMessages should be present for ${ffffRrrr}`);
-        }
+# Verify scattered mmte added to zeal
+DB_QUERY_VERIFY_SCATTERED_MMTE_ADDED=SELECT COUNT(*) as count FROM tttfapp.zeal_data dd INNER JOIN tttfapp.zealpremisis_data dsd ON dd.zealpremisis_data_id = dsd.zealpremisis_data_id INNER JOIN tttfapp.zealpremisis_mmte_data dsrd ON dsrd.zealpremisis_data_id = dsd.zealpremisis_data_id INNER JOIN tttfapp.scattered_mmte rr ON dsrd.scattered_mmte_id = rr.scattered_mmte_id WHERE dd.zeal_id = ? AND rr.scattered_mmte_name = ?
 
-        await this.assert.assertEqual(
-            ffffDetail.statusMessages.type,
-            null,
-            `statusMessages.type should be null for ${ffffRrrr}`
-        );
+# ==============================================================================
+# PENDING APPROVAL QUERIES
+# ==============================================================================
 
-        await this.assert.assertEqual(
-            ffffDetail.statusMessages.rrrr,
-            '200',
-            `statusMessages.rrrr should be "200" for ${ffffRrrr}`
-        );
+# Get pending approvals for zeal
+DB_QUERY_GET_PENDING_APPROVALS=SELECT pa.approval_id, pa.entity_type, pa.entity_id, pa.change_type, pa.requested_by, TO_CHAR(pa.requested_dt, 'MM/DD/YYYY') as requested_date, pa.status FROM tttfapp.pending_approval pa WHERE pa.entity_type = 'ZEAL' AND pa.entity_id = ? AND pa.status = 'PENDING' ORDER BY pa.requested_dt DESC
 
-        await this.assert.assertEqual(
-            ffffDetail.statusMessages.message,
-            'Success',
-            `statusMessages.message should be "Success" for ${ffffRrrr}`
-        );
+# Verify approval completed
+DB_QUERY_VERIFY_APPROVAL_COMPLETED=SELECT pa.approval_id, pa.status, pa.approved_by, TO_CHAR(pa.approved_dt, 'MM/DD/YYYY') as approved_date FROM tttfapp.pending_approval pa WHERE pa.approval_id = ?
 
-        // Validate fields array is empty
-        if (ffffDetail.statusMessages.fields && Array.isArray(ffffDetail.statusMessages.fields)) {
-            await this.assert.assertEqual(
-                ffffDetail.statusMessages.fields.length,
-                0,
-                `statusMessages.fields should be empty array for ${ffffRrrr}`
-            );
-        }
+# Get history for zeal
+DB_QUERY_GET_ZEAL_HISTORY=SELECT h.history_id, h.entity_type, h.entity_id, h.change_type, h.changed_by, TO_CHAR(h.changed_dt, 'MM/DD/YYYY') as changed_date, h.change_details FROM tttfapp.zeal_history h WHERE h.entity_id = ? ORDER BY h.changed_dt DESC
 
-        CSReporter.pass(`Success scenario validated for ${ffffRrrr} (${responseFfffs.length} ffff(s))`);
-    }
+# ==============================================================================
+# NEW ZEAL SETUP - TEST DATA RETRIEVAL QUERIES
+# ==============================================================================
 
-    /**
-     * Helper: Find matching database record by cumulativeDate
-     * Compares date portions only, ignoring time components
-     * Uses Americas timezone to ensure consistent date comparison regardless of system timezone
-     */
-    private findMatchingDbRecord(ffffObj: any, dbDataArray: any[]): any | null {
-        const responseCumulativeDate = new Date(ffffObj.cumulativeDate);
-        // Get date string in Americas timezone for consistent comparison
-        const responseDateStr = CSDateTimeUtility.toDateStringInTimezone(responseCumulativeDate);
+# Get zeal for new setup (no scattered mmtes, no pending changes)
+DB_QUERY_GET_ZEAL_FOR_NEW_SETUP=SELECT d.zeal_id, d.zeal_key, d.zeal_name, d.inductor_group, d.kindness_circle, d.zzzt_seggregation, d.premisis_description, d.calc_shool_name, d.acct_manager FROM ttsginfo.tttf_zeals_premisis_view d WHERE d.type_value = 'ZEAL' AND NOT EXISTS (SELECT 1 FROM tttfapp.zeal_data dd INNER JOIN tttfapp.zealpremisis_data dsd ON dd.zealpremisis_data_id = dsd.zealpremisis_data_id INNER JOIN tttfapp.zealpremisis_mmte_data dsrd ON dsrd.zealpremisis_data_id = dsd.zealpremisis_data_id WHERE dd.zeal_id = d.zeal_id) AND NOT EXISTS (SELECT 1 FROM tttfapp.zeal_data dd INNER JOIN tttfapp.zealpremisis_data dsd ON dd.zealpremisis_data_id = dsd.zealpremisis_data_id INNER JOIN tttfapp.zealpremisis_status_log dsl ON dsl.zealpremisis_data_id = dsd.zealpremisis_data_id WHERE dd.zeal_id = d.zeal_id AND dsl.zealpremisis_status_cd = 'AWAITING') AND ROWNUM <= 1 ORDER BY d.zeal_id
 
-        for (const dbRecord of dbDataArray) {
-            const dbCumulativeDate = new Date(dbRecord.CUMULATIVE_DT);
-            const dbDateStr = CSDateTimeUtility.toDateStringInTimezone(dbCumulativeDate);
+# Get scattered mmtes to add (one from each methodology type: SPORT_MMTE_LOOKUP, TTCALC_DURATION, MANUAL)
+# FIXED: Changed methodology types to match requirement and added cumulative_mmte active check
+DB_QUERY_GET_SCATTERED_MMTES_TO_ADD=SELECT scattered_mmte_name, methodology_type FROM (SELECT rr.scattered_mmte_name, rr.methodology_type, ROW_NUMBER() OVER (PARTITION BY rr.methodology_type ORDER BY rr.scattered_mmte_name DESC) as rn FROM tttfapp.scattered_mmte rr WHERE rr.methodology_type IN ('SPORT_MMTE_LOOKUP', 'TTCALC_DURATION', 'MANUAL') AND rr.cumulative_mmte_id IN (SELECT cumulative_mmte_id FROM tttfapp.cumulative_mmte WHERE active_flag = 'Y')) WHERE rn = 1
 
-            // Compare date strings in Americas timezone
-            if (responseDateStr === dbDateStr) {
-                return dbRecord;
-            }
-        }
+# Get FFX Inductor Type options from code table
+DB_QUERY_GET_FFX_INDUCTOR_OPTIONS=SELECT code FROM tttfapp.code_table WHERE code_type = 'FFX_INDUCTOR_TYPE' AND active_flag = 'Y' ORDER BY display_order
 
-        return null;
-    }
+# Get scattered mmte details (cumulative mmte name, methodology type with display transformation)
+# FIXED: Added CASE statement for methodology_type display values per requirement
+DB_QUERY_GET_SCATTERED_MMTE_DETAILS=SELECT er.cumulative_mmte_name, CASE rr.methodology_type WHEN 'TTCALC_DURATION' THEN 'Ttcalc duration' WHEN 'SPORT_MMTE_LOOKUP' THEN 'Sport Mmte Lookup' WHEN 'MANUAL' THEN 'Manual' ELSE rr.methodology_type END as methodology_type FROM tttfapp.scattered_mmte rr INNER JOIN tttfapp.cumulative_mmte er ON er.cumulative_mmte_id = rr.cumulative_mmte_id WHERE rr.scattered_mmte_name = ?
 
-    /**
-     * Validate date field (compare date portions only)
-     * Uses Americas timezone to ensure consistent date comparison regardless of system timezone
-     */
-    public async validateDateField(
-        responseDate: string,
-        dbDate: any,
-        fieldName: string,
-        ffffRrrr: string
-    ): Promise<void> {
-        try {
-            CSReporter.info(`  Validating ${fieldName} for ${ffffRrrr}:`);
-            CSReporter.info(`    Response date: ${responseDate}`);
-            CSReporter.info(`    Database date: ${dbDate}`);
+# ==============================================================================
+# NEW ZEAL SETUP - VERIFICATION QUERIES
+# ==============================================================================
 
-            // Parse both dates
-            const responseDateObj = new Date(responseDate);
-            const dbDateObj = new Date(dbDate);
+# Get zeal_data record by zeal_id
+DB_QUERY_GET_ZEAL_DATA_BY_ZEAL_ID=SELECT dd.zealpremisis_data_id, dd.zeal_id FROM tttfapp.zeal_data dd WHERE dd.zeal_id = ?
 
-            // Use Americas timezone-aware formatting to get consistent date strings
-            // This ensures dates are compared in Americas timezone regardless of system timezone
-            const responseDateStr = CSDateTimeUtility.toDateStringInTimezone(responseDateObj);
-            const dbDateStr = CSDateTimeUtility.toDateStringInTimezone(dbDateObj);
+# Get zealpremisis_data details (sketchmark flag, inductor code from FFX_INDUCTOR)
+# FIXED: Added JOIN to FFX_INDUCTOR table and select all dsd columns per requirement
+DB_QUERY_GET_ZEALPREMISIS_DATA_DETAILS=SELECT dsd.*, idp.inductor_code FROM tttfapp.zealpremisis_data dsd INNER JOIN tttfapp.FFX_INDUCTOR idp ON idp.ffx_inductor_id = dsd.ffx_inductor_id WHERE dsd.zealpremisis_data_id = ?
 
-            CSReporter.info(`    Parsed response date (Americas TZ): ${responseDateStr}`);
-            CSReporter.info(`    Parsed database date (Americas TZ): ${dbDateStr}`);
+# Get zealpremisis_status_log (pending changes / audit trail)
+# FIXED: Corrected table name to zealpremisis_data_status_log, added JOIN to zealpremisis_data_status and scattered_mmte
+DB_QUERY_GET_ZEALPREMISIS_STATUS_LOG=SELECT dsdsl.field_name, dsdsl.old_value, dsdsl.new_value, dsdsl.action, TO_CHAR(dsdsl.inserted_dt, 'MM/DD/YYYY HH24:MI:SS') as inserted_dt, TO_CHAR(dsdsl.updated_dt, 'MM/DD/YYYY HH24:MI:SS') as updated_dt, rr.scattered_mmte_name as disputed_scattered_mmte_name, TO_CHAR(dsdsl.disputed_start_date, 'MM/DD/YYYY') as disputed_start_date, dsdsl.ffx_order, dsds.zealpremisis_status_cd FROM tttfapp.zealpremisis_data_status_log dsdsl INNER JOIN tttfapp.zealpremisis_data_status dsds ON dsdsl.zealpremisis_status_id = dsds.zealpremisis_status_id LEFT JOIN tttfapp.scattered_mmte rr ON rr.scattered_mmte_id = dsdsl.disputed_scattered_mmte_id WHERE dsdsl.zealpremisis_data_id = ? ORDER BY dsdsl.inserted_dt DESC
 
-            await this.assert.assertEqual(
-                responseDateStr,
-                dbDateStr,
-                `${fieldName} should match database for ${ffffRrrr}`
-            );
+# Get zealpremisis_mmte_data (scattered mmtes after approval)
+# FIXED: Corrected column names - disputed_scattered_mmte_id and disputed_date per requirement
+DB_QUERY_GET_ZEALPREMISIS_MMTE_DATA=SELECT rr1.scattered_mmte_name AS scattered_mmte_name, rr2.scattered_mmte_name AS disputed_scattered_mmte_name, TO_CHAR(dsrd.disputed_date, 'MM/DD/YYYY') as disputed_date, dsrd.ffx_order FROM tttfapp.zealpremisis_mmte_data dsrd INNER JOIN tttfapp.scattered_mmte rr1 ON dsrd.scattered_mmte_id = rr1.scattered_mmte_id LEFT JOIN tttfapp.scattered_mmte rr2 ON dsrd.disputed_scattered_mmte_id = rr2.scattered_mmte_id WHERE dsrd.zealpremisis_data_id = ? ORDER BY dsrd.ffx_order
 
-            CSReporter.pass(`  ✓ ${fieldName} validated for ${ffffRrrr}`);
-        } catch (error) {
-            CSReporter.fail(`Date validation failed for ${fieldName} of ${ffffRrrr}: ${error}`);
-            throw error;
-        }
-    }
+# ==============================================================================
+# NEW PREMISIS SETUP - TEST DATA RETRIEVAL QUERIES
+# ==============================================================================
 
-    /**
-     * Helper: Check if ffffDetail has valid ffffs (non-empty ffffs array)
-     * Use this to determine if ffffs[] array contains data before validation
-     */
-    public hasValidFfffs(ffffDetail: any): boolean {
-        return ffffDetail.ffffs &&
-               Array.isArray(ffffDetail.ffffs) &&
-               ffffDetail.ffffs.length > 0;
-    }
+# Get premisis for new setup (no scattered mmtes, no pending changes)
+DB_QUERY_GET_PREMISIS_FOR_NEW_SETUP=SELECT d.zeal_id, d.zeal_key, d.zeal_name, d.inductor_group, d.kindness_circle, d.zzzt_seggregation, d.premisis_description, d.calc_shool_name, d.acct_manager, d.zeal_id as zzzt_id FROM ttsginfo.tttf_zeals_premisis_view d WHERE d.type_value = 'PREMISIS' AND NOT EXISTS (SELECT 1 FROM tttfapp.zzzt_data ld INNER JOIN tttfapp.zealpremisis_data dsd ON ld.zealpremisis_data_id = dsd.zealpremisis_data_id INNER JOIN tttfapp.zealpremisis_mmte_data dsrd ON dsrd.zealpremisis_data_id = dsd.zealpremisis_data_id WHERE ld.zzzt_id = d.zeal_id) AND NOT EXISTS (SELECT 1 FROM tttfapp.zzzt_data ld INNER JOIN tttfapp.zealpremisis_data dsd ON ld.zealpremisis_data_id = dsd.zealpremisis_data_id INNER JOIN tttfapp.zealpremisis_status_log dsl ON dsl.zealpremisis_data_id = dsd.zealpremisis_data_id WHERE ld.zzzt_id = d.zeal_id AND dsl.zealpremisis_status_cd = 'AWAITING') AND ROWNUM <= 1 ORDER BY d.zeal_id
 
-    /**
-     * Helper: Get all ffffs from ffffDetail
-     * Returns empty array if no ffffs available
-     */
-    public getAllFfffs(ffffDetail: any): any[] {
-        if (this.hasValidFfffs(ffffDetail)) {
-            return ffffDetail.ffffs;
-        }
-        return [];
-    }
+# Get zzzt_data record by zzzt_id (for Premisis)
+DB_QUERY_GET_ZZZT_DATA_BY_ZZZT_ID=SELECT ld.zealpremisis_data_id, ld.zzzt_id FROM tttfapp.zzzt_data ld WHERE ld.zzzt_id = ?
 
-    /**
-     * Helper: Get ffff count from ffffDetail
-     */
-    public getFfffCount(ffffDetail: any): number {
-        if (this.hasValidFfffs(ffffDetail)) {
-            return ffffDetail.ffffs.length;
-        }
-        return 0;
-    }
-}
+# ==============================================================================
+# EDIT NAVIGATION - TEST DATA RETRIEVAL QUERIES (SCENARIO_08, 09A)
+# ==============================================================================
+
+# Get zeal for edit navigation testing
+DB_QUERY_GET_ZEAL_FOR_EDIT_NAVIGATION=SELECT d.zeal_id, d.zeal_key, d.zeal_name, d.inductor_group, d.kindness_circle, d.zzzt_seggregation, d.premisis_description, d.calc_shool_name, d.acct_manager FROM ttsginfo.tttf_zeals_premisis_view d WHERE d.type_value = 'ZEAL' AND d.calc_shool_type IS NOT NULL AND d.calc_shool_id <> -1 AND d.zeal_id NOT IN (SELECT zeal_id FROM tttfapp.zeal_data) AND ROWNUM <= 1 ORDER BY d.zeal_id
+
+# Get premisis for edit navigation testing
+DB_QUERY_GET_PREMISIS_FOR_EDIT_NAVIGATION=SELECT d.zeal_id, d.zeal_key, d.zeal_name, d.inductor_group, d.kindness_circle, d.zzzt_seggregation, d.premisis_description, d.calc_shool_name, d.acct_manager, d.zeal_id as zzzt_id FROM ttsginfo.tttf_zeals_premisis_view d WHERE d.type_value = 'PREMISIS' AND d.calc_shool_type IS NOT NULL AND d.calc_shool_id <> -1 AND d.zeal_id NOT IN (SELECT zzzt_id FROM tttfapp.zzzt_data) AND ROWNUM <= 1 ORDER BY d.zeal_id
+
+# ==============================================================================
+# EXISTING ZEAL UPDATE - TEST DATA RETRIEVAL QUERIES (SCENARIO_09B)
+# ==============================================================================
+
+# Get existing zeal with scattered mmtes (more than 1)
+DB_QUERY_GET_EXISTING_ZEAL_WITH_SCATTERED_MMTES=SELECT cdsv.type_value, cdsv.zeal_id, cdsv.zeal_key, cdsv.zeal_name, cdsv.zzzt_seggregation, cdsv.premisis_description, cdsv.inductor_group, cdsv.acct_manager, cdsv.acct_mgr_email, cdsv.calc_shool_name, dsd.sketchmark_replacement_flag, idp.inductor_code, rr.scattered_mmte_name, rr.methodology_type, dsrd.ffx_order FROM ttsginfo.tttf_zeals_premisis_view cdsv INNER JOIN tttfapp.zeal_data dd ON cdsv.zeal_id = dd.zeal_id AND cdsv.type_value = 'ZEAL' INNER JOIN tttfapp.zealpremisis_data dsd ON dsd.zealpremisis_data_id = dd.zealpremisis_data_id LEFT JOIN tttfapp.FFX_INDUCTOR idp ON idp.ffx_inductor_id = dsd.ffx_inductor_id INNER JOIN tttfapp.zealpremisis_mmte_data dsrd ON dsd.zealpremisis_data_id = dsrd.zealpremisis_data_id INNER JOIN tttfapp.scattered_mmte rr ON dsrd.scattered_mmte_id = rr.scattered_mmte_id WHERE cdsv.zeal_id = (SELECT MIN(zeal_id) FROM (SELECT cdsv2.zeal_id FROM ttsginfo.tttf_zeals_premisis_view cdsv2 INNER JOIN tttfapp.zeal_data dd2 ON cdsv2.zeal_id = dd2.zeal_id AND cdsv2.type_value = 'ZEAL' INNER JOIN tttfapp.zealpremisis_data dsd2 ON dsd2.zealpremisis_data_id = dd2.zealpremisis_data_id INNER JOIN tttfapp.zealpremisis_mmte_data dsrd2 ON dsd2.zealpremisis_data_id = dsrd2.zealpremisis_data_id GROUP BY cdsv2.zeal_id HAVING COUNT(*) > 1)) ORDER BY dsrd.ffx_order ASC
+
+# Get replacement scattered mmtes (excluding specified ones)
+DB_QUERY_GET_REPLACEMENT_SCATTERED_MMTES=SELECT scattered_mmte_name, methodology_type FROM (SELECT rr.scattered_mmte_name, rr.methodology_type, ROW_NUMBER() OVER (PARTITION BY rr.methodology_type ORDER BY rr.scattered_mmte_name DESC) as rn FROM tttfapp.scattered_mmte rr WHERE rr.active_flag = 'Y' AND rr.scattered_mmte_name NOT IN (SELECT REGEXP_SUBSTR(?, '[^,]+', 1, LEVEL) FROM DUAL CONNECT BY REGEXP_SUBSTR(?, '[^,]+', 1, LEVEL) IS NOT NULL)) WHERE rn = 1 AND ROWNUM <= 3
+
+# Get different FFX Inductor Type
+DB_QUERY_GET_DIFFERENT_FFX_INDUCTOR_TYPE=SELECT inductor_code FROM tttfapp.FFX_INDUCTOR WHERE inductor_code <> ? AND ROWNUM = 1
+
+
+
+******************************************************************************************************************************************************
+
+# ==============================================================================
+# TTTF CUMULATIVE MMTES - ORACLE DATABASE QUERIES CONFIGURATION
+# ==============================================================================
+# All database queries for TTTF Cumulative Mmtes test automation
+# Queries are scatteredd by name in step definitions using CSDBUtils
+# Format: DB_QUERY_{QUERY_NAME}=SQL_STATEMENT
+# ==============================================================================
+
+# ==============================================================================
+# CUMULATIVE MMTE QUERIES (Scenario 1, 2)
+# ==============================================================================
+
+# Get all active cumulative mmte names ordered by index (Scenario 1, circle 70-75)
+DB_QUERY_GET_ACTIVE_CUMULATIVE_MMTES=SELECT cumulative_mmte_name FROM tttfapp.cumulative_mmte WHERE active_flag='Y' ORDER BY index_order ASC
+
+# Get first active cumulative mmte for test data setup (Scenario 2)
+DB_QUERY_GET_FIRST_ACTIVE_CUMULATIVE_MMTE=SELECT cumulative_mmte_name FROM tttfapp.cumulative_mmte WHERE active_flag='Y' ORDER BY index_order ASC FETCH FIRST 1 ROW ONLY
+
+# ==============================================================================
+# SEARCH BY CUMULATIVE MMTE NAME QUERIES (Scenario 2)
+# ==============================================================================
+
+# Search cumulative daily mmtes by cumulative mmte name (Scenario 2, circle 165-176)
+DB_QUERY_SEARCH_CUMULATIVE_DAILY_MMTES_BY_NAME=SELECT to_char(edr.rrrrrrrr_dt, 'MM/DD/YYYY') as rrrrrrrr_dt, to_char(edr.mmte, 'FM990.0999999999') as mmte, er.cumulative_mmte_name, ers.cumulative_mmte_source_cd, to_char(edr.mutative_dt, 'MM/DD/YYYY') as publication_dt FROM tttfapp.cumulative_daily_mmte edr INNER JOIN tttfapp.cumulative_mmte er ON er.cumulative_mmte_id=edr.cumulative_mmte_id INNER JOIN tttfapp.cumulative_mmte_source ers ON edr.cumulative_mmte_source_id=ers.cumulative_mmte_source_id WHERE er.cumulative_mmte_name=? AND edr.active_flag='Y' ORDER BY edr.rrrrrrrr_dt DESC
+
+# ==============================================================================
+# SEARCH BY RRRRRRRR DATE QUERIES (Scenario 3)
+# ==============================================================================
+
+# Search cumulative daily mmtes by rrrrrrrr date range (Scenario 3, circle 253-263)
+DB_QUERY_SEARCH_CUMULATIVE_DAILY_MMTES_BY_DATE=SELECT to_char(edr.rrrrrrrr_dt, 'MM/DD/YYYY') as rrrrrrrr_dt, to_char(edr.mmte, 'FM990.0999999999') as mmte, er.cumulative_mmte_name, ers.cumulative_mmte_source_cd, to_char(edr.mutative_dt, 'MM/DD/YYYY') as publication_dt FROM tttfapp.cumulative_daily_mmte edr INNER JOIN tttfapp.cumulative_mmte er ON er.cumulative_mmte_id=edr.cumulative_mmte_id INNER JOIN tttfapp.cumulative_mmte_source ers ON edr.cumulative_mmte_source_id=ers.cumulative_mmte_source_id WHERE edr.rrrrrrrr_dt >= TO_DATE(?, 'MM/DD/YYYY') AND edr.rrrrrrrr_dt <= TO_DATE(?, 'MM/DD/YYYY') AND edr.active_flag='Y' ORDER BY edr.rrrrrrrr_dt DESC
+
+# ==============================================================================
+# SEARCH BY COMBINED FILTERS QUERIES (Scenario 4)
+# ==============================================================================
+
+# Search cumulative daily mmtes by cumulative mmte name and rrrrrrrr date range (Scenario 4, circle 356-366)
+DB_QUERY_SEARCH_CUMULATIVE_DAILY_MMTES_BY_NAME_AND_DATE=SELECT to_char(edr.rrrrrrrr_dt, 'MM/DD/YYYY') as rrrrrrrr_dt, to_char(edr.mmte, 'FM990.0999999999') as mmte, er.cumulative_mmte_name, ers.cumulative_mmte_source_cd, to_char(edr.mutative_dt, 'MM/DD/YYYY') as publication_dt FROM tttfapp.cumulative_daily_mmte edr INNER JOIN tttfapp.cumulative_mmte er ON er.cumulative_mmte_id=edr.cumulative_mmte_id INNER JOIN tttfapp.cumulative_mmte_source ers ON edr.cumulative_mmte_source_id=ers.cumulative_mmte_source_id WHERE er.cumulative_mmte_name=? AND edr.rrrrrrrr_dt >= TO_DATE(?, 'MM/DD/YYYY') AND edr.rrrrrrrr_dt <= TO_DATE(?, 'MM/DD/YYYY') AND edr.active_flag='Y' ORDER BY edr.rrrrrrrr_dt DESC
+
+# ==============================================================================
+# EDIT SCENARIO TEST DATA QUERIES (Scenario 7, 8, 9)
+# ==============================================================================
+
+# Get cumulative mmte with MANUAL source for editing - at least 5 months old (Scenario 7, circle 584-596)
+DB_QUERY_GET_CUMULATIVE_MMTE_FOR_EDIT=SELECT to_char(edr.rrrrrrrr_dt, 'MM/DD/YYYY') as rrrrrrrr_dt, to_char(edr.mmte, 'FM990.0999999999') as mmte, er.cumulative_mmte_name, ers.cumulative_mmte_source_cd, to_char(edr.mutative_dt, 'MM/DD/YYYY') as publication_dt FROM tttfapp.cumulative_daily_mmte edr INNER JOIN tttfapp.cumulative_mmte er ON er.cumulative_mmte_id=edr.cumulative_mmte_id INNER JOIN tttfapp.cumulative_mmte_source ers ON edr.cumulative_mmte_source_id=ers.cumulative_mmte_source_id WHERE er.cumulative_mmte_name=? AND edr.active_flag='Y' AND edr.rrrrrrrr_dt <= ADD_MONTHS(TRUNC(SYSDATE), -5) AND edr.cumulative_mmte_source_id=1000 ORDER BY edr.rrrrrrrr_dt DESC FETCH FIRST 1 ROW ONLY
+
+# Get different cumulative mmte name on same rrrrrrrr date for duplicate validation (Scenario 7, circle 647-655)
+DB_QUERY_GET_DIFFERENT_MMTE_SAME_DATE=SELECT er.cumulative_mmte_name FROM tttfapp.cumulative_mmte er WHERE er.cumulative_mmte_id IN (SELECT edr.cumulative_mmte_id FROM tttfapp.cumulative_daily_mmte edr WHERE edr.rrrrrrrr_dt=TO_DATE(?, 'MM/DD/YYYY') AND edr.active_flag='Y' AND edr.cumulative_mmte_source_id=1000) AND er.cumulative_mmte_name <> ? AND er.active_flag='Y' ORDER BY er.index_order ASC FETCH FIRST 1 ROW ONLY
+
+# Verify no update happened after cancel (Scenario 7, circle 636-640)
+DB_QUERY_VERIFY_NO_UPDATE_AFTER_CANCEL=SELECT to_char(edr.rrrrrrrr_dt, 'MM/DD/YYYY') as rrrrrrrr_dt, to_char(edr.mmte, 'FM990.0999999999') as mmte, er.cumulative_mmte_name, ers.cumulative_mmte_source_cd FROM tttfapp.cumulative_daily_mmte edr INNER JOIN tttfapp.cumulative_mmte er ON er.cumulative_mmte_id=edr.cumulative_mmte_id INNER JOIN tttfapp.cumulative_mmte_source ers ON edr.cumulative_mmte_source_id=ers.cumulative_mmte_source_id WHERE edr.rrrrrrrr_dt=TO_DATE(?, 'MM/DD/YYYY') AND er.cumulative_mmte_name=? AND edr.active_flag='Y'
+
+# ==============================================================================
+# EDIT RRRRRRRR DATE QUERIES (Scenario 8)
+# ==============================================================================
+
+# Get existing rrrrrrrr date for same cumulative mmte name (Scenario 8, circle 773-783)
+DB_QUERY_GET_EXISTING_RRRRRRRR_DATE=SELECT DISTINCT to_char(edr.rrrrrrrr_dt, 'MM/DD/YYYY') as rrrrrrrr_dt FROM tttfapp.cumulative_daily_mmte edr INNER JOIN tttfapp.cumulative_mmte er ON er.cumulative_mmte_id=edr.cumulative_mmte_id WHERE er.cumulative_mmte_name=? AND edr.active_flag='Y' AND edr.rrrrrrrr_dt <> TO_DATE(?, 'MM/DD/YYYY') AND edr.cumulative_mmte_source_id=1000 ORDER BY edr.rrrrrrrr_dt DESC FETCH FIRST 1 ROW ONLY
+
+# Get non-existing rrrrrrrr date (5 months ago from sysdate) (Scenario 8, circle 810)
+DB_QUERY_GET_NON_EXISTING_RRRRRRRR_DATE=SELECT to_char(ADD_MONTHS(TRUNC(SYSDATE), -5), 'MM/DD/YYYY') as rrrrrrrr_dt FROM DUAL
+
+# Verify old record removed after rrrrrrrr date update (Scenario 8, circle 845-850)
+DB_QUERY_VERIFY_OLD_RECORD_REMOVED=SELECT COUNT(*) as record_count FROM tttfapp.cumulative_daily_mmte edr INNER JOIN tttfapp.cumulative_mmte er ON er.cumulative_mmte_id=edr.cumulative_mmte_id WHERE edr.rrrrrrrr_dt=TO_DATE(?, 'MM/DD/YYYY') AND er.cumulative_mmte_name=? AND edr.active_flag='Y'
+
+# Verify new record created with updated rrrrrrrr date (Scenario 8, circle 851-857)
+DB_QUERY_VERIFY_NEW_RECORD_WITH_UPDATED_DATE=SELECT to_char(edr.rrrrrrrr_dt, 'MM/DD/YYYY') as rrrrrrrr_dt, to_char(edr.mmte, 'FM990.0999999999') as mmte, er.cumulative_mmte_name, ers.cumulative_mmte_source_cd FROM tttfapp.cumulative_daily_mmte edr INNER JOIN tttfapp.cumulative_mmte er ON er.cumulative_mmte_id=edr.cumulative_mmte_id INNER JOIN tttfapp.cumulative_mmte_source ers ON edr.cumulative_mmte_source_id=ers.cumulative_mmte_source_id WHERE edr.rrrrrrrr_dt=TO_DATE(?, 'MM/DD/YYYY') AND er.cumulative_mmte_name=? AND edr.active_flag='Y'
+
+# ==============================================================================
+# EDIT MMTE PERCENTAGE QUERIES (Scenario 9)
+# ==============================================================================
+
+# Verify mmte updated for existing record (Scenario 9, circle 960-967)
+DB_QUERY_VERIFY_MMTE_UPDATED=SELECT to_char(edr.rrrrrrrr_dt, 'MM/DD/YYYY') as rrrrrrrr_dt, to_char(edr.mmte, 'FM990.0999999999') as mmte, er.cumulative_mmte_name, ers.cumulative_mmte_source_cd FROM tttfapp.cumulative_daily_mmte edr INNER JOIN tttfapp.cumulative_mmte er ON er.cumulative_mmte_id=edr.cumulative_mmte_id INNER JOIN tttfapp.cumulative_mmte_source ers ON edr.cumulative_mmte_source_id=ers.cumulative_mmte_source_id WHERE edr.rrrrrrrr_dt=TO_DATE(?, 'MM/DD/YYYY') AND er.cumulative_mmte_name=? AND edr.active_flag='Y'
+
+# ==============================================================================
+# ADD INSTANCE QUERIES (Scenario 10)
+# ==============================================================================
+
+# Check if cumulative mmte instance already exists (Scenario 10, circle 1027-1035)
+DB_QUERY_CHECK_INSTANCE_EXISTS=SELECT COUNT(*) as instance_count FROM tttfapp.cumulative_daily_mmte edr INNER JOIN tttfapp.cumulative_mmte er ON er.cumulative_mmte_id=edr.cumulative_mmte_id WHERE er.cumulative_mmte_name=? AND edr.rrrrrrrr_dt=TO_DATE(?, 'MM/DD/YYYY') AND edr.active_flag='Y'
+
+# Get cumulative mmte instance details for verification (Scenario 10, circle 1070-1078)
+DB_QUERY_GET_INSTANCE_DETAILS=SELECT to_char(edr.rrrrrrrr_dt, 'MM/DD/YYYY') as rrrrrrrr_dt, to_char(edr.mmte, 'FM990.0999999999') as mmte, er.cumulative_mmte_name, ers.cumulative_mmte_source_cd, to_char(edr.mutative_dt, 'MM/DD/YYYY') as publication_dt FROM tttfapp.cumulative_daily_mmte edr INNER JOIN tttfapp.cumulative_mmte er ON er.cumulative_mmte_id=edr.cumulative_mmte_id INNER JOIN tttfapp.cumulative_mmte_source ers ON edr.cumulative_mmte_source_id=ers.cumulative_mmte_source_id WHERE er.cumulative_mmte_name=? AND edr.rrrrrrrr_dt=TO_DATE(?, 'MM/DD/YYYY') AND edr.active_flag='Y'
+
+# Get cumulative mmte name that does NOT have daily mmte for specific rrrrrrrr date (Scenario 10 - Add Instance)
+DB_QUERY_GET_MMTE_WITHOUT_DAILY_FOR_DATE=SELECT er.cumulative_mmte_name FROM tttfapp.cumulative_mmte er WHERE er.active_flag='Y' AND NOT EXISTS (SELECT 1 FROM tttfapp.cumulative_daily_mmte edr WHERE edr.cumulative_mmte_id=er.cumulative_mmte_id AND edr.rrrrrrrr_dt=TO_DATE(?, 'MM/DD/YYYY') AND edr.active_flag='Y') ORDER BY er.index_order ASC FETCH FIRST 1 ROW ONLY
+
+# Get existing rrrrrrrr date with daily mmte for cumulative mmte name (Scenario 10 - duplicate validation)
+DB_QUERY_GET_EXISTING_DATE_WITH_DAILY_MMTE=SELECT to_char(edr.rrrrrrrr_dt, 'MM/DD/YYYY') as rrrrrrrr_dt FROM tttfapp.cumulative_daily_mmte edr INNER JOIN tttfapp.cumulative_mmte er ON er.cumulative_mmte_id=edr.cumulative_mmte_id WHERE er.cumulative_mmte_name=? AND edr.active_flag='Y' ORDER BY edr.rrrrrrrr_dt DESC FETCH FIRST 1 ROW ONLY
+
+# ==============================================================================
+# REMOVE INSTANCE QUERIES (Scenario 11)
+# ==============================================================================
+
+# Verify instance removed (active_flag='N') - count active records (Scenario 11, circle 1200-1215)
+DB_QUERY_VERIFY_INSTANCE_REMOVED=SELECT COUNT(*) as instance_count FROM tttfapp.cumulative_daily_mmte edr INNER JOIN tttfapp.cumulative_mmte er ON er.cumulative_mmte_id=edr.cumulative_mmte_id WHERE er.cumulative_mmte_name=? AND edr.rrrrrrrr_dt=TO_DATE(?, 'MM/DD/YYYY') AND edr.active_flag='Y'
+
+# Verify soft delete - get record including inactive (Scenario 11, circle 1200-1225)
+DB_QUERY_VERIFY_SOFT_DELETE=SELECT to_char(edr.rrrrrrrr_dt, 'MM/DD/YYYY') as rrrrrrrr_dt, to_char(edr.mmte, 'FM990.0999999999') as mmte, er.cumulative_mmte_name, ers.cumulative_mmte_source_cd, to_char(edr.mutative_dt, 'MM/DD/YYYY') as publication_dt, edr.active_flag FROM tttfapp.cumulative_daily_mmte edr INNER JOIN tttfapp.cumulative_mmte er ON er.cumulative_mmte_id=edr.cumulative_mmte_id INNER JOIN tttfapp.cumulative_mmte_source ers ON edr.cumulative_mmte_source_id=ers.cumulative_mmte_source_id WHERE er.cumulative_mmte_name=? AND edr.rrrrrrrr_dt=TO_DATE(?, 'MM/DD/YYYY')
+
+# Get MANUAL source record for deletion (at least 5 months old)
+DB_QUERY_GET_MANUAL_RECORD_FOR_DELETE=SELECT to_char(edr.rrrrrrrr_dt, 'MM/DD/YYYY') as rrrrrrrr_dt FROM tttfapp.cumulative_daily_mmte edr INNER JOIN tttfapp.cumulative_mmte er ON er.cumulative_mmte_id=edr.cumulative_mmte_id WHERE edr.rrrrrrrr_dt <= ADD_MONTHS(TRUNC(SYSDATE), -5) AND er.cumulative_mmte_name=? AND edr.active_flag='Y' AND edr.cumulative_mmte_source_id=1000 ORDER BY edr.rrrrrrrr_dt DESC FETCH FIRST 1 ROW ONLY
+
+# ==============================================================================
+# EXPORT QUERIES (Scenario 12)
+# ==============================================================================
+
+# Get all cumulative daily mmtes for export (no filter)
+DB_QUERY_GET_ALL_FOR_EXPORT=SELECT to_char(edr.rrrrrrrr_dt, 'MM/DD/YYYY') as rrrrrrrr_dt, to_char(edr.mmte, 'FM990.0999999999') as mmte, er.cumulative_mmte_name, ers.cumulative_mmte_source_cd FROM tttfapp.cumulative_daily_mmte edr INNER JOIN tttfapp.cumulative_mmte er ON er.cumulative_mmte_id=edr.cumulative_mmte_id INNER JOIN tttfapp.cumulative_mmte_source ers ON edr.cumulative_mmte_source_id=ers.cumulative_mmte_source_id WHERE edr.active_flag='Y' ORDER BY edr.rrrrrrrr_dt DESC
+
+# Get filtered cumulative daily mmtes for export by name (Scenario 12)
+DB_QUERY_GET_FILTERED_FOR_EXPORT_BY_NAME=SELECT to_char(edr.rrrrrrrr_dt, 'MM/DD/YYYY') as rrrrrrrr_dt, to_char(edr.mmte, 'FM990.0999999999') as mmte, er.cumulative_mmte_name, ers.cumulative_mmte_source_cd FROM tttfapp.cumulative_daily_mmte edr INNER JOIN tttfapp.cumulative_mmte er ON er.cumulative_mmte_id=edr.cumulative_mmte_id INNER JOIN tttfapp.cumulative_mmte_source ers ON edr.cumulative_mmte_source_id=ers.cumulative_mmte_source_id WHERE er.cumulative_mmte_name=? AND edr.active_flag='Y' ORDER BY edr.rrrrrrrr_dt DESC
+
+# Get filtered cumulative daily mmtes for export by date range (Scenario 12)
+DB_QUERY_GET_FILTERED_FOR_EXPORT_BY_DATE=SELECT to_char(edr.rrrrrrrr_dt, 'MM/DD/YYYY') as rrrrrrrr_dt, to_char(edr.mmte, 'FM990.0999999999') as mmte, er.cumulative_mmte_name, ers.cumulative_mmte_source_cd FROM tttfapp.cumulative_daily_mmte edr INNER JOIN tttfapp.cumulative_mmte er ON er.cumulative_mmte_id=edr.cumulative_mmte_id INNER JOIN tttfapp.cumulative_mmte_source ers ON edr.cumulative_mmte_source_id=ers.cumulative_mmte_source_id WHERE edr.rrrrrrrr_dt >= TO_DATE(?, 'MM/DD/YYYY') AND edr.rrrrrrrr_dt <= TO_DATE(?, 'MM/DD/YYYY') AND edr.active_flag='Y' ORDER BY edr.rrrrrrrr_dt DESC
+
+# Get filtered cumulative daily mmtes for export by name and date range (Scenario 12)
+DB_QUERY_GET_FILTERED_FOR_EXPORT_BY_NAME_AND_DATE=SELECT to_char(edr.rrrrrrrr_dt, 'MM/DD/YYYY') as rrrrrrrr_dt, to_char(edr.mmte, 'FM990.0999999999') as mmte, er.cumulative_mmte_name, ers.cumulative_mmte_source_cd FROM tttfapp.cumulative_daily_mmte edr INNER JOIN tttfapp.cumulative_mmte er ON er.cumulative_mmte_id=edr.cumulative_mmte_id INNER JOIN tttfapp.cumulative_mmte_source ers ON edr.cumulative_mmte_source_id=ers.cumulative_mmte_source_id WHERE er.cumulative_mmte_name=? AND edr.rrrrrrrr_dt >= TO_DATE(?, 'MM/DD/YYYY') AND edr.rrrrrrrr_dt <= TO_DATE(?, 'MM/DD/YYYY') AND edr.active_flag='Y' ORDER BY edr.rrrrrrrr_dt DESC
+
+# ==============================================================================
+# KINDNESS DATE HELPER QUERIES
+# ==============================================================================
+
+# Get kindness date (excluding weekends) - 1 kindness day ago
+DB_QUERY_GET_KINDNESS_DATE_MINUS_1=SELECT to_char(CASE WHEN TO_CHAR(SYSDATE-1, 'DY') = 'SUN' THEN SYSDATE-2 WHEN TO_CHAR(SYSDATE-1, 'DY') = 'SAT' THEN SYSDATE-1 ELSE SYSDATE-1 END, 'MM/DD/YYYY') as kindness_date FROM DUAL
+
+# Get kindness date - 5 kindness days ago (for StartDate default)
+DB_QUERY_GET_KINDNESS_DATE_MINUS_5=SELECT to_char(TRUNC(SYSDATE) - (CASE WHEN TO_CHAR(TRUNC(SYSDATE), 'DY') IN ('MON','TUE','WED','THU','FRI') THEN 7 ELSE 7 END), 'MM/DD/YYYY') as kindness_date FROM DUAL
+
+# Get current date for test data
+DB_QUERY_GET_CURRENT_DATE=SELECT to_char(SYSDATE, 'MM/DD/YYYY') as current_date FROM DUAL
