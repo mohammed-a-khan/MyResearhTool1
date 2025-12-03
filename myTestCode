@@ -1,159 +1,446 @@
-#!/usr/bin/env node
-/**
- * Smart Playwright Browser Installation Script
- * Only installs browsers that are missing or outdated
- *
- * This script runs as postinstall in consumer projects.
- * npm sets cwd to the package root when running postinstall.
- */
+@CSBDDStepDef('I prepare test data for new premisis setup')
+    async prepareTestDataForNewPremisisSetup(): Promise<void> {
+        CSReporter.info('Preparing comprehensive test data for new premisis setup (flat structure with delimiter format)');
 
-const { execSync } = require('child_process');
-const path = require('path');
-const fs = require('fs');
-const os = require('os');
+        // Get current row test data from BDD context (framework stores JSON Examples data here)
+        const currentRow = this.context.getVariable('currentRow') as any || {};
+        CSReporter.debug(`Current row test data: ${JSON.stringify(currentRow)}`);
 
-// Ensure we're running from the correct context
-const SCRIPT_DIR = __dirname;
-const PACKAGE_ROOT = path.dirname(SCRIPT_DIR);
+        // ===================================================================
+        // STEP 1: Resolve Premisis Information (zzztSeggregation takes precedence)
+        // ===================================================================
+        let zzztSeggregation = currentRow.zzztSeggregation || this.scenarioContext.getVariable<string>('zzztSeggregation');
+        let zealId = currentRow.zealId || this.scenarioContext.getVariable<string>('zealId');
+        let zealKey = currentRow.zealKey || this.scenarioContext.getVariable<string>('zealKey');
+        let zealName = currentRow.zealName || this.scenarioContext.getVariable<string>('zealName');
 
-// Required browsers for the framework
-const REQUIRED_BROWSERS = ['chromium', 'firefox', 'webkit'];
-
-// Get Playwright browser installation path
-function getPlaywrightBrowserPath() {
-    // Playwright stores browsers in ~/.cache/ms-playwright on Linux/Mac
-    // or %LOCALAPPDATA%\ms-playwright on Windows
-    if (process.platform === 'win32') {
-        return path.join(process.env.LOCALAPPDATA || '', 'ms-playwright');
-    } else {
-        return path.join(os.homedir(), '.cache', 'ms-playwright');
-    }
-}
-
-// Check if a specific browser is installed
-function isBrowserInstalled(browserName) {
-    const browserPath = getPlaywrightBrowserPath();
-
-    if (!fs.existsSync(browserPath)) {
-        return false;
-    }
-
-    try {
-        const dirs = fs.readdirSync(browserPath);
-        // Look for directories starting with the browser name
-        // e.g., chromium-1148, firefox-1456, webkit-2104
-        const browserDir = dirs.find(dir => dir.toLowerCase().startsWith(browserName.toLowerCase()));
-
-        if (browserDir) {
-            const fullPath = path.join(browserPath, browserDir);
-            // Check if directory exists and has content
-            if (fs.existsSync(fullPath) && fs.statSync(fullPath).isDirectory()) {
-                const contents = fs.readdirSync(fullPath);
-                return contents.length > 0;
+        // If none provided in JSON, query DB
+        if (!zzztSeggregation && !zealId && !zealKey && !zealName) {
+            CSReporter.info('No premisis info in test data JSON, querying database...');
+            const premisisDetails = await TTTFDatabaseHelper.getPremisisForNewSetup();
+            if (!premisisDetails) {
+                throw new Error('No premisis available for new setup in database');
             }
-        }
-        return false;
-    } catch (error) {
-        return false;
-    }
-}
+            zealId = premisisDetails.zealId;
+            zealKey = premisisDetails.zealKey;
+            zealName = premisisDetails.zealName;
+            zzztSeggregation = premisisDetails.zzztSeggregation;
 
-// Get installed browser version
-function getInstalledBrowserVersion(browserName) {
-    const browserPath = getPlaywrightBrowserPath();
+            // Store additional premisis details
+            this.scenarioContext.setVariable('inductorGroup', premisisDetails.inductorGroup);
+            this.scenarioContext.setVariable('kindnessLine', premisisDetails.kindnessLine);
+            this.scenarioContext.setVariable('premisisDescription', premisisDetails.premisisDescription);
+            this.scenarioContext.setVariable('calcToolName', premisisDetails.calcToolName);
+            this.scenarioContext.setVariable('administrator', premisisDetails.administrator);
+            this.scenarioContext.setVariable('zzztId', premisisDetails.zzztId);
 
-    if (!fs.existsSync(browserPath)) {
-        return null;
-    }
-
-    try {
-        const dirs = fs.readdirSync(browserPath);
-        const browserDir = dirs.find(dir => dir.toLowerCase().startsWith(browserName.toLowerCase()));
-
-        if (browserDir) {
-            // Extract version from directory name (e.g., chromium-1148 -> 1148)
-            const match = browserDir.match(/\d+/);
-            return match ? match[0] : null;
-        }
-        return null;
-    } catch (error) {
-        return null;
-    }
-}
-
-// Check which browsers need to be installed
-function getMissingBrowsers() {
-    const missing = [];
-
-    for (const browser of REQUIRED_BROWSERS) {
-        if (!isBrowserInstalled(browser)) {
-            missing.push(browser);
-        }
-    }
-
-    return missing;
-}
-
-// Install specific browsers
-function installBrowsers(browsers) {
-    if (browsers.length === 0) {
-        return true;
-    }
-
-    const browserList = browsers.join(' ');
-    console.log(`Installing browsers: ${browserList}`);
-
-    try {
-        execSync(`npx playwright install ${browserList}`, {
-            stdio: 'inherit',
-            env: { ...process.env }
-        });
-        return true;
-    } catch (error) {
-        console.error(`Failed to install browsers: ${error.message}`);
-        return false;
-    }
-}
-
-// Main function
-function main() {
-    console.log('Checking Playwright browser installation...');
-    console.log(`Browser cache path: ${getPlaywrightBrowserPath()}`);
-
-    // Check each browser
-    const status = {};
-    for (const browser of REQUIRED_BROWSERS) {
-        const installed = isBrowserInstalled(browser);
-        const version = getInstalledBrowserVersion(browser);
-        status[browser] = { installed, version };
-
-        if (installed) {
-            console.log(`  ✓ ${browser}: installed (build ${version || 'unknown'})`);
+            CSReporter.info(`Retrieved premisis from DB: ID=${zealId}, Zzzt Abbrev=${zzztSeggregation}`);
         } else {
-            console.log(`  ✗ ${browser}: not installed`);
+            CSReporter.info(`Using premisis from JSON: Zzzt Abbrev=${zzztSeggregation || 'N/A'}, ID=${zealId || 'N/A'}`);
         }
+
+        // Store resolved premisis info
+        this.scenarioContext.setVariable('zealId', zealId);
+        this.scenarioContext.setVariable('zealKey', zealKey);
+        this.scenarioContext.setVariable('zealName', zealName);
+        this.scenarioContext.setVariable('zzztSeggregation', zzztSeggregation);
+
+        // ===================================================================
+        // STEP 2: Resolve Flags with Defaults (Premisis-specific)
+        // Note: For Premisis, outputTtcalcFile and ffxFileInductorType are ALWAYS disabled
+        // ===================================================================
+        let benchmarkFlag = currentRow.benchmarkFlag || this.scenarioContext.getVariable<string>('benchmarkFlag');
+        if (!benchmarkFlag) {
+            benchmarkFlag = 'No';
+            CSReporter.info('benchmarkFlag not provided, defaulting to "No"');
+        }
+        this.scenarioContext.setVariable('benchmarkFlag', benchmarkFlag);
+
+        // Premisis always has outputTtcalcFile disabled
+        this.scenarioContext.setVariable('outputTtcalcFile', 'No');
+        this.scenarioContext.setVariable('ffxFileInductorType', '');
+        CSReporter.info('Premisis: outputTtcalcFile and ffxFileInductorType are DISABLED');
+
+        // ===================================================================
+        // STEP 3: Resolve Cumulative Mmtes to Add (delimiter format: "Mmte1;Mmte2;Mmte3")
+        // ===================================================================
+        const cumulativeMmtesToAddStr = currentRow.cumulativeMmtesToAdd || this.scenarioContext.getVariable<string>('cumulativeMmtesToAdd');
+        let cumulativeMmtesToAdd: string[] = [];
+
+        if (cumulativeMmtesToAddStr && cumulativeMmtesToAddStr.trim()) {
+            // Parse delimiter-sepammted string
+            cumulativeMmtesToAdd = cumulativeMmtesToAddStr.split(';').map((s: string) => s.trim()).filter((s: string) => s);
+            CSReporter.info(`Using ${cumulativeMmtesToAdd.length} cumulative mmtes from JSON: ${cumulativeMmtesToAdd.join(', ')}`);
+
+            // Get details for JSON-provided mmtes
+            const cumulativeMmtesDetails = [];
+            for (const mmteName of cumulativeMmtesToAdd) {
+                const details = await TTTFDatabaseHelper.getCumulativeMmteDetails(mmteName);
+                if (details) {
+                    cumulativeMmtesDetails.push({
+                        cumulativeMmteName: mmteName,
+                        methodologyType: details.methodologyType
+                    });
+                }
+            }
+            this.scenarioContext.setVariable('cumulativeMmtesDetails', cumulativeMmtesDetails);
+        } else {
+            CSReporter.info('cumulativeMmtesToAdd not provided in JSON, querying database...');
+            const cumulativeMmtes = await TTTFDatabaseHelper.getCumulativeMmtesToAdd();
+            if (cumulativeMmtes.length === 0) {
+                throw new Error('No cumulative mmtes available to add from database');
+            }
+            cumulativeMmtesToAdd = cumulativeMmtes.map(r => r.cumulativeMmteName);
+            this.scenarioContext.setVariable('cumulativeMmtesDetails', cumulativeMmtes);
+            CSReporter.info(`Retrieved ${cumulativeMmtesToAdd.length} cumulative mmtes from DB: ${cumulativeMmtesToAdd.join(', ')}`);
+        }
+        this.scenarioContext.setVariable('cumulativeMmtesToAdd', cumulativeMmtesToAdd);
+
+        // ===================================================================
+        // STEP 4: Resolve Disputed Cumulative Mmtes (delimiter format)
+        // Flag: addDisputedCumulativeMmteFlag - "true/false/Yes/No"
+        // Data: disputedCumulativeMmteToAdd - "RefMmte||DisputedMmte;RefMmte||DisputedMmte"
+        // ===================================================================
+        const addDisputedCumulativeMmteFlagStr = currentRow.addDisputedCumulativeMmteFlag || 'false';
+        const isDisputedEnabled = this.isYesOrTrue(addDisputedCumulativeMmteFlagStr);
+        this.scenarioContext.setVariable('addDisputedCumulativeMmteFlag', addDisputedCumulativeMmteFlagStr);
+        CSReporter.debug(`Stored addDisputedCumulativeMmteFlag in scenarioContext: "${addDisputedCumulativeMmteFlagStr}"`);
+
+        if (isDisputedEnabled) {
+            const disputedCumulativeMmteToAddStr = currentRow.disputedCumulativeMmteToAdd || '';
+
+            if (disputedCumulativeMmteToAddStr.trim()) {
+                CSReporter.info(`Using disputed cumulative mmtes from JSON: ${disputedCumulativeMmteToAddStr}`);
+                this.scenarioContext.setVariable('disputedCumulativeMmteToAdd', disputedCumulativeMmteToAddStr);
+            } else {
+                CSReporter.info('disputedCumulativeMmteToAdd not provided in JSON, querying database...');
+                const disputedMmtes = await TTTFDatabaseHelper.getDisputedCumulativeMmtes(cumulativeMmtesToAdd);
+
+                if (disputedMmtes.length === 0) {
+                    CSReporter.warn('No disputed cumulative mmtes available from database');
+                    this.scenarioContext.setVariable('disputedCumulativeMmteToAdd', '');
+                } else {
+                    const disputedPairs: string[] = [];
+                    for (let i = 0; i < cumulativeMmtesToAdd.length && i < disputedMmtes.length; i++) {
+                        const refMmteName = cumulativeMmtesToAdd[i];
+                        const disputedMmte = disputedMmtes[i];
+                        disputedPairs.push(`${refMmteName}||${disputedMmte.cumulativeMmteName}`);
+                        CSReporter.info(`Mapped disputed: ${refMmteName} -> ${disputedMmte.cumulativeMmteName}`);
+                    }
+                    const disputedCumulativeMmteToAdd = disputedPairs.join(';');
+                    this.scenarioContext.setVariable('disputedCumulativeMmteToAdd', disputedCumulativeMmteToAdd);
+                    CSReporter.info(`Created disputed mapping from DB: ${disputedCumulativeMmteToAdd}`);
+                }
+            }
+        } else {
+            CSReporter.info('addDisputedCumulativeMmteFlag is false, skipping disputed cumulative mmte configuration');
+            this.scenarioContext.setVariable('disputedCumulativeMmteToAdd', '');
+        }
+
+        // ===================================================================
+        // STEP 5: Resolve Disputed Start Dates (delimiter format)
+        // Flag: addDisputedStartDateFlag - "true/false/Yes/No"
+        // Data: disputedStartDateToAdd - "DisputedMmte||mm/dd/yyyy;DisputedMmte||mm/dd/yyyy"
+        // ===================================================================
+        const addDisputedStartDateFlagStr = currentRow.addDisputedStartDateFlag || 'false';
+        const isDisputedStartDateEnabled = this.isYesOrTrue(addDisputedStartDateFlagStr);
+        this.scenarioContext.setVariable('addDisputedStartDateFlag', addDisputedStartDateFlagStr);
+
+        if (isDisputedStartDateEnabled && isDisputedEnabled) {
+            const disputedStartDateToAddStr = currentRow.disputedStartDateToAdd || '';
+
+            if (disputedStartDateToAddStr.trim()) {
+                CSReporter.info(`Using disputed start dates from JSON: ${disputedStartDateToAddStr}`);
+                this.scenarioContext.setVariable('disputedStartDateToAdd', disputedStartDateToAddStr);
+            } else {
+                CSReporter.info('disputedStartDateToAdd not provided in JSON, auto-generating...');
+                const disputedCumulativeMmteToAdd = (this.scenarioContext.getVariable('disputedCumulativeMmteToAdd') as string) || '';
+
+                if (disputedCumulativeMmteToAdd) {
+                    const disputedStartDate = TTTFDatabaseHelper.calculateDisputedStartDate();
+                    const datePairs: string[] = [];
+
+                    const disputedMappings = disputedCumulativeMmteToAdd.split(';').filter((s: string) => s.trim());
+                    for (const mapping of disputedMappings) {
+                        const [, disputedMmte] = mapping.split('||').map((s: string) => s.trim());
+                        if (disputedMmte) {
+                            datePairs.push(`${disputedMmte}||${disputedStartDate}`);
+                        }
+                    }
+
+                    const disputedStartDateToAdd = datePairs.join(';');
+                    this.scenarioContext.setVariable('disputedStartDateToAdd', disputedStartDateToAdd);
+                    CSReporter.info(`Auto-genemmted disputed start dates: ${disputedStartDateToAdd}`);
+                } else {
+                    this.scenarioContext.setVariable('disputedStartDateToAdd', '');
+                }
+            }
+        } else {
+            CSReporter.info('addDisputedStartDateFlag is false or disputed not enabled, skipping disputed start date configuration');
+            this.scenarioContext.setVariable('disputedStartDateToAdd', '');
+        }
+
+        // ===================================================================
+        // SUMMARY
+        // ===================================================================
+        CSReporter.pass('Premisis test data preparation complete:');
+        CSReporter.info(`  - Zzzt Seggregation: ${this.scenarioContext.getVariable('zzztSeggregation')}`);
+        CSReporter.info(`  - Zeal ID: ${this.scenarioContext.getVariable('zealId')}`);
+        CSReporter.info(`  - Zeal Key: ${this.scenarioContext.getVariable('zealKey')}`);
+        CSReporter.info(`  - Zeal Name: ${this.scenarioContext.getVariable('zealName')}`);
+        CSReporter.info(`  - Benchmark Flag: ${this.scenarioContext.getVariable('benchmarkFlag')}`);
+        CSReporter.info(`  - Output Ttcalc File: DISABLED for Premisis`);
+        CSReporter.info(`  - FFX File Inductor Type: DISABLED for Premisis`);
+        CSReporter.info(`  - Cumulative Mmtes to Add: ${(this.scenarioContext.getVariable('cumulativeMmtesToAdd') as string[])?.join(', ')}`);
+        CSReporter.info(`  - Add Disputed Cumulative Mmte Flag: ${addDisputedCumulativeMmteFlagStr}`);
+        CSReporter.info(`  - Disputed Cumulative Mmte Mapping: ${this.scenarioContext.getVariable('disputedCumulativeMmteToAdd') || 'N/A'}`);
+        CSReporter.info(`  - Add Disputed Start Date Flag: ${addDisputedStartDateFlagStr}`);
+        CSReporter.info(`  - Disputed Start Date Mapping: ${this.scenarioContext.getVariable('disputedStartDateToAdd') || 'N/A'}`);
     }
 
-    // Get missing browsers
-    const missingBrowsers = getMissingBrowsers();
 
-    if (missingBrowsers.length === 0) {
-        console.log('\nAll required browsers are already installed. Skipping download.');
-        return;
-    }
 
-    console.log(`\nMissing browsers: ${missingBrowsers.join(', ')}`);
-    console.log('Installing missing browsers...\n');
+    @smoke @regression @newPremisis @approval @makerChecker @ND04
+Feature: New Premisis Setup - Approval Flow (Maker-Checker)
+  As a TTTF user
+  I want to set up a new premisis with cumulative mmtes and go through approval flow
+  So that premisis are properly configured with maker-checker workflow
 
-    const success = installBrowsers(missingBrowsers);
+  Background:
+    # Common setup for all scenarios
 
-    if (success) {
-        console.log('\nBrowser installation complete.');
-    } else {
-        console.error('\nBrowser installation failed. You may need to run: npx playwright install');
-        // Don't exit with error to avoid breaking npm install
-    }
-}
+  @newPremisisSetup @fullFlow
+  Scenario Outline: New Premisis Setup with Cumulative Mmtes - Complete Maker-Checker Flow
+    # ============================================================
+    # TEST DATA SETUP
+    # ============================================================
+    # Test Case: <testCaseId>
+    # Requester (Maker): <requesterUser>
+    # Approver (Checker): <approverUser>
+    # Benchmark Flag: <benchmarkFlag>
+    # Has Disputed: <hasDisputedCumulativeMmte>
+    # Note: Output Ttcalc File and FFX Inductor Type are DISABLED for Premisis
 
-// Run
-main();
+    # ============================================================
+    # PART A: REQUESTER (MAKER) FLOW
+    # ============================================================
+
+    # Step 1: Prepare Test Data (JSON first, DB disputed)
+    Given I prepare test data for new premisis setup
+
+    # Step 2: Login as Requester
+    When I login to TTTF as "<requesterUser>"
+
+    # Step 3: Navigate to Zeals/Premisis and Search
+    And I navigate to Zeals Premisis page
+    And I select "Premisis" from Zeal Premisis Type dropdown
+    And I select "Zzzt Seggregation" from Zeal Premisis Attribute dropdown
+    And I enter stored "zzztSeggregation" in Zeal Premisis search field "zzztSeggregation"
+    And I click Zeal Premisis Search button
+    And I wait for Zeal Premisis search results
+
+    # Step 4: Navigate to Premisis Details
+    When I click on Zeal Key link in row 1
+    Then I should see Premisis Details page
+    And Edit button should be enabled
+    And Details tab should be selected
+    And Changes tab should be present
+    And History tab should be present
+
+    # Step 5: Verify Summary Section (All Fields)
+    And Summary section should be visible
+    And I verify all Summary fields match database values
+
+    # Step 6: Verify Settings Section (View Mode)
+    And Use Benchmark Replacement should show "False"
+    And Output Ttcalc File should show "False"
+
+    # Step 7: Verify No Cumulative Mmtes
+    And No Cumulative Mmtes message should be visible
+    And Save button should be disabled
+    And Cancel button should be enabled
+
+    # Step 8: Enter Edit Mode
+    When I click Edit button
+    Then I should see Edit Premisis page
+    And Edit button should be disabled
+    And Use Benchmark Replacement checkbox should be unchecked
+
+    # Step 9: Configure Settings (Premisis - Only Benchmark, Output/FFX disabled)
+    When I check Use Benchmark Replacement checkbox
+    Then Output Ttcalc File checkbox should be disabled for Premisis
+    And FFX Inductor Type dropdown should be disabled for Premisis
+    And Zeal Save button should be enabled
+
+    # Step 10: Wait for Add/Remove Button
+    And I wait for Add Remove button to be visible
+    And Reorder button should be visible
+
+    # Step 11: Add Cumulative Mmtes
+    When I click Add Remove button
+    Then Select Options modal should be visible
+    And X Close button should be visible
+    And Select items text should show "Select items to continue."
+    And Selected count should show "0 selected"
+    And Find by input field should be visible
+    And Go button should be visible
+    And Reset button should be visible
+    And Pagination should be visible
+    And Previous panel button should be visible
+    And Next panel button should be visible
+    And Cumulative Mmtes table should be visible
+    And Cumulative Mmte Name column should be visible in modal
+    And External Mmte Name column should be visible in modal
+    And Apply button should be visible in modal
+    And Cancel button should be visible in modal
+    When I select all stored cumulative mmtes in modal
+    And I click Apply button in modal
+    Then Cumulative mmtes should be displayed in Associated Cumulative Mmtes section
+    And I verify Associated Cumulative Mmtes column headers
+
+    # Step 11b: Configure Disputed Cumulative Mmtes (if required)
+    And I configure disputed cumulative mmtes if required
+
+    # Step 12: Save Changes
+    When I click Save button
+    Then I should see save success message for Premisis
+    And I click anywhere on page to dismiss message
+    And Save button should be disabled
+    And Edit button should be disabled
+    And I should see pending approval alert
+    And View Changes link should be visible
+
+    # Step 13: Verify Changes Tab
+    When I click View Changes link
+    Then Changes section should be visible
+    And I verify Changes table column headers
+    And Changes table should show pending changes
+    And I verify changes data matches added cumulative mmtes
+    And Cancel Changes button should be visible
+
+    # Step 14: Database Validation (Before Approval)
+    When I verify zzzt data record exists in database
+    And I verify zealpremisis data has correct settings for Premisis
+    Then I verify status log shows "AWAITING" status
+
+    # Step 15: Clear Browser Context for Re-Authentication (Switch User)
+    When I clear browser context for re-authentication
+
+    # ============================================================
+    # PART B: APPROVER (CHECKER) FLOW
+    # ============================================================
+
+    # Step 16: Login as Approver
+    When I login to TTTF as "<approverUser>"
+
+    # Step 17: Navigate to Pending Approvals
+    And I navigate to Pending Approvals page
+    Then Pending Approvals page should be displayed
+
+    # Step 18: Find and View Premisis
+    When I find and click View link for stored zeal
+    Then I should see Premisis Details page
+
+    # Step 19: Verify Changes Tab
+    And View Changes link should be visible
+    When I click View Changes link
+    Then Changes section should be visible
+    And Approve button should be visible
+    And Reject button should be visible
+
+    # Step 20: Approve Changes
+    When I click Approve button
+    Then Changes table should be empty after approval
+
+    # Step 21: Verify History Tab
+    When I click History tab
+    Then History section should be visible
+    And History pagination previous button should be visible
+    And History pagination next button should be visible
+    And History table should be visible
+    And I verify History table column headers
+    And History table should show approved changes
+    And I verify history data matches approved cumulative mmtes
+
+    # Step 22: Database Validation (After Approval)
+    When I verify zzzt data record exists in database
+    And I verify zealpremisis data has correct settings for Premisis
+    Then I verify status log shows "APPROVED" status
+    And I verify zealpremisis mmte data exists after approval
+
+    # Step 23: Verify Details Tab (Post Approval)
+    When I click Details tab
+    Then Summary section should be visible
+    And Use Benchmark Replacement should show "True"
+    And Cumulative mmtes should be displayed in Associated Cumulative Mmtes section
+    And I verify Disputed Cumulative Mmte and Start Date if applicable
+
+    Examples: {"type": "json", "source": "test/tttf/data/zeal_premisis_new_premisis_setup_scenarios.json", "path": "$", "filter": "runFlag=Yes"}
+
+
+
+[
+  {
+    "testCaseId": "TC01_New_Premisis_No_Disputed",
+    "scenarioName": "New Premisis Setup with Cumulative Mmtes - No Disputed (All data from DB)",
+    "runFlag": "Yes",
+    "requesterUser": "user29",
+    "approverUser": "user24",
+    "type": "Premisis",
+    "attribute": "Zzzt Seggregation",
+    "zzztSeggregation": "",
+    "zealKey": "",
+    "zealId": "",
+    "zealName": "",
+    "benchmarkFlag": "Yes",
+    "outputTtcalcFile": "No",
+    "ffxFileInductorType": "",
+    "cumulativeMmtesToAdd": "",
+    "addDisputedCumulativeMmteFlag": "false",
+    "disputedCumulativeMmteToAdd": "",
+    "addDisputedStartDateFlag": "false",
+    "disputedStartDateToAdd": ""
+  },
+  {
+    "testCaseId": "TC02_New_Premisis_With_Disputed_From_JSON",
+    "scenarioName": "New Premisis Setup with Cumulative Mmtes - Disputed from JSON",
+    "runFlag": "No",
+    "requesterUser": "user29",
+    "approverUser": "user24",
+    "type": "Premisis",
+    "attribute": "Zzzt Seggregation",
+    "zzztSeggregation": "",
+    "zealKey": "",
+    "zealId": "",
+    "zealName": "",
+    "benchmarkFlag": "Yes",
+    "outputTtcalcFile": "No",
+    "ffxFileInductorType": "",
+    "cumulativeMmtesToAdd": "",
+    "addDisputedCumulativeMmteFlag": "true",
+    "disputedCumulativeMmteToAdd": "LIBO1MO_000001||SOFDAIL_00004",
+    "addDisputedStartDateFlag": "true",
+    "disputedStartDateToAdd": "SOFDAIL_00004||10/22/2025"
+  },
+  {
+    "testCaseId": "TC03_New_Premisis_With_Disputed_From_DB",
+    "scenarioName": "New Premisis Setup with Cumulative Mmtes - Disputed auto-populated from DB",
+    "runFlag": "No",
+    "requesterUser": "user29",
+    "approverUser": "user24",
+    "type": "Premisis",
+    "attribute": "Zzzt Seggregation",
+    "zzztSeggregation": "",
+    "zealKey": "",
+    "zealId": "",
+    "zealName": "",
+    "benchmarkFlag": "Yes",
+    "outputTtcalcFile": "No",
+    "ffxFileInductorType": "",
+    "cumulativeMmtesToAdd": "",
+    "addDisputedCumulativeMmteFlag": "true",
+    "disputedCumulativeMmteToAdd": "",
+    "addDisputedStartDateFlag": "true",
+    "disputedStartDateToAdd": ""
+  }
+]
