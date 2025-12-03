@@ -1,312 +1,159 @@
-async prepareTestDataForNewZealSetup(): Promise<void> {
-        CSReporter.info('Preparing comprehensive test data for new zeal setup (flat structure with delimiter format)');
+#!/usr/bin/env node
+/**
+ * Smart Playwright Browser Installation Script
+ * Only installs browsers that are missing or outdated
+ *
+ * This script runs as postinstall in consumer projects.
+ * npm sets cwd to the package root when running postinstall.
+ */
 
-        // Get current row test data from BDD context (framework stores JSON Examples data here)
-        const currentRow = this.context.getVariable('currentRow') as any || {};
-        CSReporter.debug(`Current row test data: ${JSON.stringify(currentRow)}`);
+const { execSync } = require('child_process');
+const path = require('path');
+const fs = require('fs');
+const os = require('os');
 
-        // ===================================================================
-        // STEP 1: Resolve Zeal Information
-        // ===================================================================
-        let zealId = currentRow.zealId || this.scenarioContext.getVariable<string>('zealId');
-        let zealKey = currentRow.zealKey || this.scenarioContext.getVariable<string>('zealKey');
-        let zealName = currentRow.zealName || this.scenarioContext.getVariable<string>('zealName');
+// Ensure we're running from the correct context
+const SCRIPT_DIR = __dirname;
+const PACKAGE_ROOT = path.dirname(SCRIPT_DIR);
 
-        // If none provided in JSON, query DB
-        if (!zealId && !zealKey && !zealName) {
-            CSReporter.info('No zeal info in test data JSON, querying database...');
-            const zealDetails = await TTTFDatabaseHelper.getZealForNewSetup();
-            if (!zealDetails) {
-                throw new Error('No zeal available for new setup in database');
-            }
-            zealId = zealDetails.zealId;
-            zealKey = zealDetails.zealKey;
-            zealName = zealDetails.zealName;
+// Required browsers for the framework
+const REQUIRED_BROWSERS = ['chromium', 'firefox', 'webkit'];
 
-            // Store additional zeal details
-            this.scenarioContext.setVariable('inductorGroup', zealDetails.inductorGroup);
-            this.scenarioContext.setVariable('kindnessLine', zealDetails.kindnessLine);
-            this.scenarioContext.setVariable('zzztAbbreviation', zealDetails.zzztAbbreviation);
-            this.scenarioContext.setVariable('premisisDescription', zealDetails.premisisDescription);
-            this.scenarioContext.setVariable('calcToolName', zealDetails.calcToolName);
-            this.scenarioContext.setVariable('administrator', zealDetails.administrator);
+// Get Playwright browser installation path
+function getPlaywrightBrowserPath() {
+    // Playwright stores browsers in ~/.cache/ms-playwright on Linux/Mac
+    // or %LOCALAPPDATA%\ms-playwright on Windows
+    if (process.platform === 'win32') {
+        return path.join(process.env.LOCALAPPDATA || '', 'ms-playwright');
+    } else {
+        return path.join(os.homedir(), '.cache', 'ms-playwright');
+    }
+}
 
-            CSReporter.info(`Retrieved zeal from DB: ID=${zealId}, Key=${zealKey}, Name=${zealName}`);
-        } else {
-            CSReporter.info(`Using zeal from JSON: ID=${zealId || 'N/A'}, Key=${zealKey || 'N/A'}, Name=${zealName || 'N/A'}`);
-        }
+// Check if a specific browser is installed
+function isBrowserInstalled(browserName) {
+    const browserPath = getPlaywrightBrowserPath();
 
-        // Store resolved zeal info
-        this.scenarioContext.setVariable('zealId', zealId);
-        this.scenarioContext.setVariable('zealKey', zealKey);
-        this.scenarioContext.setVariable('zealName', zealName);
-
-        // ===================================================================
-        // STEP 2: Resolve Flags with Defaults
-        // ===================================================================
-        let benchmarkFlag = currentRow.benchmarkFlag || this.scenarioContext.getVariable<string>('benchmarkFlag');
-        if (!benchmarkFlag) {
-            benchmarkFlag = 'No';
-            CSReporter.info('benchmarkFlag not provided, defaulting to "No"');
-        }
-        this.scenarioContext.setVariable('benchmarkFlag', benchmarkFlag);
-
-        let outputCalculationFile = currentRow.outputCalculationFile || this.scenarioContext.getVariable<string>('outputCalculationFile');
-        if (!outputCalculationFile) {
-            outputCalculationFile = 'No';
-            CSReporter.info('outputCalculationFile not provided, defaulting to "No"');
-        }
-        this.scenarioContext.setVariable('outputCalculationFile', outputCalculationFile);
-
-        // ===================================================================
-        // STEP 3: Resolve FFX File Inductor Type (if outputCalculationFile=Yes)
-        // ===================================================================
-        if (outputCalculationFile.toLowerCase() === 'yes') {
-            let ffxFileInductorType = currentRow.ffxFileInductorType || this.scenarioContext.getVariable<string>('ffxFileInductorType');
-            if (!ffxFileInductorType) {
-                CSReporter.info('ffxFileInductorType not provided, querying database...');
-                ffxFileInductorType = await TTTFDatabaseHelper.getFirstFfxInductorType() || 'RMBS';
-                CSReporter.info(`Retrieved FFX Inductor Type from DB: ${ffxFileInductorType}`);
-            } else {
-                CSReporter.info(`Using FFX Inductor Type from JSON: ${ffxFileInductorType}`);
-            }
-            this.scenarioContext.setVariable('ffxFileInductorType', ffxFileInductorType);
-        }
-
-        // ===================================================================
-        // STEP 4: Resolve Cumulative Mmtes to Add (delimiter format: "Mmte1;Mmte2;Mmte3")
-        // ===================================================================
-        const cumulativeMmtesToAddStr = currentRow.cumulativeMmtesToAdd || this.scenarioContext.getVariable<string>('cumulativeMmtesToAdd');
-        let cumulativeMmtesToAdd: string[] = [];
-
-        if (cumulativeMmtesToAddStr && cumulativeMmtesToAddStr.trim()) {
-            // Parse delimiter-sepammted string
-            cumulativeMmtesToAdd = cumulativeMmtesToAddStr.split(';').map((s: string) => s.trim()).filter((s: string) => s);
-            CSReporter.info(`Using ${cumulativeMmtesToAdd.length} cumulative mmtes from JSON: ${cumulativeMmtesToAdd.join(', ')}`);
-
-            // Get details for JSON-provided mmtes
-            const cumulativeMmtesDetails = [];
-            for (const mmteName of cumulativeMmtesToAdd) {
-                const details = await TTTFDatabaseHelper.getCumulativeMmteDetails(mmteName);
-                if (details) {
-                    cumulativeMmtesDetails.push({
-                        cumulativeMmteName: mmteName,
-                        methodologyType: details.methodologyType
-                    });
-                }
-            }
-            this.scenarioContext.setVariable('cumulativeMmtesDetails', cumulativeMmtesDetails);
-        } else {
-            CSReporter.info('cumulativeMmtesToAdd not provided in JSON, querying database...');
-            const cumulativeMmtes = await TTTFDatabaseHelper.getCumulativeMmtesToAdd();
-            if (cumulativeMmtes.length === 0) {
-                throw new Error('No cumulative mmtes available to add from database');
-            }
-            cumulativeMmtesToAdd = cumulativeMmtes.map(r => r.cumulativeMmteName);
-            this.scenarioContext.setVariable('cumulativeMmtesDetails', cumulativeMmtes);
-            CSReporter.info(`Retrieved ${cumulativeMmtesToAdd.length} cumulative mmtes from DB: ${cumulativeMmtesToAdd.join(', ')}`);
-        }
-        this.scenarioContext.setVariable('cumulativeMmtesToAdd', cumulativeMmtesToAdd);
-
-        // ===================================================================
-        // STEP 5: Resolve Disputed Cumulative Mmtes (delimiter format)
-        // Flag: addDisputedCumulativeMmteFlag - "true/false/Yes/No"
-        // Data: disputedCumulativeMmteToAdd - "RefMmte||DisputedMmte;RefMmte||DisputedMmte"
-        // ===================================================================
-        const addDisputedCumulativeMmteFlagStr = currentRow.addDisputedCumulativeMmteFlag || 'false';
-        const isDisputedEnabled = this.isYesOrTrue(addDisputedCumulativeMmteFlagStr);
-        // Store flag for later steps to access (use scenarioContext for reliable cross-step data)
-        this.scenarioContext.setVariable('addDisputedCumulativeMmteFlag', addDisputedCumulativeMmteFlagStr);
-        CSReporter.debug(`Stored addDisputedCumulativeMmteFlag in scenarioContext: "${addDisputedCumulativeMmteFlagStr}"`);
-
-        if (isDisputedEnabled) {
-            const disputedCumulativeMmteToAddStr = currentRow.disputedCumulativeMmteToAdd || '';
-
-            if (disputedCumulativeMmteToAddStr.trim()) {
-                // Parse user-provided delimiter format: "RefMmte||DisputedMmte;RefMmte||DisputedMmte"
-                CSReporter.info(`Using disputed cumulative mmtes from JSON: ${disputedCumulativeMmteToAddStr}`);
-                this.scenarioContext.setVariable('disputedCumulativeMmteToAdd', disputedCumulativeMmteToAddStr);
-            } else {
-                // Query DB for disputed mmtes (excluding already selected cumulative mmtes)
-                CSReporter.info('disputedCumulativeMmteToAdd not provided in JSON, querying database...');
-                const disputedMmtes = await TTTFDatabaseHelper.getDisputedCumulativeMmtes(cumulativeMmtesToAdd);
-
-                if (disputedMmtes.length === 0) {
-                    CSReporter.warn('No disputed cumulative mmtes available from database');
-                    this.scenarioContext.setVariable('disputedCumulativeMmteToAdd', '');
-                } else {
-                    // Build delimiter format: "RefMmte||DisputedMmte;RefMmte||DisputedMmte"
-                    const disputedPairs: string[] = [];
-                    for (let i = 0; i < cumulativeMmtesToAdd.length && i < disputedMmtes.length; i++) {
-                        const refMmteName = cumulativeMmtesToAdd[i];
-                        const disputedMmte = disputedMmtes[i];
-                        disputedPairs.push(`${refMmteName}||${disputedMmte.cumulativeMmteName}`);
-                        CSReporter.info(`Mapped disputed: ${refMmteName} -> ${disputedMmte.cumulativeMmteName}`);
-                    }
-                    const disputedCumulativeMmteToAdd = disputedPairs.join(';');
-                    this.scenarioContext.setVariable('disputedCumulativeMmteToAdd', disputedCumulativeMmteToAdd);
-                    CSReporter.info(`Created disputed mapping from DB: ${disputedCumulativeMmteToAdd}`);
-                }
-            }
-        } else {
-            CSReporter.info('addDisputedCumulativeMmteFlag is false, skipping disputed cumulative mmte configuration');
-            this.scenarioContext.setVariable('disputedCumulativeMmteToAdd', '');
-        }
-
-        // ===================================================================
-        // STEP 6: Resolve Disputed Start Dates (delimiter format)
-        // Flag: addDisputedStartDateFlag - "true/false/Yes/No"
-        // Data: disputedStartDateToAdd - "DisputedMmte||mm/dd/yyyy;DisputedMmte||mm/dd/yyyy"
-        // ===================================================================
-        const addDisputedStartDateFlagStr = currentRow.addDisputedStartDateFlag || 'false';
-        const isDisputedStartDateEnabled = this.isYesOrTrue(addDisputedStartDateFlagStr);
-        // Store flag for later steps to access (use scenarioContext for reliable cross-step data)
-        this.scenarioContext.setVariable('addDisputedStartDateFlag', addDisputedStartDateFlagStr);
-
-        if (isDisputedStartDateEnabled && isDisputedEnabled) {
-            const disputedStartDateToAddStr = currentRow.disputedStartDateToAdd || '';
-
-            if (disputedStartDateToAddStr.trim()) {
-                // Parse user-provided delimiter format: "DisputedMmte||mm/dd/yyyy;DisputedMmte||mm/dd/yyyy"
-                CSReporter.info(`Using disputed start dates from JSON: ${disputedStartDateToAddStr}`);
-                this.scenarioContext.setVariable('disputedStartDateToAdd', disputedStartDateToAddStr);
-            } else {
-                // Auto-genemmte disputed start dates based on disputed mmtes
-                CSReporter.info('disputedStartDateToAdd not provided in JSON, auto-generating...');
-                const disputedCumulativeMmteToAdd = (this.scenarioContext.getVariable('disputedCumulativeMmteToAdd') as string) || '';
-
-                if (disputedCumulativeMmteToAdd) {
-                    const disputedStartDate = TTTFDatabaseHelper.calculateDisputedStartDate();
-                    const datePairs: string[] = [];
-
-                    // Parse disputed mmtes and genemmte dates for each disputed mmte
-                    const disputedMappings = disputedCumulativeMmteToAdd.split(';').filter((s: string) => s.trim());
-                    for (const mapping of disputedMappings) {
-                        const [, disputedMmte] = mapping.split('||').map((s: string) => s.trim());
-                        if (disputedMmte) {
-                            datePairs.push(`${disputedMmte}||${disputedStartDate}`);
-                        }
-                    }
-
-                    const disputedStartDateToAdd = datePairs.join(';');
-                    this.scenarioContext.setVariable('disputedStartDateToAdd', disputedStartDateToAdd);
-                    CSReporter.info(`Auto-genemmted disputed start dates: ${disputedStartDateToAdd}`);
-                } else {
-                    this.scenarioContext.setVariable('disputedStartDateToAdd', '');
-                }
-            }
-        } else {
-            CSReporter.info('addDisputedStartDateFlag is false or disputed not enabled, skipping disputed start date configuration');
-            this.scenarioContext.setVariable('disputedStartDateToAdd', '');
-        }
-
-        // ===================================================================
-        // SUMMARY
-        // ===================================================================
-        CSReporter.pass('Test data preparation complete:');
-        CSReporter.info(`  - Zeal ID: ${this.scenarioContext.getVariable('zealId')}`);
-        CSReporter.info(`  - Zeal Key: ${this.scenarioContext.getVariable('zealKey')}`);
-        CSReporter.info(`  - Zeal Name: ${this.scenarioContext.getVariable('zealName')}`);
-        CSReporter.info(`  - Benchmark Flag: ${this.scenarioContext.getVariable('benchmarkFlag')}`);
-        CSReporter.info(`  - Output Calculation File: ${this.scenarioContext.getVariable('outputCalculationFile')}`);
-        CSReporter.info(`  - FFX File Inductor Type: ${this.scenarioContext.getVariable('ffxFileInductorType') || 'N/A'}`);
-        CSReporter.info(`  - Cumulative Mmtes to Add: ${(this.scenarioContext.getVariable('cumulativeMmtesToAdd') as string[])?.join(', ')}`);
-        CSReporter.info(`  - Add Disputed Cumulative Mmte Flag: ${addDisputedCumulativeMmteFlagStr}`);
-        CSReporter.info(`  - Disputed Cumulative Mmte Mapping: ${this.scenarioContext.getVariable('disputedCumulativeMmteToAdd') || 'N/A'}`);
-        CSReporter.info(`  - Add Disputed Start Date Flag: ${addDisputedStartDateFlagStr}`);
-        CSReporter.info(`  - Disputed Start Date Mapping: ${this.scenarioContext.getVariable('disputedStartDateToAdd') || 'N/A'}`);
+    if (!fs.existsSync(browserPath)) {
+        return false;
     }
 
+    try {
+        const dirs = fs.readdirSync(browserPath);
+        // Look for directories starting with the browser name
+        // e.g., chromium-1148, firefox-1456, webkit-2104
+        const browserDir = dirs.find(dir => dir.toLowerCase().startsWith(browserName.toLowerCase()));
 
-    ---------------------------------------------------------------------------
-
-    async configureDisputedCumulativeMmtesIfRequired(): Promise<void> {
-        CSReporter.info('Checking if disputed cumulative mmtes need to be configured');
-
-        // Read PREPARED data from scenarioContext (set by prepareTestDataForNewZealSetup)
-        const addDisputedCumulativeMmteFlag = this.scenarioContext.getVariable<string>('addDisputedCumulativeMmteFlag') || 'false';
-
-        CSReporter.debug(`addDisputedCumulativeMmteFlag from scenarioContext: "${addDisputedCumulativeMmteFlag}"`);
-
-        if (!this.isYesOrTrue(addDisputedCumulativeMmteFlag)) {
-            CSReporter.info(`addDisputedCumulativeMmteFlag is "${addDisputedCumulativeMmteFlag}", skipping disputed configuration`);
-            return;
-        }
-
-        CSReporter.info('Disputed cumulative mmtes required, processing...');
-
-        // Get the disputed cumulative mmtes data from scenarioContext (PREPARED data)
-        // Format: "RefMmte||DisputedMmte;RefMmte||DisputedMmte"
-        const disputedCumulativeMmteToAdd = this.scenarioContext.getVariable<string>('disputedCumulativeMmteToAdd') || '';
-
-        if (!disputedCumulativeMmteToAdd.trim()) {
-            CSReporter.warn('No disputed cumulative mmte data found in scenarioContext');
-            return;
-        }
-
-        // Parse delimiter format into lookup map: { RefMmte: DisputedMmte }
-        const disputedLookup: Record<string, string> = {};
-        const disputedMappings = disputedCumulativeMmteToAdd.split(';').filter((s: string) => s.trim());
-        for (const mapping of disputedMappings) {
-            const [refMmte, disputedMmte] = mapping.split('||').map((s: string) => s.trim());
-            if (refMmte && disputedMmte) {
-                disputedLookup[refMmte] = disputedMmte;
+        if (browserDir) {
+            const fullPath = path.join(browserPath, browserDir);
+            // Check if directory exists and has content
+            if (fs.existsSync(fullPath) && fs.statSync(fullPath).isDirectory()) {
+                const contents = fs.readdirSync(fullPath);
+                return contents.length > 0;
             }
         }
-
-        CSReporter.info(`Disputed lookup built with ${Object.keys(disputedLookup).length} entries: ${JSON.stringify(disputedLookup)}`);
-
-        // Get the disputed start dates data from scenarioContext (PREPARED data)
-        // Format: "DisputedMmte||mm/dd/yyyy;DisputedMmte||mm/dd/yyyy"
-        const disputedStartDateToAdd = this.scenarioContext.getVariable<string>('disputedStartDateToAdd') || '';
-        const dateLookup: Record<string, string> = {};
-        if (disputedStartDateToAdd.trim()) {
-            const dateMappings = disputedStartDateToAdd.split(';').filter((s: string) => s.trim());
-            for (const mapping of dateMappings) {
-                const [disputedMmte, date] = mapping.split('||').map((s: string) => s.trim());
-                if (disputedMmte && date) {
-                    dateLookup[disputedMmte] = date;
-                }
-            }
-            CSReporter.info(`Date lookup built with ${Object.keys(dateLookup).length} entries: ${JSON.stringify(dateLookup)}`);
-        }
-
-        // Get cumulative mmtes from scenarioContext (PREPARED data)
-        const mmteNames = this.scenarioContext.getVariable<string[]>('cumulativeMmtesToAdd') || [];
-        let rowIndex = 0; // 0-based index for page methods
-
-        for (const mmteName of mmteNames) {
-            const disputedMmteName = disputedLookup[mmteName];
-
-            if (disputedMmteName) {
-                CSReporter.info(`Configuring disputed for row ${rowIndex}: ${mmteName} -> ${disputedMmteName}`);
-
-                // Click Disputed Select button for this row
-                await this.zealDetailsPage.clickDisputedSelectButton(rowIndex);
-
-                // Verify Add Cumulative Mmtes modal is displayed
-                await this.cumulativeMmtesModalPage.verifyAddCumulativeMmtesModalDisplayed();
-
-                // Select the disputed cumulative mmte
-                await this.cumulativeMmtesModalPage.selectDisputedCumulativeMmte(disputedMmteName);
-
-                // Click Apply button
-                await this.cumulativeMmtesModalPage.clickApplyButton();
-                await this.cumulativeMmtesModalPage.waitForModalToClose();
-
-                // Enter disputed start date if provided
-                const disputedStartDate = dateLookup[disputedMmteName];
-                if (disputedStartDate) {
-                    await this.zealDetailsPage.enterDisputedStartDate(rowIndex, disputedStartDate);
-                }
-
-                CSReporter.pass(`Configured disputed for row ${rowIndex}: ${disputedMmteName}, Date: ${disputedStartDate || 'N/A'}`);
-            } else {
-                CSReporter.info(`No disputed config found for cumulative mmte: ${mmteName}, skipping`);
-            }
-
-            rowIndex++;
-        }
-
-        CSReporter.pass('Disputed cumulative mmtes configuration complete');
+        return false;
+    } catch (error) {
+        return false;
     }
+}
+
+// Get installed browser version
+function getInstalledBrowserVersion(browserName) {
+    const browserPath = getPlaywrightBrowserPath();
+
+    if (!fs.existsSync(browserPath)) {
+        return null;
+    }
+
+    try {
+        const dirs = fs.readdirSync(browserPath);
+        const browserDir = dirs.find(dir => dir.toLowerCase().startsWith(browserName.toLowerCase()));
+
+        if (browserDir) {
+            // Extract version from directory name (e.g., chromium-1148 -> 1148)
+            const match = browserDir.match(/\d+/);
+            return match ? match[0] : null;
+        }
+        return null;
+    } catch (error) {
+        return null;
+    }
+}
+
+// Check which browsers need to be installed
+function getMissingBrowsers() {
+    const missing = [];
+
+    for (const browser of REQUIRED_BROWSERS) {
+        if (!isBrowserInstalled(browser)) {
+            missing.push(browser);
+        }
+    }
+
+    return missing;
+}
+
+// Install specific browsers
+function installBrowsers(browsers) {
+    if (browsers.length === 0) {
+        return true;
+    }
+
+    const browserList = browsers.join(' ');
+    console.log(`Installing browsers: ${browserList}`);
+
+    try {
+        execSync(`npx playwright install ${browserList}`, {
+            stdio: 'inherit',
+            env: { ...process.env }
+        });
+        return true;
+    } catch (error) {
+        console.error(`Failed to install browsers: ${error.message}`);
+        return false;
+    }
+}
+
+// Main function
+function main() {
+    console.log('Checking Playwright browser installation...');
+    console.log(`Browser cache path: ${getPlaywrightBrowserPath()}`);
+
+    // Check each browser
+    const status = {};
+    for (const browser of REQUIRED_BROWSERS) {
+        const installed = isBrowserInstalled(browser);
+        const version = getInstalledBrowserVersion(browser);
+        status[browser] = { installed, version };
+
+        if (installed) {
+            console.log(`  ✓ ${browser}: installed (build ${version || 'unknown'})`);
+        } else {
+            console.log(`  ✗ ${browser}: not installed`);
+        }
+    }
+
+    // Get missing browsers
+    const missingBrowsers = getMissingBrowsers();
+
+    if (missingBrowsers.length === 0) {
+        console.log('\nAll required browsers are already installed. Skipping download.');
+        return;
+    }
+
+    console.log(`\nMissing browsers: ${missingBrowsers.join(', ')}`);
+    console.log('Installing missing browsers...\n');
+
+    const success = installBrowsers(missingBrowsers);
+
+    if (success) {
+        console.log('\nBrowser installation complete.');
+    } else {
+        console.error('\nBrowser installation failed. You may need to run: npx playwright install');
+        // Don't exit with error to avoid breaking npm install
+    }
+}
+
+// Run
+main();
