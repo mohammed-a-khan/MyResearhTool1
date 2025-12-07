@@ -1,277 +1,317 @@
-[
-  {
-    "testCaseId": "TC01_Existing_Zeal_Update_All_Features",
-    "scenarioName": "Existing Zeal Update - All Update Features (Sketchmark, FFX, Scattered Mmtes, Disputed, Dates)",
-    "runFlag": "Yes",
-    "type": "Zeal",
-    "attribute": "ID",
-    "zealId": "",
-    "zealKey": "",
-    "zealName": "",
-    "requesterUser": "tsxcrest29@akhan.com",
-    "approverUser": "tsxcrest24@akhan.com",
-    "sketchmarkFlagToUpdate": "",
-    "ffxFileInductorTypeToUpdate": "",
-    "updateScatteredMmtesFlag": "true",
-    "scatteredMmtesToUpdate": "",
-    "removeScatteredMmtesFlag": "false",
-    "scatteredMmtesToRemove": "",
-    "updateDisputedScatteredMmteFlag": "true",
-    "disputedScatteredMmteToUpdate": "",
-    "updateDisputedStartDateFlag": "true",
-    "disputedStartDateToUpdate": "",
-    "ffxOrderUpdateFlag": "false",
-    "ffxOrderToUpdate": ""
-  },
-  {
-    "testCaseId": "TC02_Existing_Zeal_Update_Sketchmark_Only",
-    "scenarioName": "Existing Zeal Update - Sketchmark Flag Toggle Only",
-    "runFlag": "No",
-    "type": "Zeal",
-    "attribute": "ID",
-    "zealId": "",
-    "zealKey": "",
-    "zealName": "",
-    "requesterUser": "tsxcrest29@akhan.com",
-    "approverUser": "tsxcrest24@akhan.com",
-    "sketchmarkFlagToUpdate": "",
-    "ffxFileInductorTypeToUpdate": "",
-    "updateScatteredMmtesFlag": "false",
-    "scatteredMmtesToUpdate": "",
-    "removeScatteredMmtesFlag": "false",
-    "scatteredMmtesToRemove": "",
-    "updateDisputedScatteredMmteFlag": "false",
-    "disputedScatteredMmteToUpdate": "",
-    "updateDisputedStartDateFlag": "false",
-    "disputedStartDateToUpdate": "",
-    "ffxOrderUpdateFlag": "false",
-    "ffxOrderToUpdate": ""
-  },
-  {
-    "testCaseId": "TC03_Existing_Zeal_Update_Scattered_Mmtes_Only",
-    "scenarioName": "Existing Zeal Update - Replace Scattered Mmtes Only",
-    "runFlag": "No",
-    "type": "Zeal",
-    "attribute": "ID",
-    "zealId": "",
-    "zealKey": "",
-    "zealName": "",
-    "requesterUser": "tsxcrest29@akhan.com",
-    "approverUser": "tsxcrest24@akhan.com",
-    "sketchmarkFlagToUpdate": "",
-    "ffxFileInductorTypeToUpdate": "",
-    "updateScatteredMmtesFlag": "true",
-    "scatteredMmtesToUpdate": "",
-    "removeScatteredMmtesFlag": "false",
-    "scatteredMmtesToRemove": "",
-    "updateDisputedScatteredMmteFlag": "false",
-    "disputedScatteredMmteToUpdate": "",
-    "updateDisputedStartDateFlag": "false",
-    "disputedStartDateToUpdate": "",
-    "ffxOrderUpdateFlag": "false",
-    "ffxOrderToUpdate": ""
-  }
-]
+# ==============================================================================
+# EXISTING ZEAL UPDATE - TEST DATA RETRIEVAL QUERIES (SCENARIO_09B)
+# ==============================================================================
+
+# Get existing zeal with scattered mmtes (returns MULTIPLE ROWS - one per scattered mmte)
+# Per SCENARIO_09B requirement: Returns all rows with zeal info + one scattered mmte per row
+# Uses subquery to find a zeal with COUNT(*) > 1 scattered mmtes, ordered randomly
+DB_QUERY_GET_EXISTING_ZEAL_WITH_SCATTERED_MMTES=SELECT cdsv.type_value, cdsv.zeal_id, cdsv.zeal_key, cdsv.zeal_name, cdsv.zzzt_seggregation, cdsv.premisis_description, cdsv.inductor_group, cdsv.acct_manager, cdsv.acct_mgr_email, cdsv.calc_shool_name, dsd.sketchmark_replacement_flag, idp.inductor_code, rr1.scattered_mmte_name AS scattered_mmte_name, rr2.scattered_mmte_name AS disputed_scattered_mmte_name, dsrd.disputed_date, dsrd.ffx_order FROM ttttinfo.tttf_zeals_premisis_view cdsv INNER JOIN tttfapp.zeal_data dd ON cdsv.zeal_id = dd.zeal_id AND cdsv.type_value = 'ZEAL' INNER JOIN tttfapp.zealpremisis_data dsd ON dsd.zealpremisis_data_id = dd.zealpremisis_data_id LEFT JOIN tttfapp.FFX_INDUCTOR idp ON idp.ffx_inductor_id = dsd.ffx_inductor_id INNER JOIN tttfapp.zealpremisis_mmte_data dsrd ON dsd.zealpremisis_data_id = dsrd.zealpremisis_data_id INNER JOIN tttfapp.scattered_mmte rr1 ON dsrd.scattered_mmte_id = rr1.scattered_mmte_id LEFT JOIN tttfapp.scattered_mmte rr2 ON dsrd.disputed_scattered_mmte_id = rr2.scattered_mmte_id WHERE cdsv.zeal_id = (SELECT MIN(zeal_id) FROM (SELECT cdsv2.zeal_id FROM ttttinfo.tttf_zeals_premisis_view cdsv2 INNER JOIN tttfapp.zeal_data dd2 ON cdsv2.zeal_id = dd2.zeal_id AND cdsv2.type_value = 'ZEAL' INNER JOIN tttfapp.zealpremisis_data dsd2 ON dsd2.zealpremisis_data_id = dd2.zealpremisis_data_id INNER JOIN tttfapp.zealpremisis_mmte_data dsrd2 ON dsd2.zealpremisis_data_id = dsrd2.zealpremisis_data_id GROUP BY cdsv2.zeal_id HAVING COUNT(*) > 1)) ORDER BY dsrd.ffx_order ASC
+
+# Get existing zeal by Zeal ID (returns MULTIPLE ROWS - one per scattered mmte)
+# Used when user provides ZealId in test data JSON
+DB_QUERY_GET_EXISTING_ZEAL_BY_ID=SELECT cdsv.type_value, cdsv.zeal_id, cdsv.zeal_key, cdsv.zeal_name, cdsv.zzzt_seggregation, cdsv.premisis_description, cdsv.inductor_group, cdsv.acct_manager, cdsv.acct_mgr_email, cdsv.calc_shool_name, dsd.sketchmark_replacement_flag, idp.inductor_code, rr1.scattered_mmte_name AS scattered_mmte_name, rr2.scattered_mmte_name AS disputed_scattered_mmte_name, dsrd.disputed_date, dsrd.ffx_order FROM ttttinfo.tttf_zeals_premisis_view cdsv INNER JOIN tttfapp.zeal_data dd ON cdsv.zeal_id = dd.zeal_id AND cdsv.type_value = 'ZEAL' INNER JOIN tttfapp.zealpremisis_data dsd ON dsd.zealpremisis_data_id = dd.zealpremisis_data_id LEFT JOIN tttfapp.FFX_INDUCTOR idp ON idp.ffx_inductor_id = dsd.ffx_inductor_id INNER JOIN tttfapp.zealpremisis_mmte_data dsrd ON dsd.zealpremisis_data_id = dsrd.zealpremisis_data_id INNER JOIN tttfapp.scattered_mmte rr1 ON dsrd.scattered_mmte_id = rr1.scattered_mmte_id LEFT JOIN tttfapp.scattered_mmte rr2 ON dsrd.disputed_scattered_mmte_id = rr2.scattered_mmte_id WHERE cdsv.zeal_id = ? ORDER BY dsrd.ffx_order ASC
+
+# Get zeal by Zeal Name (used when only ZealName is provided)
+DB_QUERY_GET_ZEAL_BY_NAME=SELECT zeal_id, zeal_key, zeal_name FROM ttttinfo.tttf_zeals_premisis_view WHERE zeal_name = ? AND type_value = 'ZEAL'
+
+# Get different FFX Inductor Type (excludes current inductor code)
+DB_QUERY_GET_DIFFERENT_FFX_INDUCTOR_TYPE=SELECT inductor_code FROM tttfapp.FFX_INDUCTOR WHERE inductor_code NOT IN (?) AND ROWNUM = 1
 
 
------------------------------------------------------------------------------------------------------
+# ==============================================================================
+# DYNAMIC CTE QUERIES FOR REPLACEMENT/DISPUTED MMTES (SCENARIO_09B)
+# Per TTTF_Update_Zeal_Scenario.txt requirement - Uses WITH exclusions AS (...) pattern
+# The {{EXCLUSIONS_CTE}} placeholder will be replaced at runtime with actual exclusion values
+# Format: SELECT 'MMTE1' as excluded_name FROM DUAL UNION ALL SELECT 'MMTE2' FROM DUAL ...
+# ==============================================================================
 
-@smoke @regression @existingZeal @update @approval @makerChecker @DS09B
-Feature: Existing Zeal Update - Approval Flow (Maker-Checker)
-  As a TTTF user
-  I want to update an existing zeal with scattered mmtes and go through approval flow
-  So that existing zeals can be properly modified with maker-checker workflow
+# Get replacement scattered mmtes using dynamic CTE exclusions
+# Returns one mmte per methodology type (SPORT_MMTE_LOOKUP, TTCALC_PERIOD, MANUAL) excluding already associated mmtes
+DB_QUERY_GET_REPLACEMENT_MMTES_DYNAMIC=WITH exclusions AS ({{EXCLUSIONS_CTE}}), ranked_data AS (SELECT scattered_mmte_name, methodology_type, ROW_NUMBER() OVER (PARTITION BY methodology_type ORDER BY scattered_mmte_name DESC) as rn_per_type FROM tttfapp.scattered_mmte rr WHERE methodology_type IN ('SPORT_MMTE_LOOKUP', 'TTCALC_PERIOD', 'MANUAL') AND cumulative_mmte_id IN (SELECT cumulative_mmte_id FROM tttfapp.cumulative_mmte WHERE active_flag = 'Y') AND scattered_mmte_name NOT IN (SELECT excluded_name FROM exclusions)) SELECT scattered_mmte_name, methodology_type FROM (SELECT scattered_mmte_name, methodology_type, rn_per_type, ROW_NUMBER() OVER (ORDER BY rn_per_type, methodology_type) as final_rn FROM ranked_data WHERE rn_per_type <= CEIL((SELECT COUNT(*) FROM exclusions) / 3.0)) WHERE final_rn <= (SELECT COUNT(*) FROM exclusions)
 
-  Background:
-    # Common setup for all scenarios
-
-  @existingZealUpdate @fullFlow
-  Scenario Outcircle: Existing Zeal Update with Scattered Mmtes - Complete Maker-Checker Flow
-    # ============================================================
-    # TEST DATA SETUP
-    # ============================================================
-    # Test Case: <testCaseId>
-    # Requester (Maker): <requesterUser>
-    # Approver (Checker): <approverUser>
-    # Update Sketchmark Flag: <sketchmarkFlagToUpdate>
-    # Update FFX Inductor Type: <ffxFileInductorTypeToUpdate>
-    # Update Scattered Mmtes: <updateScatteredMmtesFlag>
-    # Remove Scattered Mmtes: <removeScatteredMmtesFlag>
-    # Update Disputed Scattered Mmtes: <updateDisputedScatteredMmteFlag>
-    # Update Disputed Start Dates: <updateDisputedStartDateFlag>
-    # Update FFX Order: <ffxOrderUpdateFlag>
-
-    # ============================================================
-    # PART A: REQUESTER (MAKER) FLOW - TEST DATA PREPARATION
-    # ============================================================
-
-    # Step 1: Prepare Comprehensive Test Data (DB query + Auto-population)
-    Given I prepare test data for existing zeal update
-
-    # Step 2: Login as Requester
-    When I login to TTTF as "<requesterUser>"
-
-    # Step 3: Navigate to Zeals/Permisis and Search
-    And I navigate to Zeals Permisis page
-    And I select "Zeal" from Zeal Permisis Type dropdown
-    And I select "ID" from Zeal Permisis Attribute dropdown
-    And I enter stored "zealId" in Zeal Permisis search field "zealId"
-    And I uncheck Include Permisis in results checkbox
-    And I click Zeal Permisis Search button
-    And I wait for Zeal Permisis search results
-
-    # Step 4: Navigate to Zeal Details
-    When I click Zeal Key link in row 1
-    Then I should see Zeal Details page
-    And Edit button should be enabled
-    And Details tab should be selected
-    And Changes tab should be present
-    And History tab should be present
-
-    # ============================================================
-    # PART B: VERIFY EXISTING DATA BEFORE EDIT (Section E)
-    # ============================================================
-
-    # Step 5: Verify Summary Section
-    And Summary section should be visible
-    And I verify all Summary fields match database values
-
-    # Step 6: Verify Settings Section (Current Values)
-    And I verify Use Sketchmark Replacement shows current value
-    And I verify Output Ttcalc File shows current value
-
-    # Step 7: Verify Existing Scattered Mmte Associations
-    And Scattered mmtes should be displayed in Associated Scattered Mmtes section
-    And I verify existing scattered mmtes match database
-
-    # ============================================================
-    # PART C: ENTER EDIT MODE AND MAKE UPDATES (Sections F-L)
-    # ============================================================
-
-    # Step 8: Enter Edit Mode
-    When I click Edit button
-    Then I should see Edit Zeal page
-    And Edit button should be disabled
-
-    # Step 9: Update Sketchmark Flag (if required - Section G)
-    And I update sketchmark flag if required
-
-    # Step 10: Update FFX File Inductor Type (if required - Section H)
-    And I update FFX Inductor Type if required
-
-    # Step 11: Update Scattered Mmtes (if required - Section I)
-    And I update scattered mmtes if required
-
-    # Step 12: Remove Scattered Mmtes (if required - Section J)
-    And I remove scattered mmtes if required
-
-    # Step 13: Update Disputed Scattered Mmtes (if required - Section K)
-    And I update disputed scattered mmtes if required
-
-    # Step 14: Update Disputed Start Dates (if required - Section L)
-    And I update disputed start dates if required
-
-    # Step 15: Update FFX Order (if required)
-    And I update FFX order if required
-
-    # ============================================================
-    # PART D: SAVE AND VERIFY PENDING APPROVAL (Section M)
-    # ============================================================
-
-    # Step 16: Save Changes
-    When I click Save button
-    Then I should see save success message
-    And I click anywhere on page to dismiss message
-    And Save button should be disabled
-    And Edit button should be disabled
-    And I should see pending approval alert
-    And View Changes link should be visible
-
-    # ============================================================
-    # PART E: VERIFY CHANGES TAB (Section N)
-    # ============================================================
-
-    # Step 17: Navigate to Changes Tab
-    When I click View Changes link
-    Then Changes section should be visible
-    And I verify Changes table column headers
-    And Changes table should show pending changes
-    And I verify changes data matches expected updates
-    And Cancel Changes button should be visible
-
-    # Step 18: Database Validation (Before Approval)
-    When I verify zeal data record exists in database
-    And I verify zealpermisis data has correct settings
-    Then I verify status log shows "AWAITING" status
-
-    # ============================================================
-    # PART F: SWITCH USER (Section O)
-    # ============================================================
-
-    # Step 19: Clear Browser Context for Re-Authentication
-    When I clear browser context for re-authentication
-
-    # ============================================================
-    # PART G: APPROVER (CHECKER) FLOW (Section P)
-    # ============================================================
-
-    # Step 20: Login as Approver
-    When I login to TTTF as "<approverUser>"
-
-    # Step 21: Navigate to Pending Approvals
-    And I navigate to Pending Approvals page
-    Then Pending Approvals page should be displayed
-
-    # Step 22: Find and View Zeal
-    When I find and click View link for stored zeal
-    Then I should see Zeal Details page
-
-    # Step 23: Verify Changes Tab
-    And View Changes link should be visible
-    When I click View Changes link
-    Then Changes section should be visible
-    And I verify Changes table column headers
-    And Approve button should be visible
-    And Reject button should be visible
-
-    # Step 24: Approve Changes
-    When I click Approve button
-    Then Approve Email modal should be visible
-    When I click Send button in Approve modal
-    Then Approval email sent message should be displayed
-    And Changes table should be empty after approval
-
-    # ============================================================
-    # PART H: VERIFY POST-APPROVAL STATE (Section Q)
-    # ============================================================
-
-    # Step 25: Verify History Tab
-    When I click History tab
-    Then History section should be visible
-    And I verify History table column headers
-    And History table should show approved changes
-
-    # ============================================================
-    # PART I: DATABASE VERIFICATION (Section R)
-    # ============================================================
-
-    # Step 26: Database Validation (After Approval)
-    Then I verify status log is cleared after approval
-    And I verify zealpermisis data has updated settings
-    And I verify updated scattered mmtes in database
-
-    # Step 27: Verify Details Tab (Post Approval)
-    When I click Details tab
-    Then Summary section should be visible
-    And I verify Use Sketchmark Replacement shows expected updated value
-    And I verify updated scattered mmtes in UI match database
-
-    Examples: {"type": "json", "source": "test/tttf/data/zeal_permisis_existing_zeal_update_scenarios.json", "path": "$", "filter": "runFlag=Yes"}
+# Get disputed scattered mmtes using dynamic CTE exclusions (same structure as replacement mmtes)
+# Used to get disputed mmtes that are different from the new/replacement mmtes
+DB_QUERY_GET_DISPUTED_MMTES_DYNAMIC=WITH exclusions AS ({{EXCLUSIONS_CTE}}), ranked_data AS (SELECT scattered_mmte_name, methodology_type, ROW_NUMBER() OVER (PARTITION BY methodology_type ORDER BY scattered_mmte_name DESC) as rn_per_type FROM tttfapp.scattered_mmte rr WHERE methodology_type IN ('SPORT_MMTE_LOOKUP', 'TTCALC_PERIOD', 'MANUAL') AND cumulative_mmte_id IN (SELECT cumulative_mmte_id FROM tttfapp.cumulative_mmte WHERE active_flag = 'Y') AND scattered_mmte_name NOT IN (SELECT excluded_name FROM exclusions)) SELECT scattered_mmte_name, methodology_type FROM (SELECT scattered_mmte_name, methodology_type, rn_per_type, ROW_NUMBER() OVER (ORDER BY rn_per_type, methodology_type) as final_rn FROM ranked_data WHERE rn_per_type <= CEIL((SELECT COUNT(*) FROM exclusions) / 3.0)) WHERE final_rn <= (SELECT COUNT(*) FROM exclusions)
 
 
------------------------------------------------------------------------------------------------------------------------
+helper
+--------------------------------------------------------------------------------------------------------------------------
 
 
+/**
+ * Interface for existing zeal data row (one row per scattered mmte)
+ * Used for SCENARIO_09B: Existing Zeal Update
+ */
+export interface ExistingZealRow {
+    typeValue: string;
+    zealId: string;
+    zealKey: string;
+    zealName: string;
+    zzztSeggregation: string;
+    premisisDescription: string;
+    inductorGroup: string;
+    acctManager: string;
+    acctMgrEmail: string;
+    calcShoolName: string;
+    sketchmarkReplacementFlag: string;
+    inductorCode: string;
+    scatteredMmteName: string;
+    disputedScatteredMmteName: string;
+    disputedDate: string;
+    ffxOrder: number;
+}
+
+// ===================================================================
+    // EXISTING ZEAL UPDATE METHODS (SCENARIO_09B)
+    // Per TTTF_Update_Zeal_Scenario.txt requirement
+    // ===================================================================
+
+    /**
+     * Get an existing zeal with scattered mmtes - returns ARRAY OF ROWS
+     * Each row contains zeal info + one scattered mmte per row
+     * Query: DB_QUERY_GET_EXISTING_ZEAL_WITH_SCATTERED_MMTES
+     */
+    public static async getExistingZealWithScatteredMmtes(): Promise<ExistingZealRow[]> {
+        const result = await CSDBUtils.executeQuery(
+            this.DB_ALIAS,
+            'GET_EXISTING_ZEAL_WITH_SCATTERED_MMTES'
+        );
+
+        if (!result.rows || result.rows.length === 0) {
+            CSReporter.warn('No existing zeal with scattered mmtes found');
+            return [];
+        }
+
+        const rows = result.rows.map((row: any) => ({
+            typeValue: row.type_value || 'ZEAL',
+            zealId: String(row.zeal_id),
+            zealKey: row.zeal_key || '',
+            zealName: row.zeal_name || '',
+            zzztSeggregation: row.zzzt_seggregation || '',
+            premisisDescription: row.premisis_description || '',
+            inductorGroup: row.inductor_group || '',
+            acctManager: row.acct_manager || '',
+            acctMgrEmail: row.acct_mgr_email || '',
+            calcShoolName: row.calc_shool_name || '',
+            sketchmarkReplacementFlag: row.sketchmark_replacement_flag || 'N',
+            inductorCode: row.inductor_code || '',
+            scatteredMmteName: row.scattered_mmte_name || '',
+            disputedScatteredMmteName: row.disputed_scattered_mmte_name || '',
+            disputedDate: row.disputed_date || '',
+            ffxOrder: row.ffx_order || 0
+        }));
+
+        CSReporter.debug(`Found existing zeal: ${rows[0].zealId} with ${rows.length} scattered mmtes`);
+        return rows;
+    }
+
+    /**
+     * Get existing zeal by Zeal ID - returns ARRAY OF ROWS
+     * Query: DB_QUERY_GET_EXISTING_ZEAL_BY_ID
+     */
+    public static async getExistingZealById(zealId: string): Promise<ExistingZealRow[]> {
+        const result = await CSDBUtils.executeQuery(
+            this.DB_ALIAS,
+            'GET_EXISTING_ZEAL_BY_ID',
+            [zealId]
+        );
+
+        if (!result.rows || result.rows.length === 0) {
+            CSReporter.warn(`No existing zeal found for ID: ${zealId}`);
+            return [];
+        }
+
+        return result.rows.map((row: any) => ({
+            typeValue: row.type_value || 'ZEAL',
+            zealId: String(row.zeal_id),
+            zealKey: row.zeal_key || '',
+            zealName: row.zeal_name || '',
+            zzztSeggregation: row.zzzt_seggregation || '',
+            premisisDescription: row.premisis_description || '',
+            inductorGroup: row.inductor_group || '',
+            acctManager: row.acct_manager || '',
+            acctMgrEmail: row.acct_mgr_email || '',
+            calcShoolName: row.calc_shool_name || '',
+            sketchmarkReplacementFlag: row.sketchmark_replacement_flag || 'N',
+            inductorCode: row.inductor_code || '',
+            scatteredMmteName: row.scattered_mmte_name || '',
+            disputedScatteredMmteName: row.disputed_scattered_mmte_name || '',
+            disputedDate: row.disputed_date || '',
+            ffxOrder: row.ffx_order || 0
+        }));
+    }
+
+    /**
+     * Get zeal by Zeal Name - returns basic zeal info
+     * Query: DB_QUERY_GET_ZEAL_BY_NAME
+     */
+    public static async getZealByName(zealName: string): Promise<{ zealId: string; zealKey: string; zealName: string } | null> {
+        const result = await CSDBUtils.executeQuery(
+            this.DB_ALIAS,
+            'GET_ZEAL_BY_NAME',
+            [zealName]
+        );
+
+        if (!result.rows || result.rows.length === 0) {
+            CSReporter.warn(`No zeal found with name: ${zealName}`);
+            return null;
+        }
+
+        return {
+            zealId: String(result.rows[0].zeal_id),
+            zealKey: result.rows[0].zeal_key || '',
+            zealName: result.rows[0].zeal_name || ''
+        };
+    }
+
+    /**
+     * Build exclusions CTE string for dynamic queries
+     * Format: SELECT 'MMTE1' as excluded_name FROM DUAL UNION ALL SELECT 'MMTE2' FROM DUAL ...
+     * @param mmteNames - Array of scattered mmte names to exclude
+     */
+    private static buildExclusionsCTE(mmteNames: string[]): string {
+        return mmteNames
+            .map((name, index) => index === 0
+                ? `SELECT '${name}' as excluded_name FROM DUAL`
+                : `SELECT '${name}' FROM DUAL`)
+            .join(' UNION ALL ');
+    }
+
+    /**
+     * Get replacement scattered mmtes using dynamic CTE query from env file
+     * Query: DB_QUERY_GET_REPLACEMENT_MMTES_DYNAMIC (with {{EXCLUSIONS_CTE}} placeholder)
+     * Per requirement: Uses CTE WITH exclusions AS (...) pattern
+     * @param existingMmteNames - Array of scattered mmte names to exclude
+     */
+    public static async getReplacementScatteredMmtesDynamic(
+        existingMmteNames: string[]
+    ): Promise<Array<{ scatteredMmteName: string; methodologyType: string }>> {
+        if (!existingMmteNames || existingMmteNames.length === 0) {
+            CSReporter.warn('No existing mmte names provided for exclusion');
+            return [];
+        }
+
+        // Build exclusions CTE and get query template from env
+        const exclusionsCTE = this.buildExclusionsCTE(existingMmteNames);
+        const queryTemplate = process.env['DB_QUERY_GET_REPLACEMENT_MMTES_DYNAMIC'] || '';
+
+        if (!queryTemplate) {
+            throw new Error('Query template DB_QUERY_GET_REPLACEMENT_MMTES_DYNAMIC not found in env');
+        }
+
+        // Replace placeholder with actual exclusions
+        const dynamicQuery = queryTemplate.replace('{{EXCLUSIONS_CTE}}', exclusionsCTE);
+
+        CSReporter.debug(`Executing dynamic replacement mmtes query with ${existingMmteNames.length} exclusions`);
+
+        const result = await CSDBUtils.executeQuery(this.DB_ALIAS, dynamicQuery);
+
+        if (!result.rows || result.rows.length === 0) {
+            CSReporter.warn('No replacement scattered mmtes available');
+            return [];
+        }
+
+        const mmtes = result.rows.map((row: any) => ({
+            scatteredMmteName: row.scattered_mmte_name || row.SCATTERED_MMTE_NAME,
+            methodologyType: row.methodology_type || row.METHODOLOGY_TYPE
+        }));
+
+        CSReporter.debug(`Found ${mmtes.length} replacement scattered mmtes`);
+        return mmtes;
+    }
+
+    /**
+     * Get disputed scattered mmtes using dynamic CTE query from env file
+     * Query: DB_QUERY_GET_DISPUTED_MMTES_DYNAMIC (with {{EXCLUSIONS_CTE}} placeholder)
+     * Per requirement: Uses CTE WITH exclusions AS (...) pattern
+     * @param excludeMmteNames - Array of scattered mmte names to exclude
+     */
+    public static async getDisputedScatteredMmtesDynamic(
+        excludeMmteNames: string[]
+    ): Promise<Array<{ scatteredMmteName: string; methodologyType: string }>> {
+        if (!excludeMmteNames || excludeMmteNames.length === 0) {
+            CSReporter.warn('No mmte names provided for exclusion');
+            return [];
+        }
+
+        // Build exclusions CTE and get query template from env
+        const exclusionsCTE = this.buildExclusionsCTE(excludeMmteNames);
+        const queryTemplate = process.env['DB_QUERY_GET_DISPUTED_MMTES_DYNAMIC'] || '';
+
+        if (!queryTemplate) {
+            throw new Error('Query template DB_QUERY_GET_DISPUTED_MMTES_DYNAMIC not found in env');
+        }
+
+        // Replace placeholder with actual exclusions
+        const dynamicQuery = queryTemplate.replace('{{EXCLUSIONS_CTE}}', exclusionsCTE);
+
+        CSReporter.debug(`Executing dynamic disputed mmtes query with ${excludeMmteNames.length} exclusions`);
+
+        const result = await CSDBUtils.executeQuery(this.DB_ALIAS, dynamicQuery);
+
+        if (!result.rows || result.rows.length === 0) {
+            CSReporter.warn('No disputed scattered mmtes available');
+            return [];
+        }
+
+        const mmtes = result.rows.map((row: any) => ({
+            scatteredMmteName: row.scattered_mmte_name || row.SCATTERED_MMTE_NAME,
+            methodologyType: row.methodology_type || row.METHODOLOGY_TYPE
+        }));
+
+        CSReporter.debug(`Found ${mmtes.length} disputed scattered mmtes`);
+        return mmtes;
+    }
+
+    /**
+     * Calculate disputed start date: current date minus 15 days
+     * If it falls on weekend, get previous weekday
+     * Returns date in MM/DD/YYYY format
+     */
+    public static calculateDisputedStartDate(): string {
+        const today = new Date();
+        const disputedDate = new Date(today);
+        disputedDate.setDate(disputedDate.getDate() - 15);
+
+        // If weekend, get previous weekday
+        const dayOfWeek = disputedDate.getDay();
+        if (dayOfWeek === 0) {
+            disputedDate.setDate(disputedDate.getDate() - 2); // Sunday -> Friday
+        } else if (dayOfWeek === 6) {
+            disputedDate.setDate(disputedDate.getDate() - 1); // Saturday -> Friday
+        }
+
+        // Format as MM/DD/YYYY
+        const month = String(disputedDate.getMonth() + 1).padStart(2, '0');
+        const day = String(disputedDate.getDate()).padStart(2, '0');
+        const year = disputedDate.getFullYear();
+
+        return `${month}/${day}/${year}`;
+    }
+
+    /**
+     * Get a different FFX Inductor Type than the current one
+     * Query: DB_QUERY_GET_DIFFERENT_FFX_INDUCTOR_TYPE
+     */
+    public static async getDifferentFfxInductorType(currentInductorCode: string): Promise<string | null> {
+        const result = await CSDBUtils.executeQuery(
+            this.DB_ALIAS,
+            'GET_DIFFERENT_FFX_INDUCTOR_TYPE',
+            [currentInductorCode]
+        );
+
+        if (!result.rows || result.rows.length === 0) {
+            return null;
+        }
+
+        return result.rows[0].inductor_code;
+    }
+
+
+
+    -----------------------------------------------------------------------------------------------------------------
+
+    
     // ===================================================================
     // SCENARIO_09B: EXISTING ZEAL UPDATE - TEST DATA PREPARATION AND UPDATE STEPS
     // ===================================================================
@@ -279,77 +319,115 @@ Feature: Existing Zeal Update - Approval Flow (Maker-Checker)
     @CSBDDStepDef('I prepare test data for existing zeal update')
     async prepareTestDataForExistingZealUpdate(): Promise<void> {
         CSReporter.info('Preparing comprehensive test data for existing zeal update (SCENARIO_09B)');
+        CSReporter.info('Per TTTF_Update_Zeal_Scenario.txt requirement');
 
         // Get current row test data from BDD context
         const currentRow = this.context.getVariable('currentRow') as any || {};
         CSReporter.debug(`Current row test data: ${JSON.stringify(currentRow)}`);
 
         // ===================================================================
-        // STEP 1: Resolve Zeal Information (Section B.1)
+        // STEP 1: Resolve Zeal Information and Get Main Test Data from DB
+        // Per requirement: Check ZealKey, ZealId, ZealName in order
         // ===================================================================
-        let zealId = currentRow.zealId || this.scenarioContext.getVariable<string>('zealId');
-        let zealKey = currentRow.zealKey || this.scenarioContext.getVariable<string>('zealKey');
-        let zealName = currentRow.zealName || this.scenarioContext.getVariable<string>('zealName');
+        let zealId = currentRow.zealId || '';
+        let zealKey = currentRow.zealKey || '';
+        let zealName = currentRow.zealName || '';
+        let mainTestDataFromDB: ExistingZealRow[] = [];
 
-        // Query DB for existing zeal with scattered mmtes if not provided
-        if (!zealId && !zealKey && !zealName) {
+        // Case 1: No zeal info provided - use main query to get random zeal with >1 scattered mmtes
+        if (!zealKey && !zealId && !zealName) {
             CSReporter.info('No zeal info in test data JSON, querying database for existing zeal with scattered mmtes...');
-            const existingZealData = await TTTFDatabaseHelper.getExistingZealWithScatteredMmtes();
-            if (!existingZealData) {
+            mainTestDataFromDB = await TTTFDatabaseHelper.getExistingZealWithScatteredMmtes();
+
+            if (mainTestDataFromDB.length === 0) {
                 throw new Error('No existing zeal with scattered mmtes found in database');
             }
 
-            // Get zeal info from the result object
-            zealId = existingZealData.zealId;
-            zealKey = existingZealData.zealKey;
-            zealName = existingZealData.zealName;
+            // Get zeal info from first row (all rows have same zeal info)
+            const firstRow = mainTestDataFromDB[0];
+            zealId = firstRow.zealId;
+            zealKey = firstRow.zealKey;
+            zealName = firstRow.zealName;
 
-            // Store additional zeal details
-            this.scenarioContext.setVariable('inductorGroup', existingZealData.inductorGroup);
-            this.scenarioContext.setVariable('zzztSeggregation', existingZealData.zzztSeggregation);
-            this.scenarioContext.setVariable('kindnessCircle', existingZealData.kindnessCircle);
-
-            // Store current sketchmark flag and inductor code (Section B.2)
-            const currentSketchmarkFlag = existingZealData.sketchmarkFlag || 'N';
-            const currentInductorCode = existingZealData.inductorCode || '';
-            this.scenarioContext.setVariable('currentSketchmarkFlag', currentSketchmarkFlag);
-            this.scenarioContext.setVariable('currentInductorCode', currentInductorCode);
-
-            // Store existing scattered mmtes details from the scatteredMmtes array
-            const existingScatteredMmtes = existingZealData.scatteredMmtes.map((mmte: any) => ({
-                scatteredMmteName: mmte.scatteredMmteName,
-                methodologyType: mmte.methodologyType
-            }));
-            this.scenarioContext.setVariable('existingScatteredMmtes', existingScatteredMmtes);
-            CSReporter.info(`Retrieved existing zeal from DB: ID=${zealId}, Key=${zealKey}, with ${existingScatteredMmtes.length} scattered mmtes`);
+            CSReporter.info(`Retrieved existing zeal from DB: ID=${zealId}, Key=${zealKey}, with ${mainTestDataFromDB.length} scattered mmtes`);
         }
+        // Case 2: ZealId provided - get zeal data by ID
+        else if (!zealKey && zealId) {
+            CSReporter.info(`ZealId provided in JSON: ${zealId}, querying full zeal data...`);
+            mainTestDataFromDB = await TTTFDatabaseHelper.getExistingZealById(zealId);
+
+            if (mainTestDataFromDB.length === 0) {
+                throw new Error(`No existing zeal found for ID: ${zealId}`);
+            }
+
+            // Get zealKey and zealName from result
+            const firstRow = mainTestDataFromDB[0];
+            zealKey = firstRow.zealKey;
+            if (!zealName) {
+                zealName = firstRow.zealName;
+            }
+
+            CSReporter.info(`Retrieved zeal by ID: Key=${zealKey}, Name=${zealName}, with ${mainTestDataFromDB.length} scattered mmtes`);
+        }
+        // Case 3: ZealName provided but no ZealId or ZealKey
+        else if (!zealKey && !zealId && zealName) {
+            CSReporter.info(`ZealName provided in JSON: ${zealName}, querying zeal info...`);
+            const zealByName = await TTTFDatabaseHelper.getZealByName(zealName);
+
+            if (!zealByName) {
+                throw new Error(`No zeal found with name: ${zealName}`);
+            }
+
+            zealId = zealByName.zealId;
+            zealKey = zealByName.zealKey;
+
+            // Now get full data by zeal ID
+            mainTestDataFromDB = await TTTFDatabaseHelper.getExistingZealById(zealId);
+            CSReporter.info(`Retrieved zeal by name: ID=${zealId}, Key=${zealKey}, with ${mainTestDataFromDB.length} scattered mmtes`);
+        }
+
+        // Store the main result set in scenario context for future use
+        this.scenarioContext.setVariable('mainTestDataFromDB', mainTestDataFromDB);
 
         // Store resolved zeal info
         this.scenarioContext.setVariable('zealId', zealId);
         this.scenarioContext.setVariable('zealKey', zealKey);
         this.scenarioContext.setVariable('zealName', zealName);
 
+        // Store additional zeal details from first row
+        if (mainTestDataFromDB.length > 0) {
+            const firstRow = mainTestDataFromDB[0];
+            this.scenarioContext.setVariable('inductorGroup', firstRow.inductorGroup);
+            this.scenarioContext.setVariable('zzztSeggregation', firstRow.zzztSeggregation);
+            this.scenarioContext.setVariable('premisisDescription', firstRow.premisisDescription);
+            this.scenarioContext.setVariable('calcShoolName', firstRow.calcShoolName);
+            this.scenarioContext.setVariable('acctManager', firstRow.acctManager);
+            this.scenarioContext.setVariable('currentSketchmarkFlag', firstRow.sketchmarkReplacementFlag || 'N');
+            this.scenarioContext.setVariable('currentInductorCode', firstRow.inductorCode || '');
+        }
+
         // ===================================================================
-        // STEP 2: Resolve SketchmarkFlagToUpdate (Section B.3)
+        // STEP 2: Resolve SketchmarkFlagToUpdate
+        // Per requirement: Toggle current value if not provided
         // ===================================================================
         let sketchmarkFlagToUpdate = currentRow.sketchmarkFlagToUpdate || '';
-        if (!sketchmarkFlagToUpdate) {
+        if (sketchmarkFlagToUpdate) {
+            // Normalize user-provided value: Yes/True -> Y, No/False -> N
+            sketchmarkFlagToUpdate = this.normalizeYesNoFlag(sketchmarkFlagToUpdate);
+        } else {
             // Auto-toggle: If current is Y, set to N; if N, set to Y
             const currentSketchmarkFlag = this.scenarioContext.getVariable<string>('currentSketchmarkFlag') || 'N';
             sketchmarkFlagToUpdate = currentSketchmarkFlag === 'Y' ? 'N' : 'Y';
             CSReporter.info(`Auto-toggling sketchmarkFlagToUpdate: current=${currentSketchmarkFlag}, new=${sketchmarkFlagToUpdate}`);
-        } else {
-            // Normalize user-provided value
-            sketchmarkFlagToUpdate = this.normalizeYesNoFlag(sketchmarkFlagToUpdate);
         }
         this.scenarioContext.setVariable('sketchmarkFlagToUpdate', sketchmarkFlagToUpdate);
 
         // ===================================================================
-        // STEP 3: Resolve FFXFileInductorTypeToUpdate (Section B.4)
+        // STEP 3: Resolve FFXFileInductorTypeToUpdate
+        // Per requirement: Query for different inductor type if not provided
         // ===================================================================
         let ffxFileInductorTypeToUpdate = currentRow.ffxFileInductorTypeToUpdate || '';
         if (!ffxFileInductorTypeToUpdate) {
-            // Query for a different inductor type than current
             const currentInductorCode = this.scenarioContext.getVariable<string>('currentInductorCode') || '';
             if (currentInductorCode) {
                 const differentInductorCode = await TTTFDatabaseHelper.getDifferentFfxInductorType(currentInductorCode);
@@ -377,29 +455,42 @@ Feature: Existing Zeal Update - Approval Flow (Maker-Checker)
         this.scenarioContext.setVariable('ffxOrderUpdateFlag', ffxOrderUpdateFlag);
 
         // ===================================================================
-        // STEP 5: Resolve ScatteredMmtesToUpdate (Section B.5)
+        // STEP 5: Resolve ScatteredMmtesToUpdate
+        // Per requirement: Uses dynamic CTE query with exclusions
+        // Format: "OldMmte||NewMmte;OldMmte||NewMmte"
         // ===================================================================
-        if (updateScatteredMmtesFlag) {
-            let scatteredMmtesToUpdate = currentRow.scatteredMmtesToUpdate || '';
-            if (!scatteredMmtesToUpdate) {
-                // Auto-populate: Build "OldMmte||NewMmte;OldMmte||NewMmte" format
-                const existingMmtes = this.scenarioContext.getVariable<any[]>('existingScatteredMmtes') || [];
-                const existingMmteNames = existingMmtes.map(r => r.scatteredMmteName);
+        let scatteredMmtesToUpdate = currentRow.scatteredMmtesToUpdate || '';
+        let scatteredMmtesNamesData: Array<{ scatteredMmteName: string; methodologyType: string }> = [];
 
-                // Get replacement mmtes from DB (excluding existing mmtes)
-                const replacementMmtes = await TTTFDatabaseHelper.getReplacementScatteredMmtes(existingMmteNames);
+        if (updateScatteredMmtesFlag && !scatteredMmtesToUpdate) {
+            // Get existing scattered mmtes from mainTestDataFromDB, excluding any to be removed
+            const mmtesToRemove = removeScatteredMmtesFlag
+                ? (currentRow.scatteredMmtesToRemove || '').split(';').filter((r: string) => r.trim())
+                : [];
 
-                if (replacementMmtes.length > 0) {
-                    const updatePairs: string[] = [];
-                    for (let i = 0; i < existingMmteNames.length && i < replacementMmtes.length; i++) {
-                        updatePairs.push(`${existingMmteNames[i]}||${replacementMmtes[i].scatteredMmteName}`);
-                    }
-                    scatteredMmtesToUpdate = updatePairs.join(';');
-                    CSReporter.info(`Auto-genemmted scatteredMmtesToUpdate: ${scatteredMmtesToUpdate}`);
+            const existingMmteNames: string[] = [];
+            for (const row of mainTestDataFromDB) {
+                const mmteName = row.scatteredMmteName;
+                if (mmteName && !mmtesToRemove.includes(mmteName)) {
+                    existingMmteNames.push(mmteName);
                 }
             }
-            this.scenarioContext.setVariable('scatteredMmtesToUpdate', scatteredMmtesToUpdate);
+
+            if (existingMmteNames.length > 0) {
+                // Execute dynamic CTE query for replacement mmtes per requirement
+                scatteredMmtesNamesData = await TTTFDatabaseHelper.getReplacementScatteredMmtesDynamic(existingMmteNames);
+
+                // Build ScatteredMmtesToUpdate string: "OldMmte||NewMmte;..."
+                const updatePairs: string[] = [];
+                for (let i = 0; i < existingMmteNames.length && i < scatteredMmtesNamesData.length; i++) {
+                    updatePairs.push(`${existingMmteNames[i]}||${scatteredMmtesNamesData[i].scatteredMmteName}`);
+                }
+                scatteredMmtesToUpdate = updatePairs.join(';');
+                CSReporter.info(`Auto-genemmted scatteredMmtesToUpdate: ${scatteredMmtesToUpdate}`);
+            }
         }
+        this.scenarioContext.setVariable('scatteredMmtesToUpdate', scatteredMmtesToUpdate);
+        this.scenarioContext.setVariable('scatteredMmtesNamesData', scatteredMmtesNamesData);
 
         // ===================================================================
         // STEP 6: Resolve ScatteredMmtesToRemove (Section B.5)
@@ -424,8 +515,9 @@ Feature: Existing Zeal Update - Approval Flow (Maker-Checker)
                         if (newMmte) newMmteNames.push(newMmte.trim());
                     });
 
-                    // Get disputed mmtes for new scattered mmtes
-                    const disputedMmtes = await TTTFDatabaseHelper.getDisputedScatteredMmtes(newMmteNames);
+                    // Get disputed mmtes using dynamic CTE query per requirement
+                    // The new scattered mmtes are excluded to get different disputed mmtes
+                    const disputedMmtes = await TTTFDatabaseHelper.getDisputedScatteredMmtesDynamic(newMmteNames);
                     if (disputedMmtes.length > 0) {
                         const disputedPairs: string[] = [];
                         for (let i = 0; i < newMmteNames.length && i < disputedMmtes.length; i++) {
@@ -764,22 +856,22 @@ Feature: Existing Zeal Update - Approval Flow (Maker-Checker)
         }
     }
 
-    @CSBDDStepDef('I verify zealpermisis data has updated settings')
-    async verifyZealpermisisDataHasUpdatedSettings(): Promise<void> {
-        const zealpermisisDataId = this.scenarioContext.getVariable('zealpermisisDataId');
-        const zealpermisisData = await TTTFDatabaseHelper.getZealpermisisDataDetails(zealpermisisDataId);
+    @CSBDDStepDef('I verify zealpremisis data has updated settings')
+    async verifyZealpremisisDataHasUpdatedSettings(): Promise<void> {
+        const zealpremisisDataId = this.scenarioContext.getVariable('zealpremisisDataId');
+        const zealpremisisData = await TTTFDatabaseHelper.getZealpremisisDataDetails(zealpremisisDataId);
 
-        if (!zealpermisisData) {
-            throw new Error(`Zealpermisis data not found for ID: ${zealpermisisDataId}`);
+        if (!zealpremisisData) {
+            throw new Error(`Zealpremisis data not found for ID: ${zealpremisisDataId}`);
         }
 
         // Verify updated sketchmark flag
         const expectedSketchmarkFlag = this.scenarioContext.getVariable<string>('sketchmarkFlagToUpdate');
-        if (expectedSketchmarkFlag && zealpermisisData.sketchmarkReplacementFlag !== expectedSketchmarkFlag) {
-            throw new Error(`Sketchmark flag mismatch: Expected=${expectedSketchmarkFlag}, Actual=${zealpermisisData.sketchmarkReplacementFlag}`);
+        if (expectedSketchmarkFlag && zealpremisisData.sketchmarkReplacementFlag !== expectedSketchmarkFlag) {
+            throw new Error(`Sketchmark flag mismatch: Expected=${expectedSketchmarkFlag}, Actual=${zealpremisisData.sketchmarkReplacementFlag}`);
         }
 
-        CSReporter.pass('Zealpermisis data has updated settings');
+        CSReporter.pass('Zealpremisis data has updated settings');
     }
 
     @CSBDDStepDef('I verify Use Sketchmark Replacement shows expected updated value')
@@ -797,8 +889,8 @@ Feature: Existing Zeal Update - Approval Flow (Maker-Checker)
 
     @CSBDDStepDef('I verify updated scattered mmtes in UI match database')
     async verifyUpdatedScatteredMmtesInUIMatchDatabase(): Promise<void> {
-        const zealpermisisDataId = this.scenarioContext.getVariable('zealpermisisDataId');
-        const dbMmteData = await TTTFDatabaseHelper.getZealpermisisMmteData(zealpermisisDataId);
+        const zealpremisisDataId = this.scenarioContext.getVariable('zealpremisisDataId');
+        const dbMmteData = await TTTFDatabaseHelper.getZealpremisisMmteData(zealpremisisDataId);
         const uiMmteCount = await this.zealDetailsPage.getScatteredMmteRowCount();
 
         if (uiMmteCount === dbMmteData.length) {
@@ -808,85 +900,4 @@ Feature: Existing Zeal Update - Approval Flow (Maker-Checker)
         }
     }
 
-    -------------------------------------------------------------------------------------------------------------
 
-
-    
-    /**
-     * Find the row index for a scattered mmte by its name
-     * @param mmteName - The scattered mmte name to find
-     * @returns Row index (0-based) or -1 if not found
-     */
-    public async findRowByScatteredMmteName(mmteName: string): Promise<number> {
-        const rowCount = await this.getScatteredMmteRowCount();
-
-        for (let i = 0; i < rowCount; i++) {
-            const rowData = await this.getScatteredMmteRowData(i);
-            if (rowData.scatteredMmteName === mmteName) {
-                return i;
-            }
-        }
-
-        CSReporter.warn(`Scattered mmte not found in table: ${mmteName}`);
-        return -1;
-    }
-
-    /**
-     * Set disputed scattered mmte for a row identified by its primary scattered mmte name
-     * Opens the disputed modal, selects the disputed mmte, and applies
-     * @param scatteredMmteName - The primary scattered mmte name
-     * @param disputedMmteName - The disputed scattered mmte to select
-     */
-    public async setDisputedScatteredMmteForRow(scatteredMmteName: string, disputedMmteName: string): Promise<void> {
-        const rowIndex = await this.findRowByScatteredMmteName(scatteredMmteName);
-        if (rowIndex === -1) {
-            throw new Error(`Cannot set disputed: Scattered mmte not found: ${scatteredMmteName}`);
-        }
-        await this.clickDisputedSelectButton(rowIndex);
-        CSReporter.info(`Opened disputed modal for: ${scatteredMmteName} (row ${rowIndex})`);
-    }
-
-    /**
-     * Set disputed start date for a row identified by its disputed scattered mmte name
-     * @param disputedMmteName - The disputed scattered mmte name to find
-     * @param dateValue - The date to enter (MM/DD/YYYY format)
-     */
-    public async setDisputedStartDateForRow(disputedMmteName: string, dateValue: string): Promise<void> {
-        // Find the row that has this disputed mmte
-        const rowCount = await this.getScatteredMmteRowCount();
-
-        for (let i = 0; i < rowCount; i++) {
-            const rowData = await this.getScatteredMmteRowData(i);
-            if (rowData.disputedScatteredMmte === disputedMmteName) {
-                await this.enterDisputedStartDate(i, dateValue);
-                CSReporter.pass(`Set disputed start date for ${disputedMmteName}: ${dateValue}`);
-                return;
-            }
-        }
-
-        throw new Error(`Cannot set disputed start date: Disputed mmte not found: ${disputedMmteName}`);
-    }
-
-    /**
-     * Set FFX order for a row identified by its scattered mmte name
-     * @param scatteredMmteName - The scattered mmte name
-     * @param orderNumber - The FFX order number to set
-     */
-    public async setFfxOrderForRow(scatteredMmteName: string, orderNumber: number): Promise<void> {
-        const rowIndex = await this.findRowByScatteredMmteName(scatteredMmteName);
-        if (rowIndex === -1) {
-            throw new Error(`Cannot set FFX order: Scattered mmte not found: ${scatteredMmteName}`);
-        }
-
-        const counter = rowIndex + 1;
-        const ffxOrderInput = CSElementFactory.createByXPath(
-            `//form[@class='ctsjv-form']//h2[text()='Associated Scattered Mmtes']/following-sibling::div[contains(@class, 'ctsjv-row--padding')][${counter + 1}]/div[contains(@class,'ctsjv-col')][1]//input`,
-            `Row ${rowIndex} FFX Order input`,
-            this.page
-        );
-
-        await ffxOrderInput.waitForVisible(10000);
-        await ffxOrderInput.clearWithTimeout(5000);
-        await ffxOrderInput.fillWithTimeout(orderNumber.toString(), 5000);
-        CSReporter.pass(`Set FFX order for ${scatteredMmteName}: ${orderNumber}`);
-    }
