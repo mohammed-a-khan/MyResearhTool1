@@ -1,317 +1,113 @@
 # ==============================================================================
-# EXISTING ZEAL UPDATE - TEST DATA RETRIEVAL QUERIES (SCENARIO_09B)
+# EXISTING ZEAL UPDATE - CHANGE LOG VERIFICATION QUERIES (SCENARIO_09B)
 # ==============================================================================
 
-# Get existing zeal with scattered mmtes (returns MULTIPLE ROWS - one per scattered mmte)
-# Per SCENARIO_09B requirement: Returns all rows with zeal info + one scattered mmte per row
-# Uses subquery to find a zeal with COUNT(*) > 1 scattered mmtes, ordered randomly
-DB_QUERY_GET_EXISTING_ZEAL_WITH_SCATTERED_MMTES=SELECT cdsv.type_value, cdsv.zeal_id, cdsv.zeal_key, cdsv.zeal_name, cdsv.zzzt_seggregation, cdsv.premisis_description, cdsv.inductor_group, cdsv.acct_manager, cdsv.acct_mgr_email, cdsv.calc_shool_name, dsd.sketchmark_replacement_flag, idp.inductor_code, rr1.scattered_mmte_name AS scattered_mmte_name, rr2.scattered_mmte_name AS disputed_scattered_mmte_name, dsrd.disputed_date, dsrd.ffx_order FROM ttttinfo.tttf_zeals_premisis_view cdsv INNER JOIN tttfapp.zeal_data dd ON cdsv.zeal_id = dd.zeal_id AND cdsv.type_value = 'ZEAL' INNER JOIN tttfapp.zealpremisis_data dsd ON dsd.zealpremisis_data_id = dd.zealpremisis_data_id LEFT JOIN tttfapp.FFX_INDUCTOR idp ON idp.ffx_inductor_id = dsd.ffx_inductor_id INNER JOIN tttfapp.zealpremisis_mmte_data dsrd ON dsd.zealpremisis_data_id = dsrd.zealpremisis_data_id INNER JOIN tttfapp.scattered_mmte rr1 ON dsrd.scattered_mmte_id = rr1.scattered_mmte_id LEFT JOIN tttfapp.scattered_mmte rr2 ON dsrd.disputed_scattered_mmte_id = rr2.scattered_mmte_id WHERE cdsv.zeal_id = (SELECT MIN(zeal_id) FROM (SELECT cdsv2.zeal_id FROM ttttinfo.tttf_zeals_premisis_view cdsv2 INNER JOIN tttfapp.zeal_data dd2 ON cdsv2.zeal_id = dd2.zeal_id AND cdsv2.type_value = 'ZEAL' INNER JOIN tttfapp.zealpremisis_data dsd2 ON dsd2.zealpremisis_data_id = dd2.zealpremisis_data_id INNER JOIN tttfapp.zealpremisis_mmte_data dsrd2 ON dsd2.zealpremisis_data_id = dsrd2.zealpremisis_data_id GROUP BY cdsv2.zeal_id HAVING COUNT(*) > 1)) ORDER BY dsrd.ffx_order ASC
-
-# Get existing zeal by Zeal ID (returns MULTIPLE ROWS - one per scattered mmte)
-# Used when user provides ZealId in test data JSON
-DB_QUERY_GET_EXISTING_ZEAL_BY_ID=SELECT cdsv.type_value, cdsv.zeal_id, cdsv.zeal_key, cdsv.zeal_name, cdsv.zzzt_seggregation, cdsv.premisis_description, cdsv.inductor_group, cdsv.acct_manager, cdsv.acct_mgr_email, cdsv.calc_shool_name, dsd.sketchmark_replacement_flag, idp.inductor_code, rr1.scattered_mmte_name AS scattered_mmte_name, rr2.scattered_mmte_name AS disputed_scattered_mmte_name, dsrd.disputed_date, dsrd.ffx_order FROM ttttinfo.tttf_zeals_premisis_view cdsv INNER JOIN tttfapp.zeal_data dd ON cdsv.zeal_id = dd.zeal_id AND cdsv.type_value = 'ZEAL' INNER JOIN tttfapp.zealpremisis_data dsd ON dsd.zealpremisis_data_id = dd.zealpremisis_data_id LEFT JOIN tttfapp.FFX_INDUCTOR idp ON idp.ffx_inductor_id = dsd.ffx_inductor_id INNER JOIN tttfapp.zealpremisis_mmte_data dsrd ON dsd.zealpremisis_data_id = dsrd.zealpremisis_data_id INNER JOIN tttfapp.scattered_mmte rr1 ON dsrd.scattered_mmte_id = rr1.scattered_mmte_id LEFT JOIN tttfapp.scattered_mmte rr2 ON dsrd.disputed_scattered_mmte_id = rr2.scattered_mmte_id WHERE cdsv.zeal_id = ? ORDER BY dsrd.ffx_order ASC
-
-# Get zeal by Zeal Name (used when only ZealName is provided)
-DB_QUERY_GET_ZEAL_BY_NAME=SELECT zeal_id, zeal_key, zeal_name FROM ttttinfo.tttf_zeals_premisis_view WHERE zeal_name = ? AND type_value = 'ZEAL'
-
-# Get different FFX Inductor Type (excludes current inductor code)
-DB_QUERY_GET_DIFFERENT_FFX_INDUCTOR_TYPE=SELECT inductor_code FROM tttfapp.FFX_INDUCTOR WHERE inductor_code NOT IN (?) AND ROWNUM = 1
+# Get change log records for zeal verification (AWAITING status, updated today)
+# Returns all pending changes in zealpremisis_data_status_log for verification
+# Columns: field_name, scattered_mmte_name, old_value, new_value, action, inserted_dt, updated_dt,
+#          disputed_scattered_mmte_name, disputed_start_date, ffx_order, zealpremisis_status_cd
+DB_QUERY_GET_CHANGE_LOG_FOR_ZEAL=SELECT dsdsl.field_name, (SELECT scattered_mmte_name FROM tttfapp.scattered_mmte WHERE scattered_mmte_id=dsdsl.scattered_mmte_id) AS scattered_mmte_name, dsdsl.old_value, CASE WHEN dsdsl.field_name='DisputedScatteredMmte' THEN (SELECT scattered_mmte_name FROM tttfapp.scattered_mmte WHERE scattered_mmte_id=TO_NUMBER(dsdsl.new_value)) ELSE dsdsl.new_value END AS new_value, dsdsl.action, TO_CHAR(dsdsl.inserted_dt, 'DD-MON-YY HH.MI.SS.FF AM') AS inserted_dt, TO_CHAR(dsdsl.updated_dt, 'DD-MON-YY HH.MI.SS.FF AM') AS updated_dt, rr.scattered_mmte_name AS disputed_scattered_mmte_name, TO_CHAR(dsdsl.disputed_start_date, 'MM/DD/YYYY') AS disputed_start_date, dsdsl.ffx_order, dsds.zealpremisis_status_cd FROM tttfapp.zeal_data dd INNER JOIN tttfapp.zealpremisis_data_status_log dsdsl ON dsdsl.zealpremisis_data_id=dd.zealpremisis_data_id INNER JOIN tttfapp.zealpremisis_data_status dsds ON dsdsl.zealpremisis_status_id=dsds.zealpremisis_status_id LEFT JOIN tttfapp.scattered_mmte rr ON rr.scattered_mmte_id=dsdsl.disputed_scattered_mmte_id WHERE dd.zeal_id=? AND dsds.zealpremisis_status_cd='AWAITING' AND TRUNC(dsdsl.updated_dt)=TRUNC(SYSDATE)
 
 
-# ==============================================================================
-# DYNAMIC CTE QUERIES FOR REPLACEMENT/DISPUTED MMTES (SCENARIO_09B)
-# Per TTTF_Update_Zeal_Scenario.txt requirement - Uses WITH exclusions AS (...) pattern
-# The {{EXCLUSIONS_CTE}} placeholder will be replaced at runtime with actual exclusion values
-# Format: SELECT 'MMTE1' as excluded_name FROM DUAL UNION ALL SELECT 'MMTE2' FROM DUAL ...
-# ==============================================================================
+----------------------------------------------------------------------------------------------------------------------
 
-# Get replacement scattered mmtes using dynamic CTE exclusions
-# Returns one mmte per methodology type (SPORT_MMTE_LOOKUP, TTCALC_PERIOD, MANUAL) excluding already associated mmtes
-DB_QUERY_GET_REPLACEMENT_MMTES_DYNAMIC=WITH exclusions AS ({{EXCLUSIONS_CTE}}), ranked_data AS (SELECT scattered_mmte_name, methodology_type, ROW_NUMBER() OVER (PARTITION BY methodology_type ORDER BY scattered_mmte_name DESC) as rn_per_type FROM tttfapp.scattered_mmte rr WHERE methodology_type IN ('SPORT_MMTE_LOOKUP', 'TTCALC_PERIOD', 'MANUAL') AND cumulative_mmte_id IN (SELECT cumulative_mmte_id FROM tttfapp.cumulative_mmte WHERE active_flag = 'Y') AND scattered_mmte_name NOT IN (SELECT excluded_name FROM exclusions)) SELECT scattered_mmte_name, methodology_type FROM (SELECT scattered_mmte_name, methodology_type, rn_per_type, ROW_NUMBER() OVER (ORDER BY rn_per_type, methodology_type) as final_rn FROM ranked_data WHERE rn_per_type <= CEIL((SELECT COUNT(*) FROM exclusions) / 3.0)) WHERE final_rn <= (SELECT COUNT(*) FROM exclusions)
-
-# Get disputed scattered mmtes using dynamic CTE exclusions (same structure as replacement mmtes)
-# Used to get disputed mmtes that are different from the new/replacement mmtes
-DB_QUERY_GET_DISPUTED_MMTES_DYNAMIC=WITH exclusions AS ({{EXCLUSIONS_CTE}}), ranked_data AS (SELECT scattered_mmte_name, methodology_type, ROW_NUMBER() OVER (PARTITION BY methodology_type ORDER BY scattered_mmte_name DESC) as rn_per_type FROM tttfapp.scattered_mmte rr WHERE methodology_type IN ('SPORT_MMTE_LOOKUP', 'TTCALC_PERIOD', 'MANUAL') AND cumulative_mmte_id IN (SELECT cumulative_mmte_id FROM tttfapp.cumulative_mmte WHERE active_flag = 'Y') AND scattered_mmte_name NOT IN (SELECT excluded_name FROM exclusions)) SELECT scattered_mmte_name, methodology_type FROM (SELECT scattered_mmte_name, methodology_type, rn_per_type, ROW_NUMBER() OVER (ORDER BY rn_per_type, methodology_type) as final_rn FROM ranked_data WHERE rn_per_type <= CEIL((SELECT COUNT(*) FROM exclusions) / 3.0)) WHERE final_rn <= (SELECT COUNT(*) FROM exclusions)
-
-
-helper
---------------------------------------------------------------------------------------------------------------------------
-
-
-/**
- * Interface for existing zeal data row (one row per scattered mmte)
- * Used for SCENARIO_09B: Existing Zeal Update
- */
-export interface ExistingZealRow {
-    typeValue: string;
-    zealId: string;
-    zealKey: string;
-    zealName: string;
-    zzztSeggregation: string;
-    premisisDescription: string;
-    inductorGroup: string;
-    acctManager: string;
-    acctMgrEmail: string;
-    calcShoolName: string;
-    sketchmarkReplacementFlag: string;
-    inductorCode: string;
-    scatteredMmteName: string;
-    disputedScatteredMmteName: string;
-    disputedDate: string;
-    ffxOrder: number;
-}
+helper:
 
 // ===================================================================
-    // EXISTING ZEAL UPDATE METHODS (SCENARIO_09B)
-    // Per TTTF_Update_Zeal_Scenario.txt requirement
+    // CHANGE LOG VERIFICATION METHODS (SCENARIO_09B)
     // ===================================================================
 
     /**
-     * Get an existing zeal with scattered mmtes - returns ARRAY OF ROWS
-     * Each row contains zeal info + one scattered mmte per row
-     * Query: DB_QUERY_GET_EXISTING_ZEAL_WITH_SCATTERED_MMTES
+     * Get change log records for zeal verification (AWAITING status, updated today)
+     * Query: DB_QUERY_GET_CHANGE_LOG_FOR_ZEAL
+     * @param zealId - The zeal ID to get change log for
+     * @returns Array of change log records
      */
-    public static async getExistingZealWithScatteredMmtes(): Promise<ExistingZealRow[]> {
+    public static async getChangeLogForZeal(zealId: string): Promise<ChangeLogRow[]> {
         const result = await CSDBUtils.executeQuery(
             this.DB_ALIAS,
-            'GET_EXISTING_ZEAL_WITH_SCATTERED_MMTES'
-        );
-
-        if (!result.rows || result.rows.length === 0) {
-            CSReporter.warn('No existing zeal with scattered mmtes found');
-            return [];
-        }
-
-        const rows = result.rows.map((row: any) => ({
-            typeValue: row.type_value || 'ZEAL',
-            zealId: String(row.zeal_id),
-            zealKey: row.zeal_key || '',
-            zealName: row.zeal_name || '',
-            zzztSeggregation: row.zzzt_seggregation || '',
-            premisisDescription: row.premisis_description || '',
-            inductorGroup: row.inductor_group || '',
-            acctManager: row.acct_manager || '',
-            acctMgrEmail: row.acct_mgr_email || '',
-            calcShoolName: row.calc_shool_name || '',
-            sketchmarkReplacementFlag: row.sketchmark_replacement_flag || 'N',
-            inductorCode: row.inductor_code || '',
-            scatteredMmteName: row.scattered_mmte_name || '',
-            disputedScatteredMmteName: row.disputed_scattered_mmte_name || '',
-            disputedDate: row.disputed_date || '',
-            ffxOrder: row.ffx_order || 0
-        }));
-
-        CSReporter.debug(`Found existing zeal: ${rows[0].zealId} with ${rows.length} scattered mmtes`);
-        return rows;
-    }
-
-    /**
-     * Get existing zeal by Zeal ID - returns ARRAY OF ROWS
-     * Query: DB_QUERY_GET_EXISTING_ZEAL_BY_ID
-     */
-    public static async getExistingZealById(zealId: string): Promise<ExistingZealRow[]> {
-        const result = await CSDBUtils.executeQuery(
-            this.DB_ALIAS,
-            'GET_EXISTING_ZEAL_BY_ID',
+            'GET_CHANGE_LOG_FOR_ZEAL',
             [zealId]
         );
 
         if (!result.rows || result.rows.length === 0) {
-            CSReporter.warn(`No existing zeal found for ID: ${zealId}`);
+            CSReporter.warn(`No change log records found for zeal ID: ${zealId}`);
             return [];
         }
 
-        return result.rows.map((row: any) => ({
-            typeValue: row.type_value || 'ZEAL',
-            zealId: String(row.zeal_id),
-            zealKey: row.zeal_key || '',
-            zealName: row.zeal_name || '',
-            zzztSeggregation: row.zzzt_seggregation || '',
-            premisisDescription: row.premisis_description || '',
-            inductorGroup: row.inductor_group || '',
-            acctManager: row.acct_manager || '',
-            acctMgrEmail: row.acct_mgr_email || '',
-            calcShoolName: row.calc_shool_name || '',
-            sketchmarkReplacementFlag: row.sketchmark_replacement_flag || 'N',
-            inductorCode: row.inductor_code || '',
-            scatteredMmteName: row.scattered_mmte_name || '',
-            disputedScatteredMmteName: row.disputed_scattered_mmte_name || '',
-            disputedDate: row.disputed_date || '',
-            ffxOrder: row.ffx_order || 0
-        }));
-    }
-
-    /**
-     * Get zeal by Zeal Name - returns basic zeal info
-     * Query: DB_QUERY_GET_ZEAL_BY_NAME
-     */
-    public static async getZealByName(zealName: string): Promise<{ zealId: string; zealKey: string; zealName: string } | null> {
-        const result = await CSDBUtils.executeQuery(
-            this.DB_ALIAS,
-            'GET_ZEAL_BY_NAME',
-            [zealName]
-        );
-
-        if (!result.rows || result.rows.length === 0) {
-            CSReporter.warn(`No zeal found with name: ${zealName}`);
-            return null;
-        }
-
-        return {
-            zealId: String(result.rows[0].zeal_id),
-            zealKey: result.rows[0].zeal_key || '',
-            zealName: result.rows[0].zeal_name || ''
-        };
-    }
-
-    /**
-     * Build exclusions CTE string for dynamic queries
-     * Format: SELECT 'MMTE1' as excluded_name FROM DUAL UNION ALL SELECT 'MMTE2' FROM DUAL ...
-     * @param mmteNames - Array of scattered mmte names to exclude
-     */
-    private static buildExclusionsCTE(mmteNames: string[]): string {
-        return mmteNames
-            .map((name, index) => index === 0
-                ? `SELECT '${name}' as excluded_name FROM DUAL`
-                : `SELECT '${name}' FROM DUAL`)
-            .join(' UNION ALL ');
-    }
-
-    /**
-     * Get replacement scattered mmtes using dynamic CTE query from env file
-     * Query: DB_QUERY_GET_REPLACEMENT_MMTES_DYNAMIC (with {{EXCLUSIONS_CTE}} placeholder)
-     * Per requirement: Uses CTE WITH exclusions AS (...) pattern
-     * @param existingMmteNames - Array of scattered mmte names to exclude
-     */
-    public static async getReplacementScatteredMmtesDynamic(
-        existingMmteNames: string[]
-    ): Promise<Array<{ scatteredMmteName: string; methodologyType: string }>> {
-        if (!existingMmteNames || existingMmteNames.length === 0) {
-            CSReporter.warn('No existing mmte names provided for exclusion');
-            return [];
-        }
-
-        // Build exclusions CTE and get query template from env
-        const exclusionsCTE = this.buildExclusionsCTE(existingMmteNames);
-        const queryTemplate = process.env['DB_QUERY_GET_REPLACEMENT_MMTES_DYNAMIC'] || '';
-
-        if (!queryTemplate) {
-            throw new Error('Query template DB_QUERY_GET_REPLACEMENT_MMTES_DYNAMIC not found in env');
-        }
-
-        // Replace placeholder with actual exclusions
-        const dynamicQuery = queryTemplate.replace('{{EXCLUSIONS_CTE}}', exclusionsCTE);
-
-        CSReporter.debug(`Executing dynamic replacement mmtes query with ${existingMmteNames.length} exclusions`);
-
-        const result = await CSDBUtils.executeQuery(this.DB_ALIAS, dynamicQuery);
-
-        if (!result.rows || result.rows.length === 0) {
-            CSReporter.warn('No replacement scattered mmtes available');
-            return [];
-        }
-
-        const mmtes = result.rows.map((row: any) => ({
-            scatteredMmteName: row.scattered_mmte_name || row.SCATTERED_MMTE_NAME,
-            methodologyType: row.methodology_type || row.METHODOLOGY_TYPE
+        const rows = result.rows.map((row: any) => ({
+            fieldName: row.field_name || row.FIELD_NAME || '',
+            scatteredMmteName: row.scattered_mmte_name || row.SCATTERED_MMTE_NAME || '',
+            oldValue: row.old_value || row.OLD_VALUE || '',
+            newValue: row.new_value || row.NEW_VALUE || '',
+            action: row.action || row.ACTION || '',
+            insertedDt: row.inserted_dt || row.INSERTED_DT || '',
+            updatedDt: row.updated_dt || row.UPDATED_DT || '',
+            disputedScatteredMmteName: row.disputed_scattered_mmte_name || row.DISPUTED_SCATTERED_MMTE_NAME || '',
+            disputedStartDate: row.disputed_start_date || row.DISPUTED_START_DATE || '',
+            ffxOrder: row.ffx_order || row.FFX_ORDER || 0,
+            zealpremisisStatusCd: row.zealpremisis_status_cd || row.ZEALPREMISIS_STATUS_CD || ''
         }));
 
-        CSReporter.debug(`Found ${mmtes.length} replacement scattered mmtes`);
-        return mmtes;
+        CSReporter.debug(`Found ${rows.length} change log records for zeal ID: ${zealId}`);
+        return rows;
     }
 
     /**
-     * Get disputed scattered mmtes using dynamic CTE query from env file
-     * Query: DB_QUERY_GET_DISPUTED_MMTES_DYNAMIC (with {{EXCLUSIONS_CTE}} placeholder)
-     * Per requirement: Uses CTE WITH exclusions AS (...) pattern
-     * @param excludeMmteNames - Array of scattered mmte names to exclude
+     * Extract date from Oracle timestamp string
+     * Input format example: "02-NOV-25 02.45.28.363770465 PM"
+     * Output format: "02-NOV-25" (just the date part)
+     * @param oracleTimestamp - The Oracle timestamp string
+     * @returns The date portion of the timestamp
      */
-    public static async getDisputedScatteredMmtesDynamic(
-        excludeMmteNames: string[]
-    ): Promise<Array<{ scatteredMmteName: string; methodologyType: string }>> {
-        if (!excludeMmteNames || excludeMmteNames.length === 0) {
-            CSReporter.warn('No mmte names provided for exclusion');
-            return [];
-        }
-
-        // Build exclusions CTE and get query template from env
-        const exclusionsCTE = this.buildExclusionsCTE(excludeMmteNames);
-        const queryTemplate = process.env['DB_QUERY_GET_DISPUTED_MMTES_DYNAMIC'] || '';
-
-        if (!queryTemplate) {
-            throw new Error('Query template DB_QUERY_GET_DISPUTED_MMTES_DYNAMIC not found in env');
-        }
-
-        // Replace placeholder with actual exclusions
-        const dynamicQuery = queryTemplate.replace('{{EXCLUSIONS_CTE}}', exclusionsCTE);
-
-        CSReporter.debug(`Executing dynamic disputed mmtes query with ${excludeMmteNames.length} exclusions`);
-
-        const result = await CSDBUtils.executeQuery(this.DB_ALIAS, dynamicQuery);
-
-        if (!result.rows || result.rows.length === 0) {
-            CSReporter.warn('No disputed scattered mmtes available');
-            return [];
-        }
-
-        const mmtes = result.rows.map((row: any) => ({
-            scatteredMmteName: row.scattered_mmte_name || row.SCATTERED_MMTE_NAME,
-            methodologyType: row.methodology_type || row.METHODOLOGY_TYPE
-        }));
-
-        CSReporter.debug(`Found ${mmtes.length} disputed scattered mmtes`);
-        return mmtes;
+    public static extractDateFromOracleTimestamp(oracleTimestamp: string): string {
+        if (!oracleTimestamp) return '';
+        // Extract just the date part (before the first space)
+        const datePart = oracleTimestamp.split(' ')[0];
+        return datePart || '';
     }
 
     /**
-     * Calculate disputed start date: current date minus 15 days
-     * If it falls on weekend, get previous weekday
-     * Returns date in MM/DD/YYYY format
+     * Get current date in Oracle format (DD-MON-YY)
+     * @returns Current date in DD-MON-YY format (e.g., "02-NOV-25")
      */
-    public static calculateDisputedStartDate(): string {
-        const today = new Date();
-        const disputedDate = new Date(today);
-        disputedDate.setDate(disputedDate.getDate() - 15);
-
-        // If weekend, get previous weekday
-        const dayOfWeek = disputedDate.getDay();
-        if (dayOfWeek === 0) {
-            disputedDate.setDate(disputedDate.getDate() - 2); // Sunday -> Friday
-        } else if (dayOfWeek === 6) {
-            disputedDate.setDate(disputedDate.getDate() - 1); // Saturday -> Friday
-        }
-
-        // Format as MM/DD/YYYY
-        const month = String(disputedDate.getMonth() + 1).padStart(2, '0');
-        const day = String(disputedDate.getDate()).padStart(2, '0');
-        const year = disputedDate.getFullYear();
-
-        return `${month}/${day}/${year}`;
-    }
-
-    /**
-     * Get a different FFX Inductor Type than the current one
-     * Query: DB_QUERY_GET_DIFFERENT_FFX_INDUCTOR_TYPE
-     */
-    public static async getDifferentFfxInductorType(currentInductorCode: string): Promise<string | null> {
-        const result = await CSDBUtils.executeQuery(
-            this.DB_ALIAS,
-            'GET_DIFFERENT_FFX_INDUCTOR_TYPE',
-            [currentInductorCode]
-        );
-
-        if (!result.rows || result.rows.length === 0) {
-            return null;
-        }
-
-        return result.rows[0].inductor_code;
+    public static getCurrentDateInOracleFormat(): string {
+        const now = new Date();
+        const day = String(now.getDate()).padStart(2, '0');
+        const months = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
+        const month = months[now.getMonth()];
+        const year = String(now.getFullYear()).slice(-2);
+        return `${day}-${month}-${year}`;
     }
 
 
+/**
+ * Interface for change log row from zealpremisis_data_status_log
+ * Used for SCENARIO_09B: Database verification of pending changes
+ */
+export interface ChangeLogRow {
+    fieldName: string;
+    scatteredMmteName: string;
+    oldValue: string;
+    newValue: string;
+    action: string;
+    insertedDt: string;
+    updatedDt: string;
+    disputedScatteredMmteName: string;
+    disputedStartDate: string;
+    ffxOrder: number;
+    zealpremisisStatusCd: string;
+}
 
-    -----------------------------------------------------------------------------------------------------------------
+----------------------------------------------------------------------------------------------------------------
+tttf-new-zeal.steps.ts)
 
-    
+
+import { TTTFDatabaseHelper, ExistingZealRow, ChangeLogRow } from '../helpers/TTTFDatabaseHelper';
+
+
+
+
     // ===================================================================
     // SCENARIO_09B: EXISTING ZEAL UPDATE - TEST DATA PREPARATION AND UPDATE STEPS
     // ===================================================================
@@ -398,12 +194,24 @@ export interface ExistingZealRow {
         if (mainTestDataFromDB.length > 0) {
             const firstRow = mainTestDataFromDB[0];
             this.scenarioContext.setVariable('inductorGroup', firstRow.inductorGroup);
+            this.scenarioContext.setVariable('kindnessCircle', firstRow.kindnessCircle);
             this.scenarioContext.setVariable('zzztSeggregation', firstRow.zzztSeggregation);
             this.scenarioContext.setVariable('premisisDescription', firstRow.premisisDescription);
             this.scenarioContext.setVariable('calcShoolName', firstRow.calcShoolName);
             this.scenarioContext.setVariable('acctManager', firstRow.acctManager);
             this.scenarioContext.setVariable('currentSketchmarkFlag', firstRow.sketchmarkReplacementFlag || 'N');
             this.scenarioContext.setVariable('currentInductorCode', firstRow.inductorCode || '');
+
+            // Extract and store existing scattered mmtes from mainTestDataFromDB
+            // Each row contains one scattered mmte - build array for verification steps
+            const existingScatteredMmtes = mainTestDataFromDB.map(row => ({
+                scatteredMmteName: row.scatteredMmteName,
+                disputedScatteredMmteName: row.disputedScatteredMmteName,
+                disputedDate: row.disputedDate,
+                ffxOrder: row.ffxOrder
+            }));
+            this.scenarioContext.setVariable('existingScatteredMmtes', existingScatteredMmtes);
+            CSReporter.info(`Stored ${existingScatteredMmtes.length} existing scattered mmtes: ${existingScatteredMmtes.map(r => r.scatteredMmteName).join(', ')}`);
         }
 
         // ===================================================================
@@ -827,33 +635,338 @@ export interface ExistingZealRow {
 
     @CSBDDStepDef('I verify changes data matches expected updates')
     async verifyChangesDataMatchesExpectedUpdates(): Promise<void> {
-        const changesData = await this.changesHistoryPage.getAllChangesData();
-
-        // Build expected changes based on flags
-        let expectedChangesCount = 0;
-
-        if (this.scenarioContext.getVariable<string>('sketchmarkFlagToUpdate')) {
-            expectedChangesCount++;
+        const zealId = this.scenarioContext.getVariable<string>('zealId');
+        if (!zealId) {
+            throw new Error('Zeal ID not found in scenario context');
         }
-        if (this.scenarioContext.getVariable<string>('ffxFileInductorTypeToUpdate')) {
-            expectedChangesCount++;
+        CSReporter.info(`Verifying database change log for zeal ID: ${zealId}`);
+
+        // Step 1: Execute change log query
+        const changeLogResultSet = await TTTFDatabaseHelper.getChangeLogForZeal(zealId);
+        if (changeLogResultSet.length === 0) {
+            throw new Error(`No change log records found for zeal ID: ${zealId}`);
         }
-        if (this.scenarioContext.getVariable<boolean>('updateScatteredMmtesFlag')) {
+        CSReporter.info(`Retrieved ${changeLogResultSet.length} change log records`);
+
+        const currentDate = TTTFDatabaseHelper.getCurrentDateInOracleFormat();
+
+        // Build scattered mmtes lists for later use
+        const oldScatteredMmtesList: string[] = [];
+        const newScatteredMmtesList: string[] = [];
+
+        // Step 2: Verify SketchmarkFlagToUpdate
+        const sketchmarkFlagToUpdate = this.scenarioContext.getVariable<string>('sketchmarkFlagToUpdate');
+        if (sketchmarkFlagToUpdate) {
+            await this.verifySketchmarkFlagChange(changeLogResultSet, sketchmarkFlagToUpdate, currentDate);
+        }
+
+        // Step 3: Verify FFXFileInductorTypeToUpdate
+        const ffxFileInductorTypeToUpdate = this.scenarioContext.getVariable<string>('ffxFileInductorTypeToUpdate');
+        if (ffxFileInductorTypeToUpdate) {
+            await this.verifyOutputTtcalcChange(changeLogResultSet, ffxFileInductorTypeToUpdate, currentDate);
+        }
+
+        // Step 4: Verify UpdateScatteredMmtesFlag
+        const updateScatteredMmtesFlag = this.scenarioContext.getVariable<boolean>('updateScatteredMmtesFlag');
+        if (updateScatteredMmtesFlag) {
             const scatteredMmtesToUpdate = this.scenarioContext.getVariable<string>('scatteredMmtesToUpdate') || '';
-            const pairs = scatteredMmtesToUpdate.split(';').filter(p => p.trim());
-            expectedChangesCount += pairs.length * 2; // Each update = 1 remove + 1 add
-        }
-        if (this.scenarioContext.getVariable<boolean>('updateDisputedScatteredMmteFlag')) {
-            expectedChangesCount++;
+            if (scatteredMmtesToUpdate) {
+                const listScatteredMmtesToUpdate = scatteredMmtesToUpdate.split(';').filter(p => p.trim());
+                for (const item of listScatteredMmtesToUpdate) {
+                    const subItems = item.split('||');
+                    if (subItems.length >= 2) {
+                        oldScatteredMmtesList.push(subItems[0].trim());
+                        newScatteredMmtesList.push(subItems[1].trim());
+                    }
+                }
+
+                // Store for later verification steps
+                this.scenarioContext.setVariable('oldScatteredMmtesList', oldScatteredMmtesList);
+                this.scenarioContext.setVariable('newScatteredMmtesList', newScatteredMmtesList);
+
+                // Verify removed scattered mmtes
+                await this.verifyRemovedScatteredMmtes(changeLogResultSet, oldScatteredMmtesList, currentDate);
+
+                // Verify added scattered mmtes
+                await this.verifyAddedScatteredMmtes(changeLogResultSet, newScatteredMmtesList, currentDate);
+            }
         }
 
-        CSReporter.info(`Changes data: Found ${changesData.length} changes, expected approximately ${expectedChangesCount}`);
-
-        if (changesData.length > 0) {
-            CSReporter.pass(`Changes table shows ${changesData.length} pending changes`);
-        } else {
-            throw new Error('Changes table should show pending changes');
+        // Step 5: Verify UpdateDisputedScatteredMmteFlag
+        const updateDisputedScatteredMmteFlag = this.scenarioContext.getVariable<boolean>('updateDisputedScatteredMmteFlag');
+        if (updateDisputedScatteredMmteFlag) {
+            const disputedScatteredMmteToUpdate = this.scenarioContext.getVariable<string>('disputedScatteredMmteToUpdate') || '';
+            if (disputedScatteredMmteToUpdate) {
+                await this.verifyDisputedScatteredMmteChanges(changeLogResultSet, disputedScatteredMmteToUpdate, oldScatteredMmtesList, newScatteredMmtesList, currentDate);
+            }
         }
+
+        // Step 6: Verify UpdateDisputedStartDateFlag
+        const updateDisputedStartDateFlag = this.scenarioContext.getVariable<boolean>('updateDisputedStartDateFlag');
+        if (updateDisputedStartDateFlag) {
+            const disputedStartDateToUpdate = this.scenarioContext.getVariable<string>('disputedStartDateToUpdate') || '';
+            if (disputedStartDateToUpdate) {
+                await this.verifyDisputedStartDateChanges(changeLogResultSet, disputedStartDateToUpdate, oldScatteredMmtesList, newScatteredMmtesList, currentDate);
+            }
+        }
+
+        // Step 7: Verify FFXOrderUpdateFlag
+        const ffxOrderUpdateFlag = this.scenarioContext.getVariable<boolean>('ffxOrderUpdateFlag');
+        if (ffxOrderUpdateFlag) {
+            const ffxOrderToUpdate = this.scenarioContext.getVariable<string>('ffxOrderToUpdate') || '';
+            if (ffxOrderToUpdate) {
+                await this.verifyFfxOrderChanges(changeLogResultSet, ffxOrderToUpdate, oldScatteredMmtesList, newScatteredMmtesList, currentDate);
+            }
+        }
+
+        CSReporter.pass('All database change log verifications passed');
+    }
+
+    // ===================================================================
+    // PRIVATE HELPER METHODS FOR DATABASE VERIFICATION
+    // ===================================================================
+
+    private async verifySketchmarkFlagChange(changeLog: ChangeLogRow[], sketchmarkFlagToUpdate: string, currentDate: string): Promise<void> {
+        // Normalize flag value
+        const valueToVerify = this.normalizeBooleanFlag(sketchmarkFlagToUpdate) ? 'true' : 'false';
+
+        for (const row of changeLog) {
+            if (row.fieldName === 'Sketchmark Replacement') {
+                const strDBNewValue = row.newValue;
+                const strDBAction = row.action;
+                const strDBUpdatedDt = TTTFDatabaseHelper.extractDateFromOracleTimestamp(row.updatedDt);
+
+                if (strDBNewValue.toLowerCase() === valueToVerify && strDBAction === 'UPDATE' && strDBUpdatedDt === currentDate) {
+                    CSReporter.pass(`Sketchmark Replacement verified: NewValue=${strDBNewValue}, Action=${strDBAction}, Date=${strDBUpdatedDt}`);
+                    return;
+                }
+            }
+        }
+        throw new Error(`Sketchmark Replacement change not found or mismatch. Expected: NewValue=${valueToVerify}, Action=UPDATE, Date=${currentDate}`);
+    }
+
+    private async verifyOutputTtcalcChange(changeLog: ChangeLogRow[], ffxFileInductorTypeToUpdate: string, currentDate: string): Promise<void> {
+        for (const row of changeLog) {
+            if (row.fieldName === 'Output Ttcalc') {
+                const strDBNewValue = row.newValue;
+                const strDBAction = row.action;
+                const strDBUpdatedDt = TTTFDatabaseHelper.extractDateFromOracleTimestamp(row.updatedDt);
+
+                if (strDBNewValue === ffxFileInductorTypeToUpdate && strDBAction === 'UPDATE' && strDBUpdatedDt === currentDate) {
+                    CSReporter.pass(`Output Ttcalc verified: NewValue=${strDBNewValue}, Action=${strDBAction}, Date=${strDBUpdatedDt}`);
+                    return;
+                }
+            }
+        }
+        throw new Error(`Output Ttcalc change not found or mismatch. Expected: NewValue=${ffxFileInductorTypeToUpdate}, Action=UPDATE, Date=${currentDate}`);
+    }
+
+    private async verifyRemovedScatteredMmtes(changeLog: ChangeLogRow[], oldScatteredMmtesList: string[], currentDate: string): Promise<void> {
+        for (const oldMmte of oldScatteredMmtesList) {
+            let found = false;
+            for (const row of changeLog) {
+                if (row.fieldName === 'Remove Scattered Mmte') {
+                    const strDBOldValue = row.oldValue;
+                    const strDBAction = row.action;
+                    const strDBUpdatedDt = TTTFDatabaseHelper.extractDateFromOracleTimestamp(row.updatedDt);
+
+                    if (strDBOldValue === oldMmte && strDBAction === 'DELETE' && strDBUpdatedDt === currentDate) {
+                        CSReporter.pass(`Remove Scattered Mmte verified: OldValue=${strDBOldValue}, Action=${strDBAction}, Date=${strDBUpdatedDt}`);
+                        found = true;
+                        break;
+                    }
+                }
+            }
+            if (!found) {
+                throw new Error(`Remove Scattered Mmte change not found for: ${oldMmte}. Expected: Action=DELETE, Date=${currentDate}`);
+            }
+        }
+    }
+
+    private async verifyAddedScatteredMmtes(changeLog: ChangeLogRow[], newScatteredMmtesList: string[], currentDate: string): Promise<void> {
+        for (const newMmte of newScatteredMmtesList) {
+            let found = false;
+            for (const row of changeLog) {
+                if (row.fieldName === 'Add Scattered Mmte') {
+                    const strDBNewValue = row.newValue;
+                    const strDBAction = row.action;
+                    const strDBUpdatedDt = TTTFDatabaseHelper.extractDateFromOracleTimestamp(row.updatedDt);
+
+                    if (strDBNewValue === newMmte && strDBAction === 'ADD' && strDBUpdatedDt === currentDate) {
+                        CSReporter.pass(`Add Scattered Mmte verified: NewValue=${strDBNewValue}, Action=${strDBAction}, Date=${strDBUpdatedDt}`);
+                        found = true;
+                        break;
+                    }
+                }
+            }
+            if (!found) {
+                throw new Error(`Add Scattered Mmte change not found for: ${newMmte}. Expected: Action=ADD, Date=${currentDate}`);
+            }
+        }
+    }
+
+    private async verifyDisputedScatteredMmteChanges(changeLog: ChangeLogRow[], disputedScatteredMmteToUpdate: string, oldScatteredMmtesList: string[], newScatteredMmtesList: string[], currentDate: string): Promise<void> {
+        const listDisputedScatteredMmteToUpdate = disputedScatteredMmteToUpdate.split(';').filter(p => p.trim());
+
+        for (const item of listDisputedScatteredMmteToUpdate) {
+            const subItems = item.split('||');
+            if (subItems.length < 2) continue;
+
+            const refMmteName = subItems[0].trim();
+            const disputedMmteName = subItems[1].trim();
+
+            // Case 1: Scattered mmte is in oldScatteredMmtesList (UPDATE action on DisputedScatteredMmte)
+            if (oldScatteredMmtesList.includes(refMmteName)) {
+                let found = false;
+                for (const row of changeLog) {
+                    if (row.fieldName === 'DisputedScatteredMmte' && row.scatteredMmteName === refMmteName) {
+                        const strDBNewValue = row.newValue;
+                        const strDBAction = row.action;
+                        const strDBUpdatedDt = TTTFDatabaseHelper.extractDateFromOracleTimestamp(row.updatedDt);
+
+                        if (strDBNewValue === disputedMmteName && strDBAction === 'UPDATE' && strDBUpdatedDt === currentDate) {
+                            CSReporter.pass(`DisputedScatteredMmte UPDATE verified for ${refMmteName}: NewValue=${strDBNewValue}`);
+                            found = true;
+                            break;
+                        }
+                    }
+                }
+                if (!found) {
+                    throw new Error(`DisputedScatteredMmte UPDATE not found for: ${refMmteName}. Expected: NewValue=${disputedMmteName}`);
+                }
+            }
+            // Case 2: Scattered mmte is in newScatteredMmtesList (ADD action includes disputed)
+            else if (newScatteredMmtesList.includes(refMmteName)) {
+                let found = false;
+                for (const row of changeLog) {
+                    if (row.fieldName === 'Add Scattered Mmte' && row.newValue === refMmteName) {
+                        const strDBDisputedScatteredMmteName = row.disputedScatteredMmteName;
+                        const strDBAction = row.action;
+                        const strDBUpdatedDt = TTTFDatabaseHelper.extractDateFromOracleTimestamp(row.updatedDt);
+
+                        if (strDBDisputedScatteredMmteName === disputedMmteName && strDBAction === 'ADD' && strDBUpdatedDt === currentDate) {
+                            CSReporter.pass(`Add Scattered Mmte with Disputed verified for ${refMmteName}: Disputed=${strDBDisputedScatteredMmteName}`);
+                            found = true;
+                            break;
+                        }
+                    }
+                }
+                if (!found) {
+                    throw new Error(`Add Scattered Mmte with Disputed not found for: ${refMmteName}. Expected: Disputed=${disputedMmteName}`);
+                }
+            }
+        }
+    }
+
+    private async verifyDisputedStartDateChanges(changeLog: ChangeLogRow[], disputedStartDateToUpdate: string, oldScatteredMmtesList: string[], newScatteredMmtesList: string[], currentDate: string): Promise<void> {
+        const listDisputedStartDateToUpdate = disputedStartDateToUpdate.split(';').filter(p => p.trim());
+
+        for (const item of listDisputedStartDateToUpdate) {
+            const subItems = item.split('||');
+            if (subItems.length < 2) continue;
+
+            const refMmteName = subItems[0].trim();
+            const disputedStartDate = subItems[1].trim();
+
+            // Case 1: Scattered mmte is in oldScatteredMmtesList (UPDATE action on DisputedDate)
+            if (oldScatteredMmtesList.includes(refMmteName)) {
+                let found = false;
+                for (const row of changeLog) {
+                    if (row.fieldName === 'DisputedDate' && row.scatteredMmteName === refMmteName) {
+                        const strDBNewValue = row.newValue;
+                        const strDBAction = row.action;
+                        const strDBUpdatedDt = TTTFDatabaseHelper.extractDateFromOracleTimestamp(row.updatedDt);
+
+                        if (strDBNewValue === disputedStartDate && strDBAction === 'UPDATE' && strDBUpdatedDt === currentDate) {
+                            CSReporter.pass(`DisputedDate UPDATE verified for ${refMmteName}: NewValue=${strDBNewValue}`);
+                            found = true;
+                            break;
+                        }
+                    }
+                }
+                if (!found) {
+                    throw new Error(`DisputedDate UPDATE not found for: ${refMmteName}. Expected: NewValue=${disputedStartDate}`);
+                }
+            }
+            // Case 2: Scattered mmte is in newScatteredMmtesList (ADD action includes disputed start date)
+            else if (newScatteredMmtesList.includes(refMmteName)) {
+                let found = false;
+                for (const row of changeLog) {
+                    if (row.fieldName === 'Add Scattered Mmte' && row.newValue === refMmteName) {
+                        const strDBDisputedStartDate = row.disputedStartDate;
+                        const strDBAction = row.action;
+                        const strDBUpdatedDt = TTTFDatabaseHelper.extractDateFromOracleTimestamp(row.updatedDt);
+
+                        if (strDBDisputedStartDate === disputedStartDate && strDBAction === 'ADD' && strDBUpdatedDt === currentDate) {
+                            CSReporter.pass(`Add Scattered Mmte with DisputedStartDate verified for ${refMmteName}: Date=${strDBDisputedStartDate}`);
+                            found = true;
+                            break;
+                        }
+                    }
+                }
+                if (!found) {
+                    throw new Error(`Add Scattered Mmte with DisputedStartDate not found for: ${refMmteName}. Expected: Date=${disputedStartDate}`);
+                }
+            }
+        }
+    }
+
+    private async verifyFfxOrderChanges(changeLog: ChangeLogRow[], ffxOrderToUpdate: string, oldScatteredMmtesList: string[], newScatteredMmtesList: string[], currentDate: string): Promise<void> {
+        const listFfxOrderToUpdate = ffxOrderToUpdate.split(';').filter(p => p.trim());
+
+        for (const item of listFfxOrderToUpdate) {
+            const subItems = item.split('||');
+            if (subItems.length < 2) continue;
+
+            const refMmteName = subItems[0].trim();
+            const ffxOrder = subItems[1].trim();
+
+            // Case 1: Scattered mmte is in oldScatteredMmtesList (UPDATE action on FFX Order)
+            if (oldScatteredMmtesList.includes(refMmteName)) {
+                let found = false;
+                for (const row of changeLog) {
+                    if (row.fieldName === 'FFX Order' && row.scatteredMmteName === refMmteName) {
+                        const strDBNewValue = row.newValue;
+                        const strDBAction = row.action;
+                        const strDBUpdatedDt = TTTFDatabaseHelper.extractDateFromOracleTimestamp(row.updatedDt);
+
+                        if (strDBNewValue === ffxOrder && strDBAction === 'UPDATE' && strDBUpdatedDt === currentDate) {
+                            CSReporter.pass(`FFX Order UPDATE verified for ${refMmteName}: NewValue=${strDBNewValue}`);
+                            found = true;
+                            break;
+                        }
+                    }
+                }
+                if (!found) {
+                    throw new Error(`FFX Order UPDATE not found for: ${refMmteName}. Expected: NewValue=${ffxOrder}`);
+                }
+            }
+            // Case 2: Scattered mmte is in newScatteredMmtesList (ADD action includes ffx order)
+            else if (newScatteredMmtesList.includes(refMmteName)) {
+                let found = false;
+                for (const row of changeLog) {
+                    if (row.fieldName === 'Add Scattered Mmte' && row.newValue === refMmteName) {
+                        const strDBFfxOrder = String(row.ffxOrder);
+                        const strDBAction = row.action;
+                        const strDBUpdatedDt = TTTFDatabaseHelper.extractDateFromOracleTimestamp(row.updatedDt);
+
+                        if (strDBFfxOrder === ffxOrder && strDBAction === 'ADD' && strDBUpdatedDt === currentDate) {
+                            CSReporter.pass(`Add Scattered Mmte with FFX Order verified for ${refMmteName}: Order=${strDBFfxOrder}`);
+                            found = true;
+                            break;
+                        }
+                    }
+                }
+                if (!found) {
+                    throw new Error(`Add Scattered Mmte with FFX Order not found for: ${refMmteName}. Expected: Order=${ffxOrder}`);
+                }
+            }
+        }
+    }
+
+    private normalizeBooleanFlag(value: string): boolean {
+        const lowerValue = value.toLowerCase().trim();
+        return lowerValue === 'yes' || lowerValue === 'y' || lowerValue === 'true';
     }
 
     @CSBDDStepDef('I verify zealpremisis data has updated settings')
@@ -899,5 +1012,3 @@ export interface ExistingZealRow {
             throw new Error(`Scattered mmtes count mismatch: UI=${uiMmteCount}, DB=${dbMmteData.length}`);
         }
     }
-
-
