@@ -41,3 +41,45 @@
                 if (builtInMethods.includes(methodName) || foundMethods.has(methodName)) {
                     continue;
                 }
+
+
+
+// If it's a string, extract the date part directly from the string
+        if (typeof oracleTimestamp === 'string') {
+            // Try ISO format first (e.g., "2025-12-08T04:28:32.50167705")
+            const isoMatch = oracleTimestamp.match(/^(\d{4})-(\d{2})-(\d{2})/);
+            if (isoMatch) {
+                const tsYear = parseInt(isoMatch[1], 10);
+                const tsMonth = parseInt(isoMatch[2], 10) - 1; // Convert to 0-based
+                const tsDay = parseInt(isoMatch[3], 10);
+
+                const isToday = tsYear === todayYear && tsMonth === todayMonth && tsDay === todayDay;
+                CSReporter.debug(`isOracleTimestampToday (ISO): tsDate=${tsYear}-${tsMonth + 1}-${tsDay}, today=${todayYear}-${todayMonth + 1}-${todayDay}, isToday=${isToday}`);
+                return isToday;
+            }
+
+            // Fallback: Parse Oracle DD-MON-YY format (e.g., "02-NOV-25 02.45.28.363770465 PM")
+            const datePart = oracleTimestamp.split(' ')[0];
+            if (!datePart) return false;
+
+            const parts = datePart.split('-');
+            if (parts.length !== 3) return false;
+
+            const day = parseInt(parts[0], 10);
+            const monthStr = parts[1].toUpperCase();
+            const yearShort = parseInt(parts[2], 10);
+
+            const months: { [key: string]: number } = {
+                'JAN': 0, 'FEB': 1, 'MAR': 2, 'APR': 3, 'MAY': 4, 'JUN': 5,
+                'JUL': 6, 'AUG': 7, 'SEP': 8, 'OCT': 9, 'NOV': 10, 'DEC': 11
+            };
+            const month = months[monthStr];
+            if (month === undefined) return false;
+
+            // Convert 2-digit year to 4-digit (assuming 2000s for years < 50, 1900s otherwise)
+            const year = yearShort < 50 ? 2000 + yearShort : 1900 + yearShort;
+
+            const isToday = year === todayYear && month === todayMonth && day === todayDay;
+            CSReporter.debug(`isOracleTimestampToday (Oracle): tsDate=${year}-${month + 1}-${day}, today=${todayYear}-${todayMonth + 1}-${todayDay}, isToday=${isToday}`);
+            return isToday;
+        }
