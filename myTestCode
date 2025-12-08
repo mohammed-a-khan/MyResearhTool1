@@ -1,1 +1,447 @@
-my test code
+@CSBDDStepDef('I prepare test data for existing zeal update')
+    async prepareTestDataForExistingZealUpdate(): Promise<void> {
+        CSReporter.info('Preparing comprehensive test data for existing zeal update (SCENARIO_09B)');
+        CSReporter.info('Per TTTF_Update_Zeal_Scenario.txt requirement');
+
+        // Get current row test data from BDD context
+        const currentRow = this.context.getVariable('currentRow') as any || {};
+        CSReporter.debug(`Current row test data: ${JSON.stringify(currentRow)}`);
+
+        // ===================================================================
+        // STEP 1: Resolve Zeal Information and Get Main Test Data from DB
+        // Per requirement: Check ZealKey, ZealId, ZealName in order
+        // ===================================================================
+        let zealId = currentRow.zealId || '';
+        let zealKey = currentRow.zealKey || '';
+        let zealName = currentRow.zealName || '';
+        let mainTestDataFromDB: ExistingZealRow[] = [];
+
+        // Case 1: No zeal info provided - use main query to get random zeal with >1 scattered mmtes
+        if (!zealKey && !zealId && !zealName) {
+            CSReporter.info('No zeal info in test data JSON, querying database for existing zeal with scattered mmtes...');
+            mainTestDataFromDB = await TTTFDatabaseHelper.getExistingZealWithScatteredMmtes();
+
+            if (mainTestDataFromDB.length === 0) {
+                throw new Error('No existing zeal with scattered mmtes found in database');
+            }
+
+            // Get zeal info from first row (all rows have same zeal info)
+            const firstRow = mainTestDataFromDB[0];
+            zealId = firstRow.zealId;
+            zealKey = firstRow.zealKey;
+            zealName = firstRow.zealName;
+
+            CSReporter.info(`Retrieved existing zeal from DB: ID=${zealId}, Key=${zealKey}, with ${mainTestDataFromDB.length} scattered mmtes`);
+        }
+        // Case 2: ZealId provided - get zeal data by ID
+        else if (!zealKey && zealId) {
+            CSReporter.info(`ZealId provided in JSON: ${zealId}, querying full zeal data...`);
+            mainTestDataFromDB = await TTTFDatabaseHelper.getExistingZealById(zealId);
+
+            if (mainTestDataFromDB.length === 0) {
+                throw new Error(`No existing zeal found for ID: ${zealId}`);
+            }
+
+            // Get zealKey and zealName from result
+            const firstRow = mainTestDataFromDB[0];
+            zealKey = firstRow.zealKey;
+            if (!zealName) {
+                zealName = firstRow.zealName;
+            }
+
+            CSReporter.info(`Retrieved zeal by ID: Key=${zealKey}, Name=${zealName}, with ${mainTestDataFromDB.length} scattered mmtes`);
+        }
+        // Case 3: ZealName provided but no ZealId or ZealKey
+        else if (!zealKey && !zealId && zealName) {
+            CSReporter.info(`ZealName provided in JSON: ${zealName}, querying zeal info...`);
+            const zealByName = await TTTFDatabaseHelper.getZealByName(zealName);
+
+            if (!zealByName) {
+                throw new Error(`No zeal found with name: ${zealName}`);
+            }
+
+            zealId = zealByName.zealId;
+            zealKey = zealByName.zealKey;
+
+            // Now get full data by zeal ID
+            mainTestDataFromDB = await TTTFDatabaseHelper.getExistingZealById(zealId);
+            CSReporter.info(`Retrieved zeal by name: ID=${zealId}, Key=${zealKey}, with ${mainTestDataFromDB.length} scattered mmtes`);
+        }
+
+        // Store the main result set in scenario context for future use
+        this.scenarioContext.setVariable('mainTestDataFromDB', mainTestDataFromDB);
+
+        // Store resolved zeal info
+        this.scenarioContext.setVariable('zealId', zealId);
+        this.scenarioContext.setVariable('zealKey', zealKey);
+        this.scenarioContext.setVariable('zealName', zealName);
+
+        // Store additional zeal details from first row
+        if (mainTestDataFromDB.length > 0) {
+            const firstRow = mainTestDataFromDB[0];
+            this.scenarioContext.setVariable('inductorGroup', firstRow.inductorGroup);
+            this.scenarioContext.setVariable('kindnessCircle', firstRow.kindnessCircle);
+            this.scenarioContext.setVariable('zzztSeggregation', firstRow.zzztSeggregation);
+            this.scenarioContext.setVariable('premisisDescription', firstRow.premisisDescription);
+            this.scenarioContext.setVariable('calcToolName', firstRow.calcToolName);
+            this.scenarioContext.setVariable('acctManager', firstRow.acctManager);
+            this.scenarioContext.setVariable('currentSketchmarkFlag', firstRow.sketchmarkReplacementFlag || 'N');
+            this.scenarioContext.setVariable('currentInductorCode', firstRow.inductorCode || '');
+
+            // Extract and store existing scattered mmtes from mainTestDataFromDB
+            // Each row contains one scattered mmte - build array for verification steps
+            const existingScatteredMmtes = mainTestDataFromDB.map(row => ({
+                scatteredMmteName: row.scatteredMmteName,
+                disputedScatteredMmteName: row.disputedScatteredMmteName,
+                disputedDate: row.disputedDate,
+                ffxOrder: row.ffxOrder
+            }));
+            this.scenarioContext.setVariable('existingScatteredMmtes', existingScatteredMmtes);
+            CSReporter.info(`Stored ${existingScatteredMmtes.length} existing scattered mmtes: ${existingScatteredMmtes.map(r => r.scatteredMmteName).join(', ')}`);
+        }
+
+        // ===================================================================
+        // STEP 2: Resolve SketchmarkFlagToUpdate
+        // Per requirement: Toggle current value if not provided
+        // ===================================================================
+        let sketchmarkFlagToUpdate = currentRow.sketchmarkFlagToUpdate || '';
+        if (sketchmarkFlagToUpdate) {
+            // Normalize user-provided value: Yes/True -> Y, No/False -> N
+            sketchmarkFlagToUpdate = this.normalizeYesNoFlag(sketchmarkFlagToUpdate);
+        } else {
+            // Auto-toggle: If current is Y, set to N; if N, set to Y
+            const currentSketchmarkFlag = this.scenarioContext.getVariable<string>('currentSketchmarkFlag') || 'N';
+            sketchmarkFlagToUpdate = currentSketchmarkFlag === 'Y' ? 'N' : 'Y';
+            CSReporter.info(`Auto-toggling sketchmarkFlagToUpdate: current=${currentSketchmarkFlag}, new=${sketchmarkFlagToUpdate}`);
+        }
+        this.scenarioContext.setVariable('sketchmarkFlagToUpdate', sketchmarkFlagToUpdate);
+
+        // ===================================================================
+        // STEP 3: Resolve FFXFileInductorTypeToUpdate
+        // Per requirement: Query for different inductor type if not provided
+        // ===================================================================
+        let ffxFileInductorTypeToUpdate = currentRow.ffxFileInductorTypeToUpdate || '';
+        if (!ffxFileInductorTypeToUpdate) {
+            const currentInductorCode = this.scenarioContext.getVariable<string>('currentInductorCode') || '';
+            if (currentInductorCode) {
+                const differentInductorCode = await TTTFDatabaseHelper.getDifferentFfxInductorType(currentInductorCode);
+                if (differentInductorCode) {
+                    ffxFileInductorTypeToUpdate = differentInductorCode;
+                    CSReporter.info(`Auto-selected different FFX Inductor Type: ${ffxFileInductorTypeToUpdate} (current: ${currentInductorCode})`);
+                }
+            }
+        }
+        this.scenarioContext.setVariable('ffxFileInductorTypeToUpdate', ffxFileInductorTypeToUpdate);
+
+        // ===================================================================
+        // STEP 4: Resolve Update Flags
+        // ===================================================================
+        const updateScatteredMmtesFlag = this.isYesOrTrue(currentRow.updateScatteredMmtesFlag || 'false');
+        const removeScatteredMmtesFlag = this.isYesOrTrue(currentRow.removeScatteredMmtesFlag || 'false');
+        const updateDisputedScatteredMmteFlag = this.isYesOrTrue(currentRow.updateDisputedScatteredMmteFlag || 'false');
+        const updateDisputedStartDateFlag = this.isYesOrTrue(currentRow.updateDisputedStartDateFlag || 'false');
+        const ffxOrderUpdateFlag = this.isYesOrTrue(currentRow.ffxOrderUpdateFlag || 'false');
+
+        this.scenarioContext.setVariable('updateScatteredMmtesFlag', updateScatteredMmtesFlag);
+        this.scenarioContext.setVariable('removeScatteredMmtesFlag', removeScatteredMmtesFlag);
+        this.scenarioContext.setVariable('updateDisputedScatteredMmteFlag', updateDisputedScatteredMmteFlag);
+        this.scenarioContext.setVariable('updateDisputedStartDateFlag', updateDisputedStartDateFlag);
+        this.scenarioContext.setVariable('ffxOrderUpdateFlag', ffxOrderUpdateFlag);
+
+        // ===================================================================
+        // STEP 5: Resolve ScatteredMmtesToUpdate
+        // Per requirement: Uses dynamic CTE query with exclusions
+        // Format: "OldMmte||NewMmte;OldMmte||NewMmte"
+        // ===================================================================
+        let scatteredMmtesToUpdate = currentRow.scatteredMmtesToUpdate || '';
+        let scatteredMmtesNamesData: Array<{ scatteredMmteName: string; methodologyType: string }> = [];
+
+        if (updateScatteredMmtesFlag && !scatteredMmtesToUpdate) {
+            // Get existing scattered mmtes from mainTestDataFromDB, excluding any to be removed
+            const mmtesToRemove = removeScatteredMmtesFlag
+                ? (currentRow.scatteredMmtesToRemove || '').split(';').filter((r: string) => r.trim())
+                : [];
+
+            const existingMmteNames: string[] = [];
+            for (const row of mainTestDataFromDB) {
+                const mmteName = row.scatteredMmteName;
+                if (mmteName && !mmtesToRemove.includes(mmteName)) {
+                    existingMmteNames.push(mmteName);
+                }
+            }
+
+            if (existingMmteNames.length > 0) {
+                // Check for partialUpdateCount - if set, only replace that many mmtes
+                // Remaining mmtes will have their disputed updated instead
+                const partialUpdateCount = parseInt(currentRow.partialUpdateCount || '0', 10);
+
+                let mmtesToReplace: string[] = [];
+                let mmtesToKeepAndUpdateDisputed: string[] = [];
+
+                if (partialUpdateCount > 0 && partialUpdateCount < existingMmteNames.length) {
+                    // Partial update scenario: Replace only partialUpdateCount mmtes
+                    mmtesToReplace = existingMmteNames.slice(0, partialUpdateCount);
+                    mmtesToKeepAndUpdateDisputed = existingMmteNames.slice(partialUpdateCount);
+                    CSReporter.info(`Partial update: Replacing ${mmtesToReplace.length} mmte(s), keeping ${mmtesToKeepAndUpdateDisputed.length} mmte(s) for disputed update`);
+                } else {
+                    // Complete replacement scenario: Replace all mmtes
+                    mmtesToReplace = existingMmteNames;
+                    CSReporter.info(`Complete replacement: Replacing all ${mmtesToReplace.length} mmte(s)`);
+                }
+
+                // Store mmtes to keep for disputed update later
+                this.scenarioContext.setVariable('mmtesToKeepAndUpdateDisputed', mmtesToKeepAndUpdateDisputed);
+
+                if (mmtesToReplace.length > 0) {
+                    // Execute dynamic CTE query for replacement mmtes per requirement
+                    scatteredMmtesNamesData = await TTTFDatabaseHelper.getReplacementScatteredMmtesDynamic(mmtesToReplace);
+
+                    // Build ScatteredMmtesToUpdate string: "OldMmte||NewMmte;..."
+                    const updatePairs: string[] = [];
+                    for (let i = 0; i < mmtesToReplace.length && i < scatteredMmtesNamesData.length; i++) {
+                        updatePairs.push(`${mmtesToReplace[i]}||${scatteredMmtesNamesData[i].scatteredMmteName}`);
+                    }
+                    scatteredMmtesToUpdate = updatePairs.join(';');
+                    CSReporter.info(`Auto-genemmted scatteredMmtesToUpdate: ${scatteredMmtesToUpdate}`);
+                }
+            }
+        }
+        this.scenarioContext.setVariable('scatteredMmtesToUpdate', scatteredMmtesToUpdate);
+        this.scenarioContext.setVariable('scatteredMmtesNamesData', scatteredMmtesNamesData);
+
+        // ===================================================================
+        // STEP 6: Resolve ScatteredMmtesToRemove (Section B.5)
+        // ===================================================================
+        if (removeScatteredMmtesFlag) {
+            const scatteredMmtesToRemove = currentRow.scatteredMmtesToRemove || '';
+            this.scenarioContext.setVariable('scatteredMmtesToRemove', scatteredMmtesToRemove);
+        }
+
+        // ===================================================================
+        // STEP 7: Resolve DisputedScatteredMmteToUpdate (Section B.6)
+        // For partial update: Also add disputed for mmtes that are kept (not replaced)
+        // ===================================================================
+        if (updateDisputedScatteredMmteFlag) {
+            let disputedScatteredMmteToUpdate = currentRow.disputedScatteredMmteToUpdate || '';
+            if (!disputedScatteredMmteToUpdate) {
+                const disputedPairs: string[] = [];
+
+                // Part A: Get disputed mmtes for newly added scattered mmtes (from replacement)
+                const scatteredMmtesToUpdate = this.scenarioContext.getVariable<string>('scatteredMmtesToUpdate') || '';
+                const newMmteNames: string[] = [];
+                if (scatteredMmtesToUpdate) {
+                    scatteredMmtesToUpdate.split(';').forEach(pair => {
+                        const [, newMmte] = pair.split('||');
+                        if (newMmte) newMmteNames.push(newMmte.trim());
+                    });
+
+                    // Get disputed mmtes using dynamic CTE query per requirement
+                    // The new scattered mmtes are excluded to get different disputed mmtes
+                    const disputedMmtes = await TTTFDatabaseHelper.getDisputedScatteredMmtesDynamic(newMmteNames);
+                    for (let i = 0; i < newMmteNames.length && i < disputedMmtes.length; i++) {
+                        disputedPairs.push(`${newMmteNames[i]}||${disputedMmtes[i].scatteredMmteName}`);
+                    }
+                    CSReporter.info(`Disputed pairs for new mmtes: ${disputedPairs.join('; ')}`);
+                }
+
+                // Part B: Get disputed mmtes for mmtes that are kept (partial update scenario)
+                const mmtesToKeepAndUpdateDisputed = this.scenarioContext.getVariable<string[]>('mmtesToKeepAndUpdateDisputed') || [];
+                if (mmtesToKeepAndUpdateDisputed.length > 0) {
+                    CSReporter.info(`Generating disputed for ${mmtesToKeepAndUpdateDisputed.length} kept mmte(s): ${mmtesToKeepAndUpdateDisputed.join(', ')}`);
+
+                    // Exclude both the kept mmtes AND the new mmtes from disputed selection
+                    const allExcludedMmtes = [...mmtesToKeepAndUpdateDisputed, ...newMmteNames];
+                    const disputedMmtesForKept = await TTTFDatabaseHelper.getDisputedScatteredMmtesDynamic(allExcludedMmtes);
+
+                    for (let i = 0; i < mmtesToKeepAndUpdateDisputed.length && i < disputedMmtesForKept.length; i++) {
+                        disputedPairs.push(`${mmtesToKeepAndUpdateDisputed[i]}||${disputedMmtesForKept[i].scatteredMmteName}`);
+                    }
+                    CSReporter.info(`Disputed pairs for kept mmtes: ${mmtesToKeepAndUpdateDisputed.map((r, i) => `${r}||${disputedMmtesForKept[i]?.scatteredMmteName || 'N/A'}`).join('; ')}`);
+                }
+
+                if (disputedPairs.length > 0) {
+                    disputedScatteredMmteToUpdate = disputedPairs.join(';');
+                    CSReporter.info(`Auto-genemmted disputedScatteredMmteToUpdate: ${disputedScatteredMmteToUpdate}`);
+                }
+            }
+            this.scenarioContext.setVariable('disputedScatteredMmteToUpdate', disputedScatteredMmteToUpdate);
+        }
+
+        // ===================================================================
+        // STEP 8: Resolve DisputedStartDateToUpdate (Section B.7)
+        // For partial update: Genemmtes dates for ALL disputed mmtes (new + kept)
+        // since disputedScatteredMmteToUpdate already contains both sets from STEP 7
+        // ===================================================================
+        if (updateDisputedStartDateFlag && updateDisputedScatteredMmteFlag) {
+            let disputedStartDateToUpdate = currentRow.disputedStartDateToUpdate || '';
+            if (!disputedStartDateToUpdate) {
+                // Auto-genemmte: Calculate date = Current Date - 15 days (exclude weekends)
+                const disputedScatteredMmteToUpdate = this.scenarioContext.getVariable<string>('disputedScatteredMmteToUpdate') || '';
+                if (disputedScatteredMmteToUpdate) {
+                    // Get existing disputed dates to ensure we don't set the same date
+                    const existingScatteredMmtes = this.scenarioContext.getVariable<Array<{
+                        scatteredMmteName: string;
+                        disputedScatteredMmteName: string;
+                        disputedDate: string | Date;
+                        ffxOrder: number;
+                    }>>('existingScatteredMmtes') || [];
+
+                    // Collect all existing disputed dates for comparison
+                    // Handle both Date objects and string formats from database
+                    const existingDisputedDates = existingScatteredMmtes
+                        .map(r => {
+                            if (!r.disputedDate) return null;
+                            // If it's a Date object, convert to MM/DD/YYYY format
+                            if (r.disputedDate instanceof Date) {
+                                return CSDateTimeUtility.toUSDateString(r.disputedDate);
+                            }
+                            // If it's a string, return as-is
+                            return typeof r.disputedDate === 'string' ? r.disputedDate.trim() : null;
+                        })
+                        .filter((d): d is string => d !== null && d !== '');
+                    CSReporter.info(`Existing disputed dates: ${existingDisputedDates.join(', ') || 'None'}`);
+
+                    // Calculate initial disputed date (15 kindness days before today)
+                    let disputedStartDate = TTTFDatabaseHelper.calculateDisputedStartDate();
+                    CSReporter.info(`Initial calculated disputed date: ${disputedStartDate}`);
+
+                    // Check if calculated date matches any existing disputed date
+                    // If yes, subtract one more kindness day
+                    if (existingDisputedDates.includes(disputedStartDate)) {
+                        CSReporter.info(`Calculated date ${disputedStartDate} matches existing disputed date, subtracting one more kindness day`);
+                        disputedStartDate = TTTFDatabaseHelper.calculateDisputedStartDateWithOffset(-16);
+                        CSReporter.info(`Adjusted disputed date: ${disputedStartDate}`);
+                    }
+
+                    const datePairs: string[] = [];
+                    disputedScatteredMmteToUpdate.split(';').forEach(pair => {
+                        const [, disputedMmte] = pair.split('||');
+                        if (disputedMmte) {
+                            datePairs.push(`${disputedMmte.trim()}||${disputedStartDate}`);
+                        }
+                    });
+                    disputedStartDateToUpdate = datePairs.join(';');
+                    CSReporter.info(`Auto-genemmted disputedStartDateToUpdate: ${disputedStartDateToUpdate}`);
+                }
+            }
+            this.scenarioContext.setVariable('disputedStartDateToUpdate', disputedStartDateToUpdate);
+        }
+
+        // ===================================================================
+        // STEP 9: FFXOrderToUpdate (Section B.8 - Must be user-provided)
+        // ===================================================================
+        if (ffxOrderUpdateFlag) {
+            const ffxOrderToUpdate = currentRow.ffxOrderToUpdate || '';
+            if (!ffxOrderToUpdate) {
+                CSReporter.warn('FFXOrderToUpdate must be user-provided. Skipping FFX order update.');
+                this.scenarioContext.setVariable('ffxOrderUpdateFlag', false);
+            } else {
+                this.scenarioContext.setVariable('ffxOrderToUpdate', ffxOrderToUpdate);
+            }
+        }
+
+        CSReporter.pass('Test data preparation for existing zeal update completed successfully');
+    }
+
+
+
+    [
+  {
+    "testCaseId": "TC01_Existing_Zeal_Update_All_Features",
+    "scenarioName": "Existing Zeal Update - Complete Replacement (All Scattered Mmtes replaced with Disputed and Dates)",
+    "runFlag": "No",
+    "type": "Zeal",
+    "attribute": "ID",
+    "zealId": "",
+    "zealKey": "",
+    "zealName": "",
+    "requesterUser": "akhan29@mdakhan.com",
+    "approverUser": "akhan24@mdakhan.com",
+    "sketchmarkFlagToUpdate": "",
+    "ffxFileInductorTypeToUpdate": "",
+    "updateScatteredMmtesFlag": "true",
+    "scatteredMmtesToUpdate": "",
+    "removeScatteredMmtesFlag": "false",
+    "scatteredMmtesToRemove": "",
+    "updateDisputedScatteredMmteFlag": "true",
+    "disputedScatteredMmteToUpdate": "",
+    "updateDisputedStartDateFlag": "true",
+    "disputedStartDateToUpdate": "",
+    "ffxOrderUpdateFlag": "false",
+    "ffxOrderToUpdate": "",
+    "partialUpdateCount": ""
+  },
+  {
+    "testCaseId": "TC01B_Existing_Zeal_Partial_Update",
+    "scenarioName": "Existing Zeal Update - Partial Update (Replace 1 mmte, Update disputed on remaining mmte)",
+    "runFlag": "Yes",
+    "type": "Zeal",
+    "attribute": "ID",
+    "zealId": "",
+    "zealKey": "",
+    "zealName": "",
+    "requesterUser": "akhan29@mdakhan.com",
+    "approverUser": "akhan24@mdakhan.com",
+    "sketchmarkFlagToUpdate": "",
+    "ffxFileInductorTypeToUpdate": "",
+    "updateScatteredMmtesFlag": "true",
+    "scatteredMmtesToUpdate": "",
+    "removeScatteredMmtesFlag": "false",
+    "scatteredMmtesToRemove": "",
+    "updateDisputedScatteredMmteFlag": "true",
+    "disputedScatteredMmteToUpdate": "",
+    "updateDisputedStartDateFlag": "true",
+    "disputedStartDateToUpdate": "",
+    "ffxOrderUpdateFlag": "false",
+    "ffxOrderToUpdate": "",
+    "partialUpdateCount": "1"
+  },
+  {
+    "testCaseId": "TC02_Existing_Zeal_Update_Sketchmark_Only",
+    "scenarioName": "Existing Zeal Update - Sketchmark Flag Toggle Only",
+    "runFlag": "No",
+    "type": "Zeal",
+    "attribute": "ID",
+    "zealId": "",
+    "zealKey": "",
+    "zealName": "",
+    "requesterUser": "akhan29@mdakhan.com",
+    "approverUser": "akhan24@mdakhan.com",
+    "sketchmarkFlagToUpdate": "",
+    "ffxFileInductorTypeToUpdate": "",
+    "updateScatteredMmtesFlag": "false",
+    "scatteredMmtesToUpdate": "",
+    "removeScatteredMmtesFlag": "false",
+    "scatteredMmtesToRemove": "",
+    "updateDisputedScatteredMmteFlag": "false",
+    "disputedScatteredMmteToUpdate": "",
+    "updateDisputedStartDateFlag": "false",
+    "disputedStartDateToUpdate": "",
+    "ffxOrderUpdateFlag": "false",
+    "ffxOrderToUpdate": ""
+  },
+  {
+    "testCaseId": "TC03_Existing_Zeal_Update_Scattered_Mmtes_Only",
+    "scenarioName": "Existing Zeal Update - Replace Scattered Mmtes Only",
+    "runFlag": "No",
+    "type": "Zeal",
+    "attribute": "ID",
+    "zealId": "",
+    "zealKey": "",
+    "zealName": "",
+    "requesterUser": "akhan29@mdakhan.com",
+    "approverUser": "akhan24@mdakhan.com",
+    "sketchmarkFlagToUpdate": "",
+    "ffxFileInductorTypeToUpdate": "",
+    "updateScatteredMmtesFlag": "true",
+    "scatteredMmtesToUpdate": "",
+    "removeScatteredMmtesFlag": "false",
+    "scatteredMmtesToRemove": "",
+    "updateDisputedScatteredMmteFlag": "false",
+    "disputedScatteredMmteToUpdate": "",
+    "updateDisputedStartDateFlag": "false",
+    "disputedStartDateToUpdate": "",
+    "ffxOrderUpdateFlag": "false",
+    "ffxOrderToUpdate": ""
+  }
+]
