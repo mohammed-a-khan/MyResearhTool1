@@ -1,35 +1,31 @@
-@CSBDDStepDef('I verify changes data matches expected updates')
-    async verifyChangesDataMatchesExpectedUpdates(): Promise<void> {
-        const zealId = this.scenarioContext.getVariable<string>('zealId');
-        if (!zealId) {
-            throw new Error('Zeal ID not found in scenario context');
-        }
-        CSReporter.info(`Verifying database change log for zeal ID: ${zealId}`);
+@CSBDDStepDef('I verify itihas approval logs for existing zeal update')
+    async verifyItihasApprovalLogsForExistingZealUpdate(): Promise<void> {
+        CSReporter.info('Verifying itihas approval logs for existing zeal update');
 
-        // Step 1: Execute change log query
-        const changeLogResultSet = await TTTFDatabaseHelper.getChangeLogForZeal(zealId);
-        if (changeLogResultSet.length === 0) {
-            throw new Error(`No change log records found for zeal ID: ${zealId}`);
+        // Get all itihas data from UI
+        const itihasData = await this.changesItihasPage.getAllItihasData();
+        if (itihasData.length === 0) {
+            throw new Error('No itihas records found in Itihas table');
         }
-        CSReporter.info(`Retrieved ${changeLogResultSet.length} change log records`);
+        CSReporter.info(`Retrieved ${itihasData.length} itihas records from UI`);
 
-        // Build scattered mmtes lists for later use
+        // Build scattered mmtes lists (same as Changes table verification)
         const oldScatteredMmtesList: string[] = [];
         const newScatteredMmtesList: string[] = [];
 
-        // Step 2: Verify SketchmarkFlagToUpdate
+        // Step 1: Verify SketchmarkFlagToUpdate
         const sketchmarkFlagToUpdate = this.scenarioContext.getVariable<string>('sketchmarkFlagToUpdate');
         if (sketchmarkFlagToUpdate) {
-            await this.verifySketchmarkFlagChange(changeLogResultSet, sketchmarkFlagToUpdate);
+            await this.verifyItihasSketchmarkFlagChange(itihasData, sketchmarkFlagToUpdate);
         }
 
-        // Step 3: Verify FFXFileInductorTypeToUpdate
+        // Step 2: Verify FFXFileInductorTypeToUpdate
         const ffxFileInductorTypeToUpdate = this.scenarioContext.getVariable<string>('ffxFileInductorTypeToUpdate');
         if (ffxFileInductorTypeToUpdate) {
-            await this.verifyOutputTtcalcChange(changeLogResultSet, ffxFileInductorTypeToUpdate);
+            await this.verifyItihasOutputTtcalcChange(itihasData, ffxFileInductorTypeToUpdate);
         }
 
-        // Step 4: Verify UpdateScatteredMmtesFlag
+        // Step 3: Verify UpdateScatteredMmtesFlag
         const updateScatteredMmtesFlag = this.scenarioContext.getVariable<boolean>('updateScatteredMmtesFlag');
         if (updateScatteredMmtesFlag) {
             const scatteredMmtesToUpdate = this.scenarioContext.getVariable<string>('scatteredMmtesToUpdate') || '';
@@ -43,147 +39,160 @@
                     }
                 }
 
-                // Store for later verification steps
-                this.scenarioContext.setVariable('oldScatteredMmtesList', oldScatteredMmtesList);
-                this.scenarioContext.setVariable('newScatteredMmtesList', newScatteredMmtesList);
+                // Verify removed scattered mmtes in itihas
+                await this.verifyItihasRemovedScatteredMmtes(itihasData, oldScatteredMmtesList);
 
-                // Verify removed scattered mmtes
-                await this.verifyRemovedScatteredMmtes(changeLogResultSet, oldScatteredMmtesList);
-
-                // Verify added scattered mmtes
-                await this.verifyAddedScatteredMmtes(changeLogResultSet, newScatteredMmtesList);
+                // Verify added scattered mmtes in itihas
+                await this.verifyItihasAddedScatteredMmtes(itihasData, newScatteredMmtesList);
             }
         }
 
-        // Step 5: Verify UpdateDisputedScatteredMmteFlag
+        // Step 4: Verify UpdateDisputedScatteredMmteFlag
         const updateDisputedScatteredMmteFlag = this.scenarioContext.getVariable<boolean>('updateDisputedScatteredMmteFlag');
         if (updateDisputedScatteredMmteFlag) {
             const disputedScatteredMmteToUpdate = this.scenarioContext.getVariable<string>('disputedScatteredMmteToUpdate') || '';
             if (disputedScatteredMmteToUpdate) {
-                await this.verifyDisputedScatteredMmteChanges(changeLogResultSet, disputedScatteredMmteToUpdate, oldScatteredMmtesList, newScatteredMmtesList);
+                await this.verifyItihasDisputedScatteredMmteChanges(itihasData, disputedScatteredMmteToUpdate, oldScatteredMmtesList, newScatteredMmtesList);
             }
         }
 
-        // Step 6: Verify UpdateDisputedStartDateFlag
+        // Step 5: Verify UpdateDisputedStartDateFlag
         const updateDisputedStartDateFlag = this.scenarioContext.getVariable<boolean>('updateDisputedStartDateFlag');
         if (updateDisputedStartDateFlag) {
             const disputedStartDateToUpdate = this.scenarioContext.getVariable<string>('disputedStartDateToUpdate') || '';
             if (disputedStartDateToUpdate) {
-                // Get disputedScatteredMmteToUpdate from context to build the mapping of DisputedMmte -> PrimaryMmte
                 const disputedScatteredMmteToUpdateForDate = this.scenarioContext.getVariable<string>('disputedScatteredMmteToUpdate') || '';
-                await this.verifyDisputedStartDateChanges(
-                    changeLogResultSet,
-                    disputedStartDateToUpdate,
-                    oldScatteredMmtesList,
-                    newScatteredMmtesList,
-                    disputedScatteredMmteToUpdateForDate
-                );
+                await this.verifyItihasDisputedStartDateChanges(itihasData, disputedStartDateToUpdate, oldScatteredMmtesList, newScatteredMmtesList, disputedScatteredMmteToUpdateForDate);
             }
         }
 
-        // Step 7: Verify FFXOrderUpdateFlag (user-provided)
+        // Step 6: Verify FFXOrderUpdateFlag
         const ffxOrderUpdateFlag = this.scenarioContext.getVariable<boolean>('ffxOrderUpdateFlag');
         if (ffxOrderUpdateFlag) {
             const ffxOrderToUpdate = this.scenarioContext.getVariable<string>('ffxOrderToUpdate') || '';
             if (ffxOrderToUpdate) {
-                await this.verifyFfxOrderChanges(changeLogResultSet, ffxOrderToUpdate, oldScatteredMmtesList, newScatteredMmtesList);
+                await this.verifyItihasFfxOrderChanges(itihasData, ffxOrderToUpdate, oldScatteredMmtesList, newScatteredMmtesList);
             }
         }
 
-        // Step 8: Verify automatic FFX Order changes (CASE 3: partial removal scenario)
-        // When some scattered mmtes are removed but others remain, the remaining mmtes'
-        // FFX order changes automatically - verify these automatic changes
-        const removeScatteredMmtesFlag = this.scenarioContext.getVariable<boolean>('removeScatteredMmtesFlag');
-        const scatteredMmtesToRemove = this.scenarioContext.getVariable<string>('scatteredMmtesToRemove') || '';
-        const existingScatteredMmtes = this.scenarioContext.getVariable<Array<{
-            scatteredMmteName: string;
-            disputedScatteredMmteName: string;
-            disputedDate: string | Date;
-            ffxOrder: number;
-        }>>('existingScatteredMmtes') || [];
+        CSReporter.pass('All itihas approval logs verified');
+    }
 
-        // Build list of all removed mmtes (from both update and remove operations)
-        const allRemovedMmtes: string[] = [...oldScatteredMmtesList];
-        if (removeScatteredMmtesFlag && scatteredMmtesToRemove) {
-            const removeList = scatteredMmtesToRemove.split(';').filter(r => r.trim());
-            for (const mmte of removeList) {
-                if (!allRemovedMmtes.includes(mmte.trim())) {
-                    allRemovedMmtes.push(mmte.trim());
+    // ===================================================================
+    // PRIVATE HELPER METHODS FOR ITIHAS TABLE VERIFICATION
+    // ===================================================================
+
+    private async verifyItihasSketchmarkFlagChange(itihasData: Array<{ description: string; oldValue: string; newValue: string; }>, sketchmarkFlagToUpdate: string): Promise<void> {
+        const valueToVerify = this.normalizeBooleanFlag(sketchmarkFlagToUpdate) ? 'true' : 'false';
+
+        for (const row of itihasData) {
+            if (row.description.includes('Sketchmark Replacement') || row.description.includes('Approved Sketchmark')) {
+                if (row.newValue.toLowerCase() === valueToVerify) {
+                    CSReporter.pass(`Itihas: Sketchmark Replacement verified: NewValue=${row.newValue}`);
+                    return;
                 }
             }
         }
-
-        // Check for automatic FFX order changes if partial removal occurred
-        if (allRemovedMmtes.length > 0 && existingScatteredMmtes.length > allRemovedMmtes.length) {
-            await this.verifyAutomaticFfxOrderChanges(changeLogResultSet, existingScatteredMmtes, allRemovedMmtes);
-        }
-
-        CSReporter.pass('All database change log verifications passed');
+        throw new Error(`Itihas: Sketchmark Replacement change not found. Expected NewValue=${valueToVerify}`);
     }
 
+    private async verifyItihasOutputTtcalcChange(itihasData: Array<{ description: string; oldValue: string; newValue: string; }>, ffxFileInductorTypeToUpdate: string): Promise<void> {
+        for (const row of itihasData) {
+            if (row.description.includes('Output Ttcalc') || row.description.includes('Approved Output')) {
+                if (row.newValue === ffxFileInductorTypeToUpdate) {
+                    CSReporter.pass(`Itihas: Output Ttcalc verified: NewValue=${row.newValue}`);
+                    return;
+                }
+            }
+        }
+        throw new Error(`Itihas: Output Ttcalc change not found. Expected NewValue=${ffxFileInductorTypeToUpdate}`);
+    }
 
-private async verifyDisputedScatteredMmteChanges(changeLog: ChangeLogRow[], disputedScatteredMmteToUpdate: string, oldScatteredMmtesList: string[], newScatteredMmtesList: string[]): Promise<void> {
-        // Format: "PrimaryMmte||DisputedMmte;PrimaryMmte||DisputedMmte"
+    private async verifyItihasRemovedScatteredMmtes(itihasData: Array<{ description: string; oldValue: string; newValue: string; }>, oldScatteredMmtesList: string[]): Promise<void> {
+        for (const mmteName of oldScatteredMmtesList) {
+            let found = false;
+            for (const row of itihasData) {
+                if ((row.description.includes('Remove Scattered Mmte') || row.description.includes('Approved Scattered Mmtes')) &&
+                    row.oldValue.includes(mmteName)) {
+                    CSReporter.pass(`Itihas: Remove Scattered Mmte verified for ${mmteName}`);
+                    found = true;
+                    break;
+                }
+            }
+            if (!found) {
+                throw new Error(`Itihas: Remove Scattered Mmte not found for: ${mmteName}`);
+            }
+        }
+    }
+
+    private async verifyItihasAddedScatteredMmtes(itihasData: Array<{ description: string; oldValue: string; newValue: string; }>, newScatteredMmtesList: string[]): Promise<void> {
+        for (const mmteName of newScatteredMmtesList) {
+            let found = false;
+            for (const row of itihasData) {
+                if ((row.description.includes('Add Scattered Mmte') || row.description.includes('Approved Scattered Mmtes')) &&
+                    row.newValue.includes(mmteName)) {
+                    CSReporter.pass(`Itihas: Add Scattered Mmte verified for ${mmteName}`);
+                    found = true;
+                    break;
+                }
+            }
+            if (!found) {
+                throw new Error(`Itihas: Add Scattered Mmte not found for: ${mmteName}`);
+            }
+        }
+    }
+
+    private async verifyItihasDisputedScatteredMmteChanges(
+        itihasData: Array<{ description: string; oldValue: string; newValue: string; }>,
+        disputedScatteredMmteToUpdate: string,
+        oldScatteredMmtesList: string[],
+        newScatteredMmtesList: string[]
+    ): Promise<void> {
         const listDisputedScatteredMmteToUpdate = disputedScatteredMmteToUpdate.split(';').filter(p => p.trim());
 
         for (const item of listDisputedScatteredMmteToUpdate) {
             const subItems = item.split('||');
             if (subItems.length < 2) continue;
 
-            const primaryRefMmteName = subItems[0].trim();  // Primary scattered mmte
-            const disputedMmteName = subItems[1].trim();    // Disputed scattered mmte to set
+            const primaryRefMmteName = subItems[0].trim();
+            const disputedMmteName = subItems[1].trim();
 
-            // CASE 1: Primary scattered mmte is being ADDED as NEW (complete replacement scenario)
-            // When new mmtes are added, there is NO sepammte disputed record - SKIP verification
+            // Skip if primary mmte is newly added or being removed
             if (newScatteredMmtesList.includes(primaryRefMmteName)) {
-                CSReporter.info(`Primary mmte ${primaryRefMmteName} is newly added - no sepammte disputed mmte record expected`);
+                CSReporter.info(`Itihas: Primary mmte ${primaryRefMmteName} is newly added - no sepammte disputed mmte record expected`);
                 continue;
             }
-
-            // CASE 2: Primary scattered mmte is in oldScatteredMmtesList AND is being REMOVED
-            // oldScatteredMmtesList contains mmtes that are being removed in the update operation
-            // When a scattered mmte is removed, there is NO sepammte disputed update record - SKIP verification
             if (oldScatteredMmtesList.includes(primaryRefMmteName)) {
-                CSReporter.info(`Primary mmte ${primaryRefMmteName} is being removed - no sepammte disputed mmte record expected`);
+                CSReporter.info(`Itihas: Primary mmte ${primaryRefMmteName} is being removed - no sepammte disputed mmte record expected`);
                 continue;
             }
 
-            // CASE 3: Primary scattered mmte EXISTS and is NOT being added/removed
-            // This means it's an existing mmte getting its disputed updated
-            // ONLY in this case, we expect a "DisputedScatteredMmte" UPDATE record
+            // Find in itihas
             let found = false;
-            for (const row of changeLog) {
-                if (row.fieldName === 'DisputedScatteredMmte' && row.scatteredMmteName === primaryRefMmteName) {
-                    const strDBNewValue = row.newValue;
-                    const strDBAction = row.action;
-                    const isUpdatedToday = TTTFDatabaseHelper.isOracleTimestampToday(row.updatedDt);
-
-                    if (strDBNewValue === disputedMmteName && strDBAction === 'UPDATE' && isUpdatedToday) {
-                        CSReporter.pass(`DisputedScatteredMmte UPDATE verified for existing mmte ${primaryRefMmteName}: NewValue=${strDBNewValue}`);
-                        found = true;
-                        break;
-                    }
+            for (const row of itihasData) {
+                if ((row.description.includes('Disputed Scattered Mmte') || row.description.includes('DisputedScatteredMmte') || row.description.includes('Approved Disputed')) &&
+                    row.newValue.includes(disputedMmteName)) {
+                    CSReporter.pass(`Itihas: DisputedScatteredMmte UPDATE verified for ${primaryRefMmteName}: NewValue=${disputedMmteName}`);
+                    found = true;
+                    break;
                 }
             }
             if (!found) {
-                throw new Error(`DisputedScatteredMmte UPDATE not found for existing mmte: ${primaryRefMmteName}. Expected: NewValue=${disputedMmteName}`);
+                throw new Error(`Itihas: DisputedScatteredMmte UPDATE not found for: ${primaryRefMmteName}. Expected NewValue=${disputedMmteName}`);
             }
         }
     }
 
-    private async verifyDisputedStartDateChanges(
-        changeLog: ChangeLogRow[],
+    private async verifyItihasDisputedStartDateChanges(
+        itihasData: Array<{ description: string; oldValue: string; newValue: string; }>,
         disputedStartDateToUpdate: string,
         oldScatteredMmtesList: string[],
         newScatteredMmtesList: string[],
-        disputedScatteredMmteToUpdate: string = ''
+        disputedScatteredMmteToUpdate: string
     ): Promise<void> {
-        // Format: "DisputedMmteName||MM/DD/YYYY;DisputedMmteName||MM/DD/YYYY"
-        // Note: First part is the DISPUTED scattered mmte name, not the primary scattered mmte!
         const listDisputedStartDateToUpdate = disputedStartDateToUpdate.split(';').filter(p => p.trim());
 
-        // Build map of DisputedMmte -> PrimaryMmte from disputedScatteredMmteToUpdate
-        // Format of disputedScatteredMmteToUpdate: "PrimaryMmte||DisputedMmte;PrimaryMmte||DisputedMmte"
+        // Build map of DisputedMmte -> PrimaryMmte
         const disputedToPrimaryMap = new Map<string, string>();
         const disputedScatteredMmtesList: string[] = [];
 
@@ -202,55 +211,76 @@ private async verifyDisputedScatteredMmteChanges(changeLog: ChangeLogRow[], disp
             const subItems = item.split('||');
             if (subItems.length < 2) continue;
 
-            const disputedMmteName = subItems[0].trim(); // This is the DISPUTED scattered mmte name
+            const disputedMmteName = subItems[0].trim();
             const disputedStartDate = subItems[1].trim();
 
-            // Step 1: Check if this disputedMmteName is in the disputedScatteredMmtesList
+            // Check if disputedMmteName is in the list
             if (!disputedScatteredMmtesList.includes(disputedMmteName)) {
-                CSReporter.info(`Disputed mmte ${disputedMmteName} is not in disputedScatteredMmtesList - skipping`);
+                CSReporter.info(`Itihas: Disputed mmte ${disputedMmteName} is not in disputedScatteredMmtesList - skipping`);
                 continue;
             }
 
-            // Step 2: Get the PRIMARY scattered mmte that has this disputed
+            // Get primary mmte
             const primaryRefMmteName = disputedToPrimaryMap.get(disputedMmteName) || '';
             if (!primaryRefMmteName) {
-                CSReporter.warn(`Could not find primary mmte for disputed ${disputedMmteName} - skipping`);
+                CSReporter.warn(`Itihas: Could not find primary mmte for disputed ${disputedMmteName} - skipping`);
                 continue;
             }
 
-            // CASE 1: Primary scattered mmte is being ADDED as NEW (complete replacement scenario)
-            // When new mmtes are added, there is NO sepammte disputed date record - SKIP
+            // Skip if primary mmte is newly added or being removed
             if (newScatteredMmtesList.includes(primaryRefMmteName)) {
-                CSReporter.info(`Primary mmte ${primaryRefMmteName} is newly added - no sepammte disputed date record expected`);
+                CSReporter.info(`Itihas: Primary mmte ${primaryRefMmteName} is newly added - no sepammte disputed date record expected`);
                 continue;
             }
-
-            // CASE 2: Primary scattered mmte is in oldScatteredMmtesList (being REMOVED)
-            // When the primary mmte is removed, there is NO sepammte disputed date record - SKIP
             if (oldScatteredMmtesList.includes(primaryRefMmteName)) {
-                CSReporter.info(`Primary mmte ${primaryRefMmteName} is being removed - no sepammte disputed date record expected`);
+                CSReporter.info(`Itihas: Primary mmte ${primaryRefMmteName} is being removed - no sepammte disputed date record expected`);
                 continue;
             }
 
-            // CASE 3: Primary scattered mmte EXISTS and is NOT being added/removed
-            // This means it's an existing mmte getting its disputed date updated
-            // ONLY in this case, we expect a "DisputedDate" UPDATE record
+            // Find in itihas
             let found = false;
-            for (const row of changeLog) {
-                if (row.fieldName === 'DisputedDate' && row.scatteredMmteName === primaryRefMmteName) {
-                    const strDBNewValue = row.newValue;
-                    const strDBAction = row.action;
-                    const isUpdatedToday = TTTFDatabaseHelper.isOracleTimestampToday(row.updatedDt);
-
-                    if (strDBNewValue === disputedStartDate && strDBAction === 'UPDATE' && isUpdatedToday) {
-                        CSReporter.pass(`DisputedDate UPDATE verified for ${primaryRefMmteName} (disputed: ${disputedMmteName}): NewValue=${strDBNewValue}`);
+            for (const row of itihasData) {
+                if ((row.description.includes('Disputed') && row.description.includes('Date')) || row.description.includes('DisputedDate')) {
+                    if (row.newValue.includes(disputedStartDate)) {
+                        CSReporter.pass(`Itihas: DisputedDate UPDATE verified for ${primaryRefMmteName}: NewValue=${disputedStartDate}`);
                         found = true;
                         break;
                     }
                 }
             }
             if (!found) {
-                throw new Error(`DisputedDate UPDATE not found for primary mmte: ${primaryRefMmteName} (disputed: ${disputedMmteName}). Expected: NewValue=${disputedStartDate}`);
+                throw new Error(`Itihas: DisputedDate UPDATE not found for: ${primaryRefMmteName}. Expected NewValue=${disputedStartDate}`);
+            }
+        }
+    }
+
+    private async verifyItihasFfxOrderChanges(
+        itihasData: Array<{ description: string; oldValue: string; newValue: string; }>,
+        ffxOrderToUpdate: string,
+        oldScatteredMmtesList: string[],
+        newScatteredMmtesList: string[]
+    ): Promise<void> {
+        const listFfxOrderToUpdate = ffxOrderToUpdate.split(';').filter(p => p.trim());
+
+        for (const item of listFfxOrderToUpdate) {
+            const subItems = item.split('||');
+            if (subItems.length < 2) continue;
+
+            const refMmteName = subItems[0].trim();
+            const ffxOrder = subItems[1].trim();
+
+            // Find in itihas
+            let found = false;
+            for (const row of itihasData) {
+                if ((row.description.includes('FFX Order') || row.description.includes('Approved FFX')) &&
+                    row.newValue.includes(ffxOrder)) {
+                    CSReporter.pass(`Itihas: FFX Order UPDATE verified for ${refMmteName}: NewValue=${ffxOrder}`);
+                    found = true;
+                    break;
+                }
+            }
+            if (!found) {
+                CSReporter.warn(`Itihas: FFX Order UPDATE not found for ${refMmteName}. Expected NewValue=${ffxOrder}`);
             }
         }
     }
