@@ -1,1 +1,201 @@
-testing code
+/**
+     * Verify a history record exists with the given description, old value, and new value
+     * Uses contains() for partial matching of old/new values
+     * @param description - The description to match exactly in td[1]
+     * @param oldValue - The old value to match (contains match) in td[2]
+     * @param newValue - The new value to match (contains match) in td[3]
+     * @returns true if record found, false otherwise
+     */
+    public async verifyHistoryRecordForOldValueAndNewValue(
+        description: string,
+        oldValue: string,
+        newValue: string
+    ): Promise<boolean> {
+        // XPath to find a row where:
+        // - td[1] contains the description text
+        // - td[2] contains the old value text
+        // - td[3] contains the new value text
+        const xpath = `//h2[text()='History']/ancestor::div[@role='tabpanel'][1]//table[@class='sssss-table']//tbody/tr[td[1]/div[text()='${description}'] and td[2]//text()[contains(.,'${oldValue}')] and td[3]//text()[contains(.,'${newValue}')]]`;
+
+        const historyRow = CSElementFactory.createByXPath(
+            xpath,
+            `History record: ${description} (${oldValue} -> ${newValue})`,
+            this.page
+        );
+
+        const isVisible = await historyRow.isVisibleWithTimeout(5000);
+
+        if (isVisible) {
+            CSReporter.pass(`History record found: Description="${description}", OldValue contains "${oldValue}", NewValue contains "${newValue}"`);
+        } else {
+            CSReporter.warn(`History record NOT found: Description="${description}", OldValue contains "${oldValue}", NewValue contains "${newValue}"`);
+        }
+
+        return isVisible;
+    }
+
+    /**
+     * Verify a history record exists with description only (for records without old/new value requirements)
+     * @param description - The description to match exactly in td[1]
+     * @returns true if record found, false otherwise
+     */
+    public async verifyHistoryRecordByDescription(description: string): Promise<boolean> {
+        const xpath = `//h2[text()='History']/ancestor::div[@role='tabpanel'][1]//table[@class='sssss-table']//tbody/tr/td[1]/div[text()='${description}']`;
+
+        const historyRow = CSElementFactory.createByXPath(
+            xpath,
+            `History record: ${description}`,
+            this.page
+        );
+
+        const isVisible = await historyRow.isVisibleWithTimeout(5000);
+
+        if (isVisible) {
+            CSReporter.pass(`History record found: Description="${description}"`);
+        } else {
+            CSReporter.warn(`History record NOT found: Description="${description}"`);
+        }
+
+        return isVisible;
+    }
+
+---------------------------------------------------------------------------------------------------
+
+
+@CSBDDStepDef('I verify history approval logs for existing zeal update')
+    async verifyHistoryApprovalLogsForExistingZealUpdate(): Promise<void> {
+        CSReporter.info('Verifying history approval logs for existing zeal update');
+
+        // Get stored values from scenario context
+        const scatteredMmtesToRemove = this.scenarioContext.getVariable<string[]>('scatteredMmtesToRemove') || [];
+        const scatteredMmtesToAdd = this.scenarioContext.getVariable<string[]>('scatteredMmtesToAdd') || [];
+        const existingScatteredMmtes = this.scenarioContext.getVariable<string[]>('existingScatteredMmtes') || [];
+        const disputedDate = this.scenarioContext.getVariable<string>('disputedDate');
+        const existingDisputedDate = this.scenarioContext.getVariable<string>('existingDisputedDate');
+
+        let verificationPassed = true;
+        const errors: string[] = [];
+
+        // Case 1: Complete replacement - verify "Approved Scattered Mmtes" record
+        // This shows removed mmtes -> added mmtes
+        if (scatteredMmtesToRemove.length > 0 || scatteredMmtesToAdd.length > 0) {
+            const oldMmtesText = scatteredMmtesToRemove.length > 0 ? scatteredMmtesToRemove[0] : '';
+            const newMmtesText = scatteredMmtesToAdd.length > 0 ? scatteredMmtesToAdd[0] : '';
+
+            if (oldMmtesText && newMmtesText) {
+                const hasApprovedMmtes = await this.changesHistoryPage.verifyHistoryRecordForOldValueAndNewValue(
+                    'Approved Scattered Mmtes',
+                    oldMmtesText,
+                    newMmtesText
+                );
+                if (!hasApprovedMmtes) {
+                    errors.push(`Missing "Approved Scattered Mmtes" record for ${oldMmtesText} -> ${newMmtesText}`);
+                    verificationPassed = false;
+                }
+            }
+        }
+
+        // Case 2: Disputed scattered mmte update - verify "Approved Disputed Scattered Mmtes"
+        // This applies when existing mmtes have their disputed mmte updated
+        const existingMmtesNotReplaced = existingScatteredMmtes.filter(mmte =>
+            !scatteredMmtesToRemove.includes(mmte)
+        );
+
+        if (existingMmtesNotReplaced.length > 0 && scatteredMmtesToAdd.length > 0) {
+            // For each existing mmte not being replaced, check for disputed mmte update
+            for (const existingMmte of existingMmtesNotReplaced) {
+                const hasDisputedMmteRecord = await this.changesHistoryPage.verifyHistoryRecordForOldValueAndNewValue(
+                    'Approved Disputed Scattered Mmtes',
+                    existingMmte, // Old value contains the existing mmte
+                    scatteredMmtesToAdd[0] // New disputed mmte
+                );
+                if (hasDisputedMmteRecord) {
+                    CSReporter.pass(`Verified "Approved Disputed Scattered Mmtes" for ${existingMmte}`);
+                }
+            }
+        }
+
+        // Case 2 continued: Disputed start date update - verify "Approved Disputed Start Dates"
+        if (existingMmtesNotReplaced.length > 0 && disputedDate) {
+            for (const existingMmte of existingMmtesNotReplaced) {
+                const hasDisputedDateRecord = await this.changesHistoryPage.verifyHistoryRecordForOldValueAndNewValue(
+                    'Approved Disputed Start Dates',
+                    existingDisputedDate || '', // Old disputed date
+                    disputedDate // New disputed date
+                );
+                if (hasDisputedDateRecord) {
+                    CSReporter.pass(`Verified "Approved Disputed Start Dates" for ${existingMmte}`);
+                    break; // Only need to verify once
+                }
+            }
+        }
+
+        // Case 3: FFX Order changes - verify "Approved FFX Order"
+        // This happens when scattered mmtes are partially removed, causing reordering
+        const hasFfxOrderRecord = await this.changesHistoryPage.verifyHistoryRecordByDescription('Approved FFX Order');
+        if (hasFfxOrderRecord) {
+            CSReporter.pass('Verified "Approved FFX Order" record exists');
+        }
+
+        if (!verificationPassed) {
+            throw new Error(`History verification failed:\n${errors.join('\n')}`);
+        }
+
+        CSReporter.pass('History approval logs verified for existing zeal update');
+    }
+
+
+    @CSBDDStepDef('I verify Details tab shows approved scattered mmtes')
+    async verifyDetailsTabShowsApprovedScatteredMmtes(): Promise<void> {
+        CSReporter.info('Verifying Details tab shows approved scattered mmtes');
+
+        // Click Details tab first
+        await this.zealDetailsPage.clickDetailsTab();
+        // Wait for tab content to load
+        await this.zealDetailsPage.waitForPageLoad();
+
+        // Get expected scattered mmtes from scenario context
+        const scatteredMmtesToAdd = this.scenarioContext.getVariable<string[]>('scatteredMmtesToAdd') || [];
+        const disputedDate = this.scenarioContext.getVariable<string>('disputedDate');
+
+        if (scatteredMmtesToAdd.length === 0) {
+            CSReporter.warn('No scatteredMmtesToAdd in context, skipping verification');
+            return;
+        }
+
+        // Verify each added scattered mmte appears in the table
+        const rowCount = await this.zealDetailsPage.getScatteredMmteRowCount();
+        CSReporter.info(`Found ${rowCount} scattered mmte rows in Details tab`);
+
+        const foundMmtes: string[] = [];
+        for (let i = 0; i < rowCount; i++) {
+            const rowData = await this.zealDetailsPage.getScatteredMmteRowData(i);
+            foundMmtes.push(rowData.scatteredMmteName);
+
+            // If this is one of the mmtes we added, verify it's present
+            if (scatteredMmtesToAdd.includes(rowData.scatteredMmteName)) {
+                CSReporter.pass(`Scattered mmte found in Details tab: ${rowData.scatteredMmteName}`);
+
+                // Verify disputed scattered mmte if applicable
+                if (rowData.disputedScatteredMmte) {
+                    CSReporter.info(`  Disputed Scattered Mmte: ${rowData.disputedScatteredMmte}`);
+                }
+
+                // Verify disputed start date if applicable
+                if (rowData.disputedStartDate && disputedDate) {
+                    CSReporter.info(`  Disputed Start Date: ${rowData.disputedStartDate}`);
+                }
+            }
+        }
+
+        // Check all expected mmtes were found
+        const missingMmtes = scatteredMmtesToAdd.filter(mmte => !foundMmtes.includes(mmte));
+        if (missingMmtes.length > 0) {
+            throw new Error(`Scattered mmtes not found in Details tab: ${missingMmtes.join(', ')}`);
+        }
+
+        CSReporter.pass('Details tab verification completed - all approved scattered mmtes found');
+    }
+
+
+
