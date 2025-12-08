@@ -1,286 +1,149 @@
-@CSBDDStepDef('I verify itihas approval logs for existing zeal update')
-    async verifyItihasApprovalLogsForExistingZealUpdate(): Promise<void> {
-        CSReporter.info('Verifying itihas approval logs for existing zeal update');
+@CSBDDStepDef('I verify Details tab shows approved updates for existing zeal')
+    async verifyDetailsTabShowsApprovedUpdatesForExistingZeal(): Promise<void> {
+        CSReporter.info('Verifying Details tab shows approved updates for existing zeal');
 
-        // Get all itihas data from UI
-        const itihasData = await this.changesItihasPage.getAllItihasData();
-        if (itihasData.length === 0) {
-            throw new Error('No itihas records found in Itihas table');
-        }
-        CSReporter.info(`Retrieved ${itihasData.length} itihas records from UI`);
+        // Click Details tab first
+        await this.zealDetailsPage.clickDetailsTab();
+        await this.zealDetailsPage.waitForPageLoad();
 
-        // Build scattered mmtes lists (same as Changes table verification)
-        const oldScatteredMmtesList: string[] = [];
-        const newScatteredMmtesList: string[] = [];
+        // Get all scattered mmte rows from Details tab
+        const rowCount = await this.zealDetailsPage.getScatteredMmteRowCount();
+        CSReporter.info(`Found ${rowCount} scattered mmte rows in Details tab`);
 
-        // Step 1: Verify SketchmarkFlagToUpdate
-        const sketchmarkFlagToUpdate = this.scenarioContext.getVariable<string>('sketchmarkFlagToUpdate');
-        if (sketchmarkFlagToUpdate) {
-            await this.verifyItihasSketchmarkFlagChange(itihasData, sketchmarkFlagToUpdate);
-        }
+        const detailsMmtes: Array<{
+            scatteredMmteName: string;
+            disputedScatteredMmte: string;
+            disputedStartDate: string;
+            ffxOrder: string;
+        }> = [];
 
-        // Step 2: Verify FFXFileInductorTypeToUpdate
-        const ffxFileInductorTypeToUpdate = this.scenarioContext.getVariable<string>('ffxFileInductorTypeToUpdate');
-        if (ffxFileInductorTypeToUpdate) {
-            await this.verifyItihasOutputTtcalcChange(itihasData, ffxFileInductorTypeToUpdate);
+        for (let i = 0; i < rowCount; i++) {
+            const rowData = await this.zealDetailsPage.getScatteredMmteRowData(i);
+            detailsMmtes.push(rowData);
+            CSReporter.info(`Row ${i + 1}: ${rowData.scatteredMmteName}, Disputed: ${rowData.disputedScatteredMmte}, Date: ${rowData.disputedStartDate}, FFX: ${rowData.ffxOrder}`);
         }
 
-        // Step 3: Verify UpdateScatteredMmtesFlag
+        // Get update flags and data from context
         const updateScatteredMmtesFlag = this.scenarioContext.getVariable<boolean>('updateScatteredMmtesFlag');
+        const updateDisputedScatteredMmteFlag = this.scenarioContext.getVariable<boolean>('updateDisputedScatteredMmteFlag');
+        const updateDisputedStartDateFlag = this.scenarioContext.getVariable<boolean>('updateDisputedStartDateFlag');
+
+        // Step 1: Verify Scattered Mmtes Update (old mmtes removed, new mmtes added)
         if (updateScatteredMmtesFlag) {
             const scatteredMmtesToUpdate = this.scenarioContext.getVariable<string>('scatteredMmtesToUpdate') || '';
             if (scatteredMmtesToUpdate) {
-                const listScatteredMmtesToUpdate = scatteredMmtesToUpdate.split(';').filter(p => p.trim());
-                for (const item of listScatteredMmtesToUpdate) {
-                    const subItems = item.split('||');
-                    if (subItems.length >= 2) {
-                        oldScatteredMmtesList.push(subItems[0].trim());
-                        newScatteredMmtesList.push(subItems[1].trim());
+                const pairs = scatteredMmtesToUpdate.split(';').filter(p => p.trim());
+                for (const pair of pairs) {
+                    const [oldMmte, newMmte] = pair.split('||').map(s => s.trim());
+
+                    // Verify old mmte is NOT present
+                    if (oldMmte) {
+                        const oldMmteFound = detailsMmtes.some(r => r.scatteredMmteName === oldMmte);
+                        if (oldMmteFound) {
+                            throw new Error(`Details tab: Old scattered mmte ${oldMmte} should have been removed but is still present`);
+                        }
+                        CSReporter.pass(`Details tab: Old scattered mmte ${oldMmte} correctly removed`);
+                    }
+
+                    // Verify new mmte IS present
+                    if (newMmte) {
+                        const newMmteFound = detailsMmtes.some(r => r.scatteredMmteName === newMmte);
+                        if (!newMmteFound) {
+                            throw new Error(`Details tab: New scattered mmte ${newMmte} not found after approval`);
+                        }
+                        CSReporter.pass(`Details tab: New scattered mmte ${newMmte} correctly added`);
                     }
                 }
-
-                // Verify removed scattered mmtes in itihas
-                await this.verifyItihasRemovedScatteredMmtes(itihasData, oldScatteredMmtesList);
-
-                // Verify added scattered mmtes in itihas
-                await this.verifyItihasAddedScatteredMmtes(itihasData, newScatteredMmtesList);
             }
         }
 
-        // Step 4: Verify UpdateDisputedScatteredMmteFlag
-        const updateDisputedScatteredMmteFlag = this.scenarioContext.getVariable<boolean>('updateDisputedScatteredMmteFlag');
+        // Step 2: Verify Disputed Scattered Mmte Update
         if (updateDisputedScatteredMmteFlag) {
             const disputedScatteredMmteToUpdate = this.scenarioContext.getVariable<string>('disputedScatteredMmteToUpdate') || '';
             if (disputedScatteredMmteToUpdate) {
-                await this.verifyItihasDisputedScatteredMmteChanges(itihasData, disputedScatteredMmteToUpdate, oldScatteredMmtesList, newScatteredMmtesList);
-            }
-        }
-
-        // Step 5: Verify UpdateDisputedStartDateFlag
-        const updateDisputedStartDateFlag = this.scenarioContext.getVariable<boolean>('updateDisputedStartDateFlag');
-        if (updateDisputedStartDateFlag) {
-            const disputedStartDateToUpdate = this.scenarioContext.getVariable<string>('disputedStartDateToUpdate') || '';
-            if (disputedStartDateToUpdate) {
-                const disputedScatteredMmteToUpdateForDate = this.scenarioContext.getVariable<string>('disputedScatteredMmteToUpdate') || '';
-                await this.verifyItihasDisputedStartDateChanges(itihasData, disputedStartDateToUpdate, oldScatteredMmtesList, newScatteredMmtesList, disputedScatteredMmteToUpdateForDate);
-            }
-        }
-
-        // Step 6: Verify FFXOrderUpdateFlag
-        const ffxOrderUpdateFlag = this.scenarioContext.getVariable<boolean>('ffxOrderUpdateFlag');
-        if (ffxOrderUpdateFlag) {
-            const ffxOrderToUpdate = this.scenarioContext.getVariable<string>('ffxOrderToUpdate') || '';
-            if (ffxOrderToUpdate) {
-                await this.verifyItihasFfxOrderChanges(itihasData, ffxOrderToUpdate, oldScatteredMmtesList, newScatteredMmtesList);
-            }
-        }
-
-        CSReporter.pass('All itihas approval logs verified');
-    }
-
-    // ===================================================================
-    // PRIVATE HELPER METHODS FOR ITIHAS TABLE VERIFICATION
-    // ===================================================================
-
-    private async verifyItihasSketchmarkFlagChange(itihasData: Array<{ description: string; oldValue: string; newValue: string; }>, sketchmarkFlagToUpdate: string): Promise<void> {
-        const valueToVerify = this.normalizeBooleanFlag(sketchmarkFlagToUpdate) ? 'true' : 'false';
-
-        for (const row of itihasData) {
-            if (row.description.includes('Sketchmark Replacement') || row.description.includes('Approved Sketchmark')) {
-                if (row.newValue.toLowerCase() === valueToVerify) {
-                    CSReporter.pass(`Itihas: Sketchmark Replacement verified: NewValue=${row.newValue}`);
-                    return;
-                }
-            }
-        }
-        throw new Error(`Itihas: Sketchmark Replacement change not found. Expected NewValue=${valueToVerify}`);
-    }
-
-    private async verifyItihasOutputTtcalcChange(itihasData: Array<{ description: string; oldValue: string; newValue: string; }>, ffxFileInductorTypeToUpdate: string): Promise<void> {
-        for (const row of itihasData) {
-            if (row.description.includes('Output Ttcalc') || row.description.includes('Approved Output')) {
-                if (row.newValue === ffxFileInductorTypeToUpdate) {
-                    CSReporter.pass(`Itihas: Output Ttcalc verified: NewValue=${row.newValue}`);
-                    return;
-                }
-            }
-        }
-        throw new Error(`Itihas: Output Ttcalc change not found. Expected NewValue=${ffxFileInductorTypeToUpdate}`);
-    }
-
-    private async verifyItihasRemovedScatteredMmtes(itihasData: Array<{ description: string; oldValue: string; newValue: string; }>, oldScatteredMmtesList: string[]): Promise<void> {
-        for (const mmteName of oldScatteredMmtesList) {
-            let found = false;
-            for (const row of itihasData) {
-                if ((row.description.includes('Remove Scattered Mmte') || row.description.includes('Approved Scattered Mmtes')) &&
-                    row.oldValue.includes(mmteName)) {
-                    CSReporter.pass(`Itihas: Remove Scattered Mmte verified for ${mmteName}`);
-                    found = true;
-                    break;
-                }
-            }
-            if (!found) {
-                throw new Error(`Itihas: Remove Scattered Mmte not found for: ${mmteName}`);
-            }
-        }
-    }
-
-    private async verifyItihasAddedScatteredMmtes(itihasData: Array<{ description: string; oldValue: string; newValue: string; }>, newScatteredMmtesList: string[]): Promise<void> {
-        for (const mmteName of newScatteredMmtesList) {
-            let found = false;
-            for (const row of itihasData) {
-                if ((row.description.includes('Add Scattered Mmte') || row.description.includes('Approved Scattered Mmtes')) &&
-                    row.newValue.includes(mmteName)) {
-                    CSReporter.pass(`Itihas: Add Scattered Mmte verified for ${mmteName}`);
-                    found = true;
-                    break;
-                }
-            }
-            if (!found) {
-                throw new Error(`Itihas: Add Scattered Mmte not found for: ${mmteName}`);
-            }
-        }
-    }
-
-    private async verifyItihasDisputedScatteredMmteChanges(
-        itihasData: Array<{ description: string; oldValue: string; newValue: string; }>,
-        disputedScatteredMmteToUpdate: string,
-        oldScatteredMmtesList: string[],
-        newScatteredMmtesList: string[]
-    ): Promise<void> {
-        const listDisputedScatteredMmteToUpdate = disputedScatteredMmteToUpdate.split(';').filter(p => p.trim());
-
-        for (const item of listDisputedScatteredMmteToUpdate) {
-            const subItems = item.split('||');
-            if (subItems.length < 2) continue;
-
-            const primaryRefMmteName = subItems[0].trim();
-            const disputedMmteName = subItems[1].trim();
-
-            // Skip if primary mmte is newly added or being removed
-            if (newScatteredMmtesList.includes(primaryRefMmteName)) {
-                CSReporter.info(`Itihas: Primary mmte ${primaryRefMmteName} is newly added - no sepammte disputed mmte record expected`);
-                continue;
-            }
-            if (oldScatteredMmtesList.includes(primaryRefMmteName)) {
-                CSReporter.info(`Itihas: Primary mmte ${primaryRefMmteName} is being removed - no sepammte disputed mmte record expected`);
-                continue;
-            }
-
-            // Find in itihas
-            let found = false;
-            for (const row of itihasData) {
-                if ((row.description.includes('Disputed Scattered Mmte') || row.description.includes('DisputedScatteredMmte') || row.description.includes('Approved Disputed')) &&
-                    row.newValue.includes(disputedMmteName)) {
-                    CSReporter.pass(`Itihas: DisputedScatteredMmte UPDATE verified for ${primaryRefMmteName}: NewValue=${disputedMmteName}`);
-                    found = true;
-                    break;
-                }
-            }
-            if (!found) {
-                throw new Error(`Itihas: DisputedScatteredMmte UPDATE not found for: ${primaryRefMmteName}. Expected NewValue=${disputedMmteName}`);
-            }
-        }
-    }
-
-    private async verifyItihasDisputedStartDateChanges(
-        itihasData: Array<{ description: string; oldValue: string; newValue: string; }>,
-        disputedStartDateToUpdate: string,
-        oldScatteredMmtesList: string[],
-        newScatteredMmtesList: string[],
-        disputedScatteredMmteToUpdate: string
-    ): Promise<void> {
-        const listDisputedStartDateToUpdate = disputedStartDateToUpdate.split(';').filter(p => p.trim());
-
-        // Build map of DisputedMmte -> PrimaryMmte
-        const disputedToPrimaryMap = new Map<string, string>();
-        const disputedScatteredMmtesList: string[] = [];
-
-        if (disputedScatteredMmteToUpdate) {
-            const pairs = disputedScatteredMmteToUpdate.split(';').filter(p => p.trim());
-            for (const pair of pairs) {
-                const [primaryMmte, disputedMmte] = pair.split('||').map(s => s.trim());
-                if (primaryMmte && disputedMmte) {
-                    disputedToPrimaryMap.set(disputedMmte, primaryMmte);
-                    disputedScatteredMmtesList.push(disputedMmte);
-                }
-            }
-        }
-
-        for (const item of listDisputedStartDateToUpdate) {
-            const subItems = item.split('||');
-            if (subItems.length < 2) continue;
-
-            const disputedMmteName = subItems[0].trim();
-            const disputedStartDate = subItems[1].trim();
-
-            // Check if disputedMmteName is in the list
-            if (!disputedScatteredMmtesList.includes(disputedMmteName)) {
-                CSReporter.info(`Itihas: Disputed mmte ${disputedMmteName} is not in disputedScatteredMmtesList - skipping`);
-                continue;
-            }
-
-            // Get primary mmte
-            const primaryRefMmteName = disputedToPrimaryMap.get(disputedMmteName) || '';
-            if (!primaryRefMmteName) {
-                CSReporter.warn(`Itihas: Could not find primary mmte for disputed ${disputedMmteName} - skipping`);
-                continue;
-            }
-
-            // Skip if primary mmte is newly added or being removed
-            if (newScatteredMmtesList.includes(primaryRefMmteName)) {
-                CSReporter.info(`Itihas: Primary mmte ${primaryRefMmteName} is newly added - no sepammte disputed date record expected`);
-                continue;
-            }
-            if (oldScatteredMmtesList.includes(primaryRefMmteName)) {
-                CSReporter.info(`Itihas: Primary mmte ${primaryRefMmteName} is being removed - no sepammte disputed date record expected`);
-                continue;
-            }
-
-            // Find in itihas
-            let found = false;
-            for (const row of itihasData) {
-                if ((row.description.includes('Disputed') && row.description.includes('Date')) || row.description.includes('DisputedDate')) {
-                    if (row.newValue.includes(disputedStartDate)) {
-                        CSReporter.pass(`Itihas: DisputedDate UPDATE verified for ${primaryRefMmteName}: NewValue=${disputedStartDate}`);
-                        found = true;
-                        break;
+                // Format: "PrimaryMmte||DisputedMmte;PrimaryMmte||DisputedMmte"
+                const pairs = disputedScatteredMmteToUpdate.split(';').filter(p => p.trim());
+                for (const pair of pairs) {
+                    const [primaryMmte, disputedMmte] = pair.split('||').map(s => s.trim());
+                    if (primaryMmte && disputedMmte) {
+                        // Find the primary mmte row and check its disputed
+                        const mmteRow = detailsMmtes.find(r => r.scatteredMmteName === primaryMmte);
+                        if (mmteRow) {
+                            if (mmteRow.disputedScatteredMmte === disputedMmte) {
+                                CSReporter.pass(`Details tab: Disputed mmte for ${primaryMmte} correctly updated to ${disputedMmte}`);
+                            } else {
+                                throw new Error(`Details tab: Disputed mmte mismatch for ${primaryMmte}. Expected: ${disputedMmte}, Actual: ${mmteRow.disputedScatteredMmte}`);
+                            }
+                        } else {
+                            CSReporter.info(`Details tab: Primary mmte ${primaryMmte} not found - may have been replaced`);
+                        }
                     }
                 }
             }
-            if (!found) {
-                throw new Error(`Itihas: DisputedDate UPDATE not found for: ${primaryRefMmteName}. Expected NewValue=${disputedStartDate}`);
-            }
         }
-    }
 
-    private async verifyItihasFfxOrderChanges(
-        itihasData: Array<{ description: string; oldValue: string; newValue: string; }>,
-        ffxOrderToUpdate: string,
-        oldScatteredMmtesList: string[],
-        newScatteredMmtesList: string[]
-    ): Promise<void> {
-        const listFfxOrderToUpdate = ffxOrderToUpdate.split(';').filter(p => p.trim());
+        // Step 3: Verify Disputed Start Date Update
+        if (updateDisputedStartDateFlag) {
+            const disputedStartDateToUpdate = this.scenarioContext.getVariable<string>('disputedStartDateToUpdate') || '';
+            const disputedScatteredMmteToUpdate = this.scenarioContext.getVariable<string>('disputedScatteredMmteToUpdate') || '';
 
-        for (const item of listFfxOrderToUpdate) {
-            const subItems = item.split('||');
-            if (subItems.length < 2) continue;
+            if (disputedStartDateToUpdate && disputedScatteredMmteToUpdate) {
+                // Build map of DisputedMmte -> PrimaryMmte
+                const disputedToPrimaryMap = new Map<string, string>();
+                const fbPairs = disputedScatteredMmteToUpdate.split(';').filter(p => p.trim());
+                for (const pair of fbPairs) {
+                    const [primaryMmte, disputedMmte] = pair.split('||').map(s => s.trim());
+                    if (primaryMmte && disputedMmte) {
+                        disputedToPrimaryMap.set(disputedMmte, primaryMmte);
+                    }
+                }
 
-            const refMmteName = subItems[0].trim();
-            const ffxOrder = subItems[1].trim();
-
-            // Find in itihas
-            let found = false;
-            for (const row of itihasData) {
-                if ((row.description.includes('FFX Order') || row.description.includes('Approved FFX')) &&
-                    row.newValue.includes(ffxOrder)) {
-                    CSReporter.pass(`Itihas: FFX Order UPDATE verified for ${refMmteName}: NewValue=${ffxOrder}`);
-                    found = true;
-                    break;
+                // Format: "DisputedMmte||Date;DisputedMmte||Date"
+                const datePairs = disputedStartDateToUpdate.split(';').filter(p => p.trim());
+                for (const pair of datePairs) {
+                    const [disputedMmte, expectedDate] = pair.split('||').map(s => s.trim());
+                    if (disputedMmte && expectedDate) {
+                        // Get the primary mmte for this disputed
+                        const primaryMmte = disputedToPrimaryMap.get(disputedMmte);
+                        if (primaryMmte) {
+                            const mmteRow = detailsMmtes.find(r => r.scatteredMmteName === primaryMmte);
+                            if (mmteRow) {
+                                if (mmteRow.disputedStartDate === expectedDate) {
+                                    CSReporter.pass(`Details tab: Disputed start date for ${primaryMmte} correctly updated to ${expectedDate}`);
+                                } else {
+                                    throw new Error(`Details tab: Disputed start date mismatch for ${primaryMmte}. Expected: ${expectedDate}, Actual: ${mmteRow.disputedStartDate}`);
+                                }
+                            } else {
+                                CSReporter.info(`Details tab: Primary mmte ${primaryMmte} not found - may have been replaced`);
+                            }
+                        }
+                    }
                 }
             }
-            if (!found) {
-                CSReporter.warn(`Itihas: FFX Order UPDATE not found for ${refMmteName}. Expected NewValue=${ffxOrder}`);
+        }
+
+        // Step 4: Verify Sketchmark Flag (if updated)
+        const sketchmarkFlagToUpdate = this.scenarioContext.getVariable<string>('sketchmarkFlagToUpdate');
+        if (sketchmarkFlagToUpdate) {
+            const expectedValue = this.normalizeBooleanFlag(sketchmarkFlagToUpdate);
+            const actualValue = await this.zealDetailsPage.isUseSketchmarkReplacementChecked();
+            if (actualValue === expectedValue) {
+                CSReporter.pass(`Details tab: Use Sketchmark Replacement correctly set to ${expectedValue}`);
+            } else {
+                throw new Error(`Details tab: Use Sketchmark Replacement mismatch. Expected: ${expectedValue}, Actual: ${actualValue}`);
             }
         }
+
+        // Step 5: Verify FFX Inductor Type (if updated)
+        const ffxFileInductorTypeToUpdate = this.scenarioContext.getVariable<string>('ffxFileInductorTypeToUpdate');
+        if (ffxFileInductorTypeToUpdate) {
+            const actualValue = await this.zealDetailsPage.getOutputTtcalcFileValue();
+            if (actualValue === ffxFileInductorTypeToUpdate) {
+                CSReporter.pass(`Details tab: Output Ttcalc File correctly set to ${ffxFileInductorTypeToUpdate}`);
+            } else {
+                throw new Error(`Details tab: Output Ttcalc File mismatch. Expected: ${ffxFileInductorTypeToUpdate}, Actual: ${actualValue}`);
+            }
+        }
+
+        CSReporter.pass('Details tab verification completed for existing zeal update');
     }
