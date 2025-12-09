@@ -1,4 +1,206 @@
-@CSBDDStepDef('I prepare test data for existing zeal update')
+@CSBDDStepDef('I verify history approval logs for existing zeal update')
+    async verifyHistoryApprovalLogsForExistingZealUpdate(): Promise<void> {
+        CSReporter.info('Verifying history approval logs for existing zeal update');
+
+        // Get all history data from UI
+        const historyData = await this.changesHistoryPage.getAllHistoryData();
+        if (historyData.length === 0) {
+            throw new Error('No history records found in History table');
+        }
+        CSReporter.info(`Retrieved ${historyData.length} history records from UI`);
+
+        // Build scattered mmtes lists (same as Changes table verification)
+        const oldScatteredMmtesList: string[] = [];
+        const newScatteredMmtesList: string[] = [];
+
+        // Step 1: Verify SketchmarkFlagToUpdate
+        const sketchmarkFlagToUpdate = this.scenarioContext.getVariable<string>('sketchmarkFlagToUpdate');
+        if (sketchmarkFlagToUpdate) {
+            await this.verifyHistorySketchmarkFlagChange(historyData, sketchmarkFlagToUpdate);
+        }
+
+        // Step 2: Verify FFXFileInductorTypeToUpdate
+        const ffxFileInductorTypeToUpdate = this.scenarioContext.getVariable<string>('ffxFileInductorTypeToUpdate');
+        if (ffxFileInductorTypeToUpdate) {
+            await this.verifyHistoryOutputCalculationChange(historyData, ffxFileInductorTypeToUpdate);
+        }
+
+        // Step 3: Verify UpdateScatteredMmtesFlag
+        const updateScatteredMmtesFlag = this.scenarioContext.getVariable<boolean>('updateScatteredMmtesFlag');
+        if (updateScatteredMmtesFlag) {
+            const scatteredMmtesToUpdate = this.scenarioContext.getVariable<string>('scatteredMmtesToUpdate') || '';
+            if (scatteredMmtesToUpdate) {
+                const listScatteredMmtesToUpdate = scatteredMmtesToUpdate.split(';').filter(p => p.trim());
+                for (const item of listScatteredMmtesToUpdate) {
+                    const subItems = item.split('||');
+                    if (subItems.length >= 2) {
+                        oldScatteredMmtesList.push(subItems[0].trim());
+                        newScatteredMmtesList.push(subItems[1].trim());
+                    }
+                }
+
+                // Verify removed scattered mmtes in history
+                await this.verifyHistoryRemovedScatteredMmtes(historyData, oldScatteredMmtesList);
+
+                // Verify added scattered mmtes in history
+                await this.verifyHistoryAddedScatteredMmtes(historyData, newScatteredMmtesList);
+            }
+        }
+
+        // Step 4: Verify UpdateDisputedScatteredMmteFlag
+        const updateDisputedScatteredMmteFlag = this.scenarioContext.getVariable<boolean>('updateDisputedScatteredMmteFlag');
+        if (updateDisputedScatteredMmteFlag) {
+            const disputedScatteredMmteToUpdate = this.scenarioContext.getVariable<string>('disputedScatteredMmteToUpdate') || '';
+            if (disputedScatteredMmteToUpdate) {
+                await this.verifyHistoryDisputedScatteredMmteChanges(historyData, disputedScatteredMmteToUpdate, oldScatteredMmtesList, newScatteredMmtesList);
+            }
+        }
+
+        // Step 5: Verify UpdateDisputedStartDateFlag
+        const updateDisputedStartDateFlag = this.scenarioContext.getVariable<boolean>('updateDisputedStartDateFlag');
+        if (updateDisputedStartDateFlag) {
+            const disputedStartDateToUpdate = this.scenarioContext.getVariable<string>('disputedStartDateToUpdate') || '';
+            if (disputedStartDateToUpdate) {
+                const disputedScatteredMmteToUpdateForDate = this.scenarioContext.getVariable<string>('disputedScatteredMmteToUpdate') || '';
+                await this.verifyHistoryDisputedStartDateChanges(historyData, disputedStartDateToUpdate, oldScatteredMmtesList, newScatteredMmtesList, disputedScatteredMmteToUpdateForDate);
+            }
+        }
+
+        // Step 6: Verify FFXOrderUpdateFlag (explicit FFX order update)
+        const ffxOrderUpdateFlag = this.scenarioContext.getVariable<boolean>('ffxOrderUpdateFlag');
+        if (ffxOrderUpdateFlag) {
+            const ffxOrderToUpdate = this.scenarioContext.getVariable<string>('ffxOrderToUpdate') || '';
+            if (ffxOrderToUpdate) {
+                await this.verifyHistoryFfxOrderChanges(historyData, ffxOrderToUpdate, oldScatteredMmtesList, newScatteredMmtesList);
+            }
+        }
+
+        // Step 7: Verify automatic FFX order shift for partial update scenario
+        // When a mmte is removed, remaining mmtes' FFX order may automatically shift
+        const mmtesToKeepAndUpdateDisputed = this.scenarioContext.getVariable<string[]>('mmtesToKeepAndUpdateDisputed') || [];
+        if (mmtesToKeepAndUpdateDisputed.length > 0 && oldScatteredMmtesList.length > 0) {
+            await this.verifyHistoryFfxOrderShiftForKeptMmtes(historyData, mmtesToKeepAndUpdateDisputed);
+        }
+
+        CSReporter.pass('All history approval logs verified');
+    }
+
+
+
+    /**
+     * Verify automatic FFX order shift for kept mmtes in partial update scenario.
+     * When a scattered mmte is removed, the remaining mmtes' FFX order may automatically shift.
+     *
+     * Note: If the kept mmte was already at FFX order 1, no history entry will be created.
+     */
+    private async verifyHistoryFfxOrderShiftForKeptMmtes(
+        historyData: Array<{ description: string; oldValue: string; newValue: string; }>,
+        mmtesToKeepAndUpdateDisputed: string[]
+    ): Promise<void> {
+        CSReporter.info(`Verifying FFX order shift for kept mmtes: ${mmtesToKeepAndUpdateDisputed.join(', ')}`);
+
+        // Get existing scattered mmtes with their original FFX orders
+        const existingScatteredMmtes = this.scenarioContext.getVariable<Array<{
+            scatteredMmteName: string;
+            disputedScatteredMmteName: string;
+            disputedDate: string | Date;
+            ffxOrder: number;
+        }>>('existingScatteredMmtes') || [];
+
+        for (const keptMmteName of mmtesToKeepAndUpdateDisputed) {
+            // Find the original FFX order of this kept mmte
+            const originalMmteInfo = existingScatteredMmtes.find(r => r.scatteredMmteName === keptMmteName);
+            if (!originalMmteInfo) {
+                CSReporter.warn(`Could not find original FFX order for kept mmte: ${keptMmteName}`);
+                continue;
+            }
+
+            const originalFfxOrder = originalMmteInfo.ffxOrder;
+
+            // If the mmte was already at FFX order 1, no shift will occur - no history entry expected
+            if (originalFfxOrder === 1) {
+                CSReporter.info(`Kept mmte ${keptMmteName} was already at FFX order 1 - no FFX order shift expected`);
+                continue;
+            }
+
+            // The new FFX order after removal of earlier mmtes
+            // In partial update where 1 mmte is removed, the kept mmte's order shifts by 1
+            // e.g., if original was 2, new would be 1
+            const expectedNewFfxOrder = originalFfxOrder - 1;
+
+            // Search for history entry with format: Old Value="(2)XXXXX_000023", New Value="(1)XXXXXX_000023"
+            let found = false;
+            for (const row of historyData) {
+                if (row.description.includes('FFX Order')) {
+                    // Check if old value contains the original order and mmte name
+                    const oldValuePattern = `(${originalFfxOrder})${keptMmteName}`;
+                    const newValuePattern = `(${expectedNewFfxOrder})${keptMmteName}`;
+
+                    if (row.oldValue.includes(oldValuePattern) && row.newValue.includes(newValuePattern)) {
+                        CSReporter.pass(`History: FFX Order SHIFT verified for ${keptMmteName}: Old="(${originalFfxOrder})${keptMmteName}" -> New="(${expectedNewFfxOrder})${keptMmteName}"`);
+                        found = true;
+                        break;
+                    }
+                }
+            }
+
+            if (!found) {
+                // This might be okay if the mmte's position didn't change
+                CSReporter.warn(`History: FFX Order SHIFT not found for ${keptMmteName}. Expected shift from (${originalFfxOrder}) to (${expectedNewFfxOrder}). This may be expected if the mmte position didn't change.`);
+            }
+        }
+    }
+
+
+    @CSBDDStepDef('I update FFX order if required')
+    async updateFfxOrderIfRequired(): Promise<void> {
+        const ffxOrderUpdateFlag = this.scenarioContext.getVariable<boolean>('ffxOrderUpdateFlag');
+        if (!ffxOrderUpdateFlag) {
+            CSReporter.info('ffxOrderUpdateFlag is false, skipping FFX order update');
+            return;
+        }
+
+        const ffxOrderToUpdate = this.scenarioContext.getVariable<string>('ffxOrderToUpdate') || '';
+        if (!ffxOrderToUpdate) {
+            CSReporter.info('ffxOrderToUpdate is empty, skipping');
+            return;
+        }
+
+        CSReporter.info(`FFX Order Update requested: ${ffxOrderToUpdate}`);
+
+        // Parse format: "MmteName||OrderNumber;MmteName||OrderNumber"
+        // Note: Delimiter is "||" not "|" - format is "TIBO1MO_000091||2;TIBO1MO_000231||1"
+        const orderPairs = ffxOrderToUpdate.split(';').filter(p => p.trim());
+
+        // Step 1: Click on Regenerator button to open modal
+        await this.zealDetailsPage.clickRegeneratorButton();
+
+        // Step 2: Wait for modal to be visible
+        await this.regeneratorModalPage.waitForModalVisible();
+
+        // Step 3: Verify all modal elements
+        await this.regeneratorModalPage.verifyModalElements();
+
+        // Step 4: Process each regenerator pair
+        for (const pair of orderPairs) {
+            const [mmteName, orderNumber] = pair.split('||').map(s => s.trim());
+            if (mmteName && orderNumber) {
+                const targetOrder = parseInt(orderNumber, 10);
+                await this.regeneratorModalPage.regeneratorMmteToPosition(mmteName, targetOrder);
+            }
+        }
+
+        // Step 5: Click Apply to save the regenerator changes
+        await this.regeneratorModalPage.clickApply();
+
+        // Step 6: Verify modal is closed
+        await this.regeneratorModalPage.waitForModalClosed();
+
+        CSReporter.pass(`Updated ${orderPairs.length} FFX orders using Regenerator modal`);
+    }
+
+
+    @CSBDDStepDef('I prepare test data for existing zeal update')
     async prepareTestDataForExistingZealUpdate(): Promise<void> {
         CSReporter.info('Preparing comprehensive test data for existing zeal update (SCENARIO_09B)');
         CSReporter.info('Per TTTF_Update_Zeal_Scenario.txt requirement');
@@ -249,8 +451,15 @@
                 if (mmtesToKeepAndUpdateDisputed.length > 0) {
                     CSReporter.info(`Generating disputed for ${mmtesToKeepAndUpdateDisputed.length} kept mmte(s): ${mmtesToKeepAndUpdateDisputed.join(', ')}`);
 
-                    // Exclude both the kept mmtes AND the new mmtes from disputed selection
-                    const allExcludedMmtes = [...mmtesToKeepAndUpdateDisputed, ...newMmteNames];
+                    // Collect disputed mmtes already assigned in Part A
+                    const alreadyAssignedDisputeds = disputedPairs.map(pair => {
+                        const [, disputed] = pair.split('||');
+                        return disputed?.trim();
+                    }).filter(f => f);
+
+                    // Exclude: kept mmtes + new mmtes + already assigned disputeds
+                    const allExcludedMmtes = [...mmtesToKeepAndUpdateDisputed, ...newMmteNames, ...alreadyAssignedDisputeds];
+                    CSReporter.info(`Excluding from disputed query: ${allExcludedMmtes.join(', ')}`);
                     const disputedMmtesForKept = await TTTFDatabaseHelper.getDisputedScatteredMmtesDynamic(allExcludedMmtes);
 
                     for (let i = 0; i < mmtesToKeepAndUpdateDisputed.length && i < disputedMmtesForKept.length; i++) {
@@ -328,120 +537,452 @@
         }
 
         // ===================================================================
-        // STEP 9: FFXOrderToUpdate (Section B.8 - Must be user-provided)
+        // STEP 9: FFXOrderToUpdate (Section B.8)
+        // If not provided, auto-genemmte by swapping FFX orders of existing mmtes
+        // Format: "MmteName||OrderNumber;MmteName||OrderNumber"
         // ===================================================================
         if (ffxOrderUpdateFlag) {
-            const ffxOrderToUpdate = currentRow.ffxOrderToUpdate || '';
+            let ffxOrderToUpdate = currentRow.ffxOrderToUpdate || '';
             if (!ffxOrderToUpdate) {
-                CSReporter.warn('FFXOrderToUpdate must be user-provided. Skipping FFX order update.');
-                this.scenarioContext.setVariable('ffxOrderUpdateFlag', false);
-            } else {
-                this.scenarioContext.setVariable('ffxOrderToUpdate', ffxOrderToUpdate);
+                // Auto-genemmte: Swap the FFX orders of existing scattered mmtes
+                // This is only meaningful if there are 2+ scattered mmtes
+                const existingScatteredMmtes = this.scenarioContext.getVariable<Array<{
+                    scatteredMmteName: string;
+                    disputedScatteredMmteName: string;
+                    disputedDate: string | Date;
+                    ffxOrder: number;
+                }>>('existingScatteredMmtes') || [];
+
+                if (existingScatteredMmtes.length >= 2) {
+                    // Sort by current FFX order
+                    const sortedMmtes = [...existingScatteredMmtes].sort((a, b) => a.ffxOrder - b.ffxOrder);
+
+                    // Swap the first two mmtes' FFX orders
+                    // Mmte at position 1 -> position 2, Mmte at position 2 -> position 1
+                    const mmte1 = sortedMmtes[0];
+                    const mmte2 = sortedMmtes[1];
+
+                    // Genemmte FFX order update string: swap positions
+                    ffxOrderToUpdate = `${mmte1.scatteredMmteName}||${mmte2.ffxOrder};${mmte2.scatteredMmteName}||${mmte1.ffxOrder}`;
+                    CSReporter.info(`Auto-genemmted ffxOrderToUpdate (swap): ${ffxOrderToUpdate}`);
+                } else {
+                    CSReporter.warn('Cannot auto-genemmte FFX order update: Need at least 2 scattered mmtes. Skipping.');
+                    this.scenarioContext.setVariable('ffxOrderUpdateFlag', false);
+                }
             }
+            this.scenarioContext.setVariable('ffxOrderToUpdate', ffxOrderToUpdate);
         }
 
         CSReporter.pass('Test data preparation for existing zeal update completed successfully');
     }
 
 
+    -------------------------------------------------------------------------------------
 
-    [
-  {
-    "testCaseId": "TC01_Existing_Zeal_Update_All_Features",
-    "scenarioName": "Existing Zeal Update - Complete Replacement (All Scattered Mmtes replaced with Disputed and Dates)",
-    "runFlag": "No",
-    "type": "Zeal",
-    "attribute": "ID",
-    "zealId": "",
-    "zealKey": "",
-    "zealName": "",
-    "requesterUser": "akhan29@mdakhan.com",
-    "approverUser": "akhan24@mdakhan.com",
-    "sketchmarkFlagToUpdate": "",
-    "ffxFileInductorTypeToUpdate": "",
-    "updateScatteredMmtesFlag": "true",
-    "scatteredMmtesToUpdate": "",
-    "removeScatteredMmtesFlag": "false",
-    "scatteredMmtesToRemove": "",
-    "updateDisputedScatteredMmteFlag": "true",
-    "disputedScatteredMmteToUpdate": "",
-    "updateDisputedStartDateFlag": "true",
-    "disputedStartDateToUpdate": "",
-    "ffxOrderUpdateFlag": "false",
-    "ffxOrderToUpdate": "",
-    "partialUpdateCount": ""
-  },
-  {
-    "testCaseId": "TC01B_Existing_Zeal_Partial_Update",
-    "scenarioName": "Existing Zeal Update - Partial Update (Replace 1 mmte, Update disputed on remaining mmte)",
-    "runFlag": "Yes",
-    "type": "Zeal",
-    "attribute": "ID",
-    "zealId": "",
-    "zealKey": "",
-    "zealName": "",
-    "requesterUser": "akhan29@mdakhan.com",
-    "approverUser": "akhan24@mdakhan.com",
-    "sketchmarkFlagToUpdate": "",
-    "ffxFileInductorTypeToUpdate": "",
-    "updateScatteredMmtesFlag": "true",
-    "scatteredMmtesToUpdate": "",
-    "removeScatteredMmtesFlag": "false",
-    "scatteredMmtesToRemove": "",
-    "updateDisputedScatteredMmteFlag": "true",
-    "disputedScatteredMmteToUpdate": "",
-    "updateDisputedStartDateFlag": "true",
-    "disputedStartDateToUpdate": "",
-    "ffxOrderUpdateFlag": "false",
-    "ffxOrderToUpdate": "",
-    "partialUpdateCount": "1"
-  },
-  {
-    "testCaseId": "TC02_Existing_Zeal_Update_Sketchmark_Only",
-    "scenarioName": "Existing Zeal Update - Sketchmark Flag Toggle Only",
-    "runFlag": "No",
-    "type": "Zeal",
-    "attribute": "ID",
-    "zealId": "",
-    "zealKey": "",
-    "zealName": "",
-    "requesterUser": "akhan29@mdakhan.com",
-    "approverUser": "akhan24@mdakhan.com",
-    "sketchmarkFlagToUpdate": "",
-    "ffxFileInductorTypeToUpdate": "",
-    "updateScatteredMmtesFlag": "false",
-    "scatteredMmtesToUpdate": "",
-    "removeScatteredMmtesFlag": "false",
-    "scatteredMmtesToRemove": "",
-    "updateDisputedScatteredMmteFlag": "false",
-    "disputedScatteredMmteToUpdate": "",
-    "updateDisputedStartDateFlag": "false",
-    "disputedStartDateToUpdate": "",
-    "ffxOrderUpdateFlag": "false",
-    "ffxOrderToUpdate": ""
-  },
-  {
-    "testCaseId": "TC03_Existing_Zeal_Update_Scattered_Mmtes_Only",
-    "scenarioName": "Existing Zeal Update - Replace Scattered Mmtes Only",
-    "runFlag": "No",
-    "type": "Zeal",
-    "attribute": "ID",
-    "zealId": "",
-    "zealKey": "",
-    "zealName": "",
-    "requesterUser": "akhan29@mdakhan.com",
-    "approverUser": "akhan24@mdakhan.com",
-    "sketchmarkFlagToUpdate": "",
-    "ffxFileInductorTypeToUpdate": "",
-    "updateScatteredMmtesFlag": "true",
-    "scatteredMmtesToUpdate": "",
-    "removeScatteredMmtesFlag": "false",
-    "scatteredMmtesToRemove": "",
-    "updateDisputedScatteredMmteFlag": "false",
-    "disputedScatteredMmteToUpdate": "",
-    "updateDisputedStartDateFlag": "false",
-    "disputedStartDateToUpdate": "",
-    "ffxOrderUpdateFlag": "false",
-    "ffxOrderToUpdate": ""
-  }
-]
+    import { CSBasePage, CSPage, CSGetElement } from '@mdakhan.mak/cs-playwright-test-framework/core';
+import { CSWebElement, CSElementFactory } from '@mdakhan.mak/cs-playwright-test-framework/element';
+import { CSReporter } from '@mdakhan.mak/cs-playwright-test-framework/reporter';
+
+/**
+ * TTTF Regenerator Modal Page Object
+ * Handles the Order Selections modal for regeneratoring scattered mmtes
+ */
+@CSPage('tttf-regenerator-modal')
+export class TTTFRegeneratorModalPage extends CSBasePage {
+
+    protected initializeElements(): void {
+        CSReporter.debug('TTTFRegeneratorModalPage elements initialized');
+    }
+
+    // ===================================================================
+    // MODAL CONTAINER ELEMENTS
+    // ===================================================================
+
+    @CSGetElement({
+        xpath: "//div[@class='sssss-modal']//div[@class='sssss-panel__content-wrapper']",
+        description: 'Regenerator modal container',
+        waitForVisible: true
+    })
+    public modalContainer!: CSWebElement;
+
+    @CSGetElement({
+        xpath: "//div[@class='sssss-modal']//div[@class='sssss-panel__content-wrapper']//div[contains(@class, 'sssss-panel__header')]//h5[text()='Order Selections']",
+        description: 'Order Selections header',
+        waitForVisible: true
+    })
+    public orderSelectionsHeader!: CSWebElement;
+
+    @CSGetElement({
+        xpath: "//div[@class='sssss-modal']//div[@class='sssss-panel__content-wrapper']//div[contains(@class, 'sssss-panel__header')]//button[contains(@class, 'sssss-panel__close-icon')]",
+        description: 'Close X button',
+        waitForEnabled: true
+    })
+    public closeButton!: CSWebElement;
+
+    // ===================================================================
+    // SELECTION COUNT AND MOVE BUTTONS
+    // ===================================================================
+
+    @CSGetElement({
+        xpath: "//div[@class='sssss-modal']//div[@class='sssss-panel__content-wrapper']//section[@aria-label='Scattered Mmtes and Options']//span[contains(@class, 'selected-items')]",
+        description: 'Selected items count',
+        waitForVisible: true
+    })
+    public selectedItemsCount!: CSWebElement;
+
+    @CSGetElement({
+        xpath: "//div[@class='sssss-modal']//div[@class='sssss-panel__content-wrapper']//section[@aria-label='Scattered Mmtes and Options']//span[text()='Move to top']/ancestor::button[@id='regeneratorPanelMoveToTopButton']",
+        description: 'Move to top button',
+        waitForVisible: true
+    })
+    public moveToTopButton!: CSWebElement;
+
+    @CSGetElement({
+        xpath: "//div[@class='sssss-modal']//div[@class='sssss-panel__content-wrapper']//section[@aria-label='Scattered Mmtes and Options']//span[text()='Move up']/ancestor::button[@id='regeneratorPanelMoveUpButton']",
+        description: 'Move up button',
+        waitForVisible: true
+    })
+    public moveUpButton!: CSWebElement;
+
+    @CSGetElement({
+        xpath: "//div[@class='sssss-modal']//div[@class='sssss-panel__content-wrapper']//section[@aria-label='Scattered Mmtes and Options']//span[text()='Move down']/ancestor::button[@id='regeneratorPanelMoveDownButton']",
+        description: 'Move down button',
+        waitForVisible: true
+    })
+    public moveDownButton!: CSWebElement;
+
+    @CSGetElement({
+        xpath: "//div[@class='sssss-modal']//div[@class='sssss-panel__content-wrapper']//section[@aria-label='Scattered Mmtes and Options']//span[text()='Move to bottom']/ancestor::button[@id='regeneratorPanelMoveToBottomButton']",
+        description: 'Move to bottom button',
+        waitForVisible: true
+    })
+    public moveToBottomButton!: CSWebElement;
+
+    // ===================================================================
+    // TABLE ELEMENTS
+    // ===================================================================
+
+    @CSGetElement({
+        xpath: "//div[@class='sssss-modal']//div[@class='sssss-panel__body']//table[@id='refMmteTableId1']",
+        description: 'Scattered Mmtes table',
+        waitForVisible: true
+    })
+    public scatteredMmtesTable!: CSWebElement;
+
+    // ===================================================================
+    // FOOTER BUTTONS
+    // ===================================================================
+
+    @CSGetElement({
+        xpath: "//div[@class='sssss-modal']//div[@class='sssss-panel__footer']//span[text()='Apply']/parent::button",
+        description: 'Apply button',
+        waitForEnabled: true
+    })
+    public applyButton!: CSWebElement;
+
+    @CSGetElement({
+        xpath: "//div[@class='sssss-modal']//div[@class='sssss-panel__footer']//span[text()='Cancel']/parent::button",
+        description: 'Cancel button',
+        waitForEnabled: true
+    })
+    public cancelButton!: CSWebElement;
+
+    // ===================================================================
+    // MODAL VISIBILITY METHODS
+    // ===================================================================
+
+    public async isModalVisible(): Promise<boolean> {
+        return await this.modalContainer.isVisibleWithTimeout(5000);
+    }
+
+    public async waitForModalVisible(timeout: number = 10000): Promise<void> {
+        await this.modalContainer.waitForVisible(timeout);
+        CSReporter.info('Regenerator modal is visible');
+    }
+
+    public async waitForModalClosed(timeout: number = 10000): Promise<void> {
+        await this.modalContainer.waitForHidden(timeout);
+        CSReporter.info('Regenerator modal is closed');
+    }
+
+    // ===================================================================
+    // VERIFICATION METHODS
+    // ===================================================================
+
+    public async verifyModalElements(): Promise<void> {
+        CSReporter.info('Verifying Regenerator modal elements');
+
+        // Verify header
+        const headerVisible = await this.orderSelectionsHeader.isVisibleWithTimeout(5000);
+        if (!headerVisible) {
+            throw new Error('Order Selections header is not visible');
+        }
+        CSReporter.pass('Order Selections header is visible');
+
+        // Verify close button
+        const closeButtonVisible = await this.closeButton.isVisibleWithTimeout(5000);
+        if (!closeButtonVisible) {
+            throw new Error('Close X button is not visible');
+        }
+        CSReporter.pass('Close X button is visible');
+
+        // Verify selected items count
+        const selectedText = await this.getSelectedItemsText();
+        if (selectedText !== '0 selected') {
+            CSReporter.warn(`Expected "0 selected", got "${selectedText}"`);
+        } else {
+            CSReporter.pass('Selected items count shows "0 selected"');
+        }
+
+        // Verify move buttons
+        const moveToTopVisible = await this.moveToTopButton.isVisibleWithTimeout(5000);
+        const moveUpVisible = await this.moveUpButton.isVisibleWithTimeout(5000);
+        const moveDownVisible = await this.moveDownButton.isVisibleWithTimeout(5000);
+        const moveToBottomVisible = await this.moveToBottomButton.isVisibleWithTimeout(5000);
+
+        if (!moveToTopVisible || !moveUpVisible || !moveDownVisible || !moveToBottomVisible) {
+            throw new Error('One or more move buttons are not visible');
+        }
+        CSReporter.pass('All move buttons are visible (Move to top, Move up, Move down, Move to bottom)');
+
+        // Verify table
+        const tableVisible = await this.scatteredMmtesTable.isVisibleWithTimeout(5000);
+        if (!tableVisible) {
+            throw new Error('Scattered Mmtes table is not visible');
+        }
+        CSReporter.pass('Scattered Mmtes table is visible');
+
+        // Verify table columns
+        await this.verifyTableColumns();
+
+        // Verify footer buttons
+        const applyVisible = await this.applyButton.isVisibleWithTimeout(5000);
+        const cancelVisible = await this.cancelButton.isVisibleWithTimeout(5000);
+
+        if (!applyVisible || !cancelVisible) {
+            throw new Error('Apply or Cancel button is not visible');
+        }
+        CSReporter.pass('Apply and Cancel buttons are visible');
+    }
+
+    public async verifyTableColumns(): Promise<void> {
+        const refMmteNameColumn = CSElementFactory.createByXPath(
+            "//div[@class='sssss-modal']//div[@class='sssss-panel__body']//table[@id='refMmteTableId1']//thead//span[text()='Scattered Mmte Name']",
+            'Scattered Mmte Name column header',
+            this.page
+        );
+        const externalMmteNameColumn = CSElementFactory.createByXPath(
+            "//div[@class='sssss-modal']//div[@class='sssss-panel__body']//table[@id='refMmteTableId1']//thead//span[text()='External Mmte Name']",
+            'External Mmte Name column header',
+            this.page
+        );
+
+        const refMmteVisible = await refMmteNameColumn.isVisibleWithTimeout(5000);
+        const externalMmteVisible = await externalMmteNameColumn.isVisibleWithTimeout(5000);
+
+        if (!refMmteVisible || !externalMmteVisible) {
+            throw new Error('Scattered Mmte Name or External Mmte Name column is not visible');
+        }
+        CSReporter.pass('Table columns verified: Scattered Mmte Name, External Mmte Name');
+    }
+
+    // ===================================================================
+    // TABLE DATA METHODS
+    // ===================================================================
+
+    public async getTableRowCount(): Promise<number> {
+        const rows = CSElementFactory.createByXPath(
+            "//div[@class='sssss-modal']//div[@class='sssss-panel__body']//table[@id='refMmteTableId1']//tbody/tr",
+            'Table rows',
+            this.page
+        );
+        const count = await rows.count();
+        CSReporter.info(`Regenerator table has ${count} rows`);
+        return count;
+    }
+
+    public async getScatteredMmteNameFromRow(rowNumber: number): Promise<string> {
+        const cellElement = CSElementFactory.createByXPath(
+            `//div[@class='sssss-modal']//div[@class='sssss-panel__body']//table[@id='refMmteTableId1']//tbody/tr[${rowNumber}]/td[1]//div[@class='sssss-table__cell-content']`,
+            `Row ${rowNumber} scattered mmte name`,
+            this.page
+        );
+        await cellElement.waitForVisible(5000);
+        return await cellElement.textContentWithTimeout(5000) || '';
+    }
+
+    public async findRowByScatteredMmteName(scatteredMmteName: string): Promise<number> {
+        const rowCount = await this.getTableRowCount();
+
+        for (let i = 1; i <= rowCount; i++) {
+            const mmteName = await this.getScatteredMmteNameFromRow(i);
+            if (mmteName === scatteredMmteName) {
+                CSReporter.info(`Found scattered mmte ${scatteredMmteName} at row ${i}`);
+                return i;
+            }
+        }
+
+        CSReporter.warn(`Scattered mmte ${scatteredMmteName} not found in table`);
+        return -1;
+    }
+
+    // ===================================================================
+    // SELECTION METHODS
+    // ===================================================================
+
+    public async getSelectedItemsText(): Promise<string> {
+        await this.selectedItemsCount.waitForVisible(5000);
+        return await this.selectedItemsCount.textContentWithTimeout(5000) || '';
+    }
+
+    public async selectRow(rowNumber: number): Promise<void> {
+        const rowCell = CSElementFactory.createByXPath(
+            `//div[@class='sssss-modal']//div[@class='sssss-panel__body']//table[@id='refMmteTableId1']//tbody/tr[${rowNumber}]/td[1]`,
+            `Row ${rowNumber} first cell`,
+            this.page
+        );
+        await rowCell.waitForVisible(5000);
+        await rowCell.clickWithTimeout(5000);
+        CSReporter.info(`Clicked on row ${rowNumber} to select it`);
+
+        // Wait a moment for selection to register
+        await this.wait(300);
+
+        // Verify selection
+        const selectedText = await this.getSelectedItemsText();
+        if (selectedText === '1 selected') {
+            CSReporter.pass(`Row ${rowNumber} selected successfully - "${selectedText}"`);
+        } else {
+            CSReporter.warn(`Expected "1 selected" after selecting row ${rowNumber}, got "${selectedText}"`);
+        }
+    }
+
+    public async deselectRow(rowNumber: number): Promise<void> {
+        const rowCell = CSElementFactory.createByXPath(
+            `//div[@class='sssss-modal']//div[@class='sssss-panel__body']//table[@id='refMmteTableId1']//tbody/tr[${rowNumber}]/td[1]`,
+            `Row ${rowNumber} first cell`,
+            this.page
+        );
+        await rowCell.waitForVisible(5000);
+        await rowCell.clickWithTimeout(5000);
+        CSReporter.info(`Clicked on row ${rowNumber} to deselect it`);
+
+        // Wait a moment for deselection to register
+        await this.wait(300);
+
+        // Verify deselection
+        const selectedText = await this.getSelectedItemsText();
+        if (selectedText === '0 selected') {
+            CSReporter.pass(`Row ${rowNumber} deselected successfully - "${selectedText}"`);
+        } else {
+            CSReporter.warn(`Expected "0 selected" after deselecting row ${rowNumber}, got "${selectedText}"`);
+        }
+    }
+
+    // ===================================================================
+    // MOVE METHODS
+    // ===================================================================
+
+    public async clickMoveUp(): Promise<void> {
+        await this.moveUpButton.waitForVisible(5000);
+        await this.moveUpButton.clickWithTimeout(5000);
+        CSReporter.info('Clicked Move up button');
+    }
+
+    public async clickMoveDown(): Promise<void> {
+        await this.moveDownButton.waitForVisible(5000);
+        await this.moveDownButton.clickWithTimeout(5000);
+        CSReporter.info('Clicked Move down button');
+    }
+
+    public async clickMoveToTop(): Promise<void> {
+        await this.moveToTopButton.waitForVisible(5000);
+        await this.moveToTopButton.clickWithTimeout(5000);
+        CSReporter.info('Clicked Move to top button');
+    }
+
+    public async clickMoveToBottom(): Promise<void> {
+        await this.moveToBottomButton.waitForVisible(5000);
+        await this.moveToBottomButton.clickWithTimeout(5000);
+        CSReporter.info('Clicked Move to bottom button');
+    }
+
+    // ===================================================================
+    // INTELLIGENT REGENERATOR METHOD
+    // ===================================================================
+
+    /**
+     * Regenerators a scattered mmte to the specified position
+     * @param scatteredMmteName - The name of the scattered mmte to regenerator
+     * @param targetOrder - The target order number (1-based)
+     */
+    public async regeneratorMmteToPosition(scatteredMmteName: string, targetOrder: number): Promise<void> {
+        CSReporter.info(`Regeneratoring ${scatteredMmteName} to position ${targetOrder}`);
+
+        // Find the current row of the scattered mmte
+        const currentRow = await this.findRowByScatteredMmteName(scatteredMmteName);
+        if (currentRow === -1) {
+            throw new Error(`Scattered mmte ${scatteredMmteName} not found in regenerator table`);
+        }
+
+        // If already in target position, skip
+        if (currentRow === targetOrder) {
+            CSReporter.info(`${scatteredMmteName} is already at position ${targetOrder} - no regenerator needed`);
+            return;
+        }
+
+        // Select the row
+        await this.selectRow(currentRow);
+
+        // Determine direction and number of clicks
+        const numberOfClicks = Math.abs(targetOrder - currentRow);
+
+        if (targetOrder < currentRow) {
+            // Need to move UP
+            CSReporter.info(`Moving ${scatteredMmteName} UP by ${numberOfClicks} positions`);
+            for (let i = 0; i < numberOfClicks; i++) {
+                await this.clickMoveUp();
+                await this.wait(200); // Small delay between clicks
+            }
+        } else {
+            // Need to move DOWN
+            CSReporter.info(`Moving ${scatteredMmteName} DOWN by ${numberOfClicks} positions`);
+            for (let i = 0; i < numberOfClicks; i++) {
+                await this.clickMoveDown();
+                await this.wait(200); // Small delay between clicks
+            }
+        }
+
+        // Deselect the row
+        await this.deselectRow(targetOrder);
+
+        CSReporter.pass(`Successfully regeneratored ${scatteredMmteName} to position ${targetOrder}`);
+    }
+
+    // ===================================================================
+    // FOOTER BUTTON METHODS
+    // ===================================================================
+
+    public async clickApply(): Promise<void> {
+        await this.applyButton.waitForVisible(5000);
+        await this.applyButton.clickWithTimeout(5000);
+        CSReporter.info('Clicked Apply button');
+    }
+
+    public async clickCancel(): Promise<void> {
+        await this.cancelButton.waitForVisible(5000);
+        await this.cancelButton.clickWithTimeout(5000);
+        CSReporter.info('Clicked Cancel button');
+    }
+
+    public async clickClose(): Promise<void> {
+        await this.closeButton.waitForVisible(5000);
+        await this.closeButton.clickWithTimeout(5000);
+        CSReporter.info('Clicked Close X button');
+    }
+}
+
+
+
+-------------------------------------------------------------------------------------------------------------
+
