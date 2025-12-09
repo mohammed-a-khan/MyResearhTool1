@@ -1,1 +1,211 @@
-test
+@smoke @regression @cumulativeMmtes @sorting @EXT05
+Feature: Cumulative Mmtes - Results Grid Column Sorting Verification
+  As a TTTF user
+  I want to sort the results grid by different columns
+  So that I can easily find and analyze the data I need
+
+  @sorting @allColumns
+  Scenario Outline: Verify sorting functionality for all sortable columns
+    # ============================================================
+    # TEST DATA SETUP
+    # ============================================================
+    Given I resolve start date as 5 business days ago if not provided "<startDate>"
+    And I resolve end date as 1 business day ago if not provided "<endDate>"
+
+    # ============================================================
+    # SCENARIO STEPS
+    # ============================================================
+    Given I login to TTTF as "<userName>"
+    And I navigate to "Cumulative Mmtes" page
+
+    # Search by Boring Date range
+    When I select "Boring Date" from Type dropdown
+    Then From date input field should be present
+    And To date input field should be present
+    When I enter From date "{scenario:startDate}"
+    And I enter To date "{scenario:endDate}"
+    And I click Search button
+    Then I should see Displaying section with results
+    And I should see filter "Boring Date From" with value "{scenario:startDate}"
+    And I should see filter "Boring Date To" with value "{scenario:endDate}"
+    And results table should have data
+    And results table should have at least 2 rows for sorting test
+
+    # ============================================================
+    # BORING DATE COLUMN SORTING
+    # ============================================================
+    # Verify Default Sort - Boring Date Descending
+    Then column "Boring Date" should be sorted descending
+    And I verify column "Boring Date" data is in descending order
+
+    # Verify Boring Date Ascending Sort
+    When I click column header "Boring Date"
+    Then column "Boring Date" should be sorted ascending
+    And I verify column "Boring Date" data is in ascending order
+
+    # ============================================================
+    # MMTE (%) COLUMN SORTING
+    # ============================================================
+    # Verify Mmte column is unsorted by default
+    Then column "Mmte (%)" should be unsorted by default
+    When I click column header "Mmte (%)"
+    Then column "Mmte (%)" should be sorted descending
+    And I verify column "Mmte (%)" data is in descending order
+    When I click column header "Mmte (%)"
+    Then column "Mmte (%)" should be sorted ascending
+    And I verify column "Mmte (%)" data is in ascending order
+
+    # ============================================================
+    # CUMULATIVE MMTE NAME COLUMN SORTING
+    # ============================================================
+    # Verify Cumulative Mmte Name column is unsorted by default
+    Then column "Cumulative Mmte Name" should be unsorted by default
+    When I click column header "Cumulative Mmte Name"
+    Then column "Cumulative Mmte Name" should be sorted descending
+    And I verify column "Cumulative Mmte Name" data is in descending order
+    When I click column header "Cumulative Mmte Name"
+    Then column "Cumulative Mmte Name" should be sorted ascending
+    And I verify column "Cumulative Mmte Name" data is in ascending order
+
+    # ============================================================
+    # SOURCE COLUMN SORTING
+    # ============================================================
+    # Verify Source column is unsorted by default
+    Then column "Source" should be unsorted by default
+    When I click column header "Source"
+    Then column "Source" should be sorted descending
+    And I verify column "Source" data is in descending order
+    When I click column header "Source"
+    Then column "Source" should be sorted ascending
+    And I verify column "Source" data is in ascending order
+
+    # ============================================================
+    # SUPPLICATION DATE COLUMN SORTING
+    # ============================================================
+    # Verify Supplication Date column is unsorted by default
+    Then column "Supplication Date" should be unsorted by default
+    When I click column header "Supplication Date"
+    Then column "Supplication Date" should be sorted descending
+    And I verify column "Supplication Date" data is in descending order
+    When I click column header "Supplication Date"
+    Then column "Supplication Date" should be sorted ascending
+    And I verify column "Supplication Date" data is in ascending order
+
+    Examples: {"type": "json", "source": "test/tttf/data/cumulative_mmte_sorting_scenarios.json", "path": "$", "filter": "scenarioId=EXT05 AND runFlag=Yes"}
+
+
+---------------------------------------------------------------------------------------------------------------------
+
+[
+  {
+    "scenarioId": "EXT05",
+    "scenarioName": "Results Grid Column Sorting Verification",
+    "userName": "akhan21@mdkhan.com",
+    "startDate": "",
+    "endDate": "",
+    "runFlag": "Yes"
+  }
+]
+
+
+-------------------------------------------------------------------------------------------------------------------------
+
+tttf-cumulative-mmtes.steps.ts
+
+@CSBDDStepDef('column {string} should be unsorted by default')
+    async verifyColumnUnsortedByDefault(columnName: string): Promise<void> {
+        CSReporter.info(`Verifying column ${columnName} is unsorted by default`);
+        await this.cumulativeMmtesPage.verifySortState(columnName, 'unsorted');
+        CSReporter.pass(`Column ${columnName} is unsorted by default`);
+    }
+
+    @CSBDDStepDef('I verify column {string} data is in descending order')
+    async verifyColumnDataDescendingOrder(columnName: string): Promise<void> {
+        CSReporter.info(`Verifying column ${columnName} data is in descending order`);
+        await this.cumulativeMmtesPage.verifySortedData(columnName, 'descending');
+        CSReporter.pass(`Column ${columnName} data is in descending order`);
+    }
+
+    @CSBDDStepDef('I verify column {string} data is in ascending order')
+    async verifyColumnDataAscendingOrder(columnName: string): Promise<void> {
+        CSReporter.info(`Verifying column ${columnName} data is in ascending order`);
+        await this.cumulativeMmtesPage.verifySortedData(columnName, 'ascending');
+        CSReporter.pass(`Column ${columnName} data is in ascending order`);
+    }
+
+    @CSBDDStepDef('From date input field should be present')
+    async verifyFromDateInputPresent(): Promise<void> {
+        CSReporter.info('Verifying From date input field is present');
+        await this.cumulativeMmtesPage.verifyFromDateInputPresent();
+        CSReporter.pass('From date input field is present');
+    }
+
+    @CSBDDStepDef('To date input field should be present')
+    async verifyToDateInputPresent(): Promise<void> {
+        CSReporter.info('Verifying To date input field is present');
+        await this.cumulativeMmtesPage.verifyToDateInputPresent();
+        CSReporter.pass('To date input field is present');
+    }
+
+
+    TTTFCumulativeMmtesPage.ts
+    ----------------------------------------------------------------------------------------------------------------
+
+    public async selectSearchType(searchType: string): Promise<void> {
+        await this.clickSearchTypeDropdown();
+
+        const option = CSElementFactory.createByXPath(
+            `//div[contains(@class, 'sssss-balloon') and @name='searchType']//ul[@role='listbox']//li[@role='option']//span[text()='${searchType}']/parent::span`,
+            `Search type option: ${searchType}`,
+            this.page
+        );
+
+        await option.waitForVisible(10000);
+        await option.clickWithTimeout(10000);
+        // Wait for dropdown to close and UI to update after selection
+        await this.page.waitForTimeout(500);
+
+        // Verify the selection was successful
+        await this.verifySearchTypeSelected(searchType);
+        CSReporter.pass(`Selected search type: ${searchType}`);
+    }
+
+    public async verifySearchTypeSelected(searchType: string): Promise<void> {
+        const selected = CSElementFactory.createByXPath(
+            `//h5[text()='Search']/ancestor::section[1]//div[text()='Search By']/ancestor::form[@class='sssss-form'][1]//button[@name='searchType']/span[@class='sssss-button__label' and text()='${searchType}']`,
+            `Selected search type: ${searchType}`,
+            this.page
+        );
+
+        await selected.waitForVisible(10000);
+        const isVisible = await selected.isVisibleWithTimeout(5000);
+
+        if (isVisible) {
+            CSReporter.pass(`Search type '${searchType}' is selected successfully`);
+        } else {
+            CSReporter.fail(`Search type '${searchType}' is not selected`);
+            throw new Error(`Search type selection verification failed: ${searchType}`);
+        }
+    }
+
+
+    public async getTableRowCount(): Promise<number> {
+        const rows = CSElementFactory.createByXPath(
+            `//table[@class='sssss-table']//tbody/tr`,
+            'Table rows',
+            this.page
+        );
+        const count = await rows.count();
+        CSReporter.info(`Table row count: ${count}`);
+        return count;
+    }
+
+    public async getTableCellValue(rowIndex: number, columnIndex: number): Promise<string> {
+        const cell = CSElementFactory.createByXPath(
+            `//table[@class='sssss-table']//tbody/tr[${rowIndex}]/td[${columnIndex}]`,
+            `Table cell [${rowIndex}, ${columnIndex}]`,
+            this.page
+        );
+        const value = await cell.textContentWithTimeout(5000);
+        return value?.trim() || '';
+    }
