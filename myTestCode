@@ -1,1 +1,38 @@
-test
+const parseDate = (dateStr: string): Date | null => {
+                if (!dateStr || dateStr.trim() === '' || dateStr === '01/01/1900') {
+                    return null; // Treat blank/default dates as null
+                }
+                const parsed = new Date(dateStr);
+                return isNaN(parsed.getTime()) ? null : parsed;
+            };
+
+            const dateValues = values.map(v => parseDate(v));
+
+            // Custom sort that handles null dates
+            const sortedDates = [...dateValues].sort((a, b) => {
+                // Handle null values - nulls go to end for ascending, beginning for descending
+                if (a === null && b === null) return 0;
+                if (a === null) return sortOrder === 'ascending' ? 1 : -1;
+                if (b === null) return sortOrder === 'ascending' ? -1 : 1;
+                return sortOrder === 'ascending' ? a.getTime() - b.getTime() : b.getTime() - a.getTime();
+            });
+
+            for (let i = 0; i < dateValues.length; i++) {
+                const original = dateValues[i];
+                const sorted = sortedDates[i];
+
+                // Both null
+                if (original === null && sorted === null) continue;
+
+                // One is null, other is not - mismatch
+                if ((original === null) !== (sorted === null)) {
+                    CSReporter.fail(`Data not sorted correctly: ${columnName} ${sortOrder} at row ${i + 1}`);
+                    throw new Error(`Sort verification failed for ${columnName}`);
+                }
+
+                // Both are dates - compare times
+                if (original!.getTime() !== sorted!.getTime()) {
+                    CSReporter.fail(`Data not sorted correctly: ${columnName} ${sortOrder} at row ${i + 1}`);
+                    throw new Error(`Sort verification failed for ${columnName}`);
+                }
+            }
