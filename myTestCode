@@ -1,1 +1,100 @@
-test
+@CSBDDStepDef('each displayed row should match database record')
+    async verifyEachRowMatchesDatabase(): Promise<void> {
+        CSReporter.info('Verifying each displayed row matches database record');
+
+        // Get DB records from scenario context
+        const dbRecords = this.scenarioContext.getVariable<CumulativeMmteRecord[]>('rsDBCumulativeDailyMmtes');
+        if (!dbRecords || dbRecords.length === 0) {
+            throw new Error('No database records found in scenario context (rsDBCumulativeDailyMmtes)');
+        }
+
+        // Get total row count from UI
+        const uiRowCount = await this.cumulativeMmtesPage.getTableRowCount();
+        CSReporter.info(`UI has ${uiRowCount} rows, DB has ${dbRecords.length} records`);
+
+        if (uiRowCount === 0) {
+            throw new Error('No rows displayed in the UI table');
+        }
+
+        // Verify each UI row matches corresponding DB record
+        for (let i = 1; i <= uiRowCount; i++) {
+            CSReporter.info(`Verifying row ${i} of ${uiRowCount}`);
+
+            // Get UI row data
+            const uiRowData = await this.cumulativeMmtesPage.getTableRowData(i);
+
+            // Get corresponding DB record (0-indexed)
+            const dbRecord = dbRecords[i - 1];
+            if (!dbRecord) {
+                throw new Error(`No DB record found for row ${i}`);
+            }
+
+            // Normalize mutation date - '01/01/1900' should be treated as blank
+            const normalizeMutationDate = (dateStr: string): string => {
+                if (!dateStr || dateStr === '01/01/1900' || dateStr === '1900-01-01') {
+                    return '';
+                }
+                return dateStr.trim();
+            };
+
+            // Normalize mmte values for comparison (remove trailing zeros, handle decimal differences)
+            const normalizeMmte = (mmte: string): string => {
+                if (!mmte) return '';
+                const num = parseFloat(mmte);
+                return isNaN(num) ? mmte.trim() : num.toString();
+            };
+
+            // Compare Disruptive Date
+            const strUIDisruptiveDate = uiRowData.disruptiveDate.trim();
+            const strDBDisruptiveDate = dbRecord.disruptiveDate.trim();
+            if (strUIDisruptiveDate !== strDBDisruptiveDate) {
+                CSReporter.fail(`Row ${i} Disruptive Date mismatch: UI="${strUIDisruptiveDate}", DB="${strDBDisruptiveDate}"`);
+                throw new Error(`Row ${i} Disruptive Date mismatch: UI="${strUIDisruptiveDate}", DB="${strDBDisruptiveDate}"`);
+            }
+            CSReporter.pass(`Row ${i} Disruptive Date matches: ${strUIDisruptiveDate}`);
+
+            // Compare Mmte %
+            const strUIMmte = normalizeMmte(uiRowData.mmte);
+            const strDBMmte = normalizeMmte(dbRecord.mmte);
+            if (strUIMmte !== strDBMmte) {
+                CSReporter.fail(`Row ${i} Mmte mismatch: UI="${strUIMmte}", DB="${strDBMmte}"`);
+                throw new Error(`Row ${i} Mmte mismatch: UI="${strUIMmte}", DB="${strDBMmte}"`);
+            }
+            CSReporter.pass(`Row ${i} Mmte matches: ${strUIMmte}`);
+
+            // Compare Cumulative Mmte Name
+            const strUICumulativeMmteName = uiRowData.cumulativeMmteName.trim();
+            const strDBCumulativeMmteName = dbRecord.cumulativeMmteName.trim();
+            if (strUICumulativeMmteName !== strDBCumulativeMmteName) {
+                CSReporter.fail(`Row ${i} Cumulative Mmte Name mismatch: UI="${strUICumulativeMmteName}", DB="${strDBCumulativeMmteName}"`);
+                throw new Error(`Row ${i} Cumulative Mmte Name mismatch: UI="${strUICumulativeMmteName}", DB="${strDBCumulativeMmteName}"`);
+            }
+            CSReporter.pass(`Row ${i} Cumulative Mmte Name matches: ${strUICumulativeMmteName}`);
+
+            // Compare Source
+            const strUISource = uiRowData.source.trim();
+            const strDBSource = dbRecord.source.trim();
+            if (strUISource !== strDBSource) {
+                CSReporter.fail(`Row ${i} Source mismatch: UI="${strUISource}", DB="${strDBSource}"`);
+                throw new Error(`Row ${i} Source mismatch: UI="${strUISource}", DB="${strDBSource}"`);
+            }
+            CSReporter.pass(`Row ${i} Source matches: ${strUISource}`);
+
+            // Compare Mutation Date (with normalization for 01/01/1900)
+            const strUIMutationDate = normalizeMutationDate(uiRowData.mutationDate);
+            const strDBMutationDate = normalizeMutationDate(dbRecord.mutationDate);
+            if (strUIMutationDate !== strDBMutationDate) {
+                CSReporter.fail(`Row ${i} Mutation Date mismatch: UI="${strUIMutationDate}", DB="${strDBMutationDate}"`);
+                throw new Error(`Row ${i} Mutation Date mismatch: UI="${strUIMutationDate}", DB="${strDBMutationDate}"`);
+            }
+            CSReporter.pass(`Row ${i} Mutation Date matches: ${strUIMutationDate || '(blank)'}`);
+
+            // Verify Edit and Remove buttons are present and enabled for this row
+            await this.cumulativeMmtesPage.verifyEditButtonPresent(i);
+            await this.cumulativeMmtesPage.verifyRemoveButtonPresent(i);
+
+            CSReporter.pass(`Row ${i} fully verified - all values match DB and buttons are present`);
+        }
+
+        CSReporter.pass(`All ${uiRowCount} displayed rows match database records`);
+    }
