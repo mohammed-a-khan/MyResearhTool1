@@ -2,7 +2,7 @@
   {
     "scenarioId": "EXT10",
     "scenarioName": "Add Instance with Duplicate Validation",
-    "userName": "cputest21@americas.cshare.net",
+    "userName": "",
     "cumulativeMmteName": "",
     "rrrrrrrrDate": "",
     "cumulativeScatteredMmteName": "",
