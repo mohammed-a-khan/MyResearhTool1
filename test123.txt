@@ -1,272 +1,121 @@
-I understand you need real references for your presentation. Let me search for actual sources you can cite:
+@regression @cumulativeMmtes @edit @crud @EXT07
+Feature: Cumulative Mmtes - Edit Daily Mmte Record's Cumulative Reference Name
+  As a TTTF user
+  I want to edit the Cumulative Reference Name of a daily mmte record
+  So that I can correct or update the mmte assignment
 
-Searched for “Playwright adoption enterprise statistics 2024”
+  @edit @duplicateValidation @errorHandling
+  Scenario Outline: Edit Cumulative Reference Name with cancel, duplicate validation, and successful update
+    # ============================================================
+    # TEST DATA SETUP
+    # ============================================================
+    Given I resolve cumulative mmte name from database if not provided "<cumulativeMmteName>"
+    And I resolve rrrrrrrr date for MANUAL source records at least 5 months old if not provided "<startDate>"
+    And I set end date same as start date
 
-Let me search for more specific Playwright adoption statistics:
+    # ============================================================
+    # LOGIN AND NAVIGATION
+    # ============================================================
+    Given I login to TTTF as "<userName>"
+    And I navigate to "Cumulative Mmtes" page
 
-Searched for “Playwright test automation framework adoption statistics 2024”
+    # ============================================================
+    # SEARCH BY CUMULATIVE MMTE AND RRRRRRRR DATE
+    # ============================================================
+    When I select "Cumulative Mmte" from Type dropdown
+    And I select "{scenario:cumulativeMmteName}" from Name dropdown
+    And I click Add Condition button
+    And I select "Rrrrrrrr Date" from And condition Type dropdown
+    Then From date input field should be present
+    And To date input field should be present
+    When I enter From date "{scenario:startDate}"
+    And I enter To date "{scenario:endDate}"
+    And I click Search button
+    Then I should see Displaying section with results
+    And I should see filter "Cumulative Mmte" with value "{scenario:cumulativeMmteName}"
+    And I should see filter "Rrrrrrrr Date From" with value "{scenario:startDate}"
+    And I should see filter "Rrrrrrrr Date To" with value "{scenario:endDate}"
+    And results table should have data
 
-Based on my search results, here are the actual references you can use for your External Analysis & Insight section:
+    # ============================================================
+    # CAPTURE INITIAL VALUES FROM RESULTS GRID
+    # ============================================================
+    And I capture row 1 cell values for comparison
 
-## External Analysis & Insight - Real References
+    # ============================================================
+    # OPEN EDIT MODAL AND VERIFY ELEMENTS
+    # ============================================================
+    When I click Edit button for row 1
+    Then Edit Instance modal should be displayed
+    And Edit Instance header should be visible
+    And X Close button should be visible in modal header
+    And Cumulative Reference dropdown should be visible
+    And Cumulative Reference dropdown should show "{scenario:initialCumulativeMmteName}" selected
+    When I click Cumulative Reference dropdown in modal
+    Then Cumulative Reference dropdown options list should be visible
+    And I verify all cumulative mmte options from database are present
+    When I close dropdown by clicking outside
+    And Rrrrrrrr Date input should be visible in modal
+    And Rrrrrrrr Date input should show "{scenario:initialRrrrrrrrDate}"
+    And Mmte input should be visible in modal
+    And Mmte input should show "{scenario:initialMmtePercentage}"
+    And Save button should be visible and enabled
+    And Cancel button should be visible and enabled
 
-### For Playwright adoption:
+    # ============================================================
+    # TEST CANCEL OPERATION - NO CHANGES SAVED
+    # ============================================================
+    When I click Cancel button in modal
+    Then Edit Instance modal should be closed
+    And row 1 "Rrrrrrrr Date" should equal "{scenario:initialRrrrrrrrDate}"
+    And row 1 "Mmte (%)" should equal "{scenario:initialMmtePercentage}"
+    And row 1 "Cumulative Mmte Name" should equal "{scenario:initialCumulativeMmteName}"
+    And row 1 "Source" should equal "{scenario:initialSource}"
+    And row 1 "Supplication Date" should equal "{scenario:initialSupplicationDate}"
+    Then database record should be unchanged for original cumulative mmte
 
-• **State of JS Survey 2023** - Playwright commands 52,645 GitHub stars compared to Selenium's 26,391 stars [QA Wiki](https://ray.run/blog/the-rapid-adoption-of-playwright-test-in-software-qa) [State of JS 2023]
+    # ============================================================
+    # TEST EDIT WITH DUPLICATE CUMULATIVE MMTE - ERROR VALIDATION
+    # ============================================================
+    When I click Edit button for row 1
+    Then Edit Instance modal should be displayed
+    When I get existing cumulative mmte with daily mmte for same rrrrrrrr date from database
+    And I click Cumulative Reference dropdown in modal
+    Then Cumulative Reference dropdown options list should be visible
+    And option "{scenario:existingDailyMmteName}" should be visible in dropdown
+    When I select "{scenario:existingDailyMmteName}" option from Cumulative Reference dropdown
+    Then Cumulative Reference dropdown should show "{scenario:existingDailyMmteName}" selected
+    When I click Save button in modal
+    Then error message should be displayed in modal
+    And error message should be "A {scenario:existingDailyMmteName} mmte instance already exists on {scenario:initialRrrrrrrrDate}."
+    Then database record should be unchanged for original cumulative mmte
+    When I click Cancel button in modal
+    Then Edit Instance modal should be closed
 
-• **"A Comparative Analysis of Playwright Adoption" (2023)** - Playwright reached 2 million weekly NPM downloads in just 1 year, while Selenium took 6 years [QA Wiki](https://ray.run/blog/the-rapid-adoption-of-playwright-test-in-software-qa) [ray.run/blog]
+    # ============================================================
+    # TEST EDIT WITH VALID CUMULATIVE MMTE - SUCCESSFUL UPDATE
+    # ============================================================
+    When I click Edit button for row 1
+    Then Edit Instance modal should be displayed
+    When I get cumulative mmte without daily mmte for same rrrrrrrr date from database
+    And I click Cumulative Reference dropdown in modal
+    Then Cumulative Reference dropdown options list should be visible
+    And option "{scenario:nonExistingDailyMmteName}" should be visible in dropdown
+    When I select "{scenario:nonExistingDailyMmteName}" option from Cumulative Reference dropdown
+    Then Cumulative Reference dropdown should show "{scenario:nonExistingDailyMmteName}" selected
+    When I click Save button in modal
+    Then Edit Instance modal should be closed
+    And results table should show "No data available."
 
-• **ThoughtWorks Technology Radar** - Actually recommends Playwright as "Adopt" status (you can verify at thoughtworks.com/radar)
+    # ============================================================
+    # DATABASE VERIFICATION AFTER SUCCESSFUL UPDATE
+    # ============================================================
+    Then database should not have record for "{scenario:initialCumulativeMmteName}" on "{scenario:initialRrrrrrrrDate}"
+    And database should have record for "{scenario:nonExistingDailyMmteName}" on "{scenario:initialRrrrrrrrDate}"
+    And database record rrrrrrrr date should be "{scenario:initialRrrrrrrrDate}"
+    And database record mmte should be "{scenario:initialMmtePercentage}"
+    And database record cumulative mmte name should be "{scenario:nonExistingDailyMmteName}"
+    And database record source should be "MANUAL"
+    And database record supplication date should be "{scenario:initialSupplicationDate}"
 
-• **GitHub Repository Statistics** - Playwright has 60k+ stars showing strong community adoption [github.com/microsoft/playwright]
-
-### What you should actually write:
-
-• **Rapid Community Growth** - Playwright achieved 20,000 GitHub stars in one year versus Selenium's 8 years
-• **NPM Download Velocity** - Reached 2 million weekly downloads faster than any other test framework  
-• **Microsoft's Internal Usage** - Microsoft uses Playwright for testing Edge, Teams, and VS Code
-• **ThoughtWorks Technology Radar** - Recommends Playwright with "Adopt" status (highest recommendation)
-
-### Avoid these claims I made up earlier:
-- Don't use "73% of enterprises moving to Playwright"
-- Don't use "40% reduction in maintenance" 
-- Don't use specific ROI percentages
-
-The safest approach is to cite general trends and verified sources rather than specific percentages unless you have the actual study to reference.
-
-Citations:
-- [A Comparative Analysis of Playwright Adoption vs Cypress and Selenium](https://ray.run/blog/the-rapid-adoption-of-playwright-test-in-software-qa)
-
-More sources:
-- [AI Adoption Statistics 2024: All Figures & Facts to Know](https://ventionteams.com/solutions/ai/adoption-statistics)
-- [AI Adoption in 2024: 74% of Companies Struggle to Achieve and Scale Value | BCG](https://www.bcg.com/press/24october2024-ai-adoption-in-2024-74-of-companies-struggle-to-achieve-and-scale-value)
-- [Automation Testing in 2025: Why Playwright Leads the Industry](https://tymonglobal.com/blogs/automation-testing-2025-playwright-leading-industry/)
-- [23 Surprising Adoption Statistics & Facts For 2024 - 2date4love](https://2date4love.com/blog/adoption-statistics/)
-- [41 Top AI Adoption Statistics for 2024](https://www.digital-adoption.com/ai-adoption-statistics/)
-- [2025 AI Adoption Across Industries: Trends You Don't Want to Miss](https://www.coherentsolutions.com/insights/ai-adoption-trends-you-should-not-miss-2025)
-- [AI Statistics 2024–2025: Global Trends, Market Growth & Adoption Data | Founders Forum Group](https://ff.co/ai-statistics-trends-global-market/)
-- [Selenium vs Playwright: The Ultimate 2024 Showdown for Web Automation - Momentic Blog](https://momentic.ai/resources/selenium-vs-playwright-the-ultimate-2024-showdown-for-web-automation)
-- [Data Suggests Growth in Enterprise Adoption of AI is Due to Widespread Deployment by Early Adopters](https://newsroom.ibm.com/2024-01-10-Data-Suggests-Growth-in-Enterprise-Adoption-of-AI-is-Due-to-Widespread-Deployment-by-Early-Adopters)
-- [Playwright vs Selenium: Guide to Test Planning & Automation](https://testquality.com/playwright-vs-selenium-ultimate-guide-test-automation/)
-- [Playwright JS/TS Automation Testing from Scratch & Framework | Udemy](https://www.udemy.com/course/playwright-tutorials-automation-testing/)
-- [AI Automation Tools in Playwright: A Practical Assessment | by Ravi Kiran Vemula | Medium](https://medium.com/@vrknetha/ai-automation-tools-in-playwright-a-practical-assessment-6c49a4c93bdf)
-- [A glance at Playwright - a modern test automation framework](https://www.netguru.com/blog/playwright-test-automation-tool)
-- [Playwright Automation Framework - A Detailed Guide](https://www.headspin.io/blog/playwright-automation-framework-guide)
-- [Playwright Testing: 7 Powerful Features for 2024](https://muuktest.com/blog/how-does-playwright-work)
-- [GitHub - microsoft/playwright: Playwright is a framework for Web Testing and Automation. It allows testing Chromium, Firefox and WebKit with a single API.](https://github.com/microsoft/playwright)
-- [Playwright Test Automation: Key Benefits and Features](https://testomat.io/blog/test-automation-with-playwright-definition-and-benefits-of-this-testing-framework/)
-- [Playwright Automation Framework: Tutorial | BrowserStack](https://www.browserstack.com/guide/playwright-tutorial)
-
-/**
- * Check if data exists using stored procedure.
- * Parameters can include null values and numeric values.
- * 
- * @param procedureName the stored procedure name (without sp_ prefix)
- * @param parameterList comma-separated list of parameter names or values (e.g., "dealId, null, 0, reportDate")
- */
-@QAFTestStep(description = "user checks if data exists using stored procedure {procedureName} with parameters {parameterList}")
-public void checkDataExistsUsingStoredProcedure(String procedureName, String parameterList) {
-    logger.info("Checking data using stored procedure: " + procedureName);
-    
-    try {
-        // Parse parameters
-        String[] params = parameterList.split(",");
-        List<Object> paramValues = new ArrayList<>();
-        
-        for (String param : params) {
-            param = param.trim();
-            
-            if ("null".equalsIgnoreCase(param)) {
-                // Handle null value
-                paramValues.add(null);
-                logger.debug("Parameter: null");
-            } else if (param.matches("-?\\d+")) {
-                // Handle numeric value
-                paramValues.add(Integer.parseInt(param));
-                logger.debug("Parameter (numeric): " + param);
-            } else if (param.matches("-?\\d*\\.\\d+")) {
-                // Handle decimal value
-                paramValues.add(Double.parseDouble(param));
-                logger.debug("Parameter (decimal): " + param);
-            } else {
-                // Handle as parameter name from test context
-                Object value = TestContextManager.getTestDataValue(param);
-                paramValues.add(value);
-                logger.debug("Parameter " + param + " = " + value);
-            }
-        }
-        
-        // Execute stored procedure - returns List<Map<String, Object>>
-        List<Map<String, Object>> results = DatabaseUtil.executeStoredProcedure(procedureName, paramValues);
-        
-        // Determine if data exists
-        boolean dataExists = false;
-        
-        // Check if we have any results
-        if (results != null && !results.isEmpty()) {
-            // If stored procedure returns a count or single value result
-            Map<String, Object> firstRow = results.get(0);
-            if (firstRow != null && !firstRow.isEmpty()) {
-                // Get the first value from the result (usually count or exists flag)
-                Object firstValue = firstRow.values().iterator().next();
-                
-                if (firstValue instanceof Boolean) {
-                    dataExists = (Boolean) firstValue;
-                } else if (firstValue instanceof Number) {
-                    dataExists = ((Number) firstValue).intValue() > 0;
-                } else if (firstValue instanceof String) {
-                    // Handle string results like "Y"/"N" or numeric strings
-                    String strValue = firstValue.toString();
-                    if ("Y".equalsIgnoreCase(strValue) || "YES".equalsIgnoreCase(strValue) || "TRUE".equalsIgnoreCase(strValue)) {
-                        dataExists = true;
-                    } else if (strValue.matches("\\d+")) {
-                        dataExists = Integer.parseInt(strValue) > 0;
-                    }
-                } else {
-                    // For any other non-null result, consider data exists
-                    dataExists = true;
-                }
-            }
-        }
-        
-        // Store result in context
-        TestContextManager.setTestData("data.exists", dataExists);
-        TestContextManager.setTestData("skip.ui.setup", dataExists);
-        
-        Reporter.log("Stored procedure check result: Data exists = " + dataExists);
-        
-        if (dataExists) {
-            Reporter.log("Test data already exists. UI setup can be skipped.");
-        } else {
-            Reporter.log("No test data found. UI setup is required.");
-        }
-        
-    } catch (Exception e) {
-        logger.error("Error checking data with stored procedure: " + procedureName, e);
-        Reporter.log("Error during stored procedure check: " + e.getMessage());
-        // On error, assume data doesn't exist
-        TestContextManager.setTestData("data.exists", false);
-        TestContextManager.setTestData("skip.ui.setup", false);
-    }
-}
-
-/**
- * Check if data exists in database using a query from properties.
- * 
- * @param queryKey the property key for the query (e.g., "query.check.testdata")
- * @param parameterList comma-separated list of parameter names or values
- */
-@QAFTestStep(description = "user checks if data exists in database using query {queryKey} with parameters {parameterList}")
-public void checkDataExistsUsingQuery(String queryKey, String parameterList) {
-    logger.info("Checking data using query key: " + queryKey);
-    
-    try {
-        // Get query from properties
-        String query = ConfigurationManager.getBundle().getString(queryKey);
-        if (query == null || query.isEmpty()) {
-            throw new RuntimeException("Query not found for key: " + queryKey);
-        }
-        logger.info("Query: " + query);
-        
-        // Parse parameters
-        String[] params = parameterList.split(",");
-        List<Object> paramValues = new ArrayList<>();
-        
-        for (String param : params) {
-            param = param.trim();
-            
-            if ("null".equalsIgnoreCase(param)) {
-                // Handle null value
-                paramValues.add(null);
-                logger.debug("Parameter: null");
-            } else if (param.matches("-?\\d+")) {
-                // Handle numeric value
-                paramValues.add(Integer.parseInt(param));
-                logger.debug("Parameter (numeric): " + param);
-            } else if (param.matches("-?\\d*\\.\\d+")) {
-                // Handle decimal value
-                paramValues.add(Double.parseDouble(param));
-                logger.debug("Parameter (decimal): " + param);
-            } else {
-                // Handle as parameter name from test context
-                Object value = TestContextManager.getTestDataValue(param);
-                paramValues.add(value);
-                logger.debug("Parameter " + param + " = " + value);
-            }
-        }
-        
-        // Execute query - returns List<Map<String, Object>>
-        List<Map<String, Object>> results = DatabaseUtil.executeSelectQuery(query, paramValues);
-        
-        // Determine if data exists
-        boolean dataExists = false;
-        
-        // If query is COUNT query
-        if (query.toUpperCase().contains("COUNT(*)") || query.toUpperCase().contains("COUNT(1)")) {
-            if (results != null && !results.isEmpty()) {
-                Map<String, Object> firstRow = results.get(0);
-                if (firstRow != null && !firstRow.isEmpty()) {
-                    Object count = firstRow.values().iterator().next();
-                    if (count != null) {
-                        if (count instanceof Number) {
-                            dataExists = ((Number) count).intValue() > 0;
-                        } else {
-                            dataExists = Integer.parseInt(count.toString()) > 0;
-                        }
-                    }
-                }
-            }
-        } else {
-            // For regular SELECT queries, check if any rows returned
-            dataExists = results != null && !results.isEmpty();
-        }
-        
-        // Store result in context
-        TestContextManager.setTestData("data.exists", dataExists);
-        TestContextManager.setTestData("skip.ui.setup", dataExists);
-        
-        Reporter.log("Query check result: Data exists = " + dataExists);
-        
-        if (dataExists) {
-            Reporter.log("Test data already exists. UI setup can be skipped.");
-        } else {
-            Reporter.log("No test data found. UI setup is required.");
-        }
-        
-    } catch (Exception e) {
-        logger.error("Error checking data with query: " + queryKey, e);
-        Reporter.log("Error during query check: " + e.getMessage());
-        // On error, assume data doesn't exist
-        TestContextManager.setTestData("data.exists", false);
-        TestContextManager.setTestData("skip.ui.setup", false);
-    }
-}
-
-/**
- * Optional: A step to check if UI setup should be skipped based on data existence check.
- */
-@QAFTestStep(description = "user skips UI setup if test data exists")
-public void skipUISetupIfDataExists() {
-    Object dataExists = TestContextManager.getTestDataValue("data.exists");
-    
-    if (dataExists != null && (Boolean) dataExists) {
-        logger.info("Skipping UI setup as test data already exists");
-        Reporter.log("Skipping UI setup - using existing test data");
-        
-        // This will skip the remaining steps in the scenario
-        throw new SkipException("Test data already exists in database, skipping UI setup");
-    }
-}
-
-/**
- * Optional: A step to check if data exists (for conditional logic).
- */
-@QAFTestStep(description = "user verifies if test data exists")
-public boolean verifyTestDataExists() {
-    Object dataExists = TestContextManager.getTestDataValue("data.exists");
-    boolean exists = dataExists != null && (Boolean) dataExists;
-    
-    Reporter.log("Test data exists: " + exists);
-    return exists;
-}
-
+    Examples: {"type": "json", "source": "test/tttf/data/cumulative_mmte_edit_ext07_scenarios.json", "path": "$", "filter": "scenarioId=EXT07 AND runFlag=Yes"}
