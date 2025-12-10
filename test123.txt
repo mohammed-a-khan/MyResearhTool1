@@ -1,1 +1,98 @@
-test code
+/**
+     * Find latest downloaded file using framework tracking with fallback to file system search
+     * Priority: 1) Framework-tracked downloads (auto-saved with proper names)
+     *           2) File system search in Downloads folders
+     * @param extension - File extension without dot (e.g., 'csv', 'xlsx')
+     * @returns Object with filePath and fileName, or null if not found
+     */
+    private findDownloadedFileWithFrameworkTracking(extension: string): { filePath: string; fileName: string; modifiedTime: Date } | null {
+        // First, check framework-tracked downloads (v1.5.77+)
+        try {
+            const resultsManager = CSTestResultsManager.getInstance();
+            const trackedDownloads = resultsManager.getDownloadedFiles();
+
+            // Filter by extension and find the latest
+            const matchingDownloads = trackedDownloads.filter((d: any) =>
+                d.fileName.toLowerCase().endsWith(`.${extension.toLowerCase()}`) ||
+                d.suggestedName.toLowerCase().endsWith(`.${extension.toLowerCase()}`)
+            );
+
+            if (matchingDownloads.length > 0) {
+                // Get the most recent one
+                const latest = matchingDownloads[matchingDownloads.length - 1];
+                CSReporter.info(`Found framework-tracked ${extension.toUpperCase()} file: ${latest.fileName}`);
+                return {
+                    filePath: latest.filePath,
+                    fileName: latest.suggestedName || latest.fileName, // Prefer suggested name
+                    modifiedTime: latest.timestamp
+                };
+            }
+
+            CSReporter.debug(`No framework-tracked ${extension.toUpperCase()} files found, falling back to file system search`);
+        } catch (error: any) {
+            CSReporter.debug(`Framework download tracking not available: ${error.message}, using file system search`);
+        }
+
+        // Fallback: Search file system (backward compatibility)
+        return this.findLatestDownloadedFile(extension);
+    }
+
+
+    @CSBDDStepDef('CSV file should be downloaded')
+    async verifyCSVFileDownloaded(): Promise<void> {
+        CSReporter.info('Verifying CSV file is downloaded');
+
+        // Get the file that was captured before export (if any)
+        const previousFile = this.scenarioContext.getVariable<string>('previousCsvFile');
+
+        // Find the latest CSV file - uses framework tracking with fallback to file system
+        const latestFile = this.findDownloadedFileWithFrameworkTracking('csv');
+
+        if (!latestFile) {
+            // Also check the framework's downloads directory
+            try {
+                const resultsManager = CSTestResultsManager.getInstance();
+                const downloadsDir = resultsManager.getDownloadsDirectory();
+                CSReporter.fail(`No CSV file found. Checked framework downloads (${downloadsDir}) and system Downloads folders.`);
+            } catch {
+                const folders = this.getDownloadFolders();
+                CSReporter.fail(`No CSV file found in Downloads folders: ${folders.join(', ')}`);
+            }
+            throw new Error('No CSV file found after export');
+        }
+
+        // Verify it's a new file (different from before export)
+        if (previousFile && latestFile.filePath === previousFile) {
+            CSReporter.fail('No new CSV file was downloaded after export');
+            throw new Error('No new CSV file was downloaded after export. The latest file is the same as before.');
+        }
+
+        // Store the downloaded file path for later verification
+        this.scenarioContext.setVariable('downloadedCsvFile', latestFile.filePath);
+        this.scenarioContext.setVariable('downloadedCsvFileName', latestFile.fileName);
+
+        CSReporter.pass(`CSV file downloaded: ${latestFile.fileName} at ${latestFile.filePath}`);
+    }
+
+    @CSBDDStepDef('XLSX file should be downloaded')
+    async verifyXLSXFileDownloaded(): Promise<void> {
+        CSReporter.info('Verifying XLSX file is downloaded');
+
+        // Get the file that was captured before export (if any)
+        const previousFile = this.scenarioContext.getVariable<string>('previousXlsxFile');
+
+        // Find the latest XLSX file - uses framework tracking with fallback to file system
+        const latestFile = this.findDownloadedFileWithFrameworkTracking('xlsx');
+
+        if (!latestFile) {
+            // Also check the framework's downloads directory
+            try {
+                const resultsManager = CSTestResultsManager.getInstance();
+                const downloadsDir = resultsManager.getDownloadsDirectory();
+                CSReporter.fail(`No XLSX file found. Checked framework downloads (${downloadsDir}) and system Downloads folders.`);
+            } catch {
+                const folders = this.getDownloadFolders();
+                CSReporter.fail(`No XLSX file found in Downloads folders: ${folders.join(', ')}`);
+            }
+            throw new Error('No XLSX file found after export');
+        }
