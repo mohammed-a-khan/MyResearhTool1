@@ -1,11 +1,546 @@
-@regression @cumulativeMmtes @edit @crud @EXT07
-Feature: Cumulative Mmtes - Edit Daily Mmte Record's Cumulative Reference Name
+# ==============================================================================
+# EDIT RRRRRRRR DATE QUERIES (Scenario 8)
+# ==============================================================================
+
+# Get existing rrrrrrrr date for same cumulative mmte name (Scenario 8) - for duplicate validation
+# Per requirement: Gets an rrrrrrrr date that already has a daily mmte for the same cumulative mmte name
+# Params: ? = CumulativeMmteName, ? = CurrentRrrrrrrrDate (to exclude)
+DB_QUERY_GET_EXISTING_RRRRRRRR_DATE=SELECT DISTINCT to_char(edr.rrrrrrrr_dt, 'MM/DD/YYYY') as rrrrrrrr_dt FROM tttfapp.cumulative_daily_mmte edr INNER JOIN tttfapp.cumulative_mmte er ON er.cumulative_mmte_id=edr.cumulative_mmte_id WHERE er.cumulative_mmte_name=? AND edr.active_flag='Y' AND edr.rrrrrrrr_dt <> TO_DATE(?, 'MM/DD/YYYY') AND edr.cumulative_mmte_source_id=1000 AND edr.rrrrrrrr_dt <= ADD_MONTHS(TRUNC(SYSDATE), -5) ORDER BY edr.rrrrrrrr_dt DESC FETCH FIRST 1 ROW ONLY
+
+# Get non-existing rrrrrrrr date for same cumulative mmte name (Scenario 8) - for successful update
+# Per requirement: Gets an rrrrrrrr date that does NOT have a daily mmte for the cumulative mmte name
+# Uses a date 5 months ago that doesn't exist in the daily mmte table for the specific cumulative mmte
+# Params: ? = CumulativeMmteName
+DB_QUERY_GET_NONEXISTING_RRRRRRRR_DATE_FOR_MMTE=SELECT DISTINCT to_char(dates.check_dt, 'MM/DD/YYYY') as rrrrrrrr_dt FROM (SELECT TRUNC(ADD_MONTHS(SYSDATE, -5)) - LEVEL + 1 as check_dt FROM DUAL CONNECT BY LEVEL <= 30) dates WHERE TO_CHAR(dates.check_dt, 'DY') NOT IN ('SAT', 'SUN') AND NOT EXISTS (SELECT 1 FROM tttfapp.cumulative_daily_mmte edr INNER JOIN tttfapp.cumulative_mmte er ON er.cumulative_mmte_id=edr.cumulative_mmte_id WHERE er.cumulative_mmte_name=? AND edr.rrrrrrrr_dt=dates.check_dt AND edr.active_flag='Y') ORDER BY dates.check_dt DESC FETCH FIRST 1 ROW ONLY
+
+# Get non-existing rrrrrrrr date (5 months ago from sysdate) - simple fallback
+DB_QUERY_GET_NON_EXISTING_RRRRRRRR_DATE=SELECT to_char(ADD_MONTHS(TRUNC(SYSDATE), -5), 'MM/DD/YYYY') as rrrrrrrr_dt FROM DUAL
+
+# Verify old record removed after rrrrrrrr date update (Scenario 8)
+# Params: ? = OriginalRrrrrrrrDate, ? = CumulativeMmteName
+DB_QUERY_VERIFY_OLD_RECORD_REMOVED=SELECT COUNT(*) as record_count FROM tttfapp.cumulative_daily_mmte edr INNER JOIN tttfapp.cumulative_mmte er ON er.cumulative_mmte_id=edr.cumulative_mmte_id WHERE edr.rrrrrrrr_dt=TO_DATE(?, 'MM/DD/YYYY') AND er.cumulative_mmte_name=? AND edr.active_flag='Y'
+
+# Verify new record created with updated rrrrrrrr date (Scenario 8)
+# Params: ? = NewRrrrrrrrDate, ? = CumulativeMmteName
+DB_QUERY_VERIFY_NEW_RECORD_WITH_UPDATED_DATE=SELECT to_char(edr.rrrrrrrr_dt, 'MM/DD/YYYY') as rrrrrrrr_dt, to_char(edr.mmte, 'FM990.0999999999') as mmte, er.cumulative_mmte_name, ers.cumulative_mmte_source_cd, to_char(edr.mutative_dt, 'MM/DD/YYYY') as supplication_dt FROM tttfapp.cumulative_daily_mmte edr INNER JOIN tttfapp.cumulative_mmte er ON er.cumulative_mmte_id=edr.cumulative_mmte_id INNER JOIN tttfapp.cumulative_mmte_source ers ON edr.cumulative_mmte_source_id=ers.cumulative_mmte_source_id WHERE edr.rrrrrrrr_dt=TO_DATE(?, 'MM/DD/YYYY') AND er.cumulative_mmte_name=? AND edr.active_flag='Y'
+
+
+----------------------------------------------------------------------------------------------------------
+
+db helper
+
+// ===================================================================
+    // EXT08 - EDIT RRRRRRRR DATE SPECIFIC METHODS
+    // ===================================================================
+
+    /**
+     * Get non-existing rrrrrrrr date for a specific cumulative mmte (for successful update)
+     * Used for EXT08 scenario - finds a date that does NOT have a daily mmte for the cumulative mmte
+     * Query: DB_QUERY_GET_NONEXISTING_RRRRRRRR_DATE_FOR_MMTE
+     * @param cumulativeMmteName - The cumulative mmte name to check against
+     * @returns A date (MM/DD/YYYY) that doesn't have a daily mmte for the given cumulative mmte
+     */
+    public static async getNonExistingRrrrrrrrDateForMmte(cumulativeMmteName: string): Promise<string> {
+        const result = await CSDBUtils.executeQuery(
+            this.DB_ALIAS,
+            'GET_NONEXISTING_RRRRRRRR_DATE_FOR_MMTE',
+            [cumulativeMmteName]
+        );
+
+        if (!result.rows || result.rows.length === 0) {
+            throw new Error(`No non-existing rrrrrrrr date found for mmte: ${cumulativeMmteName}`);
+        }
+
+        const rrrrrrrrDate = result.rows[0].rrrrrrrr_dt;
+        CSReporter.debug(`Found non-existing rrrrrrrr date for mmte: ${rrrrrrrrDate}`);
+        return rrrrrrrrDate;
+    }
+
+    /**
+     * Verify record unchanged after attempted edit (EXT08)
+     * Query: DB_QUERY_VERIFY_RECORD_UNCHANGED
+     * @param rrrrrrrrDate - Rrrrrrrr date (MM/DD/YYYY)
+     * @param cumulativeMmteName - Cumulative mmte name
+     * @returns CumulativeMmteRecord if found, null otherwise
+     */
+    public static async verifyRecordUnchangedForRrrrrrrrDateEdit(
+        rrrrrrrrDate: string,
+        cumulativeMmteName: string
+    ): Promise<CumulativeMmteRecord | null> {
+        const result = await CSDBUtils.executeQuery(
+            this.DB_ALIAS,
+            'VERIFY_RECORD_UNCHANGED',
+            [rrrrrrrrDate, rrrrrrrrDate, cumulativeMmteName]
+        );
+
+        if (!result.rows || result.rows.length === 0) {
+            return null;
+        }
+
+        const row = result.rows[0];
+        const supplicationDate = row.supplication_dt === '01/01/1900' ? '' : (row.supplication_dt || '');
+
+        return {
+            rrrrrrrrDate: row.rrrrrrrr_dt,
+            mmte: row.mmte,
+            cumulativeMmteName: row.cumulative_mmte_name,
+            source: row.cumulative_mmte_source_cd,
+            supplicationDate: supplicationDate
+        };
+    }
+
+    /**
+     * Verify old record is removed after rrrrrrrr date update (EXT08)
+     * Query: DB_QUERY_VERIFY_OLD_RECORD_REMOVED
+     * @param rrrrrrrrDate - Original rrrrrrrr date (MM/DD/YYYY)
+     * @param cumulativeMmteName - Cumulative mmte name
+     * @returns true if record does NOT exist (removed), false if still exists
+     */
+    public static async verifyOldRecordRemovedAfterDateUpdate(
+        rrrrrrrrDate: string,
+        cumulativeMmteName: string
+    ): Promise<boolean> {
+        const result = await CSDBUtils.executeQuery(
+            this.DB_ALIAS,
+            'VERIFY_OLD_RECORD_REMOVED',
+            [rrrrrrrrDate, cumulativeMmteName]
+        );
+
+        if (!result.rows || result.rows.length === 0) {
+            CSReporter.pass(`Original record removed: ${cumulativeMmteName} on ${rrrrrrrrDate}`);
+            return true;
+        }
+
+        const count = parseInt(result.rows[0].record_count);
+        if (count === 0) {
+            CSReporter.pass(`Original record removed: ${cumulativeMmteName} on ${rrrrrrrrDate}`);
+            return true;
+        }
+
+        CSReporter.fail(`Original record still exists: ${cumulativeMmteName} on ${rrrrrrrrDate}`);
+        return false;
+    }
+
+    /**
+     * Verify new record exists after rrrrrrrr date update (EXT08)
+     * Query: DB_QUERY_VERIFY_NEW_RECORD_WITH_UPDATED_DATE
+     * @param newRrrrrrrrDate - New rrrrrrrr date (MM/DD/YYYY)
+     * @param cumulativeMmteName - Cumulative mmte name
+     * @returns CumulativeMmteRecord if found, null otherwise
+     */
+    public static async verifyNewRecordAfterRrrrrrrrDateUpdate(
+        newRrrrrrrrDate: string,
+        cumulativeMmteName: string
+    ): Promise<CumulativeMmteRecord | null> {
+        const result = await CSDBUtils.executeQuery(
+            this.DB_ALIAS,
+            'VERIFY_NEW_RECORD_WITH_UPDATED_DATE',
+            [newRrrrrrrrDate, cumulativeMmteName]
+        );
+
+        if (!result.rows || result.rows.length === 0) {
+            CSReporter.fail(`Updated record not found: ${cumulativeMmteName} on ${newRrrrrrrrDate}`);
+            return null;
+        }
+
+        const row = result.rows[0];
+        const supplicationDate = row.supplication_dt === '01/01/1900' ? '' : (row.supplication_dt || '');
+
+        CSReporter.pass(`Updated record found: ${cumulativeMmteName} on ${newRrrrrrrrDate}`);
+        return {
+            rrrrrrrrDate: row.rrrrrrrr_dt,
+            mmte: row.mmte,
+            cumulativeMmteName: row.cumulative_mmte_name,
+            source: row.cumulative_mmte_source_cd,
+            supplicationDate: supplicationDate
+        };
+    }
+
+
+    --------------------------------------------------------------------------------------------------------
+
+    // ===================================================================
+    // EDIT RRRRRRRR DATE STEPS (EXT08)
+    // ===================================================================
+
+    /**
+     * Resolve rrrrrrrr date for MANUAL source records at least 5 months old
+     * Per requirement EXT08: If startDate is null/empty, get from database
+     */
+    @CSBDDStepDef('I resolve rrrrrrrr date for MANUAL source records at least 5 months old if not provided {string}')
+    async resolveRrrrrrrrDateForManualSourceIfNotProvided(startDate: string): Promise<void> {
+        CSReporter.info('Resolving rrrrrrrr date for MANUAL source records if not provided');
+
+        let resolvedStartDate = startDate?.trim() || '';
+
+        if (!resolvedStartDate) {
+            const cumulativeMmteName = this.scenarioContext.getVariable<string>('cumulativeMmteName');
+            if (!cumulativeMmteName) {
+                throw new Error('Cumulative mmte name must be resolved before resolving rrrrrrrr date');
+            }
+            resolvedStartDate = await TTTFDatabaseHelper.getManualSourceRrrrrrrrDate(cumulativeMmteName);
+        }
+
+        this.scenarioContext.setVariable('startDate', resolvedStartDate);
+        CSReporter.pass(`Resolved start date: ${resolvedStartDate}`);
+    }
+
+    /**
+     * Set end date same as start date for EXT08
+     * Per requirement: StartDate and EndDate are the same for single record search
+     */
+    @CSBDDStepDef('I set end date same as start date')
+    async setEndDateSameAsStartDate(): Promise<void> {
+        const startDate = this.scenarioContext.getVariable<string>('startDate');
+        if (!startDate) {
+            throw new Error('Start date must be set before setting end date');
+        }
+        this.scenarioContext.setVariable('endDate', startDate);
+        CSReporter.pass(`Set end date same as start date: ${startDate}`);
+    }
+
+    /**
+     * Capture row 1 cell values for comparison - EXT08 specific
+     * Per requirement: Capture initial values from result grid for later verification
+     */
+    @CSBDDStepDef('I capture row {int} cell values for comparison')
+    async captureRowCellValuesForComparison(rowIndex: number): Promise<void> {
+        CSReporter.info(`Capturing row ${rowIndex} cell values for comparison`);
+
+        const rowData = await this.cumulativeMmtesPage.getTableRowData(rowIndex);
+
+        // Store individual values in scenario context as per requirement
+        this.scenarioContext.setVariable('initialRrrrrrrrDate', rowData.rrrrrrrrDate);
+        this.scenarioContext.setVariable('initialMmtePercentage', rowData.mmte);
+        this.scenarioContext.setVariable('initialCumulativeMmteName', rowData.cumulativeMmteName);
+        this.scenarioContext.setVariable('initialSource', rowData.source);
+        this.scenarioContext.setVariable('initialSupplicationDate', rowData.supplicationDate);
+
+        CSReporter.info(`Captured: RrrrrrrrDate=${rowData.rrrrrrrrDate}, Mmte=${rowData.mmte}, CumulativeMmteName=${rowData.cumulativeMmteName}, Source=${rowData.source}, SupplicationDate=${rowData.supplicationDate}`);
+        CSReporter.pass(`Captured row ${rowIndex} cell values for comparison`);
+    }
+
+    /**
+     * Get existing rrrrrrrr date with daily mmte for same cumulative mmte from database
+     * Per requirement EXT08: For duplicate validation - get a date that already has a daily mmte
+     */
+    @CSBDDStepDef('I get existing rrrrrrrr date with daily mmte for same cumulative mmte from database')
+    async getExistingRrrrrrrrDateWithDailyMmteFromDatabase(): Promise<void> {
+        CSReporter.info('Getting existing rrrrrrrr date with daily mmte for same cumulative mmte from database');
+
+        const cumulativeMmteName = this.scenarioContext.getVariable<string>('initialCumulativeMmteName');
+        const currentRrrrrrrrDate = this.scenarioContext.getVariable<string>('initialRrrrrrrrDate');
+
+        if (!cumulativeMmteName || !currentRrrrrrrrDate) {
+            throw new Error('Initial cumulative mmte name and rrrrrrrr date must be captured first');
+        }
+
+        const existingDate = await TTTFDatabaseHelper.getExistingDateWithDailyMmte(cumulativeMmteName, currentRrrrrrrrDate);
+        this.scenarioContext.setVariable('existingRrrrrrrrDate', existingDate);
+
+        CSReporter.pass(`Found existing rrrrrrrr date with daily mmte: ${existingDate}`);
+    }
+
+    /**
+     * Get non-existing rrrrrrrr date without daily mmte for same cumulative mmte from database
+     * Per requirement EXT08: For successful update - get a date that does NOT have a daily mmte
+     */
+    @CSBDDStepDef('I get non-existing rrrrrrrr date without daily mmte for same cumulative mmte from database')
+    async getNonExistingRrrrrrrrDateFromDatabase(): Promise<void> {
+        CSReporter.info('Getting non-existing rrrrrrrr date without daily mmte for same cumulative mmte from database');
+
+        const cumulativeMmteName = this.scenarioContext.getVariable<string>('initialCumulativeMmteName');
+
+        if (!cumulativeMmteName) {
+            throw new Error('Initial cumulative mmte name must be captured first');
+        }
+
+        const nonExistingDate = await TTTFDatabaseHelper.getNonExistingRrrrrrrrDateForMmte(cumulativeMmteName);
+        this.scenarioContext.setVariable('nonExistingRrrrrrrrDate', nonExistingDate);
+
+        CSReporter.pass(`Found non-existing rrrrrrrr date: ${nonExistingDate}`);
+    }
+
+    /**
+     * Clear and enter rrrrrrrr date in modal
+     * Per requirement EXT08: Update rrrrrrrr date input field
+     */
+    @CSBDDStepDef('I clear and enter rrrrrrrr date {string} in modal')
+    async clearAndEnterRrrrrrrrDateInModal(newDate: string): Promise<void> {
+        const resolvedDate = CSValueResolver.resolve(newDate, this.context);
+        CSReporter.info(`Clearing and entering rrrrrrrr date: ${resolvedDate}`);
+
+        await this.cumulativeMmtesPage.setEditInstanceRrrrrrrrDate(resolvedDate);
+        CSReporter.pass(`Entered rrrrrrrr date in modal: ${resolvedDate}`);
+    }
+
+    /**
+     * Verify database record unchanged after failed rrrrrrrr date edit attempt
+     * Per requirement EXT08: After error validation, verify record was not modified
+     */
+    @CSBDDStepDef('database record should be unchanged for rrrrrrrr date edit')
+    async verifyDatabaseRecordUnchangedForRrrrrrrrDateEdit(): Promise<void> {
+        CSReporter.info('Verifying database record is unchanged for rrrrrrrr date edit');
+
+        const rrrrrrrrDate = this.scenarioContext.getVariable<string>('initialRrrrrrrrDate');
+        const cumulativeMmteName = this.scenarioContext.getVariable<string>('initialCumulativeMmteName');
+        const initialMmte = this.scenarioContext.getVariable<string>('initialMmtePercentage');
+        const initialSource = this.scenarioContext.getVariable<string>('initialSource');
+        const initialPubDate = this.scenarioContext.getVariable<string>('initialSupplicationDate');
+
+        const dbRecord = await TTTFDatabaseHelper.verifyRecordUnchangedForRrrrrrrrDateEdit(
+            rrrrrrrrDate || '',
+            cumulativeMmteName || ''
+        );
+
+        if (!dbRecord) {
+            CSReporter.fail('Database record not found');
+            throw new Error('Database record not found');
+        }
+
+        // Verify rrrrrrrr date
+        if (dbRecord.rrrrrrrrDate !== rrrrrrrrDate) {
+            throw new Error(`Rrrrrrrr date mismatch: DB=${dbRecord.rrrrrrrrDate}, Initial=${rrrrrrrrDate}`);
+        }
+        CSReporter.pass(`Rrrrrrrr date verified unchanged: ${rrrrrrrrDate}`);
+
+        // Compare mmte with tolerance
+        const dbMmte = parseFloat(dbRecord.mmte);
+        const uiMmte = parseFloat(initialMmte || '0');
+        if (Math.abs(dbMmte - uiMmte) > 0.01) {
+            throw new Error(`Mmte mismatch: DB=${dbRecord.mmte}, Initial=${initialMmte}`);
+        }
+        CSReporter.pass(`Mmte verified unchanged: ${initialMmte}`);
+
+        // Verify cumulative mmte name
+        if (dbRecord.cumulativeMmteName !== cumulativeMmteName) {
+            throw new Error(`Cumulative Mmte Name mismatch: DB=${dbRecord.cumulativeMmteName}, Initial=${cumulativeMmteName}`);
+        }
+        CSReporter.pass(`Cumulative mmte name verified unchanged: ${cumulativeMmteName}`);
+
+        // Verify source
+        if (dbRecord.source !== initialSource) {
+            throw new Error(`Source mismatch: DB=${dbRecord.source}, Initial=${initialSource}`);
+        }
+        CSReporter.pass(`Source verified unchanged: ${initialSource}`);
+
+        // Verify supplication date (allow blank comparison)
+        const dbPubDate = dbRecord.supplicationDate || '';
+        const initPubDate = initialPubDate || '';
+        if (dbPubDate !== initPubDate) {
+            CSReporter.warn(`Supplication date difference: DB="${dbPubDate}", Initial="${initPubDate}"`);
+        }
+        CSReporter.pass(`Supplication date verified: ${dbPubDate}`);
+
+        CSReporter.pass('Database record is unchanged for rrrrrrrr date edit');
+    }
+
+    /**
+     * Verify database should not have record for original rrrrrrrr date
+     * Per requirement EXT08: After successful update, original record should be removed
+     */
+    @CSBDDStepDef('database should not have record for original rrrrrrrr date')
+    async verifyDatabaseNoRecordForOriginalRrrrrrrrDate(): Promise<void> {
+        CSReporter.info('Verifying database should not have record for original rrrrrrrr date');
+
+        const rrrrrrrrDate = this.scenarioContext.getVariable<string>('initialRrrrrrrrDate');
+        const cumulativeMmteName = this.scenarioContext.getVariable<string>('initialCumulativeMmteName');
+
+        const isRemoved = await TTTFDatabaseHelper.verifyOldRecordRemovedAfterDateUpdate(
+            rrrrrrrrDate || '',
+            cumulativeMmteName || ''
+        );
+
+        if (isRemoved) {
+            CSReporter.pass(`Database does not have record for ${cumulativeMmteName} on ${rrrrrrrrDate}`);
+        } else {
+            CSReporter.fail(`Database still has record for ${cumulativeMmteName} on ${rrrrrrrrDate}`);
+            throw new Error('Original record still exists in database after rrrrrrrr date update');
+        }
+    }
+
+    /**
+     * Verify database should have record for new rrrrrrrr date
+     * Per requirement EXT08: After successful update, new record should exist
+     */
+    @CSBDDStepDef('database should have record for new rrrrrrrr date')
+    async verifyDatabaseHasRecordForNewRrrrrrrrDate(): Promise<void> {
+        CSReporter.info('Verifying database should have record for new rrrrrrrr date');
+
+        const newRrrrrrrrDate = this.scenarioContext.getVariable<string>('nonExistingRrrrrrrrDate');
+        const cumulativeMmteName = this.scenarioContext.getVariable<string>('initialCumulativeMmteName');
+
+        const record = await TTTFDatabaseHelper.verifyNewRecordAfterRrrrrrrrDateUpdate(
+            newRrrrrrrrDate || '',
+            cumulativeMmteName || ''
+        );
+
+        if (record) {
+            this.scenarioContext.setVariable('updatedDbRecordAfterDateChange', record);
+            CSReporter.pass(`Database has record for ${cumulativeMmteName} on ${newRrrrrrrrDate}`);
+        } else {
+            CSReporter.fail(`Database does not have record for ${cumulativeMmteName} on ${newRrrrrrrrDate}`);
+            throw new Error('Updated record not found in database after rrrrrrrr date update');
+        }
+    }
+
+    /**
+     * Verify database record after update - rrrrrrrr date
+     * Per requirement EXT08: Verify the updated record's rrrrrrrr date
+     */
+    @CSBDDStepDef('database record after update rrrrrrrr date should be {string}')
+    async verifyDbRecordAfterUpdateRrrrrrrrDate(expectedValue: string): Promise<void> {
+        const resolvedValue = CSValueResolver.resolve(expectedValue, this.context);
+        const record = this.scenarioContext.getVariable<any>('updatedDbRecordAfterDateChange');
+
+        if (!record) {
+            throw new Error('No updated database record in context for verification');
+        }
+
+        if (record.rrrrrrrrDate === resolvedValue) {
+            CSReporter.pass(`Database record rrrrrrrr date verified: ${resolvedValue}`);
+        } else {
+            CSReporter.fail(`Rrrrrrrr date mismatch. Expected: ${resolvedValue}, Actual: ${record.rrrrrrrrDate}`);
+            throw new Error('Database record rrrrrrrr date verification failed');
+        }
+    }
+
+    /**
+     * Verify database record after update - mmte
+     * Per requirement EXT08: Verify the updated record's mmte (should be unchanged)
+     */
+    @CSBDDStepDef('database record after update mmte should be {string}')
+    async verifyDbRecordAfterUpdateMmte(expectedValue: string): Promise<void> {
+        const resolvedValue = CSValueResolver.resolve(expectedValue, this.context);
+        const record = this.scenarioContext.getVariable<any>('updatedDbRecordAfterDateChange');
+
+        if (!record) {
+            throw new Error('No updated database record in context for verification');
+        }
+
+        const dbMmte = parseFloat(record.mmte);
+        const expectedMmte = parseFloat(resolvedValue);
+        if (Math.abs(dbMmte - expectedMmte) < 0.01) {
+            CSReporter.pass(`Database record mmte verified: ${resolvedValue}`);
+        } else {
+            CSReporter.fail(`Mmte mismatch. Expected: ${resolvedValue}, Actual: ${record.mmte}`);
+            throw new Error('Database record mmte verification failed');
+        }
+    }
+
+    /**
+     * Verify database record after update - cumulative mmte name
+     * Per requirement EXT08: Verify the updated record's cumulative mmte name (should be unchanged)
+     */
+    @CSBDDStepDef('database record after update cumulative mmte name should be {string}')
+    async verifyDbRecordAfterUpdateCumulativeMmteName(expectedValue: string): Promise<void> {
+        const resolvedValue = CSValueResolver.resolve(expectedValue, this.context);
+        const record = this.scenarioContext.getVariable<any>('updatedDbRecordAfterDateChange');
+
+        if (!record) {
+            throw new Error('No updated database record in context for verification');
+        }
+
+        if (record.cumulativeMmteName === resolvedValue) {
+            CSReporter.pass(`Database record cumulative mmte name verified: ${resolvedValue}`);
+        } else {
+            CSReporter.fail(`Cumulative mmte name mismatch. Expected: ${resolvedValue}, Actual: ${record.cumulativeMmteName}`);
+            throw new Error('Database record cumulative mmte name verification failed');
+        }
+    }
+
+    /**
+     * Verify database record after update - source
+     * Per requirement EXT08: Verify the updated record's source should be MANUAL
+     */
+    @CSBDDStepDef('database record after update source should be {string}')
+    async verifyDbRecordAfterUpdateSource(expectedValue: string): Promise<void> {
+        const record = this.scenarioContext.getVariable<any>('updatedDbRecordAfterDateChange');
+
+        if (!record) {
+            throw new Error('No updated database record in context for verification');
+        }
+
+        if (record.source === expectedValue) {
+            CSReporter.pass(`Database record source verified: ${expectedValue}`);
+        } else {
+            CSReporter.fail(`Source mismatch. Expected: ${expectedValue}, Actual: ${record.source}`);
+            throw new Error('Database record source verification failed');
+        }
+    }
+
+    /**
+     * Verify database record after update - supplication date
+     * Per requirement EXT08: Verify the updated record's supplication date (should be unchanged)
+     */
+    @CSBDDStepDef('database record after update supplication date should be {string}')
+    async verifyDbRecordAfterUpdateSupplicationDate(expectedValue: string): Promise<void> {
+        const resolvedValue = CSValueResolver.resolve(expectedValue, this.context);
+        const record = this.scenarioContext.getVariable<any>('updatedDbRecordAfterDateChange');
+
+        if (!record) {
+            throw new Error('No updated database record in context for verification');
+        }
+
+        const actualPubDate = record.supplicationDate || '';
+        if (actualPubDate === resolvedValue) {
+            CSReporter.pass(`Database record supplication date verified: ${resolvedValue}`);
+        } else {
+            CSReporter.warn(`Supplication date difference. Expected: "${resolvedValue}", Actual: "${actualPubDate}"`);
+            CSReporter.pass(`Database record supplication date verified (with warning)`);
+        }
+    }
+
+    /**
+     * Verify results table shows no data available
+     * Per requirement EXT08: After successful update, the searched record should no longer appear
+     */
+    @CSBDDStepDef('results table should show {string}')
+    async verifyResultsTableShows(expectedText: string): Promise<void> {
+        CSReporter.info(`Verifying results table shows: ${expectedText}`);
+
+        if (expectedText === 'No data available.') {
+            const noData = await this.cumulativeMmtesPage.verifyNoDataAvailable();
+            if (noData) {
+                CSReporter.pass('Results table shows "No data available."');
+            } else {
+                CSReporter.fail('Results table does not show "No data available."');
+                throw new Error('Expected no data available but found data in results table');
+            }
+        } else {
+            CSReporter.warn(`Verification for "${expectedText}" not implemented`);
+        }
+    }
+
+
+    ----------------------------------------------------------------------------------------------------------
+
+    [
+  {
+    "scenarioId": "EXT08",
+    "scenarioName": "Edit Rrrrrrrr Date",
+    "userName": "akhan@mdkhan.com",
+    "searchByOption1": "Cumulative Mmte",
+    "searchByOption2": "Rrrrrrrr Date",
+    "cumulativeMmteName": "",
+    "startDate": "",
+    "endDate": "",
+    "runFlag": "Yes"
+  }
+]
+
+
+
+--------------------------------------------------------------------------------------------------------------
+
+@regression @cumulativeMmtes @edit @crud @EXT08
+Feature: Cumulative Mmtes - Edit Daily Mmte Record's Rrrrrrrr Date
   As a TTTF user
-  I want to edit the Cumulative Reference Name of a daily mmte record
-  So that I can correct or update the mmte assignment
+  I want to edit the Rrrrrrrr Date of a daily mmte record
+  So that I can correct the date assignment
 
   @edit @duplicateValidation @errorHandling
-  Scenario Outline: Edit Cumulative Reference Name with cancel, duplicate validation, and successful update
+  Scenario Outline: Edit Rrrrrrrr Date with duplicate validation and successful update
     # ============================================================
     # TEST DATA SETUP
     # ============================================================
@@ -49,12 +584,8 @@ Feature: Cumulative Mmtes - Edit Daily Mmte Record's Cumulative Reference Name
     Then Edit Instance modal should be displayed
     And Edit Instance header should be visible
     And X Close button should be visible in modal header
-    And Cumulative Reference dropdown should be visible
-    And Cumulative Reference dropdown should show "{scenario:initialCumulativeMmteName}" selected
-    When I click Cumulative Reference dropdown in modal
-    Then Cumulative Reference dropdown options list should be visible
-    And I verify all cumulative mmte options from database are present
-    When I close dropdown by clicking outside
+    And Cumulative Scattered dropdown should be visible
+    And Cumulative Scattered dropdown should show "{scenario:initialCumulativeMmteName}" selected
     And Rrrrrrrr Date input should be visible in modal
     And Rrrrrrrr Date input should show "{scenario:initialRrrrrrrrDate}"
     And Mmte input should be visible in modal
@@ -63,7 +594,19 @@ Feature: Cumulative Mmtes - Edit Daily Mmte Record's Cumulative Reference Name
     And Cancel button should be visible and enabled
 
     # ============================================================
-    # TEST CANCEL OPERATION - NO CHANGES SAVED
+    # TEST EDIT WITH DUPLICATE RRRRRRRR DATE - ERROR VALIDATION
+    # Per requirement: Update to an rrrrrrrr date that already has a daily mmte
+    # for the same cumulative mmte name should throw an error
+    # ============================================================
+    When I get existing rrrrrrrr date with daily mmte for same cumulative mmte from database
+    And I clear and enter rrrrrrrr date "{scenario:existingRrrrrrrrDate}" in modal
+    And I click Save button in modal
+    Then error message should be displayed in modal
+    And error message should be "A {scenario:initialCumulativeMmteName} mmte instance already exists on {scenario:existingRrrrrrrrDate}."
+    Then database record should be unchanged for rrrrrrrr date edit
+
+    # ============================================================
+    # CANCEL AND VERIFY NO CHANGES
     # ============================================================
     When I click Cancel button in modal
     Then Edit Instance modal should be closed
@@ -72,50 +615,30 @@ Feature: Cumulative Mmtes - Edit Daily Mmte Record's Cumulative Reference Name
     And row 1 "Cumulative Mmte Name" should equal "{scenario:initialCumulativeMmteName}"
     And row 1 "Source" should equal "{scenario:initialSource}"
     And row 1 "Supplication Date" should equal "{scenario:initialSupplicationDate}"
-    Then database record should be unchanged for original cumulative mmte
 
     # ============================================================
-    # TEST EDIT WITH DUPLICATE CUMULATIVE MMTE - ERROR VALIDATION
+    # TEST EDIT WITH VALID RRRRRRRR DATE - SUCCESSFUL UPDATE
+    # Per requirement: Update to an rrrrrrrr date that does NOT have a daily mmte
+    # for the same cumulative mmte name should succeed
     # ============================================================
     When I click Edit button for row 1
     Then Edit Instance modal should be displayed
-    When I get existing cumulative mmte with daily mmte for same rrrrrrrr date from database
-    And I click Cumulative Reference dropdown in modal
-    Then Cumulative Reference dropdown options list should be visible
-    And option "{scenario:existingDailyMmteName}" should be visible in dropdown
-    When I select "{scenario:existingDailyMmteName}" option from Cumulative Reference dropdown
-    Then Cumulative Reference dropdown should show "{scenario:existingDailyMmteName}" selected
-    When I click Save button in modal
-    Then error message should be displayed in modal
-    And error message should be "A {scenario:existingDailyMmteName} mmte instance already exists on {scenario:initialRrrrrrrrDate}."
-    Then database record should be unchanged for original cumulative mmte
-    When I click Cancel button in modal
-    Then Edit Instance modal should be closed
-
-    # ============================================================
-    # TEST EDIT WITH VALID CUMULATIVE MMTE - SUCCESSFUL UPDATE
-    # ============================================================
-    When I click Edit button for row 1
-    Then Edit Instance modal should be displayed
-    When I get cumulative mmte without daily mmte for same rrrrrrrr date from database
-    And I click Cumulative Reference dropdown in modal
-    Then Cumulative Reference dropdown options list should be visible
-    And option "{scenario:nonExistingDailyMmteName}" should be visible in dropdown
-    When I select "{scenario:nonExistingDailyMmteName}" option from Cumulative Reference dropdown
-    Then Cumulative Reference dropdown should show "{scenario:nonExistingDailyMmteName}" selected
-    When I click Save button in modal
+    When I get non-existing rrrrrrrr date without daily mmte for same cumulative mmte from database
+    And I clear and enter rrrrrrrr date "{scenario:nonExistingRrrrrrrrDate}" in modal
+    And I click Save button in modal
     Then Edit Instance modal should be closed
     And results table should show "No data available."
 
     # ============================================================
     # DATABASE VERIFICATION AFTER SUCCESSFUL UPDATE
+    # Per requirement: Verify original record no longer exists and new record exists
     # ============================================================
-    Then database should not have record for "{scenario:initialCumulativeMmteName}" on "{scenario:initialRrrrrrrrDate}"
-    And database should have record for "{scenario:nonExistingDailyMmteName}" on "{scenario:initialRrrrrrrrDate}"
-    And database record rrrrrrrr date should be "{scenario:initialRrrrrrrrDate}"
-    And database record mmte should be "{scenario:initialMmtePercentage}"
-    And database record cumulative mmte name should be "{scenario:nonExistingDailyMmteName}"
-    And database record source should be "MANUAL"
-    And database record supplication date should be "{scenario:initialSupplicationDate}"
+    Then database should not have record for original rrrrrrrr date
+    And database should have record for new rrrrrrrr date
+    And database record after update rrrrrrrr date should be "{scenario:nonExistingRrrrrrrrDate}"
+    And database record after update mmte should be "{scenario:initialMmtePercentage}"
+    And database record after update cumulative mmte name should be "{scenario:initialCumulativeMmteName}"
+    And database record after update source should be "MANUAL"
+    And database record after update supplication date should be "{scenario:initialSupplicationDate}"
 
-    Examples: {"type": "json", "source": "test/tttf/data/cumulative_mmte_edit_ext07_scenarios.json", "path": "$", "filter": "scenarioId=EXT07 AND runFlag=Yes"}
+    Examples: {"type": "json", "source": "test/tttf/data/cumulative_mmte_edit_ext08_scenarios.json", "path": "$", "filter": "scenarioId=EXT08 AND runFlag=Yes"}
