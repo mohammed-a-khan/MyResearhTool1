@@ -1,1 +1,316 @@
-my test code
+[
+  {
+    "scenarioId": "EXT10",
+    "scenarioName": "Add Instance with Duplicate Validation",
+    "userName": "cputest21@americas.cshare.net",
+    "cumulativeMmteName": "",
+    "rrrrrrrrDate": "",
+    "cumulativeScatteredMmteName": "",
+    "runFlag": "Yes"
+  }
+]
+
+
+------------------------------------------------------------------------------------------------------------------
+
+@regression @cumulativeMmtes @add @crud @validation @EXT10
+Feature: Cumulative Mmtes - Add Instance With Duplicate Validation
+  As a TTTF user
+  I want to add a new daily mmte instance
+  So that I can create new mmte records
+
+  @add @duplicateValidation @errorHandling
+  Scenario Outline: Add Instance with duplicate validation and successful creation
+    # ============================================================
+    # TEST DATA SETUP
+    # Per requirement: Setup data that already has a record in the database
+    # ============================================================
+    Given I resolve cumulative mmte name from database if not provided "<cumulativeMmteName>"
+    And I resolve rrrrrrrr date for existing record if not provided "<rrrrrrrrDate>"
+    And I genemmte random mmte percentage in x.0yy format if not provided "<cumulativeScatteredMmteName>"
+
+    # ============================================================
+    # LOGIN AND NAVIGATION
+    # ============================================================
+    Given I login to TTTF as "<userName>"
+    And I navigate to "Cumulative Mmtes" page
+
+    # ============================================================
+    # VERIFY ADD INSTANCE BUTTON AND OPEN MODAL
+    # ============================================================
+    Then Add Instance button should be visible and enabled
+    When I click Add Instance button
+    Then Add Instance modal should be displayed
+
+    # ============================================================
+    # VERIFY ADD INSTANCE MODAL ELEMENTS
+    # Per requirement: Verify all modal elements are present
+    # ============================================================
+    And Add Instance header should be visible
+    And X Close button should be visible
+    And Cumulative Scattered dropdown should be visible
+    When I open Cumulative Scattered dropdown in Add modal
+    Then I should see all active cumulative mmte names from database in dropdown
+    And I close the dropdown
+    And Rrrrrrrr Date input should be visible in modal
+    And Mmte input should be visible in modal
+    And Save button should be visible and enabled
+    And Cancel button should be visible and enabled
+
+    # ============================================================
+    # TEST CANCEL OPERATION
+    # ============================================================
+    When I click Cancel button in modal
+    Then Add Instance modal should be closed
+
+    # ============================================================
+    # TEST ADD WITH EXISTING RECORD - ERROR VALIDATION
+    # Per requirement: Verify error when record already exists for CumulativeMmteName and RrrrrrrrDate
+    # ============================================================
+    When I click Add Instance button
+    Then Add Instance modal should be displayed
+    When I select "{scenario:cumulativeMmteName}" from Cumulative Scattered dropdown in Add modal
+    Then Cumulative Scattered dropdown should show "{scenario:cumulativeMmteName}" selected
+    When I enter Rrrrrrrr Date "{scenario:rrrrrrrrDate}" in Add modal
+    And I enter Mmte "{scenario:cumulativeScatteredMmteName}" in Add modal
+    And I click Save button in modal
+    Then error message should be displayed in modal
+    And error message should be "A {scenario:cumulativeMmteName} mmte instance already exists on {scenario:rrrrrrrrDate}."
+    When I click Cancel button in modal
+    Then Add Instance modal should be closed
+
+    # ============================================================
+    # TEST ADD WITH NEW RECORD - SUCCESSFUL CREATION
+    # Per requirement: Add instance for CumulativeMmteName without existing daily mmte for RrrrrrrrDate
+    # ============================================================
+    When I click Add Instance button
+    Then Add Instance modal should be displayed
+    When I get cumulative mmte name without daily mmte for rrrrrrrr date from database
+    And I select "{scenario:nonExistingDailyMmteName}" from Cumulative Scattered dropdown in Add modal
+    Then Cumulative Scattered dropdown should show "{scenario:nonExistingDailyMmteName}" selected
+    When I enter Rrrrrrrr Date "{scenario:rrrrrrrrDate}" in Add modal
+    And I enter Mmte "{scenario:cumulativeScatteredMmteName}" in Add modal
+    And I click Save button in modal
+    Then Add Instance modal should be closed
+    And I should see "Instance Saved" message
+
+    # ============================================================
+    # DATABASE VERIFICATION AFTER SUCCESSFUL ADD
+    # Per requirement: Verify the new record exists with correct values
+    # ============================================================
+    Then database should have record for added instance
+    And database record rrrrrrrr date should be "{scenario:rrrrrrrrDate}"
+    And database record mmte should be "{scenario:cumulativeScatteredMmteName}"
+    And database record cumulative mmte name should be "{scenario:nonExistingDailyMmteName}"
+    And database record source should be "MANUAL"
+    And database record supplication date should be blank
+
+    Examples: {"type": "json", "source": "test/tttf/data/cumulative_mmte_add_ext10_scenarios.json", "path": "$", "filter": "scenarioId=EXT10 AND runFlag=Yes"}
+
+
+-----------------------------------------------------------------------------------------------------------------------
+
+
+tttf-cumulative-mmtes.steps.test
+
+/**
+     * Verify Add Instance header is visible
+     * Per requirement EXT10: Verify 'Add Instance' header in modal
+     */
+    @CSBDDStepDef('Add Instance header should be visible')
+    async verifyAddInstanceHeaderVisible(): Promise<void> {
+        CSReporter.info('Verifying Add Instance header is visible');
+        await this.cumulativeMmtesPage.verifyAddInstanceModalOpen();
+        CSReporter.pass('Add Instance header is visible');
+    }
+
+    /**
+     * Open Cumulative Scattered dropdown in Add modal
+     * Per requirement EXT10: Click on Cumulative Scattered dropdown in Add Instance modal
+     */
+    @CSBDDStepDef('I open Cumulative Scattered dropdown in Add modal')
+    async openCumulativeRefDropdownInAddModal(): Promise<void> {
+        CSReporter.info('Opening Cumulative Scattered dropdown in Add modal');
+        await this.cumulativeMmtesPage.clickCumulativeRefDropdownInAddModal();
+        CSReporter.pass('Opened Cumulative Scattered dropdown in Add modal');
+    }
+
+    /**
+     * Verify all active cumulative mmte names from database are present in dropdown
+     * Per requirement EXT10: Verify each option from database is present in the dropdown
+     */
+    @CSBDDStepDef('I should see all active cumulative mmte names from database in dropdown')
+    async verifyAllActiveCumulativeMmteNamesInDropdown(): Promise<void> {
+        CSReporter.info('Verifying all active cumulative mmte names from database in dropdown');
+
+        // Get all active cumulative mmte names from database
+        const expectedNames = await TTTFDatabaseHelper.getAllActiveCumulativeMmteNames();
+
+        // Verify each name is present in the dropdown
+        for (const name of expectedNames) {
+            const isPresent = await this.cumulativeMmtesPage.isCumulativeMmteOptionPresentInDropdown(name);
+            if (isPresent) {
+                CSReporter.pass(`Cumulative mmte option present: ${name}`);
+            } else {
+                CSReporter.fail(`Cumulative mmte option NOT found: ${name}`);
+                throw new Error(`Cumulative mmte option "${name}" not found in dropdown`);
+            }
+        }
+
+        CSReporter.pass('All active cumulative mmte names from database verified in dropdown');
+    }
+
+    /**
+     * Select cumulative mmte from Cumulative Scattered dropdown in Add modal
+     * Per requirement EXT10: Select CumulativeMmteName option from dropdown
+     */
+    @CSBDDStepDef('I select {string} from Cumulative Scattered dropdown in Add modal')
+    async selectFromCumulativeRefDropdownInAddModal(cumulativeMmteName: string): Promise<void> {
+        const resolvedName = CSValueResolver.resolve(cumulativeMmteName, this.context);
+        CSReporter.info(`Selecting "${resolvedName}" from Cumulative Scattered dropdown in Add modal`);
+
+        await this.cumulativeMmtesPage.selectCumulativeRefInAddModal(resolvedName);
+        CSReporter.pass(`Selected "${resolvedName}" from Cumulative Scattered dropdown`);
+    }
+
+    /**
+     * Verify Cumulative Scattered dropdown shows selected value
+     * Per requirement EXT10: Verify the option is selected successfully
+     */
+    @CSBDDStepDef('Cumulative Scattered dropdown should show {string} selected')
+    async verifyCumulativeRefDropdownShowsSelected(expectedValue: string): Promise<void> {
+        const resolvedValue = CSValueResolver.resolve(expectedValue, this.context);
+        CSReporter.info(`Verifying Cumulative Scattered dropdown shows "${resolvedValue}" selected`);
+
+        const isSelected = await this.cumulativeMmtesPage.verifyCumulativeRefDropdownValue(resolvedValue);
+        if (isSelected) {
+            CSReporter.pass(`Cumulative Scattered dropdown shows "${resolvedValue}" selected`);
+        } else {
+            CSReporter.fail(`Cumulative Scattered dropdown does not show "${resolvedValue}" selected`);
+            throw new Error('Cumulative Scattered dropdown value verification failed');
+        }
+    }
+
+    /**
+     * Enter Rrrrrrrr Date in Add modal
+     * Per requirement EXT10: Enter RrrrrrrrDate value in Rrrrrrrr Date input
+     */
+    @CSBDDStepDef('I enter Rrrrrrrr Date {string} in Add modal')
+    async enterRrrrrrrrDateInAddModal(rrrrrrrrDate: string): Promise<void> {
+        const resolvedDate = CSValueResolver.resolve(rrrrrrrrDate, this.context);
+        CSReporter.info(`Entering Rrrrrrrr Date "${resolvedDate}" in Add modal`);
+
+        await this.cumulativeMmtesPage.setAddInstanceRrrrrrrrDate(resolvedDate);
+        CSReporter.pass(`Entered Rrrrrrrr Date: ${resolvedDate}`);
+    }
+
+    /**
+     * Enter Mmte in Add modal
+     * Per requirement EXT10: Enter CumulativeScatteredMmteName value in Mmte input
+     */
+    @CSBDDStepDef('I enter Mmte {string} in Add modal')
+    async enterMmteInAddModal(mmte: string): Promise<void> {
+        const resolvedMmte = CSValueResolver.resolve(mmte, this.context);
+        CSReporter.info(`Entering Mmte "${resolvedMmte}" in Add modal`);
+
+        await this.cumulativeMmtesPage.setAddInstanceMmte(resolvedMmte);
+        CSReporter.pass(`Entered Mmte: ${resolvedMmte}`);
+    }
+
+    /**
+     * Get cumulative mmte name without daily mmte for rrrrrrrr date from database
+     * Per requirement EXT10: Query for cumulative mmte that does NOT have daily mmte for RrrrrrrrDate
+     */
+    @CSBDDStepDef('I get cumulative mmte name without daily mmte for rrrrrrrr date from database')
+    async getCumulativeMmteNameWithoutDailyMmteFromDB(): Promise<void> {
+        CSReporter.info('Getting cumulative mmte name without daily mmte for rrrrrrrr date from database');
+
+        const rrrrrrrrDate = this.scenarioContext.getVariable<string>('rrrrrrrrDate');
+        if (!rrrrrrrrDate) {
+            throw new Error('Rrrrrrrr date must be set in scenario context');
+        }
+
+        const nonExistingMmteName = await TTTFDatabaseHelper.getCumulativeMmteWithoutDailyMmte(rrrrrrrrDate);
+        this.scenarioContext.setVariable('nonExistingDailyMmteName', nonExistingMmteName);
+        this.scenarioContext.setVariable('selectedCumulativeMmteForAdd', nonExistingMmteName);
+
+        CSReporter.pass(`Found cumulative mmte without daily mmte: ${nonExistingMmteName}`);
+    }
+
+    /**
+     * Verify database has record for added instance
+     * Per requirement EXT10: Verify new record exists in database
+     */
+    @CSBDDStepDef('database should have record for added instance')
+    async verifyDatabaseHasRecordForAddedInstance(): Promise<void> {
+        CSReporter.info('Verifying database has record for added instance');
+
+        const cumulativeMmteName = this.scenarioContext.getVariable<string>('nonExistingDailyMmteName') ||
+                                 this.scenarioContext.getVariable<string>('selectedCumulativeMmteForAdd');
+        const rrrrrrrrDate = this.scenarioContext.getVariable<string>('rrrrrrrrDate');
+
+        if (!cumulativeMmteName || !rrrrrrrrDate) {
+            throw new Error('Cumulative mmte name and rrrrrrrr date must be set in scenario context');
+        }
+
+        const dbRecord = await TTTFDatabaseHelper.getRecordDetails(cumulativeMmteName, rrrrrrrrDate);
+
+        if (!dbRecord) {
+            CSReporter.fail(`Database record not found for ${cumulativeMmteName} on ${rrrrrrrrDate}`);
+            throw new Error('Database record not found for added instance');
+        }
+
+        // Store record for further verification
+        this.scenarioContext.setVariable('dbRecordAfterAdd', dbRecord);
+        this.scenarioContext.setVariable('updatedDbRecord', dbRecord); // For compatibility
+        CSReporter.pass(`Database has record for ${cumulativeMmteName} on ${rrrrrrrrDate}`);
+    }
+
+
+
+    -------------------------------------------------------------------------------------------------------------
+    TTTFCumulativeMmtesPage.ts
+
+    /**
+     * Click Cumulative Scattered dropdown in Add Instance modal
+     * Per requirement EXT10: Open the dropdown to select cumulative mmte
+     */
+    public async clickCumulativeRefDropdownInAddModal(): Promise<void> {
+        // Add modal uses same dropdown as Edit modal
+        await this.editInstanceCumulativeRefDropdown.waitForVisible(10000);
+        await this.editInstanceCumulativeRefDropdown.clickWithTimeout(10000);
+
+        // Wait for dropdown list to appear
+        const dropdownList = CSElementFactory.createByXPath(
+            `//div[contains(@class, 'sssss-balloon') and @name='cumulativeMmteId']//ul[@role='listbox']`,
+            'Cumulative Scattered dropdown list',
+            this.page
+        );
+        await dropdownList.waitForVisible(5000);
+        CSReporter.info('Opened Cumulative Scattered dropdown in Add Instance modal');
+    }
+
+    /**
+     * Check if a specific cumulative mmte option is present in the dropdown
+     * Per requirement EXT10: Verify each option from database is present
+     */
+    public async isCumulativeMmteOptionPresentInDropdown(cumulativeMmteName: string): Promise<boolean> {
+        const optionXpath = `//div[contains(@class, 'sssss-balloon') and @name='cumulativeMmteId']//ul[@role='listbox']//li[@role='option']//span[contains(@class, 'sssss-menu-item__label')]/span[text()='${cumulativeMmteName}']`;
+        const option = CSElementFactory.createByXPath(optionXpath, `Cumulative mmte option: ${cumulativeMmteName}`, this.page);
+
+        const isVisible = await option.isVisibleWithTimeout(2000);
+        return isVisible;
+    }
+
+    /**
+     * Verify Cumulative Scattered dropdown shows a specific value selected
+     * Per requirement EXT10: Verify option is selected successfully
+     */
+    public async verifyCumulativeRefDropdownValue(expectedValue: string): Promise<boolean> {
+        const selectedValueXpath = `//div[@class='sssss-panel__content-wrapper']//div[@class='sssss-panel__body']//button[@name='cumulativeMmteId']//span[@class='sssss-button__label' and text()='${expectedValue}']`;
+        const selectedValue = CSElementFactory.createByXPath(selectedValueXpath, `Selected value: ${expectedValue}`, this.page);
+
+        await this.page.waitForTimeout(500); // Wait for selection to complete
+        const isVisible = await selectedValue.isVisibleWithTimeout(5000);
+        return isVisible;
+    }
