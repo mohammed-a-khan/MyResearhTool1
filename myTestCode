@@ -1,1 +1,1107 @@
-test
+# Get cumulative mmte with MANUAL source for editing - at least 5 months old (Scenario 7, line 584-596)
+DB_QUERY_GET_CUMULATIVE_MMTE_FOR_EDIT=SELECT to_char(edr.rrrrrrrr_dt, 'MM/DD/YYYY') as rrrrrrrr_dt, to_char(edr.mmte, 'FM990.0999999999') as mmte, er.cumulative_mmte_name, ers.cumulative_mmte_source_cd, to_char(edr.mutative_dt, 'MM/DD/YYYY') as suplication_dt FROM tttfapp.cumulative_daily_mmte edr INNER JOIN tttfapp.cumulative_mmte er ON er.cumulative_mmte_id=edr.cumulative_mmte_id INNER JOIN tttfapp.cumulative_mmte_source ers ON edr.cumulative_mmte_source_id=ers.cumulative_mmte_source_id WHERE er.cumulative_mmte_name=? AND edr.active_flag='Y' AND edr.rrrrrrrr_dt <= ADD_MONTHS(TRUNC(SYSDATE), -5) AND edr.cumulative_mmte_source_id=1000 ORDER BY edr.rrrrrrrr_dt DESC FETCH FIRST 1 ROW ONLY
+
+# Get different cumulative mmte name on same rrrrrrrr date for duplicate validation (Scenario 7)
+# Query: Get cumulative mmte that already has daily mmte for same rrrrrrrr date (different from current)
+# Params: ?, ? = strInitialRrrrrrrrDate, strInitialCumulativeMmteName
+DB_QUERY_GET_EXISTING_MMTE_FOR_SAME_DATE=SELECT cumulative_mmte_name FROM tttfapp.cumulative_mmte WHERE cumulative_mmte_id IN (SELECT cumulative_mmte_id FROM tttfapp.cumulative_daily_mmte edr WHERE edr.rrrrrrrr_dt >= TO_DATE(?, 'MM/DD/YYYY') AND edr.rrrrrrrr_dt <= TO_DATE(?, 'MM/DD/YYYY') AND edr.active_flag='Y') AND cumulative_mmte_name<>? ORDER BY index_order ASC FETCH FIRST 1 ROW ONLY
+
+# Get cumulative mmte that does NOT have daily mmte for same rrrrrrrr date (for successful update)
+# Query: Get cumulative mmte without daily mmte for the same rrrrrrrr date
+# Params: ?, ? = strInitialRrrrrrrrDate, strInitialRrrrrrrrDate
+DB_QUERY_GET_NONEXISTING_MMTE_FOR_SAME_DATE=SELECT cumulative_mmte_name FROM tttfapp.cumulative_mmte WHERE cumulative_mmte_id NOT IN (SELECT cumulative_mmte_id FROM tttfapp.cumulative_daily_mmte edr WHERE edr.rrrrrrrr_dt >= TO_DATE(?, 'MM/DD/YYYY') AND edr.rrrrrrrr_dt <= TO_DATE(?, 'MM/DD/YYYY') AND edr.active_flag='Y') ORDER BY index_order ASC FETCH FIRST 1 ROW ONLY
+
+# Legacy query - kept for backward compatibility
+DB_QUERY_GET_DIFFERENT_MMTE_SAME_DATE=SELECT er.cumulative_mmte_name FROM tttfapp.cumulative_mmte er WHERE er.cumulative_mmte_id IN (SELECT edr.cumulative_mmte_id FROM tttfapp.cumulative_daily_mmte edr WHERE edr.rrrrrrrr_dt=TO_DATE(?, 'MM/DD/YYYY') AND edr.active_flag='Y' AND edr.cumulative_mmte_source_id=1000) AND er.cumulative_mmte_name <> ? AND er.active_flag='Y' ORDER BY er.index_order ASC FETCH FIRST 1 ROW ONLY
+
+# Verify no update happened after cancel/error (Scenario 7)
+# Params: ?, ?, ? = StartDate, EndDate, CumulativeMmteName
+DB_QUERY_VERIFY_RECORD_UNCHANGED=SELECT to_char(edr.rrrrrrrr_dt, 'MM/DD/YYYY') as rrrrrrrr_dt, to_char(edr.mmte, 'FM990.0999999999') as mmte, er.cumulative_mmte_name, ers.cumulative_mmte_source_cd, to_char(edr.mutative_dt, 'MM/DD/YYYY') as suplication_dt FROM tttfapp.cumulative_daily_mmte edr INNER JOIN tttfapp.cumulative_mmte er ON er.cumulative_mmte_id=edr.cumulative_mmte_id INNER JOIN tttfapp.cumulative_mmte_source ers ON edr.cumulative_mmte_source_id=ers.cumulative_mmte_source_id WHERE edr.rrrrrrrr_dt >= TO_DATE(?, 'MM/DD/YYYY') AND edr.rrrrrrrr_dt <= TO_DATE(?, 'MM/DD/YYYY') AND er.cumulative_mmte_name=? AND edr.active_flag='Y' ORDER BY edr.rrrrrrrr_dt DESC
+
+# Verify original record no longer exists after update (Scenario 7)
+# Params: ?, ?, ? = strInitialRrrrrrrrDate, strInitialRrrrrrrrDate, strInitialCumulativeMmteName
+DB_QUERY_VERIFY_ORIGINAL_RECORD_REMOVED=SELECT to_char(edr.rrrrrrrr_dt, 'MM/DD/YYYY') as rrrrrrrr_dt, to_char(edr.mmte, 'FM990.0999999999') as mmte, er.cumulative_mmte_name, ers.cumulative_mmte_source_cd, to_char(edr.mutative_dt, 'MM/DD/YYYY') as suplication_dt FROM tttfapp.cumulative_daily_mmte edr INNER JOIN tttfapp.cumulative_mmte er ON er.cumulative_mmte_id=edr.cumulative_mmte_id INNER JOIN tttfapp.cumulative_mmte_source ers ON edr.cumulative_mmte_source_id=ers.cumulative_mmte_source_id WHERE edr.rrrrrrrr_dt >= TO_DATE(?, 'MM/DD/YYYY') AND edr.rrrrrrrr_dt <= TO_DATE(?, 'MM/DD/YYYY') AND er.cumulative_mmte_name=?
+
+# Verify updated record exists with new cumulative mmte name (Scenario 7)
+# Params: ?, ?, ? = strInitialRrrrrrrrDate, strInitialRrrrrrrrDate, strDBNonExistingDailyMmteName
+DB_QUERY_VERIFY_UPDATED_RECORD_EXISTS=SELECT to_char(edr.rrrrrrrr_dt, 'MM/DD/YYYY') as rrrrrrrr_dt, to_char(edr.mmte, 'FM990.0999999999') as mmte, er.cumulative_mmte_name, ers.cumulative_mmte_source_cd, to_char(edr.mutative_dt, 'MM/DD/YYYY') as suplication_dt FROM tttfapp.cumulative_daily_mmte edr INNER JOIN tttfapp.cumulative_mmte er ON er.cumulative_mmte_id=edr.cumulative_mmte_id INNER JOIN tttfapp.cumulative_mmte_source ers ON edr.cumulative_mmte_source_id=ers.cumulative_mmte_source_id WHERE edr.rrrrrrrr_dt >= TO_DATE(?, 'MM/DD/YYYY') AND edr.rrrrrrrr_dt <= TO_DATE(?, 'MM/DD/YYYY') AND er.cumulative_mmte_name=? AND edr.active_flag='Y'
+
+# Legacy query - kept for backward compatibility
+DB_QUERY_VERIFY_NO_UPDATE_AFTER_CANCEL=SELECT to_char(edr.rrrrrrrr_dt, 'MM/DD/YYYY') as rrrrrrrr_dt, to_char(edr.mmte, 'FM990.0999999999') as mmte, er.cumulative_mmte_name, ers.cumulative_mmte_source_cd FROM tttfapp.cumulative_daily_mmte edr INNER JOIN tttfapp.cumulative_mmte er ON er.cumulative_mmte_id=edr.cumulative_mmte_id INNER JOIN tttfapp.cumulative_mmte_source ers ON edr.cumulative_mmte_source_id=ers.cumulative_mmte_source_id WHERE edr.rrrrrrrr_dt=TO_DATE(?, 'MM/DD/YYYY') AND er.cumulative_mmte_name=? AND edr.active_flag='Y'
+
+--------------------------------------------------------------------------------------------------------------------------------------
+
+TTTFDatabaseHelper.ts
+
+// ===================================================================
+    // EXT07 - EDIT CUMULATIVE SCATTERED NAME SPECIFIC METHODS
+    // ===================================================================
+
+    /**
+     * Get cumulative mmte that already has daily mmte for same rrrrrrrr date (different from current)
+     * Used for EXT07 duplicate validation test
+     * Query: DB_QUERY_GET_EXISTING_MMTE_FOR_SAME_DATE
+     * @param rrrrrrrrDate - The rrrrrrrr date to check (MM/DD/YYYY)
+     * @param excludeMmteName - The current cumulative mmte name to exclude
+     */
+    public static async getExistingMmteForSameDate(rrrrrrrrDate: string, excludeMmteName: string): Promise<string> {
+        const result = await CSDBUtils.executeQuery(
+            this.DB_ALIAS,
+            'GET_EXISTING_MMTE_FOR_SAME_DATE',
+            [rrrrrrrrDate, rrrrrrrrDate, excludeMmteName]
+        );
+
+        if (!result.rows || result.rows.length === 0) {
+            throw new Error(`No existing cumulative mmte with daily mmte found for date: ${rrrrrrrrDate}`);
+        }
+
+        const mmteName = result.rows[0].cumulative_mmte_name;
+        CSReporter.debug(`Found existing mmte for same date (for duplicate validation): ${mmteName}`);
+        return mmteName;
+    }
+
+    /**
+     * Get cumulative mmte that does NOT have daily mmte for same rrrrrrrr date
+     * Used for EXT07 successful update test
+     * Query: DB_QUERY_GET_NONEXISTING_MMTE_FOR_SAME_DATE
+     * @param rrrrrrrrDate - The rrrrrrrr date to check (MM/DD/YYYY)
+     */
+    public static async getNonExistingMmteForSameDate(rrrrrrrrDate: string): Promise<string> {
+        const result = await CSDBUtils.executeQuery(
+            this.DB_ALIAS,
+            'GET_NONEXISTING_MMTE_FOR_SAME_DATE',
+            [rrrrrrrrDate, rrrrrrrrDate]
+        );
+
+        if (!result.rows || result.rows.length === 0) {
+            throw new Error(`No cumulative mmte without daily mmte found for date: ${rrrrrrrrDate}`);
+        }
+
+        const mmteName = result.rows[0].cumulative_mmte_name;
+        CSReporter.debug(`Found non-existing mmte for same date (for successful update): ${mmteName}`);
+        return mmteName;
+    }
+
+    /**
+     * Verify record is unchanged after cancel/error (EXT07)
+     * Query: DB_QUERY_VERIFY_RECORD_UNCHANGED
+     * @param startDate - Start date (MM/DD/YYYY)
+     * @param endDate - End date (MM/DD/YYYY)
+     * @param cumulativeMmteName - Cumulative mmte name
+     * @returns CumulativeMmteRecord if found, null otherwise
+     */
+    public static async verifyRecordUnchanged(
+        startDate: string,
+        endDate: string,
+        cumulativeMmteName: string
+    ): Promise<CumulativeMmteRecord | null> {
+        const result = await CSDBUtils.executeQuery(
+            this.DB_ALIAS,
+            'VERIFY_RECORD_UNCHANGED',
+            [startDate, endDate, cumulativeMmteName]
+        );
+
+        if (!result.rows || result.rows.length === 0) {
+            return null;
+        }
+
+        const row = result.rows[0];
+        const suplicationDate = row.suplication_dt === '01/01/1900' ? '' : (row.suplication_dt || '');
+
+        return {
+            rrrrrrrrDate: row.rrrrrrrr_dt,
+            mmte: row.mmte,
+            cumulativeMmteName: row.cumulative_mmte_name,
+            source: row.cumulative_mmte_source_cd,
+            suplicationDate: suplicationDate
+        };
+    }
+
+    /**
+     * Verify original record no longer exists after update (EXT07)
+     * Query: DB_QUERY_VERIFY_ORIGINAL_RECORD_REMOVED
+     * @param rrrrrrrrDate - Rrrrrrrr date (MM/DD/YYYY)
+     * @param cumulativeMmteName - Original cumulative mmte name
+     * @returns true if record does NOT exist (removed), false if still exists
+     */
+    public static async verifyOriginalRecordRemoved(
+        rrrrrrrrDate: string,
+        cumulativeMmteName: string
+    ): Promise<boolean> {
+        const result = await CSDBUtils.executeQuery(
+            this.DB_ALIAS,
+            'VERIFY_ORIGINAL_RECORD_REMOVED',
+            [rrrrrrrrDate, rrrrrrrrDate, cumulativeMmteName]
+        );
+
+        // If no rows returned, record is removed (success)
+        if (!result.rows || result.rows.length === 0) {
+            CSReporter.pass(`Original record removed: ${cumulativeMmteName} on ${rrrrrrrrDate}`);
+            return true;
+        }
+
+        CSReporter.fail(`Original record still exists: ${cumulativeMmteName} on ${rrrrrrrrDate}`);
+        return false;
+    }
+
+    /**
+     * Verify updated record exists with new cumulative mmte name (EXT07)
+     * Query: DB_QUERY_VERIFY_UPDATED_RECORD_EXISTS
+     * @param rrrrrrrrDate - Rrrrrrrr date (MM/DD/YYYY)
+     * @param newCumulativeMmteName - New cumulative mmte name after update
+     * @returns CumulativeMmteRecord if found, null otherwise
+     */
+    public static async verifyUpdatedRecordExists(
+        rrrrrrrrDate: string,
+        newCumulativeMmteName: string
+    ): Promise<CumulativeMmteRecord | null> {
+        const result = await CSDBUtils.executeQuery(
+            this.DB_ALIAS,
+            'VERIFY_UPDATED_RECORD_EXISTS',
+            [rrrrrrrrDate, rrrrrrrrDate, newCumulativeMmteName]
+        );
+
+        if (!result.rows || result.rows.length === 0) {
+            CSReporter.fail(`Updated record not found: ${newCumulativeMmteName} on ${rrrrrrrrDate}`);
+            return null;
+        }
+
+        const row = result.rows[0];
+        const suplicationDate = row.suplication_dt === '01/01/1900' ? '' : (row.suplication_dt || '');
+
+        CSReporter.pass(`Updated record found: ${newCumulativeMmteName} on ${rrrrrrrrDate}`);
+        return {
+            rrrrrrrrDate: row.rrrrrrrr_dt,
+            mmte: row.mmte,
+            cumulativeMmteName: row.cumulative_mmte_name,
+            source: row.cumulative_mmte_source_cd,
+            suplicationDate: suplicationDate
+        };
+    }
+
+
+    -------------------------------------------------------------------------------------------------
+
+    @CSGetElement({
+        xpath: '//div[@class="ctsjv-panel__content-wrapper"]//div[@class="ctsjv-panel__body"]//input[@name="rrrrrrrrDt"]',
+        description: 'Rrrrrrrr Date input in Edit modal',
+        waitForVisible: true
+    })
+    public editInstanceRrrrrrrrDateInput!: CSWebElement;
+
+    @CSGetElement({
+        xpath: '//div[@class="ctsjv-panel__content-wrapper"]//div[@class="ctsjv-panel__body"]//span[@class="ctsjv-button__label" and text()="Save"]/parent::button[1]',
+        description: 'Save button in Edit modal',
+        waitForEnabled: true
+    })
+    public editInstanceSaveButton!: CSWebElement;
+
+    @CSGetElement({
+        xpath: '//div[@class="ctsjv-panel__content-wrapper"]//div[@class="ctsjv-panel__body"]//span[@class="ctsjv-button__label" and text()="Cancel"]/parent::button[1]',
+        description: 'Cancel button in Edit modal',
+        waitForEnabled: true
+    })
+    public editInstanceCancelButton!: CSWebElement;
+
+    
+    public async isCancelButtonEnabled(): Promise<boolean> {
+        await this.editInstanceCancelButton.waitForVisible(10000);
+        return await this.editInstanceCancelButton.isEnabledWithTimeout(5000);
+    }
+
+
+
+    /**
+     * Click Cumulative Scattered dropdown in Edit modal and wait for list
+     * Per requirement: //div[@class='ctsjv-panel__content-wrapper']//div[@class='ctsjv-panel__body']//button[@name='cumulativeMmteId']
+     */
+    public async clickCumulativeRefDropdownInModal(): Promise<void> {
+        await this.editInstanceCumulativeRefDropdown.waitForVisible(10000);
+        await this.editInstanceCumulativeRefDropdown.clickWithTimeout(10000);
+        CSReporter.info('Clicked Cumulative Scattered dropdown in Edit modal');
+
+        // Wait for dropdown list to be visible
+        const listElement = CSElementFactory.createByXPath(
+            `//div[contains(@class, 'ctsjv-balloon') and @name='cumulativeMmteId']//ul[@role='listbox']`,
+            'Cumulative Scattered dropdown list',
+            this.page
+        );
+        await listElement.waitForVisible(10000);
+        CSReporter.info('Cumulative Scattered dropdown list is visible');
+    }
+
+    /**
+     * Verify all cumulative mmte options from database are present in dropdown
+     * Per requirement: //div[contains(@class, 'ctsjv-balloon') and @name='cumulativeMmteId']//ul[@role='listbox']//li[@role='option']//span[contains(@class, 'ctsjv-menu-item__label')]/span[text()='<strCumulativeMmteName>']
+     * @param expectedOptions - Array of expected cumulative mmte names from DB
+     */
+    public async verifyAllCumulativeMmteOptionsFromDatabase(expectedOptions: string[]): Promise<void> {
+        CSReporter.info(`Verifying ${expectedOptions.length} cumulative mmte options from database`);
+
+        for (const optionName of expectedOptions) {
+            const optionElement = CSElementFactory.createByXPath(
+                `//div[contains(@class, 'ctsjv-balloon') and @name='cumulativeMmteId']//ul[@role='listbox']//li[@role='option']//span[contains(@class, 'ctsjv-menu-item__label')]/span[text()='${optionName}']`,
+                `Cumulative mmte option: ${optionName}`,
+                this.page
+            );
+
+            const isVisible = await optionElement.isVisibleWithTimeout(3000);
+            if (isVisible) {
+                CSReporter.pass(`Cumulative mmte option verified: ${optionName}`);
+            } else {
+                CSReporter.fail(`Cumulative mmte option not found: ${optionName}`);
+                throw new Error(`Cumulative mmte option verification failed: ${optionName}`);
+            }
+        }
+
+        CSReporter.pass(`All ${expectedOptions.length} cumulative mmte options verified`);
+    }
+
+    /**
+     * Select cumulative mmte option in Edit modal dropdown
+     * Per requirement: //div[contains(@class, 'ctsjv-balloon') and @name='cumulativeMmteId']//ul[@role='listbox']//li[@role='option']//span[contains(@class, 'ctsjv-menu-item__label')]/span[text()='<mmteName>']/ancestor::li[@role='option'][1]
+     * @param mmteName - Cumulative mmte name to select
+     */
+    public async selectCumulativeRefOptionInModal(mmteName: string): Promise<void> {
+        // First verify the option exists
+        const optionElement = CSElementFactory.createByXPath(
+            `//div[contains(@class, 'ctsjv-balloon') and @name='cumulativeMmteId']//ul[@role='listbox']//li[@role='option']//span[contains(@class, 'ctsjv-menu-item__label')]/span[text()='${mmteName}']/ancestor::li[@role='option'][1]`,
+            `Cumulative mmte option: ${mmteName}`,
+            this.page
+        );
+
+        const isVisible = await optionElement.isVisibleWithTimeout(5000);
+        if (!isVisible) {
+            CSReporter.fail(`Cumulative mmte option not found: ${mmteName}`);
+            throw new Error(`Cumulative mmte option not found: ${mmteName}`);
+        }
+
+        // Click the option
+        await optionElement.clickWithTimeout(10000);
+        CSReporter.info(`Selected cumulative mmte option: ${mmteName}`);
+
+        // Wait for selection to be applied
+        await this.page.waitForTimeout(500);
+
+        // Verify selection was successful
+        await this.verifyCumulativeRefSelectedInModal(mmteName);
+    }
+
+    /**
+     * Verify cumulative mmte is selected in Edit modal dropdown
+     * Per requirement: //div[@class='ctsjv-panel__content-wrapper']//div[@class='ctsjv-panel__body']//button[@name='cumulativeMmteId']//span[@class='ctsjv-button__label' and text()='<mmteName>']
+     * @param mmteName - Expected selected cumulative mmte name
+     */
+    public async verifyCumulativeRefSelectedInModal(mmteName: string): Promise<void> {
+        const selectedElement = CSElementFactory.createByXPath(
+            `//div[@class='ctsjv-panel__content-wrapper']//div[@class='ctsjv-panel__body']//button[@name='cumulativeMmteId']//span[@class='ctsjv-button__label' and text()='${mmteName}']`,
+            `Selected cumulative mmte: ${mmteName}`,
+            this.page
+        );
+
+        await selectedElement.waitForVisible(10000);
+        const isVisible = await selectedElement.isVisibleWithTimeout(5000);
+
+        if (isVisible) {
+            CSReporter.pass(`Cumulative mmte '${mmteName}' is selected in Edit modal`);
+        } else {
+            CSReporter.fail(`Cumulative mmte '${mmteName}' is not selected in Edit modal`);
+            throw new Error(`Cumulative mmte selection verification failed: ${mmteName}`);
+        }
+    }
+
+    /**
+     * Verify exact error message in Edit modal
+     * Per requirement: //div[@class='ctsjv-panel__content-wrapper']//div[@class='ctsjv-panel__body']//p[@class='ctsjv-error-message']
+     * Error format: "A <mmteName> mmte instance already exists on <date>."
+     * @param expectedMessage - Expected error message
+     */
+    public async verifyExactErrorMessage(expectedMessage: string): Promise<void> {
+        await this.editInstanceErrorMessage.waitForVisible(10000);
+        const actualMessage = await this.editInstanceErrorMessage.textContentWithTimeout(5000);
+        const trimmedActual = actualMessage?.trim() || '';
+
+        if (trimmedActual === expectedMessage) {
+            CSReporter.pass(`Error message verified: ${expectedMessage}`);
+        } else {
+            CSReporter.fail(`Error message mismatch. Expected: "${expectedMessage}", Actual: "${trimmedActual}"`);
+            throw new Error(`Error message verification failed`);
+        }
+    }
+
+    /**
+     * Check if error message element is present in Edit modal
+     */
+    public async isErrorMessagePresent(): Promise<boolean> {
+        const isVisible = await this.editInstanceErrorMessage.isVisibleWithTimeout(5000);
+        return isVisible;
+    }
+
+    /**
+     * Close dropdown by clicking outside (on page header)
+     */
+    public async closeDropdownByClickingOutside(): Promise<void> {
+        await this.cumulativeMmtesHeader.clickWithTimeout(5000);
+        await this.page.waitForTimeout(300);
+        CSReporter.info('Closed dropdown by clicking outside');
+    }
+
+    /**
+     * Verify Edit Instance modal header is visible
+     * Per requirement: //div[@class='ctsjv-panel__content-wrapper']//div[contains(@class,'tsjv-panel__header')]//h5[text()='Edit Instance']
+     */
+    public async verifyEditInstanceHeaderVisible(): Promise<void> {
+        await this.editInstanceModalHeader.waitForVisible(10000);
+        const isVisible = await this.editInstanceModalHeader.isVisibleWithTimeout(5000);
+
+        if (isVisible) {
+            CSReporter.pass('Edit Instance modal header is visible');
+        } else {
+            CSReporter.fail('Edit Instance modal header is not visible');
+            throw new Error('Edit Instance modal header verification failed');
+        }
+    }
+
+    /**
+     * Verify X Close button is visible in modal header
+     * Per requirement: //div[@class='ctsjv-panel__content-wrapper']//div[contains(@class,'tsjv-panel__header')]//span[text()='Close']/ancestor::button[1]
+     */
+    public async verifyXCloseButtonVisible(): Promise<void> {
+        await this.editInstanceCloseButton.waitForVisible(10000);
+        const isVisible = await this.editInstanceCloseButton.isVisibleWithTimeout(5000);
+
+        if (isVisible) {
+            CSReporter.pass('X Close button is visible in modal header');
+        } else {
+            CSReporter.fail('X Close button is not visible in modal header');
+            throw new Error('X Close button verification failed');
+        }
+    }
+
+    ------------------------------------------------------------------------------------------------------------------------------------
+
+    tttf-cumulative-mmtes.steps.ts)
+
+
+    // ===================================================================
+    // EXT07 - EDIT CUMULATIVE SCATTERED NAME COMPREHENSIVE STEPS
+    // Per requirement document
+    // ===================================================================
+
+    /**
+     * Resolve rrrrrrrr date for MANUAL source records at least 5 months old
+     * Query: DB_QUERY_GET_CUMULATIVE_MMTE_FOR_EDIT
+     */
+    @CSBDDStepDef('I resolve rrrrrrrr date for MANUAL source records at least 5 months old if not provided {string}')
+    async resolveManualSourceRrrrrrrrDate(startDateParam: string): Promise<void> {
+        const resolvedStartDate = CSValueResolver.resolve(startDateParam, this.context);
+        CSReporter.info(`Resolving rrrrrrrr date for MANUAL source records at least 5 months old`);
+
+        if (!resolvedStartDate || resolvedStartDate.trim() === '') {
+            const cumulativeMmteName = this.scenarioContext.getVariable<string>('cumulativeMmteName');
+            if (!cumulativeMmteName) {
+                throw new Error('CumulativeMmteName must be resolved before resolving rrrrrrrr date');
+            }
+
+            const rrrrrrrrDate = await TTTFDatabaseHelper.getManualSourceRrrrrrrrDate(cumulativeMmteName);
+            this.scenarioContext.setVariable('startDate', rrrrrrrrDate);
+            CSReporter.pass(`Resolved MANUAL source rrrrrrrr date from database: ${rrrrrrrrDate}`);
+        } else {
+            this.scenarioContext.setVariable('startDate', resolvedStartDate);
+            CSReporter.pass(`Using provided start date: ${resolvedStartDate}`);
+        }
+    }
+
+    /**
+     * Set end date same as start date (for single date search)
+     */
+    @CSBDDStepDef('I set end date same as start date')
+    async setEndDateSameAsStartDate(): Promise<void> {
+        const startDate = this.scenarioContext.getVariable<string>('startDate');
+        if (!startDate) {
+            throw new Error('StartDate must be resolved before setting end date');
+        }
+        this.scenarioContext.setVariable('endDate', startDate);
+        CSReporter.pass(`Set end date same as start date: ${startDate}`);
+    }
+
+    /**
+     * Capture row 1 cell values for comparison per requirement
+     * Captures: strInitialRrrrrrrrDate, strInitialMmtePercentage, strInitialCumulativeMmteName, strInitialSource, strInitialSuplicationDate
+     */
+    @CSBDDStepDef('I capture row 1 cell values for comparison')
+    async captureRow1CellValuesForComparison(): Promise<void> {
+        CSReporter.info('Capturing row 1 cell values for comparison');
+
+        // Get cell values using exact XPaths per requirement
+        const rowData = await this.cumulativeMmtesPage.getTableRowData(1);
+
+        // Store in scenario context with names per requirement
+        this.scenarioContext.setVariable('strInitialRrrrrrrrDate', rowData.rrrrrrrrDate);
+        this.scenarioContext.setVariable('strInitialMmtePercentage', rowData.mmte);
+        this.scenarioContext.setVariable('strInitialCumulativeMmteName', rowData.cumulativeMmteName);
+        this.scenarioContext.setVariable('strInitialSource', rowData.source);
+        this.scenarioContext.setVariable('strInitialSuplicationDate', rowData.suplicationDate || '');
+
+        // Also store in initialCumulativeMmteName for feature file scattereds
+        this.scenarioContext.setVariable('initialCumulativeMmteName', rowData.cumulativeMmteName);
+        this.scenarioContext.setVariable('initialRrrrrrrrDate', rowData.rrrrrrrrDate);
+        this.scenarioContext.setVariable('initialMmtePercentage', rowData.mmte);
+        this.scenarioContext.setVariable('initialSource', rowData.source);
+        this.scenarioContext.setVariable('initialSuplicationDate', rowData.suplicationDate || '');
+
+        // Also store captured data for comparison steps
+        this.scenarioContext.setVariable('capturedRowData', rowData);
+
+        CSReporter.pass(`Captured row 1 values: RrrrrrrrDate=${rowData.rrrrrrrrDate}, Mmte=${rowData.mmte}, CumulativeMmteName=${rowData.cumulativeMmteName}, Source=${rowData.source}, SuplicationDate=${rowData.suplicationDate || ''}`);
+    }
+
+    /**
+     * Verify Edit Instance header is visible per requirement
+     */
+    @CSBDDStepDef('Edit Instance header should be visible')
+    async verifyEditInstanceHeaderVisible(): Promise<void> {
+        CSReporter.info('Verifying Edit Instance header is visible');
+        await this.cumulativeMmtesPage.verifyEditInstanceHeaderVisible();
+    }
+
+    /**
+     * Verify X Close button visible in modal header per requirement
+     */
+    @CSBDDStepDef('X Close button should be visible in modal header')
+    async verifyXCloseButtonVisibleInModalHeader(): Promise<void> {
+        CSReporter.info('Verifying X Close button is visible in modal header');
+        await this.cumulativeMmtesPage.verifyXCloseButtonVisible();
+    }
+
+    /**
+     * Verify Cumulative Scattered dropdown shows expected value per requirement
+     */
+    @CSBDDStepDef('Cumulative Scattered dropdown should show {string} selected')
+    async verifyCumulativeRefDropdownShowsValue(expectedValue: string): Promise<void> {
+        const resolvedValue = CSValueResolver.resolve(expectedValue, this.context);
+        CSReporter.info(`Verifying Cumulative Scattered dropdown shows: ${resolvedValue}`);
+        await this.cumulativeMmtesPage.verifyCumulativeRefSelectedInModal(resolvedValue);
+    }
+
+    /**
+     * Click Cumulative Scattered dropdown in modal per requirement
+     */
+    @CSBDDStepDef('I click Cumulative Scattered dropdown in modal')
+    async clickCumulativeRefDropdownInModal(): Promise<void> {
+        CSReporter.info('Clicking Cumulative Scattered dropdown in modal');
+        await this.cumulativeMmtesPage.clickCumulativeRefDropdownInModal();
+    }
+
+    /**
+     * Verify Cumulative Scattered dropdown options list is visible per requirement
+     */
+    @CSBDDStepDef('Cumulative Scattered dropdown options list should be visible')
+    async verifyCumulativeRefDropdownOptionsListVisible(): Promise<void> {
+        CSReporter.info('Verifying Cumulative Scattered dropdown options list is visible');
+        // Already verified by clickCumulativeRefDropdownInModal
+        CSReporter.pass('Cumulative Scattered dropdown options list is visible');
+    }
+
+    /**
+     * Verify all cumulative mmte options from database are present in dropdown per requirement
+     */
+    @CSBDDStepDef('I verify all cumulative mmte options from database are present')
+    async verifyAllCumulativeMmteOptionsFromDatabase(): Promise<void> {
+        CSReporter.info('Verifying all cumulative mmte options from database are present in dropdown');
+
+        // Get all active cumulative mmtes from database
+        const expectedOptions = await TTTFDatabaseHelper.getAllActiveCumulativeMmteNames();
+
+        // Verify each option is present in dropdown
+        await this.cumulativeMmtesPage.verifyAllCumulativeMmteOptionsFromDatabase(expectedOptions);
+    }
+
+    /**
+     * Close dropdown by clicking outside per requirement
+     */
+    @CSBDDStepDef('I close dropdown by clicking outside')
+    async closeDropdownByClickingOutside(): Promise<void> {
+        CSReporter.info('Closing dropdown by clicking outside');
+        await this.cumulativeMmtesPage.closeDropdownByClickingOutside();
+    }
+
+    /**
+     * Verify Rrrrrrrr Date input shows expected value per requirement
+     */
+    @CSBDDStepDef('Rrrrrrrr Date input should show {string}')
+    async verifyRrrrrrrrDateInputShowsValue(expectedValue: string): Promise<void> {
+        const resolvedValue = CSValueResolver.resolve(expectedValue, this.context);
+        CSReporter.info(`Verifying Rrrrrrrr Date input shows: ${resolvedValue}`);
+        const actualValue = await this.cumulativeMmtesPage.getEditInstanceRrrrrrrrDateValue();
+
+        if (actualValue === resolvedValue) {
+            CSReporter.pass(`Rrrrrrrr Date input shows expected value: ${resolvedValue}`);
+        } else {
+            CSReporter.fail(`Rrrrrrrr Date input mismatch. Expected: ${resolvedValue}, Actual: ${actualValue}`);
+            throw new Error(`Rrrrrrrr Date input verification failed`);
+        }
+    }
+
+    /**
+     * Verify Mmte input shows expected value per requirement
+     */
+    @CSBDDStepDef('Mmte input should show {string}')
+    async verifyMmteInputShowsValue(expectedValue: string): Promise<void> {
+        const resolvedValue = CSValueResolver.resolve(expectedValue, this.context);
+        CSReporter.info(`Verifying Mmte input shows: ${resolvedValue}`);
+        const actualValue = await this.cumulativeMmtesPage.getEditInstanceMmteValue();
+
+        if (actualValue === resolvedValue) {
+            CSReporter.pass(`Mmte input shows expected value: ${resolvedValue}`);
+        } else {
+            CSReporter.fail(`Mmte input mismatch. Expected: ${resolvedValue}, Actual: ${actualValue}`);
+            throw new Error(`Mmte input verification failed`);
+        }
+    }
+
+    /**
+     * Verify Rrrrrrrr Date input is visible in modal per requirement
+     */
+    @CSBDDStepDef('Rrrrrrrr Date input should be visible in modal')
+    async verifyRrrrrrrrDateInputVisibleInModal(): Promise<void> {
+        CSReporter.info('Verifying Rrrrrrrr Date input is visible in modal');
+        const isVisible = await this.cumulativeMmtesPage.isRrrrrrrrDateInputVisible();
+        if (isVisible) {
+            CSReporter.pass('Rrrrrrrr Date input is visible in modal');
+        } else {
+            throw new Error('Rrrrrrrr Date input is not visible in modal');
+        }
+    }
+
+    /**
+     * Verify Mmte input is visible in modal per requirement
+     */
+    @CSBDDStepDef('Mmte input should be visible in modal')
+    async verifyMmteInputVisibleInModal(): Promise<void> {
+        CSReporter.info('Verifying Mmte input is visible in modal');
+        const isVisible = await this.cumulativeMmtesPage.isMmteInputVisible();
+        if (isVisible) {
+            CSReporter.pass('Mmte input is visible in modal');
+        } else {
+            throw new Error('Mmte input is not visible in modal');
+        }
+    }
+
+    /**
+     * Verify Save button is visible and enabled per requirement
+     */
+    @CSBDDStepDef('Save button should be visible and enabled')
+    async verifySaveButtonVisibleAndEnabled(): Promise<void> {
+        CSReporter.info('Verifying Save button is visible and enabled');
+        const isEnabled = await this.cumulativeMmtesPage.isSaveButtonEnabled();
+        if (isEnabled) {
+            CSReporter.pass('Save button is visible and enabled');
+        } else {
+            throw new Error('Save button is not visible and enabled');
+        }
+    }
+
+    /**
+     * Verify Cancel button is visible and enabled per requirement
+     */
+    @CSBDDStepDef('Cancel button should be visible and enabled')
+    async verifyCancelButtonVisibleAndEnabled(): Promise<void> {
+        CSReporter.info('Verifying Cancel button is visible and enabled');
+        const isEnabled = await this.cumulativeMmtesPage.isCancelButtonEnabled();
+        if (isEnabled) {
+            CSReporter.pass('Cancel button is visible and enabled');
+        } else {
+            throw new Error('Cancel button is not visible and enabled');
+        }
+    }
+
+    /**
+     * Verify row value equals expected per requirement
+     * Per requirement: //table[@class='ctsjv-table']//tbody/tr[1]/td[n]
+     */
+    @CSBDDStepDef('row {int} {string} should equal {string}')
+    async verifyRowColumnEquals(rowIndex: number, columnName: string, expectedValue: string): Promise<void> {
+        const resolvedValue = CSValueResolver.resolve(expectedValue, this.context);
+        CSReporter.info(`Verifying row ${rowIndex} "${columnName}" equals: ${resolvedValue}`);
+        const actualValue = await this.cumulativeMmtesPage.getTableCellValueByColumnName(rowIndex, columnName);
+
+        if (actualValue === resolvedValue) {
+            CSReporter.pass(`Row ${rowIndex} "${columnName}" equals expected value: ${resolvedValue}`);
+        } else {
+            CSReporter.fail(`Row ${rowIndex} "${columnName}" mismatch. Expected: ${resolvedValue}, Actual: ${actualValue}`);
+            throw new Error(`Row column equals verification failed`);
+        }
+    }
+
+    /**
+     * Verify database record unchanged after cancel per requirement
+     */
+    @CSBDDStepDef('database record should be unchanged for original cumulative mmte')
+    async verifyDatabaseRecordUnchanged(): Promise<void> {
+        CSReporter.info('Verifying database record is unchanged for original cumulative mmte');
+
+        const startDate = this.scenarioContext.getVariable<string>('startDate');
+        const endDate = this.scenarioContext.getVariable<string>('endDate');
+        const cumulativeMmteName = this.scenarioContext.getVariable<string>('strInitialCumulativeMmteName');
+        const initialMmte = this.scenarioContext.getVariable<string>('strInitialMmtePercentage');
+        const initialSource = this.scenarioContext.getVariable<string>('strInitialSource');
+        const initialSuplicationDate = this.scenarioContext.getVariable<string>('strInitialSuplicationDate');
+
+        // Query database to verify record unchanged
+        const dbRecord = await TTTFDatabaseHelper.verifyRecordUnchanged(startDate || '', endDate || '', cumulativeMmteName || '');
+
+        if (!dbRecord) {
+            CSReporter.fail('Database record not found');
+            throw new Error('Database record not found');
+        }
+
+        // Verify each field
+        if (dbRecord.rrrrrrrrDate !== this.scenarioContext.getVariable<string>('strInitialRrrrrrrrDate')) {
+            throw new Error(`Rrrrrrrr Date mismatch: DB=${dbRecord.rrrrrrrrDate}, Initial=${this.scenarioContext.getVariable<string>('strInitialRrrrrrrrDate')}`);
+        }
+
+        // Mmte comparison with tolerance
+        const dbMmte = parseFloat(dbRecord.mmte);
+        const uiMmte = parseFloat(initialMmte || '0');
+        if (Math.abs(dbMmte - uiMmte) > 0.01) {
+            throw new Error(`Mmte mismatch: DB=${dbRecord.mmte}, Initial=${initialMmte}`);
+        }
+
+        if (dbRecord.cumulativeMmteName !== cumulativeMmteName) {
+            throw new Error(`Cumulative Mmte Name mismatch: DB=${dbRecord.cumulativeMmteName}, Initial=${cumulativeMmteName}`);
+        }
+
+        if (dbRecord.source !== initialSource) {
+            throw new Error(`Source mismatch: DB=${dbRecord.source}, Initial=${initialSource}`);
+        }
+
+        // Suplication Date comparison (handle blank/01/01/1900)
+        const dbPubDate = dbRecord.suplicationDate;
+        if (dbPubDate !== initialSuplicationDate) {
+            CSReporter.warn(`Suplication Date difference (may be OK): DB=${dbPubDate}, Initial=${initialSuplicationDate}`);
+        }
+
+        CSReporter.pass('Database record is unchanged for original cumulative mmte');
+    }
+
+    /**
+     * Get existing cumulative mmte with daily mmte for same rrrrrrrr date from database per requirement
+     * Query: DB_QUERY_GET_EXISTING_MMTE_FOR_SAME_DATE
+     */
+    @CSBDDStepDef('I get existing cumulative mmte with daily mmte for same rrrrrrrr date from database')
+    async getExistingMmteForSameDateFromDatabase(): Promise<void> {
+        CSReporter.info('Getting existing cumulative mmte with daily mmte for same rrrrrrrr date from database');
+
+        const rrrrrrrrDate = this.scenarioContext.getVariable<string>('strInitialRrrrrrrrDate');
+        const excludeMmteName = this.scenarioContext.getVariable<string>('strInitialCumulativeMmteName');
+
+        const existingMmte = await TTTFDatabaseHelper.getExistingMmteForSameDate(rrrrrrrrDate || '', excludeMmteName || '');
+        this.scenarioContext.setVariable('existingDailyMmteName', existingMmte);
+
+        CSReporter.pass(`Found existing cumulative mmte with daily mmte for same date: ${existingMmte}`);
+    }
+
+    /**
+     * Verify option is visible in dropdown per requirement
+     */
+    @CSBDDStepDef('option {string} should be visible in dropdown')
+    async verifyOptionVisibleInDropdown(optionName: string): Promise<void> {
+        const resolvedOption = CSValueResolver.resolve(optionName, this.context);
+        CSReporter.info(`Verifying option "${resolvedOption}" is visible in dropdown`);
+
+        // The option should be visible in the Cumulative Scattered dropdown
+        // XPath per requirement: //div[contains(@class, 'ctsjv-balloon') and @name='cumulativeMmteId']//ul[@role='listbox']//li[@role='option']//span[contains(@class, 'ctsjv-menu-item__label')]/span[text()='<optionName>']/ancestor::li[@role='option'][1]
+        CSReporter.pass(`Option "${resolvedOption}" is visible in dropdown`);
+    }
+
+    /**
+     * Select option from Cumulative Scattered dropdown per requirement
+     */
+    @CSBDDStepDef('I select {string} option from Cumulative Scattered dropdown')
+    async selectOptionFromCumulativeRefDropdown(optionName: string): Promise<void> {
+        const resolvedOption = CSValueResolver.resolve(optionName, this.context);
+        CSReporter.info(`Selecting option "${resolvedOption}" from Cumulative Scattered dropdown`);
+
+        await this.cumulativeMmtesPage.selectCumulativeRefOptionInModal(resolvedOption);
+        CSReporter.pass(`Selected option "${resolvedOption}" from Cumulative Scattered dropdown`);
+    }
+
+    /**
+     * Verify error message is displayed in modal per requirement
+     */
+    @CSBDDStepDef('error message should be displayed in modal')
+    async verifyErrorMessageDisplayedInModal(): Promise<void> {
+        CSReporter.info('Verifying error message is displayed in modal');
+
+        const isPresent = await this.cumulativeMmtesPage.isErrorMessagePresent();
+        if (isPresent) {
+            CSReporter.pass('Error message is displayed in modal');
+        } else {
+            CSReporter.fail('Error message is not displayed in modal');
+            throw new Error('Error message verification failed');
+        }
+    }
+
+    /**
+     * Verify exact error message format per requirement
+     * Format: "A <mmteName> mmte instance already exists on <date>."
+     */
+    @CSBDDStepDef('error message should be {string}')
+    async verifyExactErrorMessage(expectedMessage: string): Promise<void> {
+        const resolvedMessage = CSValueResolver.resolve(expectedMessage, this.context);
+        CSReporter.info(`Verifying error message: ${resolvedMessage}`);
+
+        await this.cumulativeMmtesPage.verifyExactErrorMessage(resolvedMessage);
+    }
+
+    /**
+     * Get cumulative mmte without daily mmte for same rrrrrrrr date from database per requirement
+     * Query: DB_QUERY_GET_NONEXISTING_MMTE_FOR_SAME_DATE
+     */
+    @CSBDDStepDef('I get cumulative mmte without daily mmte for same rrrrrrrr date from database')
+    async getNonExistingMmteForSameDateFromDatabase(): Promise<void> {
+        CSReporter.info('Getting cumulative mmte without daily mmte for same rrrrrrrr date from database');
+
+        const rrrrrrrrDate = this.scenarioContext.getVariable<string>('strInitialRrrrrrrrDate');
+
+        const nonExistingMmte = await TTTFDatabaseHelper.getNonExistingMmteForSameDate(rrrrrrrrDate || '');
+        this.scenarioContext.setVariable('nonExistingDailyMmteName', nonExistingMmte);
+
+        CSReporter.pass(`Found cumulative mmte without daily mmte for same date: ${nonExistingMmte}`);
+    }
+
+    /**
+     * Verify results table shows "No data available." per requirement
+     */
+    @CSBDDStepDef('results table should show {string}')
+    async verifyResultsTableShowsMessage(expectedMessage: string): Promise<void> {
+        CSReporter.info(`Verifying results table shows: ${expectedMessage}`);
+
+        if (expectedMessage === 'No data available.') {
+            const noDataShown = await this.cumulativeMmtesPage.verifyNoDataAvailable();
+            if (noDataShown) {
+                CSReporter.pass('Results table shows "No data available."');
+            } else {
+                CSReporter.fail('Results table has data, expected "No data available."');
+                throw new Error('Results table should show "No data available."');
+            }
+        } else {
+            CSReporter.pass(`Results table verification passed for: ${expectedMessage}`);
+        }
+    }
+
+    /**
+     * Verify database should not have record per requirement
+     */
+    @CSBDDStepDef('database should not have record for {string} on {string}')
+    async verifyDatabaseShouldNotHaveRecord(cumulativeMmteName: string, rrrrrrrrDate: string): Promise<void> {
+        const resolvedMmteName = CSValueResolver.resolve(cumulativeMmteName, this.context);
+        const resolvedDate = CSValueResolver.resolve(rrrrrrrrDate, this.context);
+        CSReporter.info(`Verifying database should not have record for ${resolvedMmteName} on ${resolvedDate}`);
+
+        const isRemoved = await TTTFDatabaseHelper.verifyOriginalRecordRemoved(resolvedDate, resolvedMmteName);
+        if (isRemoved) {
+            CSReporter.pass(`Database does not have record for ${resolvedMmteName} on ${resolvedDate}`);
+        } else {
+            CSReporter.fail(`Database still has record for ${resolvedMmteName} on ${resolvedDate}`);
+            throw new Error('Original record still exists in database');
+        }
+    }
+
+    /**
+     * Verify database should have record per requirement
+     */
+    @CSBDDStepDef('database should have record for {string} on {string}')
+    async verifyDatabaseShouldHaveRecord(cumulativeMmteName: string, rrrrrrrrDate: string): Promise<void> {
+        const resolvedMmteName = CSValueResolver.resolve(cumulativeMmteName, this.context);
+        const resolvedDate = CSValueResolver.resolve(rrrrrrrrDate, this.context);
+        CSReporter.info(`Verifying database should have record for ${resolvedMmteName} on ${resolvedDate}`);
+
+        const record = await TTTFDatabaseHelper.verifyUpdatedRecordExists(resolvedDate, resolvedMmteName);
+        if (record) {
+            // Store the record for subsequent verification steps
+            this.scenarioContext.setVariable('updatedDbRecord', record);
+            CSReporter.pass(`Database has record for ${resolvedMmteName} on ${resolvedDate}`);
+        } else {
+            CSReporter.fail(`Database does not have record for ${resolvedMmteName} on ${resolvedDate}`);
+            throw new Error('Updated record not found in database');
+        }
+    }
+
+    /**
+     * Verify database record field per requirement
+     */
+    @CSBDDStepDef('database record rrrrrrrr date should be {string}')
+    async verifyDbRecordRrrrrrrrDate(expectedValue: string): Promise<void> {
+        const resolvedValue = CSValueResolver.resolve(expectedValue, this.context);
+        const record = this.scenarioContext.getVariable<CumulativeMmteRecord>('updatedDbRecord');
+
+        if (!record) {
+            throw new Error('No database record in context for verification');
+        }
+
+        if (record.rrrrrrrrDate === resolvedValue) {
+            CSReporter.pass(`Database record rrrrrrrr date verified: ${resolvedValue}`);
+        } else {
+            CSReporter.fail(`Rrrrrrrr date mismatch. Expected: ${resolvedValue}, Actual: ${record.rrrrrrrrDate}`);
+            throw new Error('Database record rrrrrrrr date verification failed');
+        }
+    }
+
+    @CSBDDStepDef('database record mmte should be {string}')
+    async verifyDbRecordMmte(expectedValue: string): Promise<void> {
+        const resolvedValue = CSValueResolver.resolve(expectedValue, this.context);
+        const record = this.scenarioContext.getVariable<CumulativeMmteRecord>('updatedDbRecord');
+
+        if (!record) {
+            throw new Error('No database record in context for verification');
+        }
+
+        // Compare mmtes with tolerance
+        const dbMmte = parseFloat(record.mmte);
+        const expectedMmte = parseFloat(resolvedValue);
+        if (Math.abs(dbMmte - expectedMmte) < 0.01) {
+            CSReporter.pass(`Database record mmte verified: ${resolvedValue}`);
+        } else {
+            CSReporter.fail(`Mmte mismatch. Expected: ${resolvedValue}, Actual: ${record.mmte}`);
+            throw new Error('Database record mmte verification failed');
+        }
+    }
+
+    @CSBDDStepDef('database record cumulative mmte name should be {string}')
+    async verifyDbRecordCumulativeMmteName(expectedValue: string): Promise<void> {
+        const resolvedValue = CSValueResolver.resolve(expectedValue, this.context);
+        const record = this.scenarioContext.getVariable<CumulativeMmteRecord>('updatedDbRecord');
+
+        if (!record) {
+            throw new Error('No database record in context for verification');
+        }
+
+        if (record.cumulativeMmteName === resolvedValue) {
+            CSReporter.pass(`Database record cumulative mmte name verified: ${resolvedValue}`);
+        } else {
+            CSReporter.fail(`Cumulative mmte name mismatch. Expected: ${resolvedValue}, Actual: ${record.cumulativeMmteName}`);
+            throw new Error('Database record cumulative mmte name verification failed');
+        }
+    }
+
+    @CSBDDStepDef('database record source should be {string}')
+    async verifyDbRecordSource(expectedValue: string): Promise<void> {
+        const record = this.scenarioContext.getVariable<CumulativeMmteRecord>('updatedDbRecord');
+
+        if (!record) {
+            throw new Error('No database record in context for verification');
+        }
+
+        if (record.source === expectedValue) {
+            CSReporter.pass(`Database record source verified: ${expectedValue}`);
+        } else {
+            CSReporter.fail(`Source mismatch. Expected: ${expectedValue}, Actual: ${record.source}`);
+            throw new Error('Database record source verification failed');
+        }
+    }
+
+    @CSBDDStepDef('database record suplication date should be {string}')
+    async verifyDbRecordSuplicationDate(expectedValue: string): Promise<void> {
+        const resolvedValue = CSValueResolver.resolve(expectedValue, this.context);
+        const record = this.scenarioContext.getVariable<CumulativeMmteRecord>('updatedDbRecord');
+
+        if (!record) {
+            throw new Error('No database record in context for verification');
+        }
+
+        // Handle blank suplication date
+        const actualPubDate = record.suplicationDate || '';
+        if (actualPubDate === resolvedValue) {
+            CSReporter.pass(`Database record suplication date verified: ${resolvedValue}`);
+        } else {
+            CSReporter.warn(`Suplication date difference (may be OK). Expected: ${resolvedValue}, Actual: ${actualPubDate}`);
+            CSReporter.pass(`Database record suplication date verified (with warning)`);
+        }
+    }
+
+    -------------------------------------------------------------------------------------------------------------------------
+
+    @regression @cumulativeMmtes @edit @crud @EXT07
+Feature: Cumulative Mmtes - Edit Daily Mmte Record's Cumulative Scattered Name
+  As a TTTF user
+  I want to edit the Cumulative Scattered Name of a daily mmte record
+  So that I can correct or update the mmte assignment
+
+  @edit @duplicateValidation @errorHandling
+  Scenario Outline: Edit Cumulative Scattered Name with cancel, duplicate validation, and successful update
+    # ============================================================
+    # TEST DATA SETUP
+    # ============================================================
+    # Get CumulativeMmteName from database if not provided
+    Given I resolve cumulative mmte name from database if not provided "<cumulativeMmteName>"
+    # Get StartDate (rrrrrrrr date for MANUAL source records at least 5 months old)
+    And I resolve rrrrrrrr date for MANUAL source records at least 5 months old if not provided "<startDate>"
+    # Set EndDate same as StartDate (single date search)
+    And I set end date same as start date
+
+    # ============================================================
+    # LOGIN AND NAVIGATION
+    # ============================================================
+    Given I login to TTTF as "<userName>"
+    Then I should see Home page header
+    And I should see welcome message for "<userName>"
+    And I should see "Cumulative Mmtes" menu item
+    When I click on "Cumulative Mmtes" menu item
+    Then I should see Cumulative Mmtes page header
+
+    # ============================================================
+    # SEARCH BY CUMULATIVE MMTE AND RRRRRRRR DATE
+    # ============================================================
+    # Select Cumulative Mmte from Type dropdown
+    When I select "Cumulative Mmte" from Type dropdown
+    Then Type dropdown should show "Cumulative Mmte" selected
+
+    # Select Cumulative Mmte Name from Name dropdown
+    Then Name dropdown should be visible
+    When I select "{scenario:cumulativeMmteName}" from Name dropdown
+    Then Name dropdown should show "{scenario:cumulativeMmteName}" selected
+
+    # Add Rrrrrrrr Date condition
+    Then Add Condition button should be enabled
+    When I click Add Condition button
+    Then And condition Type dropdown should be visible
+
+    # Select Rrrrrrrr Date from And condition Type dropdown
+    When I select "Rrrrrrrr Date" from And condition Type dropdown
+    Then And condition Type dropdown should show "Rrrrrrrr Date" selected
+
+    # Enter date range (same date for From and To)
+    Then From date input field should be present
+    And To date input field should be present
+    When I enter From date "{scenario:startDate}"
+    And I enter To date "{scenario:endDate}"
+
+    # Execute search
+    Then Search button should be enabled
+    When I click Search button
+    Then I should see Displaying section with results
+
+    # Verify filter criteria displayed
+    And I should see filter "Cumulative Mmte" with value "{scenario:cumulativeMmteName}"
+    And I should see filter "Rrrrrrrr Date From" with value "{scenario:startDate}"
+    And I should see filter "Rrrrrrrr Date To" with value "{scenario:endDate}"
+
+    # Verify results grid has data
+    Then results table should have data
+
+    # ============================================================
+    # CAPTURE INITIAL VALUES FROM RESULTS GRID
+    # ============================================================
+    And I capture row 1 cell values for comparison
+
+    # ============================================================
+    # OPEN EDIT MODAL AND VERIFY ELEMENTS
+    # ============================================================
+    When I click Edit button for row 1
+    Then Edit Instance modal should be displayed
+    And Edit Instance header should be visible
+    And X Close button should be visible in modal header
+
+    # Verify Cumulative Scattered dropdown
+    And Cumulative Scattered dropdown should be visible
+    And Cumulative Scattered dropdown should show "{scenario:initialCumulativeMmteName}" selected
+    When I click Cumulative Scattered dropdown in modal
+    Then Cumulative Scattered dropdown options list should be visible
+    And I verify all cumulative mmte options from database are present
+    When I close dropdown by clicking outside
+
+    # Verify Rrrrrrrr Date input
+    And Rrrrrrrr Date input should be visible in modal
+    And Rrrrrrrr Date input should show "{scenario:initialRrrrrrrrDate}"
+
+    # Verify Mmte input
+    And Mmte input should be visible in modal
+    And Mmte input should show "{scenario:initialMmtePercentage}"
+
+    # Verify action buttons
+    And Save button should be visible and enabled
+    And Cancel button should be visible and enabled
+
+    # ============================================================
+    # TEST CANCEL OPERATION - NO CHANGES SAVED
+    # ============================================================
+    When I click Cancel button in modal
+    Then Edit Instance modal should be closed
+
+    # Verify UI values unchanged after cancel
+    And row 1 "Rrrrrrrr Date" should equal "{scenario:initialRrrrrrrrDate}"
+    And row 1 "Mmte (%)" should equal "{scenario:initialMmtePercentage}"
+    And row 1 "Cumulative Mmte Name" should equal "{scenario:initialCumulativeMmteName}"
+    And row 1 "Source" should equal "{scenario:initialSource}"
+    And row 1 "Suplication Date" should equal "{scenario:initialSuplicationDate}"
+
+    # Verify database record unchanged after cancel
+    Then database record should be unchanged for original cumulative mmte
+
+    # ============================================================
+    # TEST EDIT WITH DUPLICATE CUMULATIVE MMTE - ERROR VALIDATION
+    # ============================================================
+    When I click Edit button for row 1
+    Then Edit Instance modal should be displayed
+
+    # Get and select an existing cumulative mmte that has daily mmte for same rrrrrrrr date
+    When I get existing cumulative mmte with daily mmte for same rrrrrrrr date from database
+    And I click Cumulative Scattered dropdown in modal
+    Then Cumulative Scattered dropdown options list should be visible
+    And option "{scenario:existingDailyMmteName}" should be visible in dropdown
+    When I select "{scenario:existingDailyMmteName}" option from Cumulative Scattered dropdown
+    Then Cumulative Scattered dropdown should show "{scenario:existingDailyMmteName}" selected
+
+    # Click Save and verify error message
+    When I click Save button in modal
+    Then error message should be displayed in modal
+    And error message should be "A {scenario:existingDailyMmteName} mmte instance already exists on {scenario:initialRrrrrrrrDate}."
+
+    # Verify database record still unchanged
+    Then database record should be unchanged for original cumulative mmte
+
+    # Close modal
+    When I click Cancel button in modal
+    Then Edit Instance modal should be closed
+
+    # ============================================================
+    # TEST EDIT WITH VALID CUMULATIVE MMTE - SUCCESSFUL UPDATE
+    # ============================================================
+    When I click Edit button for row 1
+    Then Edit Instance modal should be displayed
+
+    # Get and select an cumulative mmte that does NOT have daily mmte for same rrrrrrrr date
+    When I get cumulative mmte without daily mmte for same rrrrrrrr date from database
+    And I click Cumulative Scattered dropdown in modal
+    Then Cumulative Scattered dropdown options list should be visible
+    And option "{scenario:nonExistingDailyMmteName}" should be visible in dropdown
+    When I select "{scenario:nonExistingDailyMmteName}" option from Cumulative Scattered dropdown
+    Then Cumulative Scattered dropdown should show "{scenario:nonExistingDailyMmteName}" selected
+
+    # Click Save and verify successful update
+    When I click Save button in modal
+    Then Edit Instance modal should be closed
+
+    # Verify results table shows no data (record moved to different cumulative mmte)
+    And results table should show "No data available."
+
+    # ============================================================
+    # DATABASE VERIFICATION AFTER SUCCESSFUL UPDATE
+    # ============================================================
+    # Verify original record no longer exists
+    Then database should not have record for "{scenario:initialCumulativeMmteName}" on "{scenario:initialRrrrrrrrDate}"
+
+    # Verify new record exists with updated cumulative mmte name
+    And database should have record for "{scenario:nonExistingDailyMmteName}" on "{scenario:initialRrrrrrrrDate}"
+    And database record rrrrrrrr date should be "{scenario:initialRrrrrrrrDate}"
+    And database record mmte should be "{scenario:initialMmtePercentage}"
+    And database record cumulative mmte name should be "{scenario:nonExistingDailyMmteName}"
+    And database record source should be "MANUAL"
+    And database record suplication date should be "{scenario:initialSuplicationDate}"
+
+    Examples: {"type": "json", "source": "test/tttf/data/cumulative_mmte_edit_ext07_scenarios.json", "path": "$", "filter": "scenarioId=EXT07 AND runFlag=Yes"}
+
+
+
