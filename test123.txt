@@ -1,1 +1,208 @@
-test
+[
+  {
+    "scenarioId": "EXT11",
+    "scenarioName": "Remove Instance",
+    "userName": "",
+    "searchByOption1": "Cumulative Mmte",
+    "searchByOption2": "Rrrrrrrr Date",
+    "cumulativeMmteName": "",
+    "startDate": "",
+    "endDate": "",
+    "runFlag": "Yes"
+  }
+]
+
+
+----------------------------------------------------------------------------------------------------------------
+
+TTTFCumulativeMmtesPage.ts
+
+ @CSGetElement({
+        xpath: '//div[@class="sssss-panel__content-wrapper"]//div[contains(@class,"tsjv-panel__header")]//h5[text()="Confirm Delete"]',
+        description: 'Confirm Delete modal header',
+        waitForVisible: true
+    })
+    public confirmDeleteModalHeader!: CSWebElement;
+
+    @CSGetElement({
+        xpath: '//div[@class="sssss-panel__content-wrapper"]//div[contains(@class,"tsjv-panel__header")]//span[text()="Close"]/ancestor::button[1]',
+        description: 'X Close button in Confirm Delete modal header',
+        waitForVisible: true
+    })
+    public confirmDeleteCloseButton!: CSWebElement;
+
+    @CSGetElement({
+        xpath: '//div[@class="sssss-panel__content-wrapper"]//div[@class="sssss-panel__body"]//div[contains(@class, "sssss-message-box__text")]',
+        description: 'Confirm Delete message text',
+        waitForVisible: true
+    })
+    public confirmDeleteMessageText!: CSWebElement;
+
+    @CSGetElement({
+        xpath: '//div[@class="sssss-panel__content-wrapper"]//div[@class="sssss-panel__footer"]//span[@class="sssss-button__label" and text()="Delete"]/parent::button[1]',
+        description: 'Delete button in Confirm Delete modal',
+        waitForEnabled: true
+    })
+    public confirmDeleteButton!: CSWebElement;
+
+    @CSGetElement({
+        xpath: '//div[@class="sssss-panel__content-wrapper"]//div[@class="sssss-panel__footer"]//span[@class="sssss-button__label" and text()="Cancel"]/parent::button[1]',
+        description: 'Cancel button in Confirm Delete modal',
+        waitForEnabled: true
+    })
+    public confirmDeleteCancelButton!: CSWebElement;
+
+
+    public async isConfirmDeleteXCloseButtonVisible(): Promise<boolean> {
+        return await this.confirmDeleteCloseButton.isVisibleWithTimeout(5000);
+    }
+
+    public async isConfirmDeleteCancelButtonEnabled(): Promise<boolean> {
+        await this.confirmDeleteCancelButton.waitForVisible(10000);
+        return await this.confirmDeleteCancelButton.isEnabledWithTimeout(5000);
+    }
+
+
+    --------------------------------------------------------------------------------------------------------------
+
+    @regression @cumulativeMmtes @remove @delete @crud @EXT11
+Feature: Cumulative Mmtes - Remove Daily Mmte Instance
+  As a TTTF user
+  I want to remove a daily mmte instance
+  So that I can delete mmte records that are no longer needed
+
+  @remove @cancelValidation @softDelete
+  Scenario Outline: Remove Instance with cancel validation and successful soft deletion
+    # ============================================================
+    # TEST DATA SETUP
+    # Per requirement: Setup data with MANUAL source record at least 5 months old
+    # ============================================================
+    Given I resolve cumulative mmte name from database if not provided "<cumulativeMmteName>"
+    And I resolve rrrrrrrr date for MANUAL source records at least 5 months old if not provided "<startDate>"
+    And I set end date same as start date
+
+    # ============================================================
+    # LOGIN AND NAVIGATION
+    # ============================================================
+    Given I login to TTTF as "<userName>"
+    And I navigate to "Cumulative Mmtes" page
+
+    # ============================================================
+    # SEARCH BY CUMULATIVE MMTE AND RRRRRRRR DATE
+    # Per requirement: Search using Cumulative Mmte and Rrrrrrrr Date filters
+    # ============================================================
+    When I select "Cumulative Mmte" from Type dropdown
+    And I select "{scenario:cumulativeMmteName}" from Name dropdown
+    And I click Add Condition button
+    And I select "Rrrrrrrr Date" from And condition Type dropdown
+    Then From date input field should be present
+    And To date input field should be present
+    When I enter From date "{scenario:startDate}"
+    And I enter To date "{scenario:endDate}"
+    And I click Search button
+    Then I should see Displaying section with results
+    And I should see filter "Cumulative Mmte" with value "{scenario:cumulativeMmteName}"
+    And I should see filter "Rrrrrrrr Date From" with value "{scenario:startDate}"
+    And I should see filter "Rrrrrrrr Date To" with value "{scenario:endDate}"
+    And results table should have data
+
+    # ============================================================
+    # CAPTURE INITIAL VALUES FOR COMPARISON
+    # Per requirement: Store initial values for verification after cancel and delete
+    # ============================================================
+    And I capture row 1 cell values for comparison
+
+    # ============================================================
+    # CLICK REMOVE AND VERIFY CONFIRM DELETE MODAL ELEMENTS
+    # Per requirement: Verify all elements in Confirm Delete popup
+    # ============================================================
+    When I click Remove button for row 1
+    Then Confirm Delete modal should be displayed
+    And Confirm Delete header should be visible
+    And X Close button should be visible in Confirm Delete modal
+    And warning message "Deleting this instance will affect mmte calculations." should be displayed
+    And Delete button should be enabled
+    And Cancel button in Confirm Delete should be enabled
+
+    # ============================================================
+    # TEST CANCEL OPERATION - VERIFY NO CHANGES
+    # Per requirement: Cancel should close modal and not update anything
+    # ============================================================
+    When I click Cancel button in Confirm Delete modal
+    Then Confirm Delete modal should be closed
+
+    # Verify UI values unchanged after Cancel
+    Then row 1 "Rrrrrrrr Date" should equal "{scenario:initialRrrrrrrrDate}"
+    And row 1 "Mmte (%)" should equal "{scenario:initialMmtePercentage}"
+    And row 1 "Cumulative Mmte Name" should equal "{scenario:initialCumulativeMmteName}"
+    And row 1 "Source" should equal "{scenario:initialSource}"
+    And row 1 "Supplication Date" should equal "{scenario:initialSupplicationDate}"
+
+    # Verify database record unchanged after Cancel
+    Then database record should be unchanged
+
+    # ============================================================
+    # TEST DELETE OPERATION - SUCCESSFUL SOFT DELETE
+    # Per requirement: DELETE should soft delete the record (active_flag = 'N')
+    # ============================================================
+    When I click Remove button for row 1
+    Then Confirm Delete modal should be displayed
+    When I click Delete button in Confirm Delete modal
+    Then Confirm Delete modal should be closed
+    And results table should show "No data available."
+
+    # ============================================================
+    # DATABASE VERIFICATION AFTER DELETE
+    # Per requirement: Verify record is soft deleted with active_flag = 'N'
+    # ============================================================
+    Then database record should be soft deleted with active_flag "N"
+    And soft deleted record values should be unchanged except active_flag
+
+    Examples: {"type": "json", "source": "test/tttf/data/cumulative_mmte_remove_ext11_scenarios.json", "path": "$", "filter": "scenarioId=EXT11 AND runFlag=Yes"}
+
+
+
+---------------------------------------------------------------------------------------------------
+
+/**
+     * Verify Confirm Delete header is visible
+     * Per requirement EXT11: Verify 'Confirm Delete' header is present
+     */
+    @CSBDDStepDef('Confirm Delete header should be visible')
+    async verifyConfirmDeleteHeaderVisible(): Promise<void> {
+        CSReporter.info('Verifying Confirm Delete header is visible');
+        await this.cumulativeMmtesPage.verifyConfirmDeleteModalOpen();
+        CSReporter.pass('Confirm Delete header is visible');
+    }
+
+    /**
+     * Verify X Close button is visible in Confirm Delete modal
+     * Per requirement EXT11: Verify X Close button in header section
+     */
+    @CSBDDStepDef('X Close button should be visible in Confirm Delete modal')
+    async verifyXCloseButtonInConfirmDeleteModal(): Promise<void> {
+        CSReporter.info('Verifying X Close button is visible in Confirm Delete modal');
+        const isVisible = await this.cumulativeMmtesPage.isConfirmDeleteXCloseButtonVisible();
+        if (isVisible) {
+            CSReporter.pass('X Close button is visible in Confirm Delete modal');
+        } else {
+            CSReporter.fail('X Close button is not visible in Confirm Delete modal');
+            throw new Error('X Close button verification failed');
+        }
+    }
+
+    /**
+     * Verify Cancel button in Confirm Delete modal is enabled
+     * Per requirement EXT11: Verify Cancel button is present and enabled
+     */
+    @CSBDDStepDef('Cancel button in Confirm Delete should be enabled')
+    async verifyCancelButtonInConfirmDeleteEnabled(): Promise<void> {
+        CSReporter.info('Verifying Cancel button in Confirm Delete is enabled');
+        const isEnabled = await this.cumulativeMmtesPage.isConfirmDeleteCancelButtonEnabled();
+        if (isEnabled) {
+            CSReporter.pass('Cancel button in Confirm Delete is enabled');
+        } else {
+            CSReporter.fail('Cancel button in Confirm Delete is not enabled');
+            throw new Error('Cancel button verification failed');
+        }
+    }
