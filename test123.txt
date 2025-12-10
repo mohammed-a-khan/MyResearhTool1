@@ -1,98 +1,61 @@
 /**
-     * Find latest downloaded file using framework tracking with fallback to file system search
-     * Priority: 1) Framework-tracked downloads (auto-saved with proper names)
-     *           2) File system search in Downloads folders
-     * @param extension - File extension without dot (e.g., 'csv', 'xlsx')
-     * @returns Object with filePath and fileName, or null if not found
+     * Helper to check if a value is a valid provided date (not a placeholder or column name)
+     * Valid dates should contain / or - (e.g., MM/DD/YYYY or YYYY-MM-DD)
      */
-    private findDownloadedFileWithFrameworkTracking(extension: string): { filePath: string; fileName: string; modifiedTime: Date } | null {
-        // First, check framework-tracked downloads (v1.5.77+)
-        try {
-            const resultsManager = CSTestResultsManager.getInstance();
-            const trackedDownloads = resultsManager.getDownloadedFiles();
-
-            // Filter by extension and find the latest
-            const matchingDownloads = trackedDownloads.filter((d: any) =>
-                d.fileName.toLowerCase().endsWith(`.${extension.toLowerCase()}`) ||
-                d.suggestedName.toLowerCase().endsWith(`.${extension.toLowerCase()}`)
-            );
-
-            if (matchingDownloads.length > 0) {
-                // Get the most recent one
-                const latest = matchingDownloads[matchingDownloads.length - 1];
-                CSReporter.info(`Found framework-tracked ${extension.toUpperCase()} file: ${latest.fileName}`);
-                return {
-                    filePath: latest.filePath,
-                    fileName: latest.suggestedName || latest.fileName, // Prefer suggested name
-                    modifiedTime: latest.timestamp
-                };
-            }
-
-            CSReporter.debug(`No framework-tracked ${extension.toUpperCase()} files found, falling back to file system search`);
-        } catch (error: any) {
-            CSReporter.debug(`Framework download tracking not available: ${error.message}, using file system search`);
-        }
-
-        // Fallback: Search file system (backward compatibility)
-        return this.findLatestDownloadedFile(extension);
+    private isValidProvidedDate(value: string): boolean {
+        if (!value || value.trim() === '') return false;
+        if (value.includes('<') || value.includes('>')) return false;
+        if (value.includes('{') || value.includes('}')) return false;
+        // Reject literal column names that might leak through
+        const lowerValue = value.toLowerCase().trim();
+        if (lowerValue === 'startdate' || lowerValue === 'enddate' ||
+            lowerValue === 'start_date' || lowerValue === 'end_date' ||
+            lowerValue === 'undefined' || lowerValue === 'null') return false;
+        // Valid date should contain / or - separator
+        return value.includes('/') || value.includes('-');
     }
 
+    @CSBDDStepDef('I resolve start date as 3 business days ago if not provided {string}')
+    async resolveStartDate3BusinessDaysAgo(providedValue: string): Promise<void> {
+        CSReporter.info(`Resolving start date as 3 business days ago if not provided: ${providedValue}`);
 
-    @CSBDDStepDef('CSV file should be downloaded')
-    async verifyCSVFileDownloaded(): Promise<void> {
-        CSReporter.info('Verifying CSV file is downloaded');
-
-        // Get the file that was captured before export (if any)
-        const previousFile = this.scenarioContext.getVariable<string>('previousCsvFile');
-
-        // Find the latest CSV file - uses framework tracking with fallback to file system
-        const latestFile = this.findDownloadedFileWithFrameworkTracking('csv');
-
-        if (!latestFile) {
-            // Also check the framework's downloads directory
-            try {
-                const resultsManager = CSTestResultsManager.getInstance();
-                const downloadsDir = resultsManager.getDownloadsDirectory();
-                CSReporter.fail(`No CSV file found. Checked framework downloads (${downloadsDir}) and system Downloads folders.`);
-            } catch {
-                const folders = this.getDownloadFolders();
-                CSReporter.fail(`No CSV file found in Downloads folders: ${folders.join(', ')}`);
-            }
-            throw new Error('No CSV file found after export');
+        if (this.isValidProvidedDate(providedValue)) {
+            this.scenarioContext.setVariable('startDate', providedValue);
+            CSReporter.pass(`Using provided start date: ${providedValue}`);
+            return;
         }
 
-        // Verify it's a new file (different from before export)
-        if (previousFile && latestFile.filePath === previousFile) {
-            CSReporter.fail('No new CSV file was downloaded after export');
-            throw new Error('No new CSV file was downloaded after export. The latest file is the same as before.');
-        }
-
-        // Store the downloaded file path for later verification
-        this.scenarioContext.setVariable('downloadedCsvFile', latestFile.filePath);
-        this.scenarioContext.setVariable('downloadedCsvFileName', latestFile.fileName);
-
-        CSReporter.pass(`CSV file downloaded: ${latestFile.fileName} at ${latestFile.filePath}`);
+        const startDate = TTTFDatabaseHelper.calculateBusinessDaysAgo(3);
+        this.scenarioContext.setVariable('startDate', startDate);
+        CSReporter.pass(`Resolved start date as 3 business days ago: ${startDate}`);
     }
 
-    @CSBDDStepDef('XLSX file should be downloaded')
-    async verifyXLSXFileDownloaded(): Promise<void> {
-        CSReporter.info('Verifying XLSX file is downloaded');
+    @CSBDDStepDef('I resolve start date as 5 business days ago if not provided {string}')
+    async resolveStartDate5BusinessDaysAgo(providedValue: string): Promise<void> {
+        CSReporter.info(`Resolving start date as 5 business days ago if not provided: ${providedValue}`);
 
-        // Get the file that was captured before export (if any)
-        const previousFile = this.scenarioContext.getVariable<string>('previousXlsxFile');
-
-        // Find the latest XLSX file - uses framework tracking with fallback to file system
-        const latestFile = this.findDownloadedFileWithFrameworkTracking('xlsx');
-
-        if (!latestFile) {
-            // Also check the framework's downloads directory
-            try {
-                const resultsManager = CSTestResultsManager.getInstance();
-                const downloadsDir = resultsManager.getDownloadsDirectory();
-                CSReporter.fail(`No XLSX file found. Checked framework downloads (${downloadsDir}) and system Downloads folders.`);
-            } catch {
-                const folders = this.getDownloadFolders();
-                CSReporter.fail(`No XLSX file found in Downloads folders: ${folders.join(', ')}`);
-            }
-            throw new Error('No XLSX file found after export');
+        if (this.isValidProvidedDate(providedValue)) {
+            this.scenarioContext.setVariable('startDate', providedValue);
+            CSReporter.pass(`Using provided start date: ${providedValue}`);
+            return;
         }
+
+        const startDate = TTTFDatabaseHelper.calculateBusinessDaysAgo(5);
+        this.scenarioContext.setVariable('startDate', startDate);
+        CSReporter.pass(`Resolved start date as 5 business days ago: ${startDate}`);
+    }
+
+    @CSBDDStepDef('I resolve end date as 1 business day ago if not provided {string}')
+    async resolveEndDate1BusinessDayAgo(providedValue: string): Promise<void> {
+        CSReporter.info(`Resolving end date as 1 business day ago if not provided: ${providedValue}`);
+
+        if (this.isValidProvidedDate(providedValue)) {
+            this.scenarioContext.setVariable('endDate', providedValue);
+            CSReporter.pass(`Using provided end date: ${providedValue}`);
+            return;
+        }
+
+        const endDate = TTTFDatabaseHelper.calculateBusinessDaysAgo(1);
+        this.scenarioContext.setVariable('endDate', endDate);
+        CSReporter.pass(`Resolved end date as 1 business day ago: ${endDate}`);
+    }
