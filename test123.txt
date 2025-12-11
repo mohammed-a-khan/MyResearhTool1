@@ -1,61 +1,29 @@
-/**
-     * Helper to check if a value is a valid provided date (not a placeholder or column name)
-     * Valid dates should contain / or - (e.g., MM/DD/YYYY or YYYY-MM-DD)
-     */
-    private isValidProvidedDate(value: string): boolean {
-        if (!value || value.trim() === '') return false;
-        if (value.includes('<') || value.includes('>')) return false;
-        if (value.includes('{') || value.includes('}')) return false;
-        // Reject literal column names that might leak through
-        const lowerValue = value.toLowerCase().trim();
-        if (lowerValue === 'startdate' || lowerValue === 'enddate' ||
-            lowerValue === 'start_date' || lowerValue === 'end_date' ||
-            lowerValue === 'undefined' || lowerValue === 'null') return false;
-        // Valid date should contain / or - separator
-        return value.includes('/') || value.includes('-');
-    }
+// Calculate feature-level statistics
+            const passedCount = scenarios.filter(s => s.status === 'passed').length;
+            const failedCount = scenarios.filter(s => s.status === 'failed').length;
+            const skippedCount = scenarios.filter(s => s.status === 'skipped').length;
+            const featureStatus = failedCount > 0 ? 'failed' : (skippedCount === scenarios.length ? 'skipped' : 'passed');
+            const featureStatusIcon = featureStatus === 'passed' ? '✅' : (featureStatus === 'failed' ? '❌' : '⏭️');
 
-    @CSBDDStepDef('I resolve start date as 3 business days ago if not provided {string}')
-    async resolveStartDate3BusinessDaysAgo(providedValue: string): Promise<void> {
-        CSReporter.info(`Resolving start date as 3 business days ago if not provided: ${providedValue}`);
-
-        if (this.isValidProvidedDate(providedValue)) {
-            this.scenarioContext.setVariable('startDate', providedValue);
-            CSReporter.pass(`Using provided start date: ${providedValue}`);
-            return;
-        }
-
-        const startDate = TTTFDatabaseHelper.calculateBusinessDaysAgo(3);
-        this.scenarioContext.setVariable('startDate', startDate);
-        CSReporter.pass(`Resolved start date as 3 business days ago: ${startDate}`);
-    }
-
-    @CSBDDStepDef('I resolve start date as 5 business days ago if not provided {string}')
-    async resolveStartDate5BusinessDaysAgo(providedValue: string): Promise<void> {
-        CSReporter.info(`Resolving start date as 5 business days ago if not provided: ${providedValue}`);
-
-        if (this.isValidProvidedDate(providedValue)) {
-            this.scenarioContext.setVariable('startDate', providedValue);
-            CSReporter.pass(`Using provided start date: ${providedValue}`);
-            return;
-        }
-
-        const startDate = TTTFDatabaseHelper.calculateBusinessDaysAgo(5);
-        this.scenarioContext.setVariable('startDate', startDate);
-        CSReporter.pass(`Resolved start date as 5 business days ago: ${startDate}`);
-    }
-
-    @CSBDDStepDef('I resolve end date as 1 business day ago if not provided {string}')
-    async resolveEndDate1BusinessDayAgo(providedValue: string): Promise<void> {
-        CSReporter.info(`Resolving end date as 1 business day ago if not provided: ${providedValue}`);
-
-        if (this.isValidProvidedDate(providedValue)) {
-            this.scenarioContext.setVariable('endDate', providedValue);
-            CSReporter.pass(`Using provided end date: ${providedValue}`);
-            return;
-        }
-
-        const endDate = TTTFDatabaseHelper.calculateBusinessDaysAgo(1);
-        this.scenarioContext.setVariable('endDate', endDate);
-        CSReporter.pass(`Resolved end date as 1 business day ago: ${endDate}`);
-    }
+            return `
+                <div class="feature-item">
+                    <div class="feature-header" onclick="toggleFeature(this)">
+                        <div>
+                            <strong>${featureStatusIcon} 📁 ${featureName}</strong>
+                            <span class="text-muted" style="margin-left: 1rem;">(${scenarios.length} scenarios)</span>
+                            <span style="margin-left: 0.5rem;">
+                                ${passedCount > 0 ? `<span style="color: #28a745; font-weight: 500;">${passedCount} passed</span>` : ''}
+                                ${failedCount > 0 ? `<span style="color: #dc3545; font-weight: 500; margin-left: 0.5rem;">${failedCount} failed</span>` : ''}
+                                ${skippedCount > 0 ? `<span style="color: #6c757d; font-weight: 500; margin-left: 0.5rem;">${skippedCount} skipped</span>` : ''}
+                            </span>
+                        </div>
+                        <div>
+                            <span class="toggle-icon">▶</span>
+                        </div>
+                    </div>
+                    <div class="feature-scenarios">
+                        ${scenarioItems}
+                    </div>
+                </div>
+            `;
+        }).join('');
