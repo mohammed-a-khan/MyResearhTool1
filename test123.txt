@@ -1,29 +1,829 @@
-// Calculate feature-level statistics
-            const passedCount = scenarios.filter(s => s.status === 'passed').length;
-            const failedCount = scenarios.filter(s => s.status === 'failed').length;
-            const skippedCount = scenarios.filter(s => s.status === 'skipped').length;
-            const featureStatus = failedCount > 0 ? 'failed' : (skippedCount === scenarios.length ? 'skipped' : 'passed');
-            const featureStatusIcon = featureStatus === 'passed' ? '✅' : (featureStatus === 'failed' ? '❌' : '⏭️');
+file1
+----------------
+# Example: Deployment Pipeline with Playwright Test Automation
+# Following the exact pattern of yyy-yyy-yyyy with xxx-xxx-xxxx
 
-            return `
-                <div class="feature-item">
-                    <div class="feature-header" onclick="toggleFeature(this)">
-                        <div>
-                            <strong>${featureStatusIcon} 📁 ${featureName}</strong>
-                            <span class="text-muted" style="margin-left: 1rem;">(${scenarios.length} scenarios)</span>
-                            <span style="margin-left: 0.5rem;">
-                                ${passedCount > 0 ? `<span style="color: #28a745; font-weight: 500;">${passedCount} passed</span>` : ''}
-                                ${failedCount > 0 ? `<span style="color: #dc3545; font-weight: 500; margin-left: 0.5rem;">${failedCount} failed</span>` : ''}
-                                ${skippedCount > 0 ? `<span style="color: #6c757d; font-weight: 500; margin-left: 0.5rem;">${skippedCount} skipped</span>` : ''}
-                            </span>
-                        </div>
-                        <div>
-                            <span class="toggle-icon">▶</span>
-                        </div>
-                    </div>
-                    <div class="feature-scenarios">
-                        ${scenarioItems}
-                    </div>
-                </div>
-            `;
-        }).join('');
+trigger: none
+
+parameters:
+- name: stageToRun
+  displayName: 'Stage'
+  type: string
+  default: 'DEV'
+  values:
+  - 'DEV'
+  - 'SIT'
+  - 'STAGE'
+  - 'UAT'
+  - 'ALL'
+
+resources:
+  pipelines:
+  - pipeline: BuildArtifact
+    source: '[CI - Snapshot Build] YourApplication'
+    trigger:
+      branches:
+        - refs/heads/main
+  repositories:
+  # Your application sss repo
+  - repository: your-app-sss
+    name: your-app-sss
+    type: git
+    ref: main
+  # Deployment templates
+  - repository: templatesAndScripts
+    name: ado-sss-shared
+    type: git
+    ref: main
+  # Playwright test templates (like xxx-xxx-xxxx)
+  - repository: qqq-qqq-qqqq
+    name: qqq-qqq-qqqq
+    type: git
+    ref: main
+  # Your Playwright automation repository
+  - repository: automationRepo
+    name: your-playwright-automation
+    type: git
+    ref: main
+
+variables:
+- template: variables.yml
+- template: templates/variables.yml@templatesAndScripts
+
+stages:
+# Deployment Stage
+- template: templates/stage-ocp-yyy-yyy-yyy@templatesAndScripts
+  parameters:
+    stageToRun: ${{parameters.stageToRun}}
+    appName: 'your-application'
+    buildArtifactName: 'BuildArtifact'
+
+# Playwright Test Automation Stage
+# - stageToRun: Controls WHEN the test stage runs (pipeline condition)
+# - targetEnv: Controls WHICH environment tests run against (framework config)
+#
+# NOTE: 'ALL' and 'DEV' do NOT trigger tests. Tests only run for SIT/UAT/STAGE.
+# If you need tests for ALL, define separate test stages per environment below.
+- template: yaml/stages/test.yml@qqq-qqq-qqqq
+  parameters:
+    stageToRun: ${{parameters.stageToRun}}   # Pass user's selection for condition
+    targetEnv: ${{parameters.stageToRun}}    # Test against selected environment
+    nodeVersion: '20'
+    repositoryName: 'your-playwright-automation'
+    suiteConfig: 'test-suite.yaml'
+    suiteMode: 'all'
+    tags: ''
+    emailTo: 'your-team@akhancompany.com'
+    emailSubject: 'YourApplication - Playwright Test Report - ${{parameters.stageToRun}}'
+    workingDirectory: '.'
+
+
+file2:
+------------
+# Standalone Playwright Test Pipeline
+# Use this for running tests independently (not attached to deployment)
+#
+# Setup:
+# 1. Create new pipeline in Azure Collections
+# 2. Point to this YAML file in your automation repo
+# 3. Configure variables/parameters as needed
+
+trigger: none  # Manual trigger only
+
+schedules:
+- cron: '0 6 * * 1-5'  # Optional: Run at 6 AM Mon-Fri
+  displayName: 'Daily Regression'
+  branches:
+    include:
+    - main
+  always: true
+
+parameters:
+- name: targetEnv
+  displayName: 'Target Environment'
+  type: string
+  default: 'SIT'
+  values:
+  - SIT
+  - UAT
+  - STAGE
+
+- name: suiteConfig
+  displayName: 'Suite Configuration'
+  type: string
+  default: 'test-suite.yaml'
+
+- name: suiteMode
+  displayName: 'Suite Mode'
+  type: string
+  default: 'all'
+  values:
+  - all
+  - api-only
+  - ui-only
+
+- name: tags
+  displayName: 'Tags Filter (optional)'
+  type: string
+  default: ''
+  values:
+  - ''
+  - '@smoke'
+  - '@regression'
+  - '@smoke or @regression'
+
+- name: emailTo
+  displayName: 'Email Recipients'
+  type: string
+  default: 'your-team@akhancompany.com'
+
+resources:
+  repositories:
+  - repository: qqq-qqq-qqqq
+    name: qqq-qqq-qqqq
+    type: git
+    ref: main
+
+# Variables
+variables:
+- name: nodeVersion
+  value: '20'
+
+stages:
+# Single test stage - runs always (no deployment dependency)
+- template: yaml/stages/test.yml@qqq-qqq-qqqq
+  parameters:
+    stageToRun: ${{ parameters.targetEnv }}  # Use targetEnv to control stage condition
+    poolName: 'MMM'
+    nodeVersion: $(nodeVersion)
+    repositoryName: '$(Build.Repository.Name)'
+    workingDirectory: '.'
+    suiteConfig: ${{ parameters.suiteConfig }}
+    targetEnv: ${{ parameters.targetEnv }}
+    suiteMode: ${{ parameters.suiteMode }}
+    tags: ${{ parameters.tags }}
+    emailTo: ${{ parameters.emailTo }}
+    emailSubject: 'Playwright Tests - ${{ parameters.targetEnv }} - $(Build.BuildNumber)'
+    skipEmail: false
+    useProxyForNpm: false
+
+
+file3:
+------------
+parameters:
+- name: poolName
+  type: string
+  default: 'MMM'
+- name: nodeVersion
+  type: string
+  default: '20'
+- name: workingDirectory
+  type: string
+  default: '.'
+- name: repositoryName
+  type: string
+  default: '$(Build.Repository.Name)'
+- name: suiteConfig
+  type: string
+  default: 'test-suite.yaml'
+- name: targetEnv
+  type: string
+  default: 'SIT'
+- name: suiteMode
+  type: string
+  default: 'all'
+- name: tags
+  type: string
+  default: ''
+- name: emailTo
+  type: string
+  default: ''
+- name: emailSubject
+  type: string
+  default: '$(Build.DefinitionName) test report'
+- name: skipEmail
+  type: boolean
+  default: false
+- name: useProxyForNpm
+  type: boolean
+  default: false
+
+jobs:
+- job: Playwright_Test
+  displayName: Playwright Test Execution
+  timeoutInMinutes: 120
+  workspace:
+    clean: all
+  pool:
+    name: ${{ parameters.poolName }}
+  steps:
+  - template: ../steps/test.yml
+    parameters:
+      nodeVersion: '${{ parameters.nodeVersion }}'
+      workingDirectory: '${{ parameters.workingDirectory }}'
+      repositoryName: '${{ parameters.repositoryName }}'
+      suiteConfig: '${{ parameters.suiteConfig }}'
+      targetEnv: '${{ parameters.targetEnv }}'
+      suiteMode: '${{ parameters.suiteMode }}'
+      tags: '${{ parameters.tags }}'
+      emailTo: '${{ parameters.emailTo }}'
+      emailSubject: '${{ parameters.emailSubject }}'
+      skipEmail: ${{ parameters.skipEmail }}
+      useProxyForNpm: ${{ parameters.useProxyForNpm }}
+
+
+file4:
+--------------
+parameters:
+- name: poolName
+  type: string
+  default: 'MMM'
+- name: stageToRun
+  type: string
+  default: ''
+- name: nodeVersion
+  type: string
+  default: '20'
+- name: workingDirectory
+  type: string
+  default: '.'
+- name: repositoryName
+  type: string
+  default: '$(Build.Repository.Name)'
+- name: suiteConfig
+  type: string
+  default: 'test-suite.yaml'
+- name: targetEnv
+  type: string
+  default: 'SIT'
+- name: suiteMode
+  type: string
+  default: 'all'
+- name: tags
+  type: string
+  default: ''
+- name: emailTo
+  type: string
+  default: ''
+- name: emailSubject
+  type: string
+  default: '$(Build.DefinitionName) test report'
+- name: skipEmail
+  type: boolean
+  default: false
+- name: useProxyForNpm
+  type: boolean
+  default: false
+
+stages:
+
+- stage: Test_Automation
+  displayName: Playwright Test Automation
+
+  variables:
+  - template: ../variables/variables-test.yml
+
+  # Note: ALL is excluded - for ALL deployments, define separate test stages per environment
+  condition: or(eq('${{ parameters.stageToRun }}', 'SIT'),eq('${{ parameters.stageToRun }}', 'UAT'),eq('${{ parameters.stageToRun }}', 'STAGE'))
+
+  jobs:
+  - template: ../jobs/test.yml
+    parameters:
+      poolName: ${{ parameters.poolName }}
+      nodeVersion: '${{ parameters.nodeVersion }}'
+      workingDirectory: '${{ parameters.workingDirectory }}'
+      repositoryName: '${{ parameters.repositoryName }}'
+      suiteConfig: '${{ parameters.suiteConfig }}'
+      targetEnv: '${{ parameters.targetEnv }}'
+      suiteMode: '${{ parameters.suiteMode }}'
+      tags: '${{ parameters.tags }}'
+      emailTo: '${{ parameters.emailTo }}'
+      emailSubject: '${{ parameters.emailSubject }}'
+      skipEmail: ${{ parameters.skipEmail }}
+      useProxyForNpm: ${{ parameters.useProxyForNpm }}
+
+
+file 5:
+----------------
+
+parameters:
+- name: nodeVersion
+  type: string
+  default: '20'
+- name: workingDirectory
+  type: string
+  default: '.'
+- name: repositoryName
+  type: string
+  default: '$(Build.Repository.Name)'
+- name: suiteConfig
+  type: string
+  default: 'test-suite.yaml'
+- name: targetEnv
+  type: string
+  default: 'SIT'
+- name: suiteMode
+  type: string
+  default: 'all'
+- name: tags
+  type: string
+  default: ''
+- name: emailTo
+  type: string
+  default: ''
+- name: emailSubject
+  type: string
+  default: '$(Build.DefinitionName) test report'
+- name: skipEmail
+  type: boolean
+  default: false
+- name: useProxyForNpm
+  type: boolean
+  default: false
+
+steps:
+
+# Checkout repositories
+- checkout: qqq-qqq-qqqq
+  persistCredentials: true
+  clean: true
+
+- checkout: automationRepo
+  persistCredentials: true
+  clean: true
+
+# Browser version check
+- task: PowerShell@2
+  displayName: 'Browser version check'
+  inputs:
+    targetType: 'inline'
+    script: |
+      Write-Host "=== Browser Versions ==="
+      try {
+        $chromeVersion = (Get-ItemProperty 'HKLM:\Software\Wow6432Node\Google\Update\Clients\{8A69D345-D564-463c-AFF1-A69D9E530F96}' -Name "pv" -ErrorAction SilentlyContinue).pv
+        if ($chromeVersion) { Write-Host "Chrome: $chromeVersion" }
+      } catch { Write-Host "Chrome: Not found" }
+      try {
+        $edgeVersion = (Get-ItemProperty 'HKLM:\Software\Microsoft\Edge' -Name "Version" -ErrorAction SilentlyContinue).Version
+        if ($edgeVersion) { Write-Host "Edge: $edgeVersion" }
+      } catch { Write-Host "Edge: Not found" }
+  continueOnError: true
+
+# .rrrrrrrr file for npm install (following ado-javascript-shared pattern)
+- task: DownloadPackageFile@1
+  name: rrrrrrrr
+  displayName: 'Download .nnnnn-nnnnn'
+  inputs:
+    secureFile: .nnnnn-nnnnn
+
+- powershell: |
+    $targetDir = "$(System.DefaultWorkingDirectory)/${{ parameters.repositoryName }}/${{ parameters.workingDirectory }}"
+    Write-Host "Copying .rrrrrrrr to $targetDir"
+    copy $(rrrrrrrr.secureFilePath) "$targetDir/.rrrrrrrr"
+  displayName: Copy .rrrrrrrr to working dir
+  condition: eq( variables['Agent.OS'], 'Windows_NT' )
+
+- bash: |
+    targetDir="$(System.DefaultWorkingDirectory)/${{ parameters.repositoryName }}/${{ parameters.workingDirectory }}"
+    echo "Copying .rrrrrrrr to $targetDir"
+    cp $(rrrrrrrr.secureFilePath) "$targetDir/.rrrrrrrr"
+  displayName: Copy .rrrrrrrr to working dir
+  condition: eq( variables['Agent.OS'], 'Linux' )
+
+- task: qetza.replacetokens.replacetokens-task.replacetokens@5
+  env:
+    SYSTEM_ACCESSTOKEN: $(System.AccessToken)
+  displayName: 'Replace tokens in .rrrrrrrr'
+  inputs:
+    rootDirectory: '$(System.DefaultWorkingDirectory)/${{ parameters.repositoryName }}/${{ parameters.workingDirectory }}'
+    targetFiles: .rrrrrrrr
+
+- powershell: |
+    $targetDir = "$(System.DefaultWorkingDirectory)/${{ parameters.repositoryName }}/${{ parameters.workingDirectory }}"
+    Write-Host "--- adding proxy to .rrrrrrrr"
+    Add-Content "$targetDir/.rrrrrrrr" "proxy=http://mylocalproxy.com:80/"
+  displayName: Add proxy to .rrrrrrrr
+  condition: and( eq( variables['Agent.OS'], 'Windows_NT' ), eq('${{ parameters.useProxyForNpm }}', 'True') )
+
+- bash: |
+    targetDir="$(System.DefaultWorkingDirectory)/${{ parameters.repositoryName }}/${{ parameters.workingDirectory }}"
+    echo "--- adding proxy to .rrrrrrrr"
+    echo "proxy=http://mylocalproxy.com:80/" >> "$targetDir/.rrrrrrrr"
+  displayName: Add proxy to .rrrrrrrr
+  condition: and( eq( variables['Agent.OS'], 'Linux' ), eq('${{ parameters.useProxyForNpm }}', 'True') )
+
+# Install Node.js
+- task: NodeTool@0
+  displayName: 'Install Node ${{ parameters.nodeVersion }}'
+  inputs:
+    versionSpec: '${{ parameters.nodeVersion }}'
+
+# List folder contents and capture start time
+- task: PowerShell@2
+  displayName: 'List folder contents and capture start time'
+  inputs:
+    targetType: 'inline'
+    script: |
+      Write-Host "=== Working Directory Contents ==="
+      Get-ChildItem -Recurse -Depth 2 | Format-Table Name, Length
+      $time = Get-Date
+      $startTime = $time.ToString("yyyy-MM-dd HH:mm:ss")
+      Write-Host "##vso[task.setvariable variable=startTime]$startTime"
+      Write-Host "Test execution started at: $startTime"
+
+# Install Dependencies
+- task: Npm@1
+  displayName: 'Install Dependencies'
+  inputs:
+    command: 'custom'
+    customCommand: 'install'
+    workingDir: '$(System.DefaultWorkingDirectory)/${{ parameters.repositoryName }}/${{ parameters.workingDirectory }}'
+
+# Install Playwright browsers
+- task: PowerShell@2
+  displayName: 'Install Playwright Browsers'
+  inputs:
+    targetType: 'inline'
+    workingDirectory: '$(System.DefaultWorkingDirectory)/${{ parameters.repositoryName }}/${{ parameters.workingDirectory }}'
+    script: |
+      Write-Host "Installing Playwright browsers..."
+      npx playwright install chromium
+      npx playwright install msedge
+      Write-Host "Playwright browsers installed"
+  continueOnError: true
+
+# Test Execution
+- task: PowerShell@2
+  displayName: 'Test Execution'
+  inputs:
+    targetType: 'inline'
+    workingDirectory: '$(System.DefaultWorkingDirectory)/${{ parameters.repositoryName }}/${{ parameters.workingDirectory }}'
+    script: |
+      Write-Host "=================================================="
+      Write-Host "  CS Playwright Test Framework - Test Execution"
+      Write-Host "=================================================="
+      Write-Host ""
+      Write-Host "##vso[task.setvariable variable=status]Failed"
+      $cmd = "npx cs-playwright-test --suite=multi-project"
+      $cmd += " --suite-config=`"${{ parameters.suiteConfig }}`""
+      $cmd += " --environment=`"${{ parameters.targetEnv }}`""
+      $suiteMode = "${{ parameters.suiteMode }}"
+      if ($suiteMode -and $suiteMode -ne "all") {
+        $cmd += " --suite-mode=$suiteMode"
+      }
+      $tags = "${{ parameters.tags }}"
+      if ($tags -and $tags -ne "none" -and $tags -ne "") {
+        $cmd += " --tags=`"$tags`""
+      }
+      Write-Host "Executing: $cmd"
+      Write-Host ""
+      Invoke-Expression $cmd
+      $exitCode = $LASTEXITCODE
+      if ($exitCode -eq 0) {
+        Write-Host "##vso[task.setvariable variable=status]Succeeded"
+        Write-Host "Tests completed successfully!"
+      } else {
+        Write-Host "##vso[task.setvariable variable=status]Failed"
+        Write-Host "Tests completed with failures (exit code: $exitCode)"
+      }
+      Write-Host "##vso[task.setvariable variable=testExitCode]$exitCode"
+      exit 0
+  continueOnError: true
+
+# Parse Test Results
+- task: PowerShell@2
+  displayName: 'Parse Test Results'
+  inputs:
+    targetType: 'inline'
+    workingDirectory: '$(System.DefaultWorkingDirectory)/${{ parameters.repositoryName }}/${{ parameters.workingDirectory }}'
+    script: |
+      $time = Get-Date
+      $endTime = $time.ToString("yyyy-MM-dd HH:mm:ss")
+      Write-Host "##vso[task.setvariable variable=endTime]$endTime"
+      $totalScenarios = 0
+      $passedScenarios = 0
+      $failedScenarios = 0
+      $skippedScenarios = 0
+      $successRate = "0.00"
+      $totalDuration = "0s"
+      $projectCount = 0
+      $suiteName = "Test Suite"
+      $reportDir = ""
+      $reportsPath = "reports"
+      $allScenarios = @()
+      $featureStats = @{}
+      if (Test-Path $reportsPath) {
+        $reportDirs = Get-ChildItem -Path $reportsPath -Directory | Sort-Object LastWriteTime -Descending
+        if ($reportDirs.Count -gt 0) {
+          $reportDir = $reportDirs[0].FullName
+          Write-Host "Report directory: $reportDir"
+          $consolidatedJson = Join-Path $reportDir "consolidated-data.json"
+          if (Test-Path $consolidatedJson) {
+            Write-Host "Parsing consolidated report..."
+            $data = Get-Content $consolidatedJson -Raw | ConvertFrom-Json
+            $totalScenarios = $data.totalScenarios
+            $passedScenarios = $data.passedScenarios
+            $failedScenarios = $data.failedScenarios
+            $skippedScenarios = if ($data.skippedScenarios) { $data.skippedScenarios } else { 0 }
+            $successRate = $data.successRate
+            $totalDuration = $data.totalDurationFormatted
+            $projectCount = $data.totalProjects
+            $suiteName = $data.suiteName
+            foreach ($project in $data.projects) {
+              foreach ($scenario in $project.scenarios) {
+                $scenarioError = ""
+                if ($scenario.error) { $scenarioError = $scenario.error }
+                elseif ($scenario.steps) {
+                  foreach ($step in $scenario.steps) {
+                    if ($step.status -eq "failed" -and $step.error) { $scenarioError = $step.error; break }
+                  }
+                }
+                $scenarioDuration = $scenario.durationFormatted
+                if (-not $scenarioDuration -and $scenario.duration) {
+                  $dur = [int]$scenario.duration
+                  $scenarioDuration = if ($dur -lt 1000) { "${dur}ms" } else { "$([math]::Round($dur / 1000, 1))s" }
+                }
+                $allScenarios += @{ project = $project.name; feature = $scenario.feature; name = $scenario.name; status = $scenario.status; duration = $scenarioDuration; error = $scenarioError }
+              }
+            }
+          } else {
+            $reportJson = Join-Path $reportDir "reports/report-data.json"
+            if (Test-Path $reportJson) {
+              Write-Host "Parsing single project report..."
+              $data = Get-Content $reportJson -Raw | ConvertFrom-Json
+              if ($data.suite) {
+                $totalScenarios = if ($data.suite.totalScenarios) { $data.suite.totalScenarios } else { $data.suite.scenarios.Count }
+                $passedScenarios = if ($data.suite.passedScenarios) { $data.suite.passedScenarios } else { 0 }
+                $failedScenarios = if ($data.suite.failedScenarios) { $data.suite.failedScenarios } else { 0 }
+                $skippedScenarios = if ($data.suite.skippedScenarios) { $data.suite.skippedScenarios } else { 0 }
+                $suiteName = if ($data.suite.name) { $data.suite.name } else { "Test Suite" }
+                if ($passedScenarios -eq 0 -and $failedScenarios -eq 0 -and $data.suite.scenarios) {
+                  foreach ($sc in $data.suite.scenarios) {
+                    if ($sc.status -eq "passed") { $passedScenarios++ }
+                    elseif ($sc.status -eq "failed") { $failedScenarios++ }
+                    else { $skippedScenarios++ }
+                  }
+                }
+                if ($totalScenarios -gt 0) { $successRate = [math]::Round(($passedScenarios / $totalScenarios) * 100, 2) }
+                $durationMs = if ($data.suite.duration) { $data.suite.duration } else { 0 }
+                if ($durationMs -lt 1000) { $totalDuration = "${durationMs}ms" }
+                elseif ($durationMs -lt 60000) { $totalDuration = "$([math]::Round($durationMs / 1000, 1))s" }
+                else { $mins = [math]::Floor($durationMs / 60000); $secs = [math]::Round(($durationMs % 60000) / 1000); $totalDuration = "${mins}m ${secs}s" }
+                $projectCount = 1
+                foreach ($scenario in $data.suite.scenarios) {
+                  $scenarioError = ""
+                  if ($scenario.error) { $scenarioError = $scenario.error }
+                  elseif ($scenario.steps) {
+                    foreach ($step in $scenario.steps) {
+                      if ($step.status -eq "failed" -and $step.error) { $scenarioError = $step.error; break }
+                    }
+                  }
+                  $scenarioDurationMs = if ($scenario.duration) { $scenario.duration } else { 0 }
+                  $scenarioDuration = if ($scenarioDurationMs -lt 1000) { "${scenarioDurationMs}ms" } else { "$([math]::Round($scenarioDurationMs / 1000, 1))s" }
+                  $allScenarios += @{ project = $suiteName; feature = if ($scenario.feature) { $scenario.feature } else { "Unknown" }; name = $scenario.name; status = $scenario.status; duration = $scenarioDuration; error = $scenarioError }
+                }
+              }
+            }
+          }
+        }
+      }
+      # Build feature stats
+      foreach ($s in $allScenarios) {
+        $fName = $s.feature
+        if (-not $featureStats.ContainsKey($fName)) { $featureStats[$fName] = @{ passed = 0; failed = 0; skipped = 0; total = 0 } }
+        $featureStats[$fName].total++
+        if ($s.status -eq "passed") { $featureStats[$fName].passed++ }
+        elseif ($s.status -eq "failed") { $featureStats[$fName].failed++ }
+        else { $featureStats[$fName].skipped++ }
+      }
+      # Build Feature Summary HTML
+      $featureHtml = '<table border="0" cellpadding="0" cellspacing="0" width="100%" style="margin-top:15px;">'
+      $featureHtml += '<tr bgcolor="#93186C"><td style="padding:10px 15px;color:#ffffff;font-weight:bold;">Feature</td><td style="padding:10px 15px;color:#ffffff;font-weight:bold;text-align:center;width:60px;">Total</td><td style="padding:10px 15px;color:#ffffff;font-weight:bold;text-align:center;width:60px;">Pass</td><td style="padding:10px 15px;color:#ffffff;font-weight:bold;text-align:center;width:60px;">Fail</td><td style="padding:10px 15px;color:#ffffff;font-weight:bold;text-align:center;width:60px;">Skip</td><td style="padding:10px 15px;color:#ffffff;font-weight:bold;text-align:center;width:70px;">Status</td></tr>'
+      $rowNum = 0
+      foreach ($fName in $featureStats.Keys) {
+        $f = $featureStats[$fName]
+        $rowBg = if ($rowNum % 2 -eq 0) { "#ffffff" } else { "#f8fafc" }
+        $statusBg = if ($f.failed -gt 0) { "#fef2f2" } else { "#f0fdf4" }
+        $statusColor = if ($f.failed -gt 0) { "#dc2626" } else { "#059669" }
+        $statusText = if ($f.failed -gt 0) { "FAILED" } else { "PASSED" }
+        $shortName = if ($fName.Length -gt 50) { $fName.Substring(0,47) + "..." } else { $fName }
+        $featureHtml += "<tr bgcolor=`"$rowBg`"><td style=`"padding:10px 15px;border-bottom:1px solid #e2e8f0;`">$shortName</td><td style=`"padding:10px 15px;border-bottom:1px solid #e2e8f0;text-align:center;font-weight:bold;`">$($f.total)</td><td style=`"padding:10px 15px;border-bottom:1px solid #e2e8f0;text-align:center;color:#059669;font-weight:bold;`">$($f.passed)</td><td style=`"padding:10px 15px;border-bottom:1px solid #e2e8f0;text-align:center;color:#dc2626;font-weight:bold;`">$($f.failed)</td><td style=`"padding:10px 15px;border-bottom:1px solid #e2e8f0;text-align:center;color:#6b7280;`">$($f.skipped)</td><td style=`"padding:10px 15px;border-bottom:1px solid #e2e8f0;text-align:center;`"><span style=`"background-color:$statusBg;color:$statusColor;padding:3px 8px;font-size:11px;font-weight:bold;`">$statusText</span></td></tr>"
+        $rowNum++
+      }
+      $featureHtml += '</table>'
+      # Build Failed Scenarios HTML
+      $failedHtml = ''
+      $failedList = $allScenarios | Where-Object { $_.status -eq "failed" }
+      if ($failedList.Count -gt 0) {
+        $failedHtml = '<table border="0" cellpadding="0" cellspacing="0" width="100%" style="margin-top:15px;"><tr bgcolor="#dc2626"><td style="padding:10px 15px;color:#ffffff;font-weight:bold;">Scenario</td><td style="padding:10px 15px;color:#ffffff;font-weight:bold;">Feature</td><td style="padding:10px 15px;color:#ffffff;font-weight:bold;">Error</td></tr>'
+        $rowNum = 0
+        foreach ($s in $failedList) {
+          $rowBg = if ($rowNum % 2 -eq 0) { "#fef2f2" } else { "#ffffff" }
+          $shortScenario = if ($s.name.Length -gt 40) { $s.name.Substring(0,37) + "..." } else { $s.name }
+          $shortFeature = if ($s.feature.Length -gt 30) { $s.feature.Substring(0,27) + "..." } else { $s.feature }
+          $shortError = if ($s.error.Length -gt 80) { $s.error.Substring(0,77) + "..." } else { $s.error }
+          $shortError = $shortError -replace '<', '&lt;' -replace '>', '&gt;'
+          $failedHtml += "<tr bgcolor=`"$rowBg`"><td style=`"padding:10px 15px;border-bottom:1px solid #fecaca;color:#991b1b;`">&#10008; $shortScenario</td><td style=`"padding:10px 15px;border-bottom:1px solid #fecaca;color:#7f1d1d;font-size:12px;`">$shortFeature</td><td style=`"padding:10px 15px;border-bottom:1px solid #fecaca;color:#b91c1c;font-size:11px;font-family:Consolas,monospace;`">$shortError</td></tr>"
+          $rowNum++
+        }
+        $failedHtml += '</table>'
+      }
+      # Build Passed Scenarios HTML
+      $passedHtml = ''
+      $passedList = $allScenarios | Where-Object { $_.status -eq "passed" }
+      if ($passedList.Count -gt 0 -and $passedList.Count -le 20) {
+        $passedHtml = '<table border="0" cellpadding="0" cellspacing="0" width="100%" style="margin-top:15px;"><tr bgcolor="#059669"><td style="padding:10px 15px;color:#ffffff;font-weight:bold;">Scenario</td><td style="padding:10px 15px;color:#ffffff;font-weight:bold;">Feature</td><td style="padding:10px 15px;color:#ffffff;font-weight:bold;text-align:center;width:80px;">Duration</td></tr>'
+        $rowNum = 0
+        foreach ($s in $passedList) {
+          $rowBg = if ($rowNum % 2 -eq 0) { "#f0fdf4" } else { "#ffffff" }
+          $shortScenario = if ($s.name.Length -gt 45) { $s.name.Substring(0,42) + "..." } else { $s.name }
+          $shortFeature = if ($s.feature.Length -gt 35) { $s.feature.Substring(0,32) + "..." } else { $s.feature }
+          $passedHtml += "<tr bgcolor=`"$rowBg`"><td style=`"padding:8px 15px;border-bottom:1px solid #bbf7d0;color:#166534;`">&#10004; $shortScenario</td><td style=`"padding:8px 15px;border-bottom:1px solid #bbf7d0;color:#15803d;font-size:12px;`">$shortFeature</td><td style=`"padding:8px 15px;border-bottom:1px solid #bbf7d0;color:#166534;text-align:center;font-size:12px;`">$($s.duration)</td></tr>"
+          $rowNum++
+        }
+        $passedHtml += '</table>'
+      }
+      # Store HTML in temp files
+      $featureHtml | Out-File -FilePath "feature-html.tmp" -Encoding UTF8
+      $failedHtml | Out-File -FilePath "failed-html.tmp" -Encoding UTF8
+      $passedHtml | Out-File -FilePath "passed-html.tmp" -Encoding UTF8
+      Write-Host "##vso[task.setvariable variable=reportDirectory]$reportDir"
+      Write-Host "##vso[task.setvariable variable=totalScenarios]$totalScenarios"
+      Write-Host "##vso[task.setvariable variable=passedScenarios]$passedScenarios"
+      Write-Host "##vso[task.setvariable variable=failedScenarios]$failedScenarios"
+      Write-Host "##vso[task.setvariable variable=skippedScenarios]$skippedScenarios"
+      Write-Host "##vso[task.setvariable variable=successRate]$successRate"
+      Write-Host "##vso[task.setvariable variable=totalDuration]$totalDuration"
+      Write-Host "##vso[task.setvariable variable=projectCount]$projectCount"
+      Write-Host "##vso[task.setvariable variable=suiteName]$suiteName"
+      Write-Host ""
+      Write-Host "=========================================="
+      Write-Host "           TEST SUMMARY"
+      Write-Host "=========================================="
+      Write-Host "Suite Name    : $suiteName"
+      Write-Host "Total         : $totalScenarios"
+      Write-Host "Passed        : $passedScenarios"
+      Write-Host "Failed        : $failedScenarios"
+      Write-Host "Skipped       : $skippedScenarios"
+      Write-Host "Success Rate  : $successRate%"
+      Write-Host "Duration      : $totalDuration"
+      Write-Host "=========================================="
+
+# Prepare Test Results ZIP
+- task: PowerShell@2
+  displayName: 'Prepare Test Results ZIP'
+  inputs:
+    targetType: 'inline'
+    workingDirectory: '$(System.DefaultWorkingDirectory)/${{ parameters.repositoryName }}/${{ parameters.workingDirectory }}'
+    script: |
+      $reportDir = "$(reportDirectory)"
+      $zipFile = ""
+      if (Test-Path "reports") {
+        $existingZips = Get-ChildItem -Path "reports" -Filter "*.zip" | Sort-Object LastWriteTime -Descending
+        if ($existingZips.Count -gt 0) { $zipFile = $existingZips[0].FullName; Write-Host "Found existing ZIP: $zipFile" }
+      }
+      if (-not $zipFile -and $reportDir -and (Test-Path $reportDir)) {
+        $zipName = (Split-Path $reportDir -Leaf) + ".zip"
+        $zipFile = Join-Path "reports" $zipName
+        Write-Host "Creating ZIP: $zipFile"
+        Compress-Archive -Path $reportDir -DestinationPath $zipFile -Force
+      }
+      if ($zipFile -and (Test-Path $zipFile)) {
+        Write-Host "##vso[task.setvariable variable=testResultsZip]$zipFile"
+        $size = [math]::Round((Get-Item $zipFile).Length / 1MB, 2)
+        Write-Host "ZIP file size: $size MB"
+      } else {
+        Write-Host "##vso[task.setvariable variable=testResultsZip]"
+        Write-Host "No ZIP file available"
+      }
+
+# Send Email Report (company SMTP - no authentication required)
+- task: PowerShell@2
+  displayName: 'Send Test Report Email'
+  inputs:
+    targetType: 'inline'
+    workingDirectory: '$(System.DefaultWorkingDirectory)/${{ parameters.repositoryName }}/${{ parameters.workingDirectory }}'
+    script: |
+      Write-Host "=================================================="
+      Write-Host "  Sending Test Report Email"
+      Write-Host "=================================================="
+      $testStatus = "$(status)"
+      $totalScenarios = "$(totalScenarios)"
+      $passedScenarios = "$(passedScenarios)"
+      $failedScenarios = "$(failedScenarios)"
+      $skippedScenarios = "$(skippedScenarios)"
+      $successRate = "$(successRate)"
+      $totalDuration = "$(totalDuration)"
+      $projectCount = "$(projectCount)"
+      $suiteName = "$(suiteName)"
+      $startTime = "$(startTime)"
+      $endTime = "$(endTime)"
+      $zipFile = "$(testResultsZip)"
+      if ($testStatus -eq "Succeeded") { $statusColor = "#10b981"; $statusText = "PASSED" }
+      else { $statusColor = "#ef4444"; $statusText = "FAILED" }
+      $pipelineUrl = "https://dev.azure.com/Mkhan/_build/results?buildId=$(Build.BuildId)"
+      $buildReason = "$(Build.Reason)"
+      $triggeredBy = if ($buildReason -eq "Manual") { "Manually by $(Build.RequestedFor)" } else { $buildReason }
+      $total = [int]$totalScenarios
+      if ($total -gt 0) { $passedPct = [math]::Round(([int]$passedScenarios / $total) * 100, 0); $failedPct = [math]::Round(([int]$failedScenarios / $total) * 100, 0); $skippedPct = [math]::Round(([int]$skippedScenarios / $total) * 100, 0) }
+      else { $passedPct = 0; $failedPct = 0; $skippedPct = 0 }
+      $featureHtml = if (Test-Path "feature-html.tmp") { Get-Content "feature-html.tmp" -Raw } else { "" }
+      $failedHtml = if (Test-Path "failed-html.tmp") { Get-Content "failed-html.tmp" -Raw } else { "" }
+      $passedHtml = if (Test-Path "passed-html.tmp") { Get-Content "passed-html.tmp" -Raw } else { "" }
+      # Build HTML Email
+      $html = '<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Test Report</title></head><body style="margin:0;padding:0;background-color:#f4f4f4;font-family:Segoe UI,Arial,sans-serif;"><table border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color:#f4f4f4;"><tr><td align="center" style="padding:20px 0;">'
+      $html += '<table border="0" cellpadding="0" cellspacing="0" width="720" style="margin-bottom:20px;"><tr><td style="padding:0 10px;"><p style="color:#1e293b;margin:0;font-size:15px;line-height:1.6;"><strong>Hello,</strong></p><p style="color:#475569;margin:15px 0 0 0;font-size:14px;line-height:1.6;">Please find below the automated test execution results from the latest Azure Collections test automation pipeline run. This report includes feature-level statistics, scenario outcomes, and error details for any failures.</p></td></tr></table>'
+      $html += '<table border="0" cellpadding="0" cellspacing="0" width="720" style="background-color:#ffffff;border:2px solid #000000;">'
+      $html += '<tr><td bgcolor="#93186C" style="padding:30px 40px;text-align:center;"><h1 style="color:#ffffff;margin:0;font-size:28px;font-weight:600;">Automated Test Execution Report</h1><p style="color:#e8b4d8;margin:10px 0 0 0;font-size:14px;">CS Playwright Test Framework</p></td></tr>'
+      $statusEmoji = if ($testStatus -eq "Succeeded") { "&#10004;" } else { "&#10008;" }
+      $html += '<tr><td bgcolor="' + $statusColor + '" style="padding:20px 40px;text-align:center;"><span style="color:#ffffff;font-size:32px;font-weight:bold;">' + $statusEmoji + ' ' + $statusText + '</span></td></tr>'
+      $html += '<tr><td style="padding:30px 40px;"><table border="0" cellpadding="0" cellspacing="0" width="100%"><tr><td style="padding-bottom:20px;border-bottom:3px solid #93186C;"><h2 style="color:#93186C;margin:0;font-size:20px;font-weight:600;">Executive Summary</h2></td></tr></table>'
+      $html += '<table border="0" cellpadding="0" cellspacing="10" width="100%" style="margin-top:20px;"><tr>'
+      $html += '<td width="25%" bgcolor="#93186C" style="padding:20px 10px;text-align:center;"><div style="color:#e8b4d8;font-size:11px;text-transform:uppercase;">TOTAL</div><div style="color:#ffffff;font-size:36px;font-weight:bold;margin:8px 0;">' + $totalScenarios + '</div><div style="color:#e8b4d8;font-size:11px;">Scenarios</div></td>'
+      $html += '<td width="25%" bgcolor="#059669" style="padding:20px 10px;text-align:center;"><div style="color:#a7f3d0;font-size:11px;text-transform:uppercase;">PASSED</div><div style="color:#ffffff;font-size:36px;font-weight:bold;margin:8px 0;">' + $passedScenarios + '</div><div style="color:#a7f3d0;font-size:11px;">&#10004; Success</div></td>'
+      $html += '<td width="25%" bgcolor="#dc2626" style="padding:20px 10px;text-align:center;"><div style="color:#fecaca;font-size:11px;text-transform:uppercase;">FAILED</div><div style="color:#ffffff;font-size:36px;font-weight:bold;margin:8px 0;">' + $failedScenarios + '</div><div style="color:#fecaca;font-size:11px;">&#10008; Failures</div></td>'
+      $html += '<td width="25%" bgcolor="#6b7280" style="padding:20px 10px;text-align:center;"><div style="color:#d1d5db;font-size:11px;text-transform:uppercase;">SKIPPED</div><div style="color:#ffffff;font-size:36px;font-weight:bold;margin:8px 0;">' + $skippedScenarios + '</div><div style="color:#d1d5db;font-size:11px;">&#8212; Skipped</div></td></tr></table>'
+      $html += '<table border="0" cellpadding="0" cellspacing="0" width="100%" style="margin-top:25px;"><tr><td style="padding-bottom:8px;"><span style="color:#4a5568;font-size:12px;font-weight:600;">Test Distribution</span></td></tr><tr><td><table border="0" cellpadding="0" cellspacing="0" width="100%" style="height:12px;"><tr>'
+      if ([int]$passedPct -gt 0) { $html += '<td width="' + $passedPct + '%" bgcolor="#059669" style="height:12px;"></td>' }
+      if ([int]$failedPct -gt 0) { $html += '<td width="' + $failedPct + '%" bgcolor="#dc2626" style="height:12px;"></td>' }
+      if ([int]$skippedPct -gt 0) { $html += '<td width="' + $skippedPct + '%" bgcolor="#6b7280" style="height:12px;"></td>' }
+      $html += '</tr></table></td></tr><tr><td style="padding-top:5px;"><span style="color:#059669;font-size:11px;">&#9632; Passed ' + $passedPct + '%</span><span style="color:#dc2626;font-size:11px;margin-left:15px;">&#9632; Failed ' + $failedPct + '%</span><span style="color:#6b7280;font-size:11px;margin-left:15px;">&#9632; Skipped ' + $skippedPct + '%</span></td></tr></table>'
+      $html += '<table border="0" cellpadding="0" cellspacing="0" width="100%" style="margin-top:25px;"><tr><td align="center" style="padding:25px;background-color:#f8fafc;border:2px solid #e2e8f0;"><div style="color:#64748b;font-size:12px;text-transform:uppercase;letter-spacing:2px;margin-bottom:5px;">Success Rate</div><div style="color:' + $statusColor + ';font-size:52px;font-weight:bold;line-height:1;">' + $successRate + '%</div></td></tr></table>'
+      $html += '<table border="0" cellpadding="0" cellspacing="10" width="100%" style="margin-top:20px;"><tr><td width="50%" bgcolor="#f1f5f9" style="padding:20px;text-align:center;"><div style="color:#64748b;font-size:11px;text-transform:uppercase;">Duration</div><div style="color:#1e293b;font-size:24px;font-weight:600;margin-top:5px;">&#128337; ' + $totalDuration + '</div></td><td width="50%" bgcolor="#f1f5f9" style="padding:20px;text-align:center;"><div style="color:#64748b;font-size:11px;text-transform:uppercase;">Projects Executed</div><div style="color:#1e293b;font-size:24px;font-weight:600;margin-top:5px;">&#128194; ' + $projectCount + '</div></td></tr></table></td></tr>'
+      $html += '<tr><td style="padding:0 40px 30px 40px;"><table border="0" cellpadding="0" cellspacing="0" width="100%"><tr><td style="padding-bottom:15px;border-bottom:3px solid #93186C;"><h2 style="color:#93186C;margin:0;font-size:20px;font-weight:600;">Build Information</h2></td></tr></table>'
+      $html += '<table border="0" cellpadding="0" cellspacing="0" width="100%" style="margin-top:15px;"><tr bgcolor="#f8fafc"><td style="padding:12px 15px;border-bottom:1px solid #e2e8f0;width:40%;"><strong style="color:#475569;">Suite Name</strong></td><td style="padding:12px 15px;border-bottom:1px solid #e2e8f0;color:#1e293b;">' + $suiteName + '</td></tr>'
+      $html += '<tr><td style="padding:12px 15px;border-bottom:1px solid #e2e8f0;"><strong style="color:#475569;">Repository</strong></td><td style="padding:12px 15px;border-bottom:1px solid #e2e8f0;color:#1e293b;">${{ parameters.repositoryName }}</td></tr>'
+      $html += '<tr bgcolor="#f8fafc"><td style="padding:12px 15px;border-bottom:1px solid #e2e8f0;"><strong style="color:#475569;">Build ID</strong></td><td style="padding:12px 15px;border-bottom:1px solid #e2e8f0;color:#1e293b;"><strong>#$(Build.BuildId)</strong></td></tr>'
+      $html += '<tr><td style="padding:12px 15px;border-bottom:1px solid #e2e8f0;"><strong style="color:#475569;">Branch</strong></td><td style="padding:12px 15px;border-bottom:1px solid #e2e8f0;color:#1e293b;">&#128204; $(Build.SourceBranchName)</td></tr>'
+      $html += '<tr bgcolor="#f8fafc"><td style="padding:12px 15px;border-bottom:1px solid #e2e8f0;"><strong style="color:#475569;">Environment</strong></td><td style="padding:12px 15px;border-bottom:1px solid #e2e8f0;color:#1e293b;"><span style="background-color:#f3e8f0;color:#93186C;padding:3px 10px;font-size:12px;font-weight:600;">${{ parameters.targetEnv }}</span></td></tr>'
+      $html += '<tr><td style="padding:12px 15px;border-bottom:1px solid #e2e8f0;"><strong style="color:#475569;">Triggered By</strong></td><td style="padding:12px 15px;border-bottom:1px solid #e2e8f0;color:#1e293b;">&#128100; ' + $triggeredBy + '</td></tr>'
+      $html += '<tr bgcolor="#f8fafc"><td style="padding:12px 15px;border-bottom:1px solid #e2e8f0;"><strong style="color:#475569;">Start Time</strong></td><td style="padding:12px 15px;border-bottom:1px solid #e2e8f0;color:#1e293b;">' + $startTime + '</td></tr>'
+      $html += '<tr><td style="padding:12px 15px;"><strong style="color:#475569;">End Time</strong></td><td style="padding:12px 15px;color:#1e293b;">' + $endTime + '</td></tr></table></td></tr>'
+      if ($featureHtml) { $html += '<tr><td style="padding:0 40px 30px 40px;"><table border="0" cellpadding="0" cellspacing="0" width="100%"><tr><td style="padding-bottom:15px;border-bottom:3px solid #93186C;"><h2 style="color:#93186C;margin:0;font-size:20px;font-weight:600;">&#128203; Feature Summary</h2></td></tr></table>' + $featureHtml + '</td></tr>' }
+      if ($failedHtml) { $html += '<tr><td style="padding:0 40px 30px 40px;"><table border="0" cellpadding="0" cellspacing="0" width="100%"><tr><td style="padding-bottom:15px;border-bottom:3px solid #dc2626;"><h2 style="color:#dc2626;margin:0;font-size:20px;font-weight:600;">&#10008; Failed Scenarios</h2></td></tr></table>' + $failedHtml + '</td></tr>' }
+      if ($passedHtml) { $html += '<tr><td style="padding:0 40px 30px 40px;"><table border="0" cellpadding="0" cellspacing="0" width="100%"><tr><td style="padding-bottom:15px;border-bottom:3px solid #059669;"><h2 style="color:#059669;margin:0;font-size:20px;font-weight:600;">&#10004; Passed Scenarios</h2></td></tr></table>' + $passedHtml + '</td></tr>' }
+      $html += '<tr><td style="padding:20px 40px 30px 40px;text-align:center;"><table border="0" cellpadding="0" cellspacing="0" width="100%"><tr><td align="center"><table border="0" cellpadding="0" cellspacing="0"><tr><td bgcolor="#93186C" style="padding:15px 40px;"><a href="' + $pipelineUrl + '" style="color:#ffffff;text-decoration:none;font-size:16px;font-weight:600;display:inline-block;">&#128279; View Pipeline Results</a></td></tr></table></td></tr></table></td></tr>'
+      $html += '<tr><td bgcolor="#6b1150" style="padding:20px 40px;text-align:center;"><p style="color:#e8b4d8;margin:0;font-size:11px;">Build #$(Build.BuildId) | ' + (Get-Date).ToString("yyyy-MM-dd HH:mm:ss") + '</p><p style="color:#e8b4d8;margin:5px 0 0 0;font-size:11px;">&#128206; Test Results ZIP attached to this email</p></td></tr></table>'
+      $html += '<table border="0" cellpadding="0" cellspacing="0" width="720" style="margin-top:20px;"><tr><td style="padding:0 10px;"><p style="color:#1e293b;margin:0;font-size:14px;line-height:1.6;"><strong>Thanks &amp; Regards,</strong></p><p style="color:#93186C;margin:5px 0 0 0;font-size:14px;font-weight:600;">CS Playwright Framework Team</p><p style="color:#64748b;margin:15px 0 0 0;font-size:12px;font-style:italic;">This is an automated email. Test results ZIP is attached. Full report available in pipeline artifacts.</p></td></tr></table></td></tr></table></body></html>'
+      $emailTo = "${{ parameters.emailTo }}"
+      if (-not $emailTo -or $emailTo -eq '' -or $emailTo -eq 'NA') { Write-Host "No email recipients configured, skipping email"; return }
+      Write-Host "Sending to: $emailTo"
+      Write-Host "Subject: ${{ parameters.emailSubject }}"
+      try {
+        $emailParams = @{ From = 'UUUMMM Collections<nammmcollectionssupport@akhancompany.com>'; To = $emailTo.Split(",").Trim(); Subject = "${{ parameters.emailSubject }}"; Body = $html; BodyAsHtml = $true; SmtpServer = 'wwww-wwww-wwww'; Port = 345 }
+        if ($zipFile -and (Test-Path $zipFile)) { $emailParams.Attachments = $zipFile; Write-Host "Attaching: $zipFile" }
+        Send-MailMessage @emailParams
+        Write-Host "Email sent successfully!"
+      } catch {
+        Write-Host "##vso[task.logissue type=warning]Email sending failed: $_"
+        Write-Host "Test reports are available in pipeline artifacts: test-reports-$(Build.BuildId)"
+      }
+  condition: and(always(), eq('${{ parameters.skipEmail }}', 'false'), ne('${{ parameters.emailTo }}', ''), ne('${{ parameters.emailTo }}', 'NA'))
+  continueOnError: true
+
+# List output report folder contents
+- task: PowerShell@2
+  displayName: 'List output report folder contents'
+  inputs:
+    targetType: 'inline'
+    script: |
+      Get-ChildItem -Recurse "$(System.DefaultWorkingDirectory)/${{ parameters.repositoryName }}/${{ parameters.workingDirectory }}/reports" -ErrorAction SilentlyContinue
+  condition: always()
+  continueOnError: true
+
+# Cleanup ZIP files from reports (already attached to email, avoid duplicate in artifacts)
+- task: PowerShell@2
+  displayName: 'Cleanup ZIP files from reports'
+  inputs:
+    targetType: 'inline'
+    workingDirectory: '$(System.DefaultWorkingDirectory)/${{ parameters.repositoryName }}/${{ parameters.workingDirectory }}'
+    script: |
+      $reportPath = "reports"
+      if (Test-Path $reportPath) {
+        $zipFiles = Get-ChildItem -Path $reportPath -Filter "*.zip" -Recurse
+        foreach ($zip in $zipFiles) {
+          Write-Host "Removing ZIP from artifact: $($zip.FullName)"
+          Remove-Item $zip.FullName -Force
+        }
+        Write-Host "Reports folder cleaned - only test-results folders will be published"
+      }
+  condition: always()
+  continueOnError: true
+
+# Publish artifacts
+- task: PublishPipelineArtifact@1
+  displayName: 'Publish Test Reports'
+  inputs:
+    targetPath: '$(System.DefaultWorkingDirectory)/${{ parameters.repositoryName }}/${{ parameters.workingDirectory }}/reports'
+    artifact: 'test-reports-$(Build.BuildId)'
+    publishLocation: 'pipeline'
+  condition: always()
+  continueOnError: true
+
+
+file 6:
+-----------
+
+variables:
+  testValue: ''
+
