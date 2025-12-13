@@ -1,1 +1,23 @@
-test code
+# Check Node.js cache on agent before install
+- task: PowerShell@2
+  displayName: 'Check Node.js cache on agent'
+  inputs:
+    targetType: 'inline'
+    script: |
+      Write-Host "=== Node.js Tool Cache ==="
+      $cachePath = "$env:AGENT_TOOLSDIRECTORY\node"
+      if (Test-Path $cachePath) {
+        Write-Host "Cached Node versions:"
+        Get-ChildItem $cachePath | ForEach-Object { Write-Host "  - $($_.Name)" }
+      } else {
+        Write-Host "No Node.js versions cached on this agent"
+      }
+      Write-Host ""
+      Write-Host "=== Current Node (if any) ==="
+      try {
+        Write-Host "Node.js: $(node --version)"
+        Write-Host "npm: $(npm --version)"
+      } catch {
+        Write-Host "Node.js not in PATH"
+      }
+  continueOnError: true
