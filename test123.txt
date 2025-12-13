@@ -1,23 +1,33 @@
-# Check Node.js cache on agent before install
-- task: PowerShell@2
-  displayName: 'Check Node.js cache on agent'
-  inputs:
-    targetType: 'inline'
-    script: |
-      Write-Host "=== Node.js Tool Cache ==="
-      $cachePath = "$env:AGENT_TOOLSDIRECTORY\node"
-      if (Test-Path $cachePath) {
-        Write-Host "Cached Node versions:"
-        Get-ChildItem $cachePath | ForEach-Object { Write-Host "  - $($_.Name)" }
-      } else {
-        Write-Host "No Node.js versions cached on this agent"
-      }
-      Write-Host ""
-      Write-Host "=== Current Node (if any) ==="
-      try {
-        Write-Host "Node.js: $(node --version)"
-        Write-Host "npm: $(npm --version)"
-      } catch {
-        Write-Host "Node.js not in PATH"
-      }
-  continueOnError: true
+$html += '<table border="0" cellpadding="0" cellspacing="0" width="720" style="margin-bottom:30px;"><tr><td style="padding:0 10px;"><p style="color:#1e293b;margin:0;font-size:15px;line-height:1.6;"><strong>Hello,</strong></p><p style="color:#475569;margin:15px 0 0 0;font-size:14px;line-height:1.6;">Please find below the automated test execution results from the latest Azure DevOps test automation pipeline run. This report includes feature-level statistics, scenario outcomes, and error details for any failures.</p></td></tr></table>'
+      $html += '<table border="0" cellpadding="0" cellspacing="0" width="720" style="background-color:#ffffff;border:2px solid #000000;">'
+      $html += '<tr><td bgcolor="#93186C" style="padding:18px 40px;text-align:center;"><h1 style="color:#ffffff;margin:0;font-size:26px;font-weight:600;">Automated Test Execution Report</h1><p style="color:#e8b4d8;margin:6px 0 0 0;font-size:13px;">CS Playwright Test Framework</p></td></tr>'
+      $statusEmoji = if ($testStatus -eq "Succeeded") { "&#10004;" } else { "&#10008;" }
+      $html += '<tr><td bgcolor="' + $statusColor + '" style="padding:12px 40px;text-align:center;"><span style="color:#ffffff;font-size:28px;font-weight:bold;">' + $statusEmoji + ' ' + $statusText + '</span></td></tr>'
+      $html += '<tr><td style="padding:30px 40px;"><table border="0" cellpadding="0" cellspacing="0" width="100%"><tr><td style="padding-bottom:20px;border-bottom:3px solid #93186C;"><h2 style="color:#93186C;margin:0;font-size:20px;font-weight:600;">Executive Summary</h2></td></tr></table>'
+      $html += '<table border="0" cellpadding="0" cellspacing="10" width="100%" style="margin-top:20px;"><tr>'
+      $html += '<td width="25%" bgcolor="#93186C" style="padding:20px 10px;text-align:center;"><div style="color:#e8b4d8;font-size:11px;text-transform:uppercase;">TOTAL</div><div style="color:#ffffff;font-size:36px;font-weight:bold;margin:8px 0;">' + $totalScenarios + '</div><div style="color:#e8b4d8;font-size:11px;">Scenarios</div></td>'
+      $html += '<td width="25%" bgcolor="#059669" style="padding:20px 10px;text-align:center;"><div style="color:#a7f3d0;font-size:11px;text-transform:uppercase;">PASSED</div><div style="color:#ffffff;font-size:36px;font-weight:bold;margin:8px 0;">' + $passedScenarios + '</div><div style="color:#a7f3d0;font-size:11px;">&#10004; Success</div></td>'
+      $html += '<td width="25%" bgcolor="#dc2626" style="padding:20px 10px;text-align:center;"><div style="color:#fecaca;font-size:11px;text-transform:uppercase;">FAILED</div><div style="color:#ffffff;font-size:36px;font-weight:bold;margin:8px 0;">' + $failedScenarios + '</div><div style="color:#fecaca;font-size:11px;">&#10008; Failures</div></td>'
+      $html += '<td width="25%" bgcolor="#6b7280" style="padding:20px 10px;text-align:center;"><div style="color:#d1d5db;font-size:11px;text-transform:uppercase;">SKIPPED</div><div style="color:#ffffff;font-size:36px;font-weight:bold;margin:8px 0;">' + $skippedScenarios + '</div><div style="color:#d1d5db;font-size:11px;">&#8212; Skipped</div></td></tr></table>'
+      $html += '<table border="0" cellpadding="0" cellspacing="0" width="100%" style="margin-top:25px;"><tr><td style="padding-bottom:8px;"><span style="color:#4a5568;font-size:12px;font-weight:600;">Test Distribution</span></td></tr><tr><td><table border="0" cellpadding="0" cellspacing="0" width="100%" style="height:12px;"><tr>'
+      if ([int]$passedPct -gt 0) { $html += '<td width="' + $passedPct + '%" bgcolor="#059669" style="height:12px;"></td>' }
+      if ([int]$failedPct -gt 0) { $html += '<td width="' + $failedPct + '%" bgcolor="#dc2626" style="height:12px;"></td>' }
+      if ([int]$skippedPct -gt 0) { $html += '<td width="' + $skippedPct + '%" bgcolor="#6b7280" style="height:12px;"></td>' }
+      $html += '</tr></table></td></tr><tr><td style="padding-top:5px;"><span style="color:#059669;font-size:11px;">&#9632; Passed ' + $passedPct + '%</span><span style="color:#dc2626;font-size:11px;margin-left:15px;">&#9632; Failed ' + $failedPct + '%</span><span style="color:#6b7280;font-size:11px;margin-left:15px;">&#9632; Skipped ' + $skippedPct + '%</span></td></tr></table>'
+      $html += '<table border="0" cellpadding="0" cellspacing="0" width="100%" style="margin-top:25px;"><tr><td align="center" style="padding:15px;background-color:#f8fafc;border:2px solid #e2e8f0;"><div style="color:#64748b;font-size:12px;text-transform:uppercase;letter-spacing:2px;margin-bottom:3px;">Success Rate</div><div style="color:' + $statusColor + ';font-size:44px;font-weight:bold;line-height:1;">' + $successRate + '%</div></td></tr></table>'
+      $html += '<table border="0" cellpadding="0" cellspacing="10" width="100%" style="margin-top:20px;"><tr><td width="50%" bgcolor="#f1f5f9" style="padding:20px;text-align:center;"><div style="color:#64748b;font-size:11px;text-transform:uppercase;">Duration</div><div style="color:#1e293b;font-size:24px;font-weight:600;margin-top:5px;">&#128337; ' + $totalDuration + '</div></td><td width="50%" bgcolor="#f1f5f9" style="padding:20px;text-align:center;"><div style="color:#64748b;font-size:11px;text-transform:uppercase;">Projects Executed</div><div style="color:#1e293b;font-size:24px;font-weight:600;margin-top:5px;">&#128194; ' + $projectCount + '</div></td></tr></table></td></tr>'
+      $html += '<tr><td style="padding:0 40px 30px 40px;"><table border="0" cellpadding="0" cellspacing="0" width="100%"><tr><td style="padding-bottom:15px;border-bottom:3px solid #93186C;"><h2 style="color:#93186C;margin:0;font-size:20px;font-weight:600;">Build Information</h2></td></tr></table>'
+      $html += '<table border="0" cellpadding="0" cellspacing="0" width="100%" style="margin-top:15px;"><tr bgcolor="#f8fafc"><td style="padding:12px 15px;border-bottom:1px solid #e2e8f0;width:40%;"><strong style="color:#475569;">Suite Name</strong></td><td style="padding:12px 15px;border-bottom:1px solid #e2e8f0;color:#1e293b;">' + $suiteName + '</td></tr>'
+      $html += '<tr><td style="padding:12px 15px;border-bottom:1px solid #e2e8f0;"><strong style="color:#475569;">Repository</strong></td><td style="padding:12px 15px;border-bottom:1px solid #e2e8f0;color:#1e293b;">${{ parameters.repositoryName }}</td></tr>'
+      $html += '<tr bgcolor="#f8fafc"><td style="padding:12px 15px;border-bottom:1px solid #e2e8f0;"><strong style="color:#475569;">Build ID</strong></td><td style="padding:12px 15px;border-bottom:1px solid #e2e8f0;color:#1e293b;"><strong>#$(Build.BuildId)</strong></td></tr>'
+      $html += '<tr><td style="padding:12px 15px;border-bottom:1px solid #e2e8f0;"><strong style="color:#475569;">Branch</strong></td><td style="padding:12px 15px;border-bottom:1px solid #e2e8f0;color:#1e293b;">&#128204; $(Build.SourceBranchName)</td></tr>'
+      $html += '<tr bgcolor="#f8fafc"><td style="padding:12px 15px;border-bottom:1px solid #e2e8f0;"><strong style="color:#475569;">Environment</strong></td><td style="padding:12px 15px;border-bottom:1px solid #e2e8f0;color:#1e293b;"><span style="background-color:#f3e8f0;color:#93186C;padding:3px 10px;font-size:12px;font-weight:600;">${{ parameters.targetEnv }}</span></td></tr>'
+      $html += '<tr><td style="padding:12px 15px;border-bottom:1px solid #e2e8f0;"><strong style="color:#475569;">Triggered By</strong></td><td style="padding:12px 15px;border-bottom:1px solid #e2e8f0;color:#1e293b;">&#128100; ' + $triggeredBy + '</td></tr>'
+      $html += '<tr bgcolor="#f8fafc"><td style="padding:12px 15px;border-bottom:1px solid #e2e8f0;"><strong style="color:#475569;">Start Time</strong></td><td style="padding:12px 15px;border-bottom:1px solid #e2e8f0;color:#1e293b;">' + $startTime + '</td></tr>'
+      $html += '<tr><td style="padding:12px 15px;"><strong style="color:#475569;">End Time</strong></td><td style="padding:12px 15px;color:#1e293b;">' + $endTime + '</td></tr></table></td></tr>'
+      if ($featureHtml) { $html += '<tr><td style="padding:0 40px 30px 40px;"><table border="0" cellpadding="0" cellspacing="0" width="100%"><tr><td style="padding-bottom:15px;border-bottom:3px solid #93186C;"><h2 style="color:#93186C;margin:0;font-size:20px;font-weight:600;">&#128203; Feature Summary</h2></td></tr></table>' + $featureHtml + '</td></tr>' }
+      if ([int]$failedScenarios -gt 0 -and $failedHtml) { $html += '<tr><td style="padding:0 40px 30px 40px;"><table border="0" cellpadding="0" cellspacing="0" width="100%"><tr><td style="padding-bottom:15px;border-bottom:3px solid #dc2626;"><h2 style="color:#dc2626;margin:0;font-size:20px;font-weight:600;">&#10008; Failed Scenarios</h2></td></tr></table>' + $failedHtml + '</td></tr>' }
+      if ([int]$passedScenarios -gt 0 -and $passedHtml) { $html += '<tr><td style="padding:0 40px 30px 40px;"><table border="0" cellpadding="0" cellspacing="0" width="100%"><tr><td style="padding-bottom:15px;border-bottom:3px solid #059669;"><h2 style="color:#059669;margin:0;font-size:20px;font-weight:600;">&#10004; Passed Scenarios</h2></td></tr></table>' + $passedHtml + '</td></tr>' }
+      $html += '<tr><td style="padding:20px 40px 30px 40px;text-align:center;"><table border="0" cellpadding="0" cellspacing="0" width="100%"><tr><td align="center"><table border="0" cellpadding="0" cellspacing="0"><tr><td bgcolor="#93186C" style="padding:15px 40px;"><a href="' + $pipelineUrl + '" target="_blank" style="color:#ffffff !important;text-decoration:none;font-size:16px;font-weight:600;display:inline-block;">&#128279; View Pipeline Results</a></td></tr></table></td></tr></table></td></tr>'
+      $html += '<tr><td bgcolor="#6b1150" style="padding:20px 40px;text-align:center;"><p style="color:#e8b4d8;margin:0;font-size:11px;">Build #$(Build.BuildId) | ' + (Get-Date).ToString("yyyy-MM-dd HH:mm:ss") + '</p><p style="color:#e8b4d8;margin:5px 0 0 0;font-size:11px;">&#128206; Test Results ZIP attached to this email</p></td></tr></table>'
+      $html += '<table border="0" cellpadding="0" cellspacing="0" width="720" style="margin-top:30px;"><tr><td style="padding:0 10px;"><p style="color:#1e293b;margin:0;font-size:14px;line-height:1.6;"><strong>Thanks &amp; Regards,</strong></p><p style="color:#93186C;margin:5px 0 0 0;font-size:14px;font-weight:600;">CS Playwright Framework Team</p><p style="color:#64748b;margin:15px 0 0 0;font-size:12px;font-style:italic;">This is an automated email. Test results ZIP is attached. Full report available in pipeline artifacts.</p></td></tr></table></td></tr></table></body></html>'
