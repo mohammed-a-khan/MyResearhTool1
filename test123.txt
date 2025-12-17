@@ -1,33 +1,2761 @@
-$html += '<table border="0" cellpadding="0" cellspacing="0" width="720" style="margin-bottom:30px;"><tr><td style="padding:0 10px;"><p style="color:#1e293b;margin:0;font-size:15px;line-height:1.6;"><strong>Hello,</strong></p><p style="color:#475569;margin:15px 0 0 0;font-size:14px;line-height:1.6;">Please find below the automated test execution results from the latest Azure DevOps test automation pipeline run. This report includes feature-level statistics, scenario outcomes, and error details for any failures.</p></td></tr></table>'
-      $html += '<table border="0" cellpadding="0" cellspacing="0" width="720" style="background-color:#ffffff;border:2px solid #000000;">'
-      $html += '<tr><td bgcolor="#93186C" style="padding:18px 40px;text-align:center;"><h1 style="color:#ffffff;margin:0;font-size:26px;font-weight:600;">Automated Test Execution Report</h1><p style="color:#e8b4d8;margin:6px 0 0 0;font-size:13px;">CS Playwright Test Framework</p></td></tr>'
-      $statusEmoji = if ($testStatus -eq "Succeeded") { "&#10004;" } else { "&#10008;" }
-      $html += '<tr><td bgcolor="' + $statusColor + '" style="padding:12px 40px;text-align:center;"><span style="color:#ffffff;font-size:28px;font-weight:bold;">' + $statusEmoji + ' ' + $statusText + '</span></td></tr>'
-      $html += '<tr><td style="padding:30px 40px;"><table border="0" cellpadding="0" cellspacing="0" width="100%"><tr><td style="padding-bottom:20px;border-bottom:3px solid #93186C;"><h2 style="color:#93186C;margin:0;font-size:20px;font-weight:600;">Executive Summary</h2></td></tr></table>'
-      $html += '<table border="0" cellpadding="0" cellspacing="10" width="100%" style="margin-top:20px;"><tr>'
-      $html += '<td width="25%" bgcolor="#93186C" style="padding:20px 10px;text-align:center;"><div style="color:#e8b4d8;font-size:11px;text-transform:uppercase;">TOTAL</div><div style="color:#ffffff;font-size:36px;font-weight:bold;margin:8px 0;">' + $totalScenarios + '</div><div style="color:#e8b4d8;font-size:11px;">Scenarios</div></td>'
-      $html += '<td width="25%" bgcolor="#059669" style="padding:20px 10px;text-align:center;"><div style="color:#a7f3d0;font-size:11px;text-transform:uppercase;">PASSED</div><div style="color:#ffffff;font-size:36px;font-weight:bold;margin:8px 0;">' + $passedScenarios + '</div><div style="color:#a7f3d0;font-size:11px;">&#10004; Success</div></td>'
-      $html += '<td width="25%" bgcolor="#dc2626" style="padding:20px 10px;text-align:center;"><div style="color:#fecaca;font-size:11px;text-transform:uppercase;">FAILED</div><div style="color:#ffffff;font-size:36px;font-weight:bold;margin:8px 0;">' + $failedScenarios + '</div><div style="color:#fecaca;font-size:11px;">&#10008; Failures</div></td>'
-      $html += '<td width="25%" bgcolor="#6b7280" style="padding:20px 10px;text-align:center;"><div style="color:#d1d5db;font-size:11px;text-transform:uppercase;">SKIPPED</div><div style="color:#ffffff;font-size:36px;font-weight:bold;margin:8px 0;">' + $skippedScenarios + '</div><div style="color:#d1d5db;font-size:11px;">&#8212; Skipped</div></td></tr></table>'
-      $html += '<table border="0" cellpadding="0" cellspacing="0" width="100%" style="margin-top:25px;"><tr><td style="padding-bottom:8px;"><span style="color:#4a5568;font-size:12px;font-weight:600;">Test Distribution</span></td></tr><tr><td><table border="0" cellpadding="0" cellspacing="0" width="100%" style="height:12px;"><tr>'
-      if ([int]$passedPct -gt 0) { $html += '<td width="' + $passedPct + '%" bgcolor="#059669" style="height:12px;"></td>' }
-      if ([int]$failedPct -gt 0) { $html += '<td width="' + $failedPct + '%" bgcolor="#dc2626" style="height:12px;"></td>' }
-      if ([int]$skippedPct -gt 0) { $html += '<td width="' + $skippedPct + '%" bgcolor="#6b7280" style="height:12px;"></td>' }
-      $html += '</tr></table></td></tr><tr><td style="padding-top:5px;"><span style="color:#059669;font-size:11px;">&#9632; Passed ' + $passedPct + '%</span><span style="color:#dc2626;font-size:11px;margin-left:15px;">&#9632; Failed ' + $failedPct + '%</span><span style="color:#6b7280;font-size:11px;margin-left:15px;">&#9632; Skipped ' + $skippedPct + '%</span></td></tr></table>'
-      $html += '<table border="0" cellpadding="0" cellspacing="0" width="100%" style="margin-top:25px;"><tr><td align="center" style="padding:15px;background-color:#f8fafc;border:2px solid #e2e8f0;"><div style="color:#64748b;font-size:12px;text-transform:uppercase;letter-spacing:2px;margin-bottom:3px;">Success Rate</div><div style="color:' + $statusColor + ';font-size:44px;font-weight:bold;line-height:1;">' + $successRate + '%</div></td></tr></table>'
-      $html += '<table border="0" cellpadding="0" cellspacing="10" width="100%" style="margin-top:20px;"><tr><td width="50%" bgcolor="#f1f5f9" style="padding:20px;text-align:center;"><div style="color:#64748b;font-size:11px;text-transform:uppercase;">Duration</div><div style="color:#1e293b;font-size:24px;font-weight:600;margin-top:5px;">&#128337; ' + $totalDuration + '</div></td><td width="50%" bgcolor="#f1f5f9" style="padding:20px;text-align:center;"><div style="color:#64748b;font-size:11px;text-transform:uppercase;">Projects Executed</div><div style="color:#1e293b;font-size:24px;font-weight:600;margin-top:5px;">&#128194; ' + $projectCount + '</div></td></tr></table></td></tr>'
-      $html += '<tr><td style="padding:0 40px 30px 40px;"><table border="0" cellpadding="0" cellspacing="0" width="100%"><tr><td style="padding-bottom:15px;border-bottom:3px solid #93186C;"><h2 style="color:#93186C;margin:0;font-size:20px;font-weight:600;">Build Information</h2></td></tr></table>'
-      $html += '<table border="0" cellpadding="0" cellspacing="0" width="100%" style="margin-top:15px;"><tr bgcolor="#f8fafc"><td style="padding:12px 15px;border-bottom:1px solid #e2e8f0;width:40%;"><strong style="color:#475569;">Suite Name</strong></td><td style="padding:12px 15px;border-bottom:1px solid #e2e8f0;color:#1e293b;">' + $suiteName + '</td></tr>'
-      $html += '<tr><td style="padding:12px 15px;border-bottom:1px solid #e2e8f0;"><strong style="color:#475569;">Repository</strong></td><td style="padding:12px 15px;border-bottom:1px solid #e2e8f0;color:#1e293b;">${{ parameters.repositoryName }}</td></tr>'
-      $html += '<tr bgcolor="#f8fafc"><td style="padding:12px 15px;border-bottom:1px solid #e2e8f0;"><strong style="color:#475569;">Build ID</strong></td><td style="padding:12px 15px;border-bottom:1px solid #e2e8f0;color:#1e293b;"><strong>#$(Build.BuildId)</strong></td></tr>'
-      $html += '<tr><td style="padding:12px 15px;border-bottom:1px solid #e2e8f0;"><strong style="color:#475569;">Branch</strong></td><td style="padding:12px 15px;border-bottom:1px solid #e2e8f0;color:#1e293b;">&#128204; $(Build.SourceBranchName)</td></tr>'
-      $html += '<tr bgcolor="#f8fafc"><td style="padding:12px 15px;border-bottom:1px solid #e2e8f0;"><strong style="color:#475569;">Environment</strong></td><td style="padding:12px 15px;border-bottom:1px solid #e2e8f0;color:#1e293b;"><span style="background-color:#f3e8f0;color:#93186C;padding:3px 10px;font-size:12px;font-weight:600;">${{ parameters.targetEnv }}</span></td></tr>'
-      $html += '<tr><td style="padding:12px 15px;border-bottom:1px solid #e2e8f0;"><strong style="color:#475569;">Triggered By</strong></td><td style="padding:12px 15px;border-bottom:1px solid #e2e8f0;color:#1e293b;">&#128100; ' + $triggeredBy + '</td></tr>'
-      $html += '<tr bgcolor="#f8fafc"><td style="padding:12px 15px;border-bottom:1px solid #e2e8f0;"><strong style="color:#475569;">Start Time</strong></td><td style="padding:12px 15px;border-bottom:1px solid #e2e8f0;color:#1e293b;">' + $startTime + '</td></tr>'
-      $html += '<tr><td style="padding:12px 15px;"><strong style="color:#475569;">End Time</strong></td><td style="padding:12px 15px;color:#1e293b;">' + $endTime + '</td></tr></table></td></tr>'
-      if ($featureHtml) { $html += '<tr><td style="padding:0 40px 30px 40px;"><table border="0" cellpadding="0" cellspacing="0" width="100%"><tr><td style="padding-bottom:15px;border-bottom:3px solid #93186C;"><h2 style="color:#93186C;margin:0;font-size:20px;font-weight:600;">&#128203; Feature Summary</h2></td></tr></table>' + $featureHtml + '</td></tr>' }
-      if ([int]$failedScenarios -gt 0 -and $failedHtml) { $html += '<tr><td style="padding:0 40px 30px 40px;"><table border="0" cellpadding="0" cellspacing="0" width="100%"><tr><td style="padding-bottom:15px;border-bottom:3px solid #dc2626;"><h2 style="color:#dc2626;margin:0;font-size:20px;font-weight:600;">&#10008; Failed Scenarios</h2></td></tr></table>' + $failedHtml + '</td></tr>' }
-      if ([int]$passedScenarios -gt 0 -and $passedHtml) { $html += '<tr><td style="padding:0 40px 30px 40px;"><table border="0" cellpadding="0" cellspacing="0" width="100%"><tr><td style="padding-bottom:15px;border-bottom:3px solid #059669;"><h2 style="color:#059669;margin:0;font-size:20px;font-weight:600;">&#10004; Passed Scenarios</h2></td></tr></table>' + $passedHtml + '</td></tr>' }
-      $html += '<tr><td style="padding:20px 40px 30px 40px;text-align:center;"><table border="0" cellpadding="0" cellspacing="0" width="100%"><tr><td align="center"><table border="0" cellpadding="0" cellspacing="0"><tr><td bgcolor="#93186C" style="padding:15px 40px;"><a href="' + $pipelineUrl + '" target="_blank" style="color:#ffffff !important;text-decoration:none;font-size:16px;font-weight:600;display:inline-block;">&#128279; View Pipeline Results</a></td></tr></table></td></tr></table></td></tr>'
-      $html += '<tr><td bgcolor="#6b1150" style="padding:20px 40px;text-align:center;"><p style="color:#e8b4d8;margin:0;font-size:11px;">Build #$(Build.BuildId) | ' + (Get-Date).ToString("yyyy-MM-dd HH:mm:ss") + '</p><p style="color:#e8b4d8;margin:5px 0 0 0;font-size:11px;">&#128206; Test Results ZIP attached to this email</p></td></tr></table>'
-      $html += '<table border="0" cellpadding="0" cellspacing="0" width="720" style="margin-top:30px;"><tr><td style="padding:0 10px;"><p style="color:#1e293b;margin:0;font-size:14px;line-height:1.6;"><strong>Thanks &amp; Regards,</strong></p><p style="color:#93186C;margin:5px 0 0 0;font-size:14px;font-weight:600;">CS Playwright Framework Team</p><p style="color:#64748b;margin:15px 0 0 0;font-size:12px;font-style:italic;">This is an automated email. Test results ZIP is attached. Full report available in pipeline artifacts.</p></td></tr></table></td></tr></table></body></html>'
+# ==============================================================================
+# TTTF FILE UPLOAD MODULE - DATABASE QUERIES
+# ==============================================================================
+# Query naming convention: DB_QUERY_<QUERY_NAME>
+# Placeholder format: ? for parameters (positional, in order)
+# Source: 03.TTTF_FileUpload_TestFlow.txt requirements document
+# ==============================================================================
+
+# ==============================================================================
+# TEST DATA PREPARATION QUERIES
+# ==============================================================================
+
+# Get zeal details by GGG name
+DB_QUERY_GET_ZEAL_BY_GGG_NAME=SELECT zeal_id, zeal_key, zeal_name, calc_shool_name FROM ttttinfo.tttf_zeals_premisis_view WHERE calc_shool_name = ? AND type_value = 'ZEAL'
+
+# Get zeals with old and new scattered mmtes for file upload testing
+# The ? placeholder should be replaced with the number of zeals needed
+# This query finds zeals with multiple scattered mmtes and suggests replacement mmtes
+DB_QUERY_GET_ZEAL_OLD_NEW_SCATTERED_MMTES=WITH base_zeals AS ( SELECT zeal_id FROM ( SELECT cdsv2.zeal_id FROM ttttinfo.tttf_zeals_premisis_view cdsv2 INNER JOIN tttfapp.zeal_data dd2 ON cdsv2.zeal_id = dd2.zeal_id AND cdsv2.type_value = 'ZEAL' INNER JOIN tttfapp.zealpremisis_data dsd2 ON dsd2.zealpremisis_data_id = dd2.zealpremisis_data_id INNER JOIN tttfapp.zealpremisis_mmte_data dsrd2 ON dsd2.zealpremisis_data_id = dsrd2.zealpremisis_data_id GROUP BY cdsv2.zeal_id HAVING COUNT(*) > 3 ORDER BY DBMS_RANDOM.VALUE ) WHERE ROWNUM <= ? * 7 ), ranked_zeals AS ( SELECT cdsv.type_value, cdsv.zeal_id, cdsv.zeal_key, cdsv.zeal_name, cdsv.zzzt_seggregation, cdsv.premisis_description, cdsv.inductor_group, cdsv.kindness_circle, cdsv.acct_manager, cdsv.acct_mgr_email, cdsv.calc_shool_name, dsd.sketchmark_replacement_flag, idp.inductor_code, rrl.scattered_mmte_name, rr2.scattered_mmte_name AS disputed_scattered_mmte_name, dsrd.disputed_date, dsrd.ffx_order, ROW_NUMBER() OVER (ORDER BY cdsv.zeal_id, dsrd.ffx_order ASC) as zeal_rn FROM base_zeals bd INNER JOIN ttttinfo.tttf_zeals_premisis_view cdsv ON bd.zeal_id = cdsv.zeal_id AND cdsv.type_value = 'ZEAL' INNER JOIN tttfapp.zeal_data dd ON cdsv.zeal_id = dd.zeal_id INNER JOIN tttfapp.zealpremisis_data dsd ON dsd.zealpremisis_data_id = dd.zealpremisis_data_id LEFT JOIN tttfapp.FFX_INDUCTOR idp ON idp.ffx_inductor_id = dsd.ffx_inductor_id INNER JOIN tttfapp.zealpremisis_mmte_data dsrd ON dsd.zealpremisis_data_id = dsrd.zealpremisis_data_id INNER JOIN tttfapp.scattered_mmte rrl ON dsrd.scattered_mmte_id = rrl.scattered_mmte_id LEFT JOIN tttfapp.scattered_mmte rr2 ON dsrd.disputed_scattered_mmte_id = rr2.scattered_mmte_id ), replacement_mmtes AS ( SELECT scattered_mmte_name as new_scattered_mmte_name, methodology_type as new_methodology_type, ROW_NUMBER() OVER (ORDER BY type_rn, method_order) as replacement_rn FROM ( SELECT scattered_mmte_name, methodology_type, ROW_NUMBER() OVER (PARTITION BY methodology_type ORDER BY scattered_mmte_name DESC) as type_rn, CASE methodology_type WHEN 'TTCALC_DURATION' THEN 1 WHEN 'MANUAL' THEN 2 WHEN 'SPORT_MMTE_LOOKUP' THEN 3 END as method_order FROM tttfapp.scattered_mmte rr WHERE rr.methodology_type IN ('SPORT_MMTE_LOOKUP', 'TTCALC_DURATION', 'MANUAL') AND rr.cumulative_mmte_id IN (SELECT cumulative_mmte_id FROM tttfapp.cumulative_mmte WHERE active_flag = 'Y') AND rr.scattered_mmte_name NOT IN ( SELECT DISTINCT rrl.scattered_mmte_name FROM base_zeals bd INNER JOIN tttfapp.zeal_data dd ON bd.zeal_id = dd.zeal_id INNER JOIN tttfapp.zealpremisis_data dsd ON dsd.zealpremisis_data_id = dd.zealpremisis_data_id INNER JOIN tttfapp.zealpremisis_mmte_data dsrd ON dsd.zealpremisis_data_id = dsrd.zealpremisis_data_id INNER JOIN tttfapp.scattered_mmte rrl ON dsrd.scattered_mmte_id = rrl.scattered_mmte_id ) ) ) SELECT rd.*, rr.new_scattered_mmte_name, rr.new_methodology_type FROM ranked_zeals rd LEFT JOIN replacement_mmtes rr ON rd.zeal_rn = rr.replacement_rn ORDER BY rd.zeal_id, rd.ffx_order ASC
+
+# ==============================================================================
+# VERIFICATION QUERIES
+# ==============================================================================
+
+# Verify scattered mmtes after file upload
+DB_QUERY_VERIFY_FILE_UPLOAD_SCATTERED_MMTES=SELECT cdsv.type_value, cdsv.zeal_id, cdsv.zeal_key, cdsv.zeal_name, cdsv.zzzt_seggregation, cdsv.premisis_description, cdsv.inductor_group, cdsv.kindness_circle, cdsv.acct_manager, cdsv.acct_mgr_email, cdsv.calc_shool_name, dsd.sketchmark_replacement_flag, idp.inductor_code, rrl.scattered_mmte_name AS scattered_mmte_name, rr2.scattered_mmte_name AS disputed_scattered_mmte_name, dsrd.disputed_date, dsrd.ffx_order FROM ttttinfo.tttf_zeals_premisis_view cdsv INNER JOIN tttfapp.zeal_data dd ON cdsv.zeal_id = dd.zeal_id AND cdsv.type_value = 'ZEAL' INNER JOIN tttfapp.zealpremisis_data dsd ON dsd.zealpremisis_data_id = dd.zealpremisis_data_id LEFT JOIN tttfapp.FFX_INDUCTOR idp ON idp.ffx_inductor_id = dsd.ffx_inductor_id INNER JOIN tttfapp.zealpremisis_mmte_data dsrd ON dsd.zealpremisis_data_id = dsrd.zealpremisis_data_id INNER JOIN tttfapp.scattered_mmte rrl ON dsrd.scattered_mmte_id = rrl.scattered_mmte_id LEFT JOIN tttfapp.scattered_mmte rr2 ON dsrd.disputed_scattered_mmte_id = rr2.scattered_mmte_id WHERE cdsv.calc_shool_name = ? ORDER BY dsrd.ffx_order ASC
+
+# ==============================================================================
+# REPLACEMENT MMTES QUERIES
+# ==============================================================================
+
+# Get replacement scattered mmtes for file upload (with dynamic exclusions CTE)
+# The {{EXCLUSIONS_CTE}} placeholder should be replaced with the exclusions list
+DB_QUERY_GET_REPLACEMENT_MMTES_FOR_FILE_UPLOAD=WITH exclusions AS ( {{EXCLUSIONS_CTE}} ), ranked_data AS ( SELECT scattered_mmte_name, methodology_type, ROW_NUMBER() OVER (PARTITION BY methodology_type ORDER BY scattered_mmte_name DESC) as rn_per_type FROM tttfapp.scattered_mmte rr WHERE rr.methodology_type IN ('SPORT_MMTE_LOOKUP', 'TTCALC_DURATION', 'MANUAL') AND cumulative_mmte_id IN ( SELECT cumulative_mmte_id FROM tttfapp.cumulative_mmte WHERE active_flag = 'Y') AND scattered_mmte_name NOT IN (SELECT excluded_name FROM exclusions) ) SELECT scattered_mmte_name, methodology_type FROM ( SELECT scattered_mmte_name, methodology_type, rn_per_type, ROW_NUMBER() OVER (ORDER BY rn_per_type, methodology_type) as final_rn FROM ranked_data WHERE rn_per_type <= CEIL( (SELECT COUNT(*) FROM exclusions) / 3.0 ) ) WHERE final_rn <= (SELECT COUNT(*)/2 FROM exclusions)
+
+-------------------------------------------------------------------------------------------------
+
+[
+    {
+        "scenarioId": "FU08",
+        "scenarioName": "Already Associated Scattered Mmte Error",
+        "runFlag": "Yes",
+        "userName": "{config:TTTF_USERNAME}"
+    }
+]
+
+
+-------------------------------------------------------------------------------------------
+
+[
+    {
+        "scenarioId": "FU05",
+        "scenarioName": "Invalid File Format - CSV File",
+        "runFlag": "Yes",
+        "userName": "{config:TTTF_USERNAME}",
+        "invalidFileName": "invalid_file.csv"
+    },
+    {
+        "scenarioId": "FU05",
+        "scenarioName": "Invalid File Format - TXT File",
+        "runFlag": "Yes",
+        "userName": "{config:TTTF_USERNAME}",
+        "invalidFileName": "invalid_file.txt"
+    },
+    {
+        "scenarioId": "FU05",
+        "scenarioName": "Invalid File Format - DAT File",
+        "runFlag": "Yes",
+        "userName": "{config:TTTF_USERNAME}",
+        "invalidFileName": "invalid_file.dat"
+    }
+]
+
+
+--------------------------------------------------------------------------------------------------
+
+[
+    {
+        "scenarioId": "FU06a",
+        "scenarioName": "Empty File Rejection",
+        "runFlag": "Yes",
+        "userName": "{config:TTTF_USERNAME}"
+    },
+    {
+        "scenarioId": "FU06b",
+        "scenarioName": "Missing GGG Name Column",
+        "runFlag": "Yes",
+        "userName": "{config:TTTF_USERNAME}"
+    },
+    {
+        "scenarioId": "FU06c",
+        "scenarioName": "Missing FFX Order Column",
+        "runFlag": "Yes",
+        "userName": "{config:TTTF_USERNAME}"
+    },
+    {
+        "scenarioId": "FU06d",
+        "scenarioName": "Missing Old Scattered Mmte Name Column",
+        "runFlag": "Yes",
+        "userName": "{config:TTTF_USERNAME}"
+    },
+    {
+        "scenarioId": "FU06e",
+        "scenarioName": "Missing New Scattered Mmte Name Column",
+        "runFlag": "Yes",
+        "userName": "{config:TTTF_USERNAME}"
+    }
+]
+
+
+--------------------------------------------------------------------------------------------
+
+[
+    {
+        "scenarioId": "FU04",
+        "scenarioName": "Single File Multiple Zeals Upload - 2 Zeals No FFX Order Update",
+        "runFlag": "Yes",
+        "userName": "{config:TTTF_USERNAME}",
+        "numberOfZeals": 2,
+        "updateFfxOrderFlag": "false"
+    },
+    {
+        "scenarioId": "FU04",
+        "scenarioName": "Single File Multiple Zeals Upload - 3 Zeals With FFX Order Update",
+        "runFlag": "Yes",
+        "userName": "{config:TTTF_USERNAME}",
+        "numberOfZeals": 3,
+        "updateFfxOrderFlag": "true"
+    }
+]
+
+
+----------------------------------------------------------------------------------------------
+
+[
+    {
+        "scenarioId": "FU03",
+        "scenarioName": "Multiple Files Upload - 3 Files No FFX Order Update",
+        "runFlag": "Yes",
+        "userName": "{config:TTTF_USERNAME}",
+        "updateFfxOrderFlag": "false"
+    },
+    {
+        "scenarioId": "FU03",
+        "scenarioName": "Multiple Files Upload - 3 Files With FFX Order Update",
+        "runFlag": "Yes",
+        "userName": "{config:TTTF_USERNAME}",
+        "updateFfxOrderFlag": "true"
+    }
+]
+
+--------------------------------------------------------------------------------------
+
+[
+    {
+        "scenarioId": "FU01",
+        "scenarioName": "File Upload Page Elements Verification",
+        "runFlag": "Yes",
+        "userName": "{config:TTTF_USERNAME}"
+    }
+]
+
+
+-------------------------------------------------------------------------------------------
+
+[
+    {
+        "scenarioId": "FU02",
+        "scenarioName": "Single File Single Zeal Upload - No FFX Order Update",
+        "runFlag": "Yes",
+        "userName": "{config:TTTF_USERNAME}",
+        "gggName": "",
+        "scatteredMmtesToUpdate": "",
+        "updateFfxOrderFlag": "false",
+        "newScatteredMmtesFfxOrder": ""
+    },
+    {
+        "scenarioId": "FU02",
+        "scenarioName": "Single File Single Zeal Upload - With FFX Order Update",
+        "runFlag": "Yes",
+        "userName": "{config:TTTF_USERNAME}",
+        "gggName": "",
+        "scatteredMmtesToUpdate": "",
+        "updateFfxOrderFlag": "true",
+        "newScatteredMmtesFfxOrder": ""
+    }
+]
+
+
+------------------------------------------------------------------------------------------------
+
+[
+    {
+        "scenarioId": "FU07",
+        "scenarioName": "Unassociated Scattered Mmte Error",
+        "runFlag": "Yes",
+        "userName": "{config:TTTF_USERNAME}"
+    }
+]
+
+
+---------------------------------------------------------------------------------
+
+@smoke @regression @fileUpload @pageElements @FU01
+Feature: File Upload - Page Elements and Navigation Verification
+  As a TTTF user
+  I want to verify all page elements on the File Upload screen
+  So that I can ensure the file upload functionality is properly configured
+
+  @pageVerification @elementVerification
+  Scenario Outcircle: FU01 - Verify File Upload page elements and navigation
+    # ============================================================
+    # TEST DATA SETUP
+    # ============================================================
+    # No test data setup required for this scenario
+
+    # ============================================================
+    # SCENARIO STEPS
+    # ============================================================
+    # Step 1: Login to TTTF application
+    Given I login to TTTF as "<userName>"
+
+    # Step 2: Navigate to File Upload page from menu
+    When I click on menu item "File Upload"
+
+    # Step 3: Verify File Upload page is displayed
+    Then I should see File Upload page
+
+    # Step 4: Verify default file count
+    And I verify selected file count text is "0 files selected"
+
+    # Step 5: Verify file uploader table is displayed
+    And I verify files are displayed in the table
+
+    # Step 6: Verify table column headers
+    And I verify file uploader table column header "File name"
+    And I verify file uploader table column header "Type"
+    And I verify file uploader table column header "Size"
+    And I verify file uploader table column header "Status"
+
+    # Step 7: Verify button states
+    And I verify Add files button is enabled
+    And I verify Upload button is disabled
+    And I verify Cancel button is disabled
+
+    Examples: {"type": "json", "source": "test/tttf/data/file_upload/file_upload_page_elements.json", "path": "$", "filter": "scenarioId=FU01 AND runFlag=Yes"}
+
+
+-------------------------------------------------------------------------------------------------------------------------
+
+@regression @fileUpload @singleFile @singleZeal @FU02
+Feature: File Upload - Single File Single Zeal Upload
+  As a TTTF user
+  I want to upload a single file with single zeal scattered mmte update
+  So that I can update scattered mmtes for one zeal at a time
+
+  @positiveScenario @uploadSuccess
+  Scenario Outcircle: FU02 - Upload single file with single zeal scattered mmte update
+    # ============================================================
+    # TEST DATA SETUP
+    # ============================================================
+    # Test data will be prepared from database:
+    # - Zeal with scattered mmtes
+    # - Replacement scattered mmtes
+    # - FFX order updates (optional based on flag)
+
+    # ============================================================
+    # SCENARIO STEPS
+    # ============================================================
+    # Step 1: Login to TTTF application
+    Given I login to TTTF as "<userName>"
+
+    # Step 2: Navigate to File Upload page from menu
+    When I click on menu item "File Upload"
+
+    # Step 3: Verify File Upload page is displayed
+    Then I should see File Upload page
+
+    # Step 4: Prepare test data from database
+    And I prepare file upload test data for single zeal scenario
+
+    # Step 5: Genemmte the scattered mmte upload file (xlsx)
+    And I genemmte scattered mmte upload file
+
+    # Step 6: Upload the genemmted file
+    When I upload the genemmted scattered mmte file
+
+    # Step 7: Verify file appears in table
+    Then I verify files are displayed in the table
+    And I verify file table has 1 rows
+
+    # Step 8: Verify file row details
+    And I verify file row 1 checkbox is checked
+    And I verify file row 1 displays file name from genemmted file
+    And I verify file row 1 displays file type "xlsx"
+    And I verify file row 1 status is "Ready for upload"
+    And I verify file row 1 has Remove button enabled
+
+    # Step 9: Verify button states after file selection
+    And I verify selected file count text is "1 file selected"
+    And I verify Upload button is enabled
+    And I verify Upload button file count is "1"
+    And I verify Cancel button is disabled
+
+    # Step 10: Click Upload button
+    When I click the Upload button
+
+    # Step 11: Wait for upload to complete
+    Then I wait for file row 1 upload to complete
+
+    # Step 12: Verify upload success
+    And I verify file row 1 status is "Upload complete"
+    And I verify file row 1 checkbox is disabled
+    And I verify file row 1 checkbox is unchecked
+
+    # Step 13: Verify buttons after successful upload
+    # Per requirements: Add files button is DISABLED after successful upload
+    And I verify Add files button is disabled
+    And I verify Upload button is disabled
+    And I verify Cancel button is disabled
+
+    # Step 14: Verify database updates
+    And I verify database updates for single zeal upload
+
+    Examples: {"type": "json", "source": "test/tttf/data/file_upload/file_upload_single_zeal.json", "path": "$", "filter": "scenarioId=FU02 AND runFlag=Yes"}
+
+
+---------------------------------------------------------------------------------------------------------------------------------------------
+
+@regression @fileUpload @multipleFiles @FU03
+Feature: File Upload - Multiple Files Upload (Max 3)
+  As a TTTF user
+  I want to upload multiple files (up to 3) with single zeal per file
+  So that I can update scattered mmtes for multiple zeals in one session
+
+  @positiveScenario @uploadSuccess
+  Scenario Outcircle: FU03 - Upload multiple files with single zeal per file
+    # ============================================================
+    # TEST DATA SETUP
+    # ============================================================
+    # Test data will be prepared from database:
+    # - 3 zeals with scattered mmtes (one per file)
+    # - Replacement scattered mmtes for each zeal
+    # - FFX order updates (optional based on flag)
+
+    # ============================================================
+    # SCENARIO STEPS
+    # ============================================================
+    # Step 1: Login to TTTF application
+    Given I login to TTTF as "<userName>"
+
+    # Step 2: Navigate to File Upload page from menu
+    When I click on menu item "File Upload"
+
+    # Step 3: Verify File Upload page is displayed
+    Then I should see File Upload page
+
+    # Step 4: Prepare test data from database for 3 files
+    And I prepare file upload test data for multiple files scenario with 3 files
+
+    # Step 5: Genemmte the scattered mmte upload files (xlsx)
+    And I genemmte multiple scattered mmte upload files
+
+    # Step 6: Upload all genemmted files
+    When I upload all genemmted scattered mmte files
+
+    # Step 7: Verify files appear in table
+    Then I verify files are displayed in the table
+    And I verify file table has 3 rows
+
+    # Step 8: Verify all file rows are correctly displayed
+    And I verify all genemmted files are displayed correctly
+
+    # Step 9: Verify button states after file selection
+    And I verify selected file count text is "3 files selected"
+    And I verify Upload button is enabled
+    And I verify Upload button file count is "3"
+    And I verify Cancel button is disabled
+
+    # Step 10: Click Upload button
+    When I click the Upload button
+
+    # Step 11: Wait for all uploads to complete
+    Then I wait for all 3 file uploads to complete
+
+    # Step 12: Verify upload success for all files
+    And I verify file row 1 status is "Upload complete"
+    And I verify file row 2 status is "Upload complete"
+    And I verify file row 3 status is "Upload complete"
+
+    # Step 13: Verify checkboxes disabled after successful upload
+    And I verify file row 1 checkbox is disabled
+    And I verify file row 2 checkbox is disabled
+    And I verify file row 3 checkbox is disabled
+
+    # Step 14: Verify buttons after successful upload
+    # Per requirements: Add files button is DISABLED after successful upload
+    And I verify Add files button is disabled
+    And I verify Upload button is disabled
+    And I verify Cancel button is disabled
+
+    # Step 15: Verify database updates for all zeals
+    And I verify database updates for all uploaded zeals
+
+    Examples: {"type": "json", "source": "test/tttf/data/file_upload/file_upload_multiple_files.json", "path": "$", "filter": "scenarioId=FU03 AND runFlag=Yes"}
+
+
+--------------------------------------------------------------------------------------------------------------------------------------------
+
+@regression @fileUpload @singleFile @multipleZeals @FU04
+Feature: File Upload - Single File Multiple Zeals Upload
+  As a TTTF user
+  I want to upload a single file containing multiple zeal information
+  So that I can update scattered mmtes for multiple zeals using one file
+
+  @positiveScenario @uploadSuccess
+  Scenario Outcircle: FU04 - Upload single file with multiple zeal scattered mmte updates
+    # ============================================================
+    # TEST DATA SETUP
+    # ============================================================
+    # Test data will be prepared from database:
+    # - Multiple zeals with scattered mmtes (all in one file)
+    # - Replacement scattered mmtes for each zeal
+    # - FFX order updates (optional based on flag)
+
+    # ============================================================
+    # SCENARIO STEPS
+    # ============================================================
+    # Step 1: Login to TTTF application
+    Given I login to TTTF as "<userName>"
+
+    # Step 2: Navigate to File Upload page from menu
+    When I click on menu item "File Upload"
+
+    # Step 3: Verify File Upload page is displayed
+    Then I should see File Upload page
+
+    # Step 4: Prepare test data from database for multiple zeals in single file
+    And I prepare file upload test data for single file with multiple zeals scenario with <numberOfZeals> zeals
+
+    # Step 5: Genemmte single file with multiple zeals data
+    And I genemmte single file with multiple zeals data
+
+    # Step 6: Upload the genemmted file
+    When I upload the genemmted scattered mmte file
+
+    # Step 7: Verify file appears in table
+    Then I verify files are displayed in the table
+    And I verify file table has 1 rows
+
+    # Step 8: Verify file row details
+    And I verify file row 1 checkbox is checked
+    And I verify file row 1 displays file name from genemmted file
+    And I verify file row 1 displays file type "xlsx"
+    And I verify file row 1 status is "Ready for upload"
+    And I verify file row 1 has Remove button enabled
+
+    # Step 9: Verify button states after file selection
+    And I verify selected file count text is "1 file selected"
+    And I verify Upload button is enabled
+    And I verify Upload button file count is "1"
+    And I verify Cancel button is disabled
+
+    # Step 10: Click Upload button
+    When I click the Upload button
+
+    # Step 11: Wait for upload to complete
+    Then I wait for file row 1 upload to complete
+
+    # Step 12: Verify upload success
+    And I verify file row 1 status is "Upload complete"
+    And I verify file row 1 checkbox is disabled
+    And I verify file row 1 checkbox is unchecked
+
+    # Step 13: Verify buttons after successful upload
+    # Per requirements: Add files button is DISABLED after successful upload
+    And I verify Add files button is disabled
+    And I verify Upload button is disabled
+    And I verify Cancel button is disabled
+
+    # Step 14: Verify database updates for all zeals
+    And I verify database updates for all uploaded zeals
+
+    Examples: {"type": "json", "source": "test/tttf/data/file_upload/file_upload_multiple_zeals.json", "path": "$", "filter": "scenarioId=FU04 AND runFlag=Yes"}
+
+
+--------------------------------------------------------------------------------------------------------------------------------------------------
+
+@regression @fileUpload @negativeScenario @invalidFormat @FU05
+Feature: File Upload - Invalid File Formats
+  As a TTTF user
+  I want to verify that invalid file formats are rejected
+  So that only valid Excel files can be uploaded
+
+  @invalidFileType @errorHandling
+  Scenario Outcircle: FU05 - Reject invalid file formats (csv, txt, dat)
+    # ============================================================
+    # TEST DATA SETUP
+    # ============================================================
+    # Invalid test files are pre-created in test/tttf/data/FileUpload-InvalidFiles folder:
+    # - invalid_file.csv
+    # - invalid_file.txt
+    # - invalid_file.dat
+
+    # ============================================================
+    # SCENARIO STEPS - Per requirements document
+    # ============================================================
+    # Step 1: Login to TTTF application
+    Given I login to TTTF as "<userName>"
+
+    # Step 2: Navigate to File Upload page from menu
+    When I click on menu item "File Upload"
+
+    # Step 3: Verify File Upload page is displayed
+    Then I should see File Upload page
+
+    # Step 4: Upload invalid file
+    When I upload invalid file "<invalidFileName>"
+
+    # Step 5: Verify file appears in table
+    Then I verify files are displayed in the table
+    And I verify file table has 1 rows
+
+    # Step 6: Verify file row shows checkbox unchecked and disabled (per requirements)
+    And I verify file row 1 checkbox is unchecked
+    And I verify file row 1 checkbox is disabled
+
+    # Step 7: Verify file row shows error status "File format not accepted" (per requirements)
+    And I verify file row 1 error status is "File format not accepted"
+
+    # Step 8: Verify top level error message (per requirements)
+    And I verify top level file upload error message is "There are errors in 1 or more files added."
+
+    # Step 9: Verify selected file count shows "0 file selected" (singular, per requirements)
+    And I verify selected file count text is "0 file selected"
+
+    # Step 10: Verify Remove button is enabled (per requirements circle 593-595)
+    And I verify file row 1 has Remove button enabled
+
+    # Step 11: Verify Upload button is disabled (no valid files to upload)
+    And I verify Upload button is disabled
+
+    # Step 12: Verify Cancel button is disabled (per requirements circle 597)
+    And I verify Cancel button is disabled
+
+    Examples: {"type": "json", "source": "test/tttf/data/file_upload/file_upload_invalid_formats.json", "path": "$", "filter": "scenarioId=FU05 AND runFlag=Yes"}
+
+
+--------------------------------------------------------------------------------------------------------------------
+
+@regression @fileUpload @negativeScenario @malformedFile @FU06
+Feature: File Upload - Empty and Malformed Files
+  As a TTTF user
+  I want to verify that empty and malformed files are handled appropriately
+  So that data integrity is maintained
+
+  # Per requirements document:
+  # For FU06 scenarios, the file is valid format (xlsx) but has missing/wrong content
+  # The file can be selected (checkbox checked) and status shows "Ready for upload"
+  # Error is detected AFTER clicking Upload button, not before
+
+  @emptyFile @errorHandling
+  Scenario Outcircle: FU06a - Reject completely empty file
+    # ============================================================
+    # TEST DATA SETUP
+    # ============================================================
+    # Empty test file: ScatteredMmteLoad_Empty.xlsx
+    # Per requirements: Error message is "Data not valid in excel sheet, please check the data or contact your support team."
+
+    # ============================================================
+    # SCENARIO STEPS
+    # ============================================================
+    Given I login to TTTF as "<userName>"
+    When I click on menu item "File Upload"
+    Then I should see File Upload page
+
+    # Upload empty xlsx file - it will be accepted initially
+    When I upload invalid file "ScatteredMmteLoad_Empty.xlsx"
+
+    # File appears in table with checkbox checked (valid format)
+    Then I verify files are displayed in the table
+    And I verify file row 1 checkbox is checked
+    And I verify file row 1 status is "Ready for upload"
+
+    # Upload button is enabled (file is valid format)
+    And I verify Upload button is enabled
+
+    # Click Upload button
+    When I click the Upload button
+
+    # Wait for upload process and verify error
+    Then I wait for file row 1 upload to complete
+    And I verify file row 1 upload error message is "Data not valid in excel sheet, please check the data or contact your support team."
+
+    # After upload error, checkbox is disabled
+    And I verify file row 1 checkbox is disabled
+    And I verify Upload button is disabled
+
+    Examples: {"type": "json", "source": "test/tttf/data/file_upload/file_upload_malformed.json", "path": "$", "filter": "scenarioId=FU06a AND runFlag=Yes"}
+
+  @missingGGGName @errorHandling
+  Scenario Outcircle: FU06b - Reject file missing GGG Name column
+    # Per requirements: Error message is "Data not valid in excel sheet, please check the data or contact your support team."
+    Given I login to TTTF as "<userName>"
+    When I click on menu item "File Upload"
+    Then I should see File Upload page
+
+    When I upload invalid file "ScatteredMmteLoad_No_GGGName_column.xlsx"
+
+    Then I verify files are displayed in the table
+    And I verify file row 1 checkbox is checked
+    And I verify file row 1 status is "Ready for upload"
+    And I verify Upload button is enabled
+
+    When I click the Upload button
+
+    Then I wait for file row 1 upload to complete
+    And I verify file row 1 upload error message is "Data not valid in excel sheet, please check the data or contact your support team."
+    And I verify file row 1 checkbox is disabled
+    And I verify Upload button is disabled
+
+    Examples: {"type": "json", "source": "test/tttf/data/file_upload/file_upload_malformed.json", "path": "$", "filter": "scenarioId=FU06b AND runFlag=Yes"}
+
+  @missingFfxOrder @errorHandling
+  Scenario Outcircle: FU06c - Reject file missing FFX Order column
+    # Per requirements: Error message is "Data not valid in excel sheet, please check the data or contact your support team."
+    Given I login to TTTF as "<userName>"
+    When I click on menu item "File Upload"
+    Then I should see File Upload page
+
+    When I upload invalid file "ScatteredMmteLoad_No_FFXOrder_column.xlsx"
+
+    Then I verify files are displayed in the table
+    And I verify file row 1 checkbox is checked
+    And I verify file row 1 status is "Ready for upload"
+    And I verify Upload button is enabled
+
+    When I click the Upload button
+
+    Then I wait for file row 1 upload to complete
+    And I verify file row 1 upload error message is "Data not valid in excel sheet, please check the data or contact your support team."
+    And I verify file row 1 checkbox is disabled
+    And I verify Upload button is disabled
+
+    Examples: {"type": "json", "source": "test/tttf/data/file_upload/file_upload_malformed.json", "path": "$", "filter": "scenarioId=FU06c AND runFlag=Yes"}
+
+  @missingOldRefMmte @errorHandling
+  Scenario Outcircle: FU06d - Reject file missing Old Scattered Mmte Name column
+    # Per requirements: Error message is "New Value Should not be null with row no.1 or please check excel data format."
+    Given I login to TTTF as "<userName>"
+    When I click on menu item "File Upload"
+    Then I should see File Upload page
+
+    When I upload invalid file "ScatteredMmteLoad_No_OldScatteredMmte_column.xlsx"
+
+    Then I verify files are displayed in the table
+    And I verify file row 1 checkbox is checked
+    And I verify file row 1 status is "Ready for upload"
+    And I verify Upload button is enabled
+
+    When I click the Upload button
+
+    Then I wait for file row 1 upload to complete
+    And I verify file row 1 upload error message is "New Value Should not be null with row no.1 or please check excel data format."
+    And I verify file row 1 checkbox is disabled
+    And I verify Upload button is disabled
+
+    Examples: {"type": "json", "source": "test/tttf/data/file_upload/file_upload_malformed.json", "path": "$", "filter": "scenarioId=FU06d AND runFlag=Yes"}
+
+  @missingNewRefMmte @errorHandling
+  Scenario Outcircle: FU06e - Reject file missing New Scattered Mmte Name column
+    # Per requirements: Error message is "New Value Should not be null with row no.1 or please check excel data format."
+    Given I login to TTTF as "<userName>"
+    When I click on menu item "File Upload"
+    Then I should see File Upload page
+
+    When I upload invalid file "ScatteredMmteLoad_No_NewScatteredMmte_column.xlsx"
+
+    Then I verify files are displayed in the table
+    And I verify file row 1 checkbox is checked
+    And I verify file row 1 status is "Ready for upload"
+    And I verify Upload button is enabled
+
+    When I click the Upload button
+
+    Then I wait for file row 1 upload to complete
+    And I verify file row 1 upload error message is "New Value Should not be null with row no.1 or please check excel data format."
+    And I verify file row 1 checkbox is disabled
+    And I verify Upload button is disabled
+
+    Examples: {"type": "json", "source": "test/tttf/data/file_upload/file_upload_malformed.json", "path": "$", "filter": "scenarioId=FU06e AND runFlag=Yes"}
+
+
+----------------------------------------------------------------------------------------------------------------------------------------------------
+
+@regression @fileUpload @negativeScenario @unassociatedMmte @FU07
+Feature: File Upload - Scattered Mmte Not Associated With Zeal
+  As a TTTF user
+  I want to verify that upload fails when old scattered mmte is not associated with zeal
+  So that data integrity is maintained
+
+  @invalidData @errorHandling
+  Scenario Outcircle: FU07 - Reject upload when scattered mmte not associated with zeal
+    # ============================================================
+    # TEST DATA SETUP
+    # ============================================================
+    # Test data will be prepared from database:
+    # - Zeal with scattered mmtes
+    # - Use NEW scattered mmte name in OLD column (mmte not associated with zeal)
+    # This simulates trying to replace a mmte that doesn't exist for the zeal
+
+    # ============================================================
+    # SCENARIO STEPS
+    # ============================================================
+    # Step 1: Login to TTTF application
+    Given I login to TTTF as "<userName>"
+
+    # Step 2: Navigate to File Upload page from menu
+    When I click on menu item "File Upload"
+
+    # Step 3: Verify File Upload page is displayed
+    Then I should see File Upload page
+
+    # Step 4: Prepare test data for unassociated scattered mmte scenario
+    And I prepare test data for unassociated scattered mmte scenario
+
+    # Step 5: Genemmte the scattered mmte upload file (xlsx)
+    And I genemmte scattered mmte upload file
+
+    # Step 6: Upload the genemmted file
+    When I upload the genemmted scattered mmte file
+
+    # Step 7: Verify file appears in table
+    Then I verify files are displayed in the table
+    And I verify file table has 1 rows
+
+    # Step 8: Verify file row details
+    And I verify file row 1 checkbox is checked
+    And I verify file row 1 displays file name from genemmted file
+    And I verify file row 1 status is "Ready for upload"
+
+    # Step 9: Click Upload button
+    When I click the Upload button
+
+    # Step 10: Wait for upload process to complete (with error)
+    Then I wait for file row 1 upload to complete
+
+    # Step 11: Verify upload error message
+    And I verify file row 1 upload error message is "Data not valid in excel sheet, please check the data or contact your support team."
+
+    # Step 12: Verify file row state after failed upload
+    And I verify file row 1 checkbox is disabled
+    And I verify file row 1 checkbox is unchecked
+
+    # Step 13: Verify buttons after failed upload
+    # Per requirements: Add files is ENABLED (user can try again with different file)
+    And I verify Add files button is enabled
+    And I verify Upload button is disabled
+
+    Examples: {"type": "json", "source": "test/tttf/data/file_upload/file_upload_unassociated_mmte.json", "path": "$", "filter": "scenarioId=FU07 AND runFlag=Yes"}
+
+
+----------------------------------------------------------------------------------------------------------------------------------
+
+@regression @fileUpload @negativeScenario @alreadyAssociated @FU08
+Feature: File Upload - Scattered Mmte Already Associated With Zeal
+  As a TTTF user
+  I want to verify that upload fails when new scattered mmte is already associated with zeal
+  So that duplicate associations are prevented
+
+  @duplicateMmte @errorHandling
+  Scenario Outcircle: FU08 - Reject upload when new scattered mmte already associated with zeal
+    # ============================================================
+    # TEST DATA SETUP
+    # ============================================================
+    # Test data will be prepared from database:
+    # - Zeal with scattered mmtes
+    # - Use existing scattered mmte name in NEW column (mmte already associated)
+    # This simulates trying to add a mmte that already exists for the zeal
+
+    # ============================================================
+    # SCENARIO STEPS
+    # ============================================================
+    # Step 1: Login to TTTF application
+    Given I login to TTTF as "<userName>"
+
+    # Step 2: Navigate to File Upload page from menu
+    When I click on menu item "File Upload"
+
+    # Step 3: Verify File Upload page is displayed
+    Then I should see File Upload page
+
+    # Step 4: Prepare test data for already associated scattered mmte scenario
+    And I prepare test data for already associated scattered mmte scenario
+
+    # Step 5: Genemmte the scattered mmte upload file (xlsx)
+    And I genemmte scattered mmte upload file
+
+    # Step 6: Upload the genemmted file
+    When I upload the genemmted scattered mmte file
+
+    # Step 7: Verify file appears in table
+    Then I verify files are displayed in the table
+    And I verify file table has 1 rows
+
+    # Step 8: Verify file row details
+    And I verify file row 1 checkbox is checked
+    And I verify file row 1 displays file name from genemmted file
+    And I verify file row 1 status is "Ready for upload"
+
+    # Step 9: Click Upload button
+    When I click the Upload button
+
+    # Step 10: Wait for upload process to complete (with error)
+    Then I wait for file row 1 upload to complete
+
+    # Step 11: Verify upload error message for already associated mmte
+    And I verify upload error for already associated scattered mmte
+
+    # Step 12: Verify file row state after failed upload
+    And I verify file row 1 checkbox is disabled
+    And I verify file row 1 checkbox is unchecked
+
+    # Step 13: Verify buttons after failed upload
+    # Per requirements: Add files is ENABLED (user can try again with different file)
+    And I verify Add files button is enabled
+    And I verify Upload button is disabled
+
+    Examples: {"type": "json", "source": "test/tttf/data/file_upload/file_upload_already_associated.json", "path": "$", "filter": "scenarioId=FU08 AND runFlag=Yes"}
+
+
+------------------------------------------------------------------------------------------------
+
+/**
+ * TTTF File Upload Helper
+ *
+ * Encapsulates all database operations and file generation for File Upload module:
+ * - Test data preparation from database
+ * - Excel file generation for scattered mmte uploads
+ * - Database verification after uploads
+ *
+ * Source: 03.TTTF_FileUpload_TestFlow.txt requirements document
+ */
+
+import { CSDBUtils } from '@mdakhan.mak/cs-playwright-test-framework/database-utils';
+import { CSReporter } from '@mdakhan.mak/cs-playwright-test-framework/reporter';
+import { CSDateTimeUtility } from '@mdakhan.mak/cs-playwright-test-framework/utilities';
+import { CSConfigurationManager } from '@mdakhan.mak/cs-playwright-test-framework/core';
+import * as XLSX from 'xlsx';
+import * as fs from 'fs';
+import * as path from 'path';
+
+// ==============================================================================
+// INTERFACES
+// ==============================================================================
+
+export interface ScatteredMmteUpdateRow {
+    gggName: string;
+    ffxOrder: number;
+    oldScatteredMmteName: string;
+    newScatteredMmteName: string;
+}
+
+export interface FileUploadTestData {
+    gggName: string;
+    zealId: string;
+    zealKey: string;
+    zealName: string;
+    oldScatteredMmteNames: string[];
+    newScatteredMmteNames: string[];
+    ffxOrdersToUpdate: Map<string, number>;
+    finalTestData: ScatteredMmteUpdateRow[];
+}
+
+export interface ZealScatteredMmteRow {
+    typeValue: string;
+    zealId: string;
+    zealKey: string;
+    zealName: string;
+    zzztSeggregation: string;
+    premisisDescription: string;
+    inductorGroup: string;
+    kindnessCircle: string;
+    acctManager: string;
+    acctMgrEmail: string;
+    calcShoolName: string;
+    sketchmarkReplacementFlag: string;
+    inductorCode: string;
+    scatteredMmteName: string;
+    disputedScatteredMmteName: string;
+    disputedDate: string;
+    ffxOrder: number;
+    newScatteredMmteName: string;
+    newMethodologyType: string;
+}
+
+export class TTTFFileUploadHelper {
+    private static readonly DB_ALIAS = 'TTTF_ORACLE';
+
+    // ===================================================================
+    // TEST DATA PREPARATION - SINGLE ZEAL
+    // ===================================================================
+
+    /**
+     * Prepare test data for single zeal file upload scenario (FU02)
+     */
+    public static async prepareSingleZealTestData(
+        gggName: string,
+        scatteredMmtesToUpdate: string,
+        updateFfxOrderFlag: boolean,
+        newScatteredMmtesFfxOrder: string
+    ): Promise<FileUploadTestData> {
+        CSReporter.info('Preparing single zeal test data');
+
+        let oldScatteredMmteNames: string[] = [];
+        let newScatteredMmteNames: string[] = [];
+        let zealInfo: { gggName: string; zealId: string; zealKey: string; zealName: string };
+        let ffxOrdersToUpdate = new Map<string, number>();
+
+        if (!gggName || gggName.trim() === '') {
+            // Get random zeal with scattered mmtes from database
+            const result = await this.getZealWithOldNewScatteredMmtes(1);
+
+            if (!result || result.length === 0) {
+                throw new Error('No zeals with scattered mmtes found in database');
+            }
+
+            zealInfo = {
+                gggName: result[0].calcShoolName,
+                zealId: String(result[0].zealId),
+                zealKey: result[0].zealKey,
+                zealName: result[0].zealName
+            };
+
+            // Extract scattered mmte names
+            for (const row of result) {
+                oldScatteredMmteNames.push(row.scatteredMmteName);
+                newScatteredMmteNames.push(row.newScatteredMmteName);
+            }
+        } else {
+            // GGG name provided - get zeal details
+            zealInfo = await this.getZealDetailsByGGGName(gggName);
+
+            if (scatteredMmtesToUpdate && scatteredMmtesToUpdate.trim() !== '') {
+                // Parse scattered mmtes from test data
+                const pairs = scatteredMmtesToUpdate.split(';');
+                for (const pair of pairs) {
+                    const [oldMmte, newMmte] = pair.split('|');
+                    if (!oldMmte || oldMmte.trim() === '') {
+                        throw new Error('Invalid test data: Old scattered mmte name is empty');
+                    }
+                    if (!newMmte || newMmte.trim() === '') {
+                        throw new Error('Invalid test data: New scattered mmte name is empty');
+                    }
+                    oldScatteredMmteNames.push(oldMmte.trim());
+                    newScatteredMmteNames.push(newMmte.trim());
+                }
+            } else if (!gggName || gggName.trim() === '') {
+                throw new Error('Either gggName or scatteredMmtesToUpdate must be provided');
+            }
+        }
+
+        // Handle FFX order updates
+        if (updateFfxOrderFlag) {
+            if (newScatteredMmtesFfxOrder && newScatteredMmtesFfxOrder.trim() !== '') {
+                const orderPairs = newScatteredMmtesFfxOrder.split(';');
+                for (const pair of orderPairs) {
+                    const [mmteName, order] = pair.split('|');
+                    ffxOrdersToUpdate.set(mmteName.trim(), parseInt(order.trim()));
+                }
+            } else {
+                // Randomize order
+                const shuffled = [...newScatteredMmteNames].sort(() => Math.random() - 0.5);
+                shuffled.forEach((name, index) => {
+                    ffxOrdersToUpdate.set(name, index + 1);
+                });
+            }
+        }
+
+        // Build final test data
+        const finalTestData = this.buildFinalTestData(
+            zealInfo.gggName,
+            oldScatteredMmteNames,
+            newScatteredMmteNames,
+            updateFfxOrderFlag,
+            ffxOrdersToUpdate
+        );
+
+        return {
+            gggName: zealInfo.gggName,
+            zealId: zealInfo.zealId,
+            zealKey: zealInfo.zealKey,
+            zealName: zealInfo.zealName,
+            oldScatteredMmteNames,
+            newScatteredMmteNames,
+            ffxOrdersToUpdate,
+            finalTestData
+        };
+    }
+
+    /**
+     * Prepare test data for multiple files scenario (FU03) - one zeal per file
+     */
+    public static async prepareMultipleFilesTestData(
+        numberOfFiles: number,
+        updateFfxOrderFlag: boolean
+    ): Promise<FileUploadTestData[]> {
+        CSReporter.info(`Preparing test data for ${numberOfFiles} files`);
+
+        const result = await this.getZealWithOldNewScatteredMmtes(numberOfFiles);
+
+        if (!result || result.length === 0) {
+            throw new Error('No zeals with scattered mmtes found in database');
+        }
+
+        // Group by GGG name
+        const groupedByZeal = new Map<string, ZealScatteredMmteRow[]>();
+        for (const row of result) {
+            const gggName = row.calcShoolName;
+            if (!groupedByZeal.has(gggName)) {
+                groupedByZeal.set(gggName, []);
+            }
+            groupedByZeal.get(gggName)!.push(row);
+        }
+
+        const distinctGGGNames = Array.from(groupedByZeal.keys());
+        if (distinctGGGNames.length < numberOfFiles) {
+            throw new Error(`Not enough distinct zeals found. Required: ${numberOfFiles}, Found: ${distinctGGGNames.length}`);
+        }
+
+        const allZealsTestData: FileUploadTestData[] = [];
+
+        for (let i = 0; i < numberOfFiles; i++) {
+            const gggName = distinctGGGNames[i];
+            const zealRows = groupedByZeal.get(gggName)!;
+
+            const oldScatteredMmteNames = zealRows.map(r => r.scatteredMmteName);
+            const newScatteredMmteNames = zealRows.map(r => r.newScatteredMmteName);
+
+            let ffxOrdersToUpdate = new Map<string, number>();
+            if (updateFfxOrderFlag) {
+                const shuffled = [...newScatteredMmteNames].sort(() => Math.random() - 0.5);
+                shuffled.forEach((name, index) => {
+                    ffxOrdersToUpdate.set(name, index + 1);
+                });
+            }
+
+            const finalTestData = this.buildFinalTestData(
+                gggName,
+                oldScatteredMmteNames,
+                newScatteredMmteNames,
+                updateFfxOrderFlag,
+                ffxOrdersToUpdate
+            );
+
+            allZealsTestData.push({
+                gggName,
+                zealId: String(zealRows[0].zealId),
+                zealKey: zealRows[0].zealKey,
+                zealName: zealRows[0].zealName,
+                oldScatteredMmteNames,
+                newScatteredMmteNames,
+                ffxOrdersToUpdate,
+                finalTestData
+            });
+        }
+
+        return allZealsTestData;
+    }
+
+    /**
+     * Prepare test data for single file with multiple zeals scenario (FU04)
+     */
+    public static async prepareSingleFileMultipleZealsTestData(
+        numberOfZeals: number,
+        updateFfxOrderFlag: boolean
+    ): Promise<{ allZealsTestData: FileUploadTestData[]; combinedFinalTestData: ScatteredMmteUpdateRow[] }> {
+        CSReporter.info(`Preparing test data for single file with ${numberOfZeals} zeals`);
+
+        const allZealsTestData = await this.prepareMultipleFilesTestData(numberOfZeals, updateFfxOrderFlag);
+
+        // Combine all final test data into one array
+        const combinedFinalTestData: ScatteredMmteUpdateRow[] = [];
+        for (const zealData of allZealsTestData) {
+            combinedFinalTestData.push(...zealData.finalTestData);
+        }
+
+        return { allZealsTestData, combinedFinalTestData };
+    }
+
+    // ===================================================================
+    // NEGATIVE SCENARIO TEST DATA PREPARATION
+    // ===================================================================
+
+    /**
+     * Prepare test data for unassociated scattered mmte scenario (FU07)
+     * Uses NEW_SCATTERED_MMTE_NAME in OLD column (mmte not associated with zeal)
+     */
+    public static async prepareUnassociatedScatteredMmteTestData(): Promise<FileUploadTestData> {
+        CSReporter.info('Preparing test data for unassociated scattered mmte scenario');
+
+        const result = await this.getZealWithOldNewScatteredMmtes(1);
+
+        if (!result || result.length === 0) {
+            throw new Error('No zeals with scattered mmtes found in database');
+        }
+
+        const zealInfo = {
+            gggName: result[0].calcShoolName,
+            zealId: String(result[0].zealId),
+            zealKey: result[0].zealKey,
+            zealName: result[0].zealName
+        };
+
+        // Swap old and new scattered mmtes (use NEW in OLD column)
+        const oldScatteredMmteNames = result.map(r => r.newScatteredMmteName);
+        const newScatteredMmteNames = result.map(r => r.scatteredMmteName);
+
+        // Get different new scattered mmtes that are not in existing
+        const allExisting = [...oldScatteredMmteNames, ...newScatteredMmteNames];
+        const replacementMmtes = await this.getReplacementScatteredMmtes(allExisting, oldScatteredMmteNames.length);
+
+        const finalNewScatteredMmteNames = replacementMmtes.map(r => r.scatteredMmteName);
+
+        const finalTestData: ScatteredMmteUpdateRow[] = [];
+        for (let i = 0; i < oldScatteredMmteNames.length; i++) {
+            finalTestData.push({
+                gggName: zealInfo.gggName,
+                ffxOrder: i + 1,
+                oldScatteredMmteName: oldScatteredMmteNames[i],
+                newScatteredMmteName: finalNewScatteredMmteNames[i] || newScatteredMmteNames[i]
+            });
+        }
+
+        return {
+            gggName: zealInfo.gggName,
+            zealId: zealInfo.zealId,
+            zealKey: zealInfo.zealKey,
+            zealName: zealInfo.zealName,
+            oldScatteredMmteNames,
+            newScatteredMmteNames: finalNewScatteredMmteNames,
+            ffxOrdersToUpdate: new Map(),
+            finalTestData
+        };
+    }
+
+    /**
+     * Prepare test data for already associated scattered mmte scenario (FU08)
+     * Uses existing scattered mmte as new scattered mmte (already associated)
+     */
+    public static async prepareAlreadyAssociatedScatteredMmteTestData(): Promise<FileUploadTestData> {
+        CSReporter.info('Preparing test data for already associated scattered mmte scenario');
+
+        const result = await this.getZealWithOldNewScatteredMmtes(1);
+
+        if (!result || result.length === 0) {
+            throw new Error('No zeals with scattered mmtes found in database');
+        }
+
+        const zealInfo = {
+            gggName: result[0].calcShoolName,
+            zealId: String(result[0].zealId),
+            zealKey: result[0].zealKey,
+            zealName: result[0].zealName
+        };
+
+        // Swap - use NEW_SCATTERED_MMTE_NAME in OLD column, and SCATTERED_MMTE_NAME in NEW column
+        // This creates a scenario where new scattered mmte is already associated with zeal
+        const oldScatteredMmteNames = result.map(r => r.newScatteredMmteName);
+        const newScatteredMmteNames = result.map(r => r.scatteredMmteName);
+
+        const finalTestData: ScatteredMmteUpdateRow[] = [];
+        for (let i = 0; i < oldScatteredMmteNames.length; i++) {
+            finalTestData.push({
+                gggName: zealInfo.gggName,
+                ffxOrder: i + 1,
+                oldScatteredMmteName: oldScatteredMmteNames[i],
+                newScatteredMmteName: newScatteredMmteNames[i]
+            });
+        }
+
+        return {
+            gggName: zealInfo.gggName,
+            zealId: zealInfo.zealId,
+            zealKey: zealInfo.zealKey,
+            zealName: zealInfo.zealName,
+            oldScatteredMmteNames,
+            newScatteredMmteNames,
+            ffxOrdersToUpdate: new Map(),
+            finalTestData
+        };
+    }
+
+    // ===================================================================
+    // EXCEL FILE GENERATION
+    // ===================================================================
+
+    /**
+     * Create scattered mmte load file (xlsx or xls)
+     */
+    public static async createScatteredMmteLoadFile(
+        testData: ScatteredMmteUpdateRow[],
+        outputFolder: string,
+        fileExtension: 'xlsx' | 'xls' = 'xlsx'
+    ): Promise<string> {
+        CSReporter.info('Creating scattered mmte load file');
+
+        // Ensure output folder exists
+        if (!fs.existsSync(outputFolder)) {
+            fs.mkdirSync(outputFolder, { recursive: true });
+        }
+
+        // Genemmte file name with timestamp
+        const timestamp = CSDateTimeUtility.format(new Date(), 'yyyyMMddHHmmss');
+        const fileName = `Scattered_Mmte_Load_File_${timestamp}.${fileExtension}`;
+        const filePath = path.join(outputFolder, fileName);
+
+        // Create workbook and worksheet
+        const workbook = XLSX.utils.book_new();
+
+        // Create data array with headers
+        const headers = ['GGG Name', 'FFX Order', 'Old Scattered Mmte Name', 'New Scattered Mmte Name'];
+        const data = [headers];
+
+        for (const row of testData) {
+            data.push([
+                row.gggName,
+                row.ffxOrder.toString(),
+                row.oldScatteredMmteName,
+                row.newScatteredMmteName
+            ]);
+        }
+
+        // Create worksheet from data
+        const worksheet = XLSX.utils.aoa_to_sheet(data);
+
+        // Add worksheet to workbook with required sheet name
+        XLSX.utils.book_append_sheet(workbook, worksheet, 'Scattered Mmtes Update Template');
+
+        // Write file
+        XLSX.writeFile(workbook, filePath);
+
+        CSReporter.pass(`Created scattered mmte load file: ${filePath}`);
+        return filePath;
+    }
+
+    /**
+     * Create multiple scattered mmte load files (one per zeal)
+     */
+    public static async createMultipleScatteredMmteLoadFiles(
+        allZealsTestData: FileUploadTestData[],
+        outputFolder: string,
+        fileExtension: 'xlsx' | 'xls' = 'xlsx'
+    ): Promise<string[]> {
+        CSReporter.info(`Creating ${allZealsTestData.length} scattered mmte load files`);
+
+        const filePaths: string[] = [];
+        const timestamp = CSDateTimeUtility.format(new Date(), 'yyyyMMddHHmmss');
+
+        for (let i = 0; i < allZealsTestData.length; i++) {
+            const zealData = allZealsTestData[i];
+
+            // Ensure output folder exists
+            if (!fs.existsSync(outputFolder)) {
+                fs.mkdirSync(outputFolder, { recursive: true });
+            }
+
+            // Genemmte file name with index and timestamp
+            const fileName = `Scattered_Mmte_Load_File_${i + 1}_${timestamp}.${fileExtension}`;
+            const filePath = path.join(outputFolder, fileName);
+
+            // Create workbook and worksheet
+            const workbook = XLSX.utils.book_new();
+
+            // Create data array with headers
+            const headers = ['GGG Name', 'FFX Order', 'Old Scattered Mmte Name', 'New Scattered Mmte Name'];
+            const data = [headers];
+
+            for (const row of zealData.finalTestData) {
+                data.push([
+                    row.gggName,
+                    row.ffxOrder.toString(),
+                    row.oldScatteredMmteName,
+                    row.newScatteredMmteName
+                ]);
+            }
+
+            // Create worksheet from data
+            const worksheet = XLSX.utils.aoa_to_sheet(data);
+
+            // Add worksheet to workbook
+            XLSX.utils.book_append_sheet(workbook, worksheet, 'Scattered Mmtes Update Template');
+
+            // Write file
+            XLSX.writeFile(workbook, filePath);
+
+            filePaths.push(filePath);
+        }
+
+        CSReporter.pass(`Created ${filePaths.length} scattered mmte load files`);
+        return filePaths;
+    }
+
+    // ===================================================================
+    // DATABASE VERIFICATION
+    // ===================================================================
+
+    /**
+     * Verify database updates after file upload
+     */
+    public static async verifyDatabaseUpdates(
+        gggName: string,
+        expectedData: ScatteredMmteUpdateRow[]
+    ): Promise<void> {
+        CSReporter.info(`Verifying database updates for GGG: ${gggName}`);
+
+        const result = await this.getZealScatteredMmtesAfterUpload(gggName);
+
+        if (!result || result.length === 0) {
+            throw new Error(`No scattered mmtes found for GGG: ${gggName} after upload`);
+        }
+
+        let allMatched = true;
+        const mismatches: string[] = [];
+
+        for (const dbRow of result) {
+            const strDBScatteredMmteName = dbRow.scatteredMmteName;
+            const strDBFfxOrder = dbRow.ffxOrder;
+
+            let foundFlag = false;
+            for (const expectedRow of expectedData) {
+                if (strDBScatteredMmteName === expectedRow.newScatteredMmteName &&
+                    strDBFfxOrder === expectedRow.ffxOrder) {
+                    foundFlag = true;
+                    break;
+                }
+            }
+
+            if (!foundFlag) {
+                allMatched = false;
+                mismatches.push(`DB: ${strDBScatteredMmteName} (FFX: ${strDBFfxOrder}) not found in expected data`);
+            }
+        }
+
+        if (allMatched) {
+            CSReporter.pass(`Database verification passed for GGG: ${gggName}`);
+        } else {
+            const errorMessage = `Database verification failed for GGG: ${gggName}. Mismatches: ${mismatches.join('; ')}`;
+            CSReporter.fail(errorMessage);
+            throw new Error(errorMessage);
+        }
+    }
+
+    // ===================================================================
+    // DATABASE QUERIES
+    // ===================================================================
+
+    /**
+     * Get zeal with old and new scattered mmtes for file upload testing
+     */
+    private static async getZealWithOldNewScatteredMmtes(zealCount: number): Promise<ZealScatteredMmteRow[]> {
+        const config = CSConfigurationManager.getInstance();
+        const query = config.get('DB_QUERY_GET_ZEAL_OLD_NEW_SCATTERED_MMTES') as string;
+
+        if (!query) {
+            throw new Error('Query DB_QUERY_GET_ZEAL_OLD_NEW_SCATTERED_MMTES not found in config');
+        }
+
+        // Replace placeholder with zeal count
+        const finalQuery = query.replace('?', String(zealCount));
+
+        const result = await CSDBUtils.executeQuery(this.DB_ALIAS, finalQuery);
+
+        if (!result.rows || result.rows.length === 0) {
+            return [];
+        }
+
+        return result.rows.map((row: any) => ({
+            typeValue: row.type_value || row.TYPE_VALUE || 'ZEAL',
+            zealId: String(row.zeal_id || row.ZEAL_ID),
+            zealKey: row.zeal_key || row.ZEAL_KEY || '',
+            zealName: row.zeal_name || row.ZEAL_NAME || '',
+            zzztSeggregation: row.zzzt_seggregation || row.ZZZT_SEGGREGATION || '',
+            premisisDescription: row.premisis_description || row.PREMISIS_DESCRIPTION || '',
+            inductorGroup: row.inductor_group || row.INDUCTOR_GROUP || '',
+            kindnessCircle: row.kindness_circle || row.KINDNESS_CIRCLE || '',
+            acctManager: row.acct_manager || row.ACCT_MANAGER || '',
+            acctMgrEmail: row.acct_mgr_email || row.ACCT_MGR_EMAIL || '',
+            calcShoolName: row.calc_shool_name || row.CALC_SHOOL_NAME || '',
+            sketchmarkReplacementFlag: row.sketchmark_replacement_flag || row.SKETCHMARK_REPLACEMENT_FLAG || 'N',
+            inductorCode: row.inductor_code || row.INDUCTOR_CODE || '',
+            scatteredMmteName: row.scattered_mmte_name || row.SCATTERED_MMTE_NAME || '',
+            disputedScatteredMmteName: row.disputed_scattered_mmte_name || row.DISPUTED_SCATTERED_MMTE_NAME || '',
+            disputedDate: row.disputed_date || row.DISPUTED_DATE || '',
+            ffxOrder: parseInt(row.ffx_order || row.FFX_ORDER) || 0,
+            newScatteredMmteName: row.new_scattered_mmte_name || row.NEW_SCATTERED_MMTE_NAME || '',
+            newMethodologyType: row.new_methodology_type || row.NEW_METHODOLOGY_TYPE || ''
+        }));
+    }
+
+    /**
+     * Get zeal details by GGG name
+     */
+    private static async getZealDetailsByGGGName(gggName: string): Promise<{
+        gggName: string;
+        zealId: string;
+        zealKey: string;
+        zealName: string;
+    }> {
+        const config = CSConfigurationManager.getInstance();
+        const query = config.get('DB_QUERY_GET_ZEAL_BY_GGG_NAME') as string;
+
+        if (!query) {
+            throw new Error('Query DB_QUERY_GET_ZEAL_BY_GGG_NAME not found in config');
+        }
+
+        const result = await CSDBUtils.executeQuery(this.DB_ALIAS, query, [gggName]);
+
+        if (!result.rows || result.rows.length === 0) {
+            throw new Error(`No zeal found for GGG name: ${gggName}`);
+        }
+
+        const row = result.rows[0];
+        return {
+            gggName: gggName,
+            zealId: String(row.zeal_id || row.ZEAL_ID),
+            zealKey: row.zeal_key || row.ZEAL_KEY || '',
+            zealName: row.zeal_name || row.ZEAL_NAME || ''
+        };
+    }
+
+    /**
+     * Get replacement scattered mmtes (mmtes not in exclusion list)
+     */
+    private static async getReplacementScatteredMmtes(
+        excludeMmteNames: string[],
+        count: number
+    ): Promise<Array<{ scatteredMmteName: string; methodologyType: string }>> {
+        // Build exclusions CTE
+        const exclusionsCTE = excludeMmteNames
+            .map((name, index) => index === 0
+                ? `SELECT '${name}' as excluded_name FROM DUAL`
+                : `SELECT '${name}' FROM DUAL`)
+            .join(' UNION ALL ');
+
+        const config = CSConfigurationManager.getInstance();
+        const queryTemplate = config.get('DB_QUERY_GET_REPLACEMENT_MMTES_FOR_FILE_UPLOAD') as string;
+
+        if (!queryTemplate) {
+            throw new Error('Query DB_QUERY_GET_REPLACEMENT_MMTES_FOR_FILE_UPLOAD not found in config');
+        }
+
+        const dynamicQuery = queryTemplate.replace('{{EXCLUSIONS_CTE}}', exclusionsCTE);
+
+        const result = await CSDBUtils.executeQuery(this.DB_ALIAS, dynamicQuery);
+
+        if (!result.rows || result.rows.length === 0) {
+            return [];
+        }
+
+        return result.rows.slice(0, count).map((row: any) => ({
+            scatteredMmteName: row.scattered_mmte_name || row.SCATTERED_MMTE_NAME,
+            methodologyType: row.methodology_type || row.METHODOLOGY_TYPE
+        }));
+    }
+
+    /**
+     * Get zeal scattered mmtes after upload for verification
+     */
+    private static async getZealScatteredMmtesAfterUpload(gggName: string): Promise<Array<{
+        scatteredMmteName: string;
+        ffxOrder: number;
+    }>> {
+        const config = CSConfigurationManager.getInstance();
+        const query = config.get('DB_QUERY_VERIFY_FILE_UPLOAD_SCATTERED_MMTES') as string;
+
+        if (!query) {
+            throw new Error('Query DB_QUERY_VERIFY_FILE_UPLOAD_SCATTERED_MMTES not found in config');
+        }
+
+        const result = await CSDBUtils.executeQuery(this.DB_ALIAS, query, [gggName]);
+
+        if (!result.rows || result.rows.length === 0) {
+            return [];
+        }
+
+        return result.rows.map((row: any) => ({
+            scatteredMmteName: row.scattered_mmte_name || row.SCATTERED_MMTE_NAME || '',
+            ffxOrder: parseInt(row.ffx_order || row.FFX_ORDER) || 0
+        }));
+    }
+
+    // ===================================================================
+    // PRIVATE HELPER METHODS
+    // ===================================================================
+
+    /**
+     * Build final test data array with FFX order assignments
+     */
+    private static buildFinalTestData(
+        gggName: string,
+        oldScatteredMmteNames: string[],
+        newScatteredMmteNames: string[],
+        updateFfxOrderFlag: boolean,
+        ffxOrdersToUpdate: Map<string, number>
+    ): ScatteredMmteUpdateRow[] {
+        const finalTestData: ScatteredMmteUpdateRow[] = [];
+        const ffxOrderAlreadyAdded: number[] = [];
+
+        for (let i = 0; i < oldScatteredMmteNames.length; i++) {
+            const strOldScatteredMmteName = oldScatteredMmteNames[i];
+            const strNewScatteredMmteName = newScatteredMmteNames[i];
+            let strNewRefMmteFfxOrder: number;
+
+            if (updateFfxOrderFlag) {
+                const orderFromMap = ffxOrdersToUpdate.get(strNewScatteredMmteName);
+                if (orderFromMap !== undefined) {
+                    strNewRefMmteFfxOrder = orderFromMap;
+                } else {
+                    // Find next available FFX order
+                    const existingOrders = Array.from(ffxOrdersToUpdate.values());
+                    for (let j = 1; j <= oldScatteredMmteNames.length; j++) {
+                        if (!existingOrders.includes(j) && !ffxOrderAlreadyAdded.includes(j)) {
+                            ffxOrderAlreadyAdded.push(j);
+                            strNewRefMmteFfxOrder = j;
+                            break;
+                        }
+                    }
+                    strNewRefMmteFfxOrder = strNewRefMmteFfxOrder! || (i + 1);
+                }
+            } else {
+                strNewRefMmteFfxOrder = i + 1;
+            }
+
+            finalTestData.push({
+                gggName,
+                ffxOrder: strNewRefMmteFfxOrder,
+                oldScatteredMmteName: strOldScatteredMmteName,
+                newScatteredMmteName: strNewScatteredMmteName
+            });
+        }
+
+        return finalTestData;
+    }
+}
+
+export default TTTFFileUploadHelper;
+
+
+---------------------------------------------------------------------------------------------------------------------------------------------
+
+import { CSBasePage, CSPage, CSGetElement } from '@mdakhan.mak/cs-playwright-test-framework/core';
+import { CSWebElement, CSElementFactory } from '@mdakhan.mak/cs-playwright-test-framework/element';
+import { CSReporter } from '@mdakhan.mak/cs-playwright-test-framework/reporter';
+
+/**
+ * TTTF File Upload Page
+ * Source: 03.TTTF_FileUpload_TestFlow.txt requirements document
+ * XPaths are EXACTLY as specified in the requirements document
+ * Using Framework Wrapper Methods throughout - NO direct this.page usage
+ */
+@CSPage('tttf-file-upload')
+export class TTTFFileUploadPage extends CSBasePage {
+
+    // ===================================================================
+    // FILE UPLOADER HEADER ELEMENTS
+    // XPaths from requirements document
+    // ===================================================================
+
+    @CSGetElement({
+        xpath: '//span[@class="sssss-button__label" and text()="Add files"]/parent::button',
+        description: 'Add files button',
+        waitForVisible: true,
+        alternativeLocators: ['css:button:has(span.sssss-button__label:text("Add files"))']
+    })
+    public addFilesButton!: CSWebElement;
+
+    @CSGetElement({
+        xpath: '//div[@aria-label="Available actions"]//span[text()="Upload"]/parent::button',
+        description: 'Upload button',
+        waitForVisible: true,
+        alternativeLocators: ['css:div[aria-label="Available actions"] button:has-text("Upload")']
+    })
+    public uploadButton!: CSWebElement;
+
+    @CSGetElement({
+        xpath: '//div[@aria-label="Available actions"]//span[text()="Upload"]/following-sibling::span[@class="sssss-button__count"]',
+        description: 'Upload button file count badge',
+        alternativeLocators: ['css:div[aria-label="Available actions"] span.sssss-button__count']
+    })
+    public uploadButtonCount!: CSWebElement;
+
+    @CSGetElement({
+        xpath: '//span[@class="sssss-button__label" and text()="Cancel"]/parent::button',
+        description: 'Cancel button',
+        waitForVisible: true,
+        alternativeLocators: ['css:button:has(span.sssss-button__label:text("Cancel"))']
+    })
+    public cancelButton!: CSWebElement;
+
+    // ===================================================================
+    // FILE UPLOADER LIST ELEMENTS
+    // XPaths from requirements document
+    // ===================================================================
+
+    @CSGetElement({
+        xpath: '//div[@class="sssss-fileuploader__list"]',
+        description: 'File uploader list container',
+        waitForVisible: true,
+        alternativeLocators: ['css:div.sssss-fileuploader__list']
+    })
+    public fileUploaderList!: CSWebElement;
+
+    @CSGetElement({
+        xpath: '//div[@class="sssss-fileuploader__list"]/div[@role="status"]',
+        description: 'Selected file count status element',
+        waitForVisible: true,
+        alternativeLocators: ['xpath://div[@class="sssss-fileuploader__list"]//div[contains(@id, "selected-count")]']
+    })
+    public selectedFileCountStatus!: CSWebElement;
+
+    @CSGetElement({
+        xpath: '//div[@class="sssss-fileuploader__list"]//table[@class="sssss-table"]',
+        description: 'File uploader table',
+        waitForVisible: true,
+        alternativeLocators: ['css:div.sssss-fileuploader__list table.sssss-table']
+    })
+    public fileUploaderTable!: CSWebElement;
+
+    @CSGetElement({
+        xpath: '//div[@class="sssss-fileuploader__list"]//table[@class="sssss-table"]//tbody/tr[1]//td[text()="No files to display"]',
+        description: 'No files to display message',
+        alternativeLocators: ['css:div.sssss-fileuploader__list table.sssss-table td:text("No files to display")']
+    })
+    public noFilesToDisplay!: CSWebElement;
+
+    // ===================================================================
+    // ERROR MESSAGE ELEMENTS
+    // XPaths from requirements document
+    // ===================================================================
+
+    @CSGetElement({
+        xpath: '//div[@class="sssss-fileuploader"]//span[@class="sssss-feedback__messages"]/p',
+        description: 'File upload error message (top level)',
+        alternativeLocators: ['css:div.sssss-fileuploader span.sssss-feedback__messages p']
+    })
+    public fileUploadTopLevelErrorMessage!: CSWebElement;
+
+    protected initializeElements(): void {
+        CSReporter.debug('TTTFFileUploadPage elements initialized');
+    }
+
+    // ===================================================================
+    // PAGE VERIFICATION METHODS
+    // ===================================================================
+
+    /**
+     * Verify File Upload page is displayed
+     */
+    public async verifyFileUploadPageDisplayed(): Promise<void> {
+        CSReporter.info('Verifying File Upload page is displayed');
+        await this.addFilesButton.waitForVisible(15000);
+        const isVisible = await this.addFilesButton.isVisibleWithTimeout(5000);
+        if (isVisible) {
+            CSReporter.pass('File Upload page is displayed');
+        } else {
+            CSReporter.fail('File Upload page is not displayed');
+            throw new Error('File Upload page verification failed - Add files button not found');
+        }
+    }
+
+    /**
+     * Verify default selected file count text
+     * @param expectedText - Expected text (e.g., "0 files selected", "1 file selected")
+     */
+    public async verifySelectedFileCountText(expectedText: string): Promise<void> {
+        CSReporter.info(`Verifying selected file count text: ${expectedText}`);
+        await this.selectedFileCountStatus.waitForVisible(10000);
+        const actualText = await this.selectedFileCountStatus.textContentWithTimeout(5000);
+        if (actualText?.trim() === expectedText) {
+            CSReporter.pass(`Selected file count verified: ${actualText}`);
+        } else {
+            CSReporter.fail(`Selected file count mismatch. Expected: "${expectedText}", Actual: "${actualText}"`);
+            throw new Error(`Selected file count verification failed. Expected: "${expectedText}", Actual: "${actualText}"`);
+        }
+    }
+
+    /**
+     * Verify file uploader table is displayed
+     */
+    public async verifyFileUploaderTableDisplayed(): Promise<void> {
+        CSReporter.info('Verifying file uploader table is displayed');
+        await this.fileUploaderTable.waitForVisible(10000);
+        const isVisible = await this.fileUploaderTable.isVisibleWithTimeout(5000);
+        if (isVisible) {
+            CSReporter.pass('File uploader table is displayed');
+        } else {
+            CSReporter.fail('File uploader table is not displayed');
+            throw new Error('File uploader table verification failed');
+        }
+    }
+
+    /**
+     * Verify column header is displayed in file uploader table
+     * XPath from requirements: //div[@class='sssss-fileuploader__list']//table[@class='sssss-table']//th//span[contains(@class,'sssss-table__sortable-indicator-header') and text()='<columnName>']
+     * @param columnName - Column name to verify (e.g., "File name", "Type", "Size", "Status")
+     */
+    public async verifyFileTableColumnHeader(columnName: string): Promise<void> {
+        CSReporter.info(`Verifying file table column header: ${columnName}`);
+        const columnHeader = CSElementFactory.createByXPath(
+            `//div[@class='sssss-fileuploader__list']//table[@class='sssss-table']//th//span[contains(@class,'sssss-table__sortable-indicator-header') and text()='${columnName}']`,
+            `Column header: ${columnName}`,
+            this.getPage()
+        );
+        await columnHeader.waitForVisible(10000);
+        const isVisible = await columnHeader.isVisibleWithTimeout(5000);
+        if (isVisible) {
+            CSReporter.pass(`Column header verified: ${columnName}`);
+        } else {
+            CSReporter.fail(`Column header not found: ${columnName}`);
+            throw new Error(`Column header verification failed: ${columnName}`);
+        }
+    }
+
+    /**
+     * Verify all expected column headers are displayed
+     */
+    public async verifyAllFileTableColumnHeaders(): Promise<void> {
+        const expectedColumns = ['File name', 'Type', 'Size', 'Status'];
+        for (const column of expectedColumns) {
+            await this.verifyFileTableColumnHeader(column);
+        }
+    }
+
+    // ===================================================================
+    // BUTTON STATE VERIFICATION METHODS
+    // ===================================================================
+
+    /**
+     * Verify Add files button is enabled
+     */
+    public async verifyAddFilesButtonEnabled(): Promise<void> {
+        CSReporter.info('Verifying Add files button is enabled');
+        await this.addFilesButton.waitForVisible(10000);
+        const isEnabled = await this.addFilesButton.isEnabledWithTimeout(5000);
+        if (isEnabled) {
+            CSReporter.pass('Add files button is enabled');
+        } else {
+            CSReporter.fail('Add files button is disabled');
+            throw new Error('Add files button should be enabled');
+        }
+    }
+
+    /**
+     * Verify Add files button is disabled
+     */
+    public async verifyAddFilesButtonDisabled(): Promise<void> {
+        CSReporter.info('Verifying Add files button is disabled');
+        await this.addFilesButton.waitForVisible(10000);
+        const isEnabled = await this.addFilesButton.isEnabledWithTimeout(5000);
+        if (!isEnabled) {
+            CSReporter.pass('Add files button is disabled as expected');
+        } else {
+            CSReporter.fail('Add files button should be disabled');
+            throw new Error('Add files button should be disabled');
+        }
+    }
+
+    /**
+     * Verify Upload button is enabled
+     */
+    public async verifyUploadButtonEnabled(): Promise<void> {
+        CSReporter.info('Verifying Upload button is enabled');
+        await this.uploadButton.waitForVisible(10000);
+        const isEnabled = await this.uploadButton.isEnabledWithTimeout(5000);
+        if (isEnabled) {
+            CSReporter.pass('Upload button is enabled');
+        } else {
+            CSReporter.fail('Upload button is disabled');
+            throw new Error('Upload button should be enabled');
+        }
+    }
+
+    /**
+     * Verify Upload button is disabled
+     */
+    public async verifyUploadButtonDisabled(): Promise<void> {
+        CSReporter.info('Verifying Upload button is disabled');
+        await this.uploadButton.waitForVisible(10000);
+        const isEnabled = await this.uploadButton.isEnabledWithTimeout(5000);
+        if (!isEnabled) {
+            CSReporter.pass('Upload button is disabled as expected');
+        } else {
+            CSReporter.fail('Upload button should be disabled');
+            throw new Error('Upload button should be disabled');
+        }
+    }
+
+    /**
+     * Verify Upload button file count
+     * @param expectedCount - Expected count (e.g., "1", "3")
+     */
+    public async verifyUploadButtonFileCount(expectedCount: string): Promise<void> {
+        CSReporter.info(`Verifying Upload button file count: ${expectedCount}`);
+        await this.uploadButtonCount.waitForVisible(10000);
+        const actualCount = await this.uploadButtonCount.textContentWithTimeout(5000);
+        if (actualCount?.trim() === expectedCount) {
+            CSReporter.pass(`Upload button file count verified: ${actualCount}`);
+        } else {
+            CSReporter.fail(`Upload button file count mismatch. Expected: "${expectedCount}", Actual: "${actualCount}"`);
+            throw new Error(`Upload button file count verification failed. Expected: "${expectedCount}", Actual: "${actualCount}"`);
+        }
+    }
+
+    /**
+     * Verify Cancel button is disabled
+     */
+    public async verifyCancelButtonDisabled(): Promise<void> {
+        CSReporter.info('Verifying Cancel button is disabled');
+        await this.cancelButton.waitForVisible(10000);
+        const isEnabled = await this.cancelButton.isEnabledWithTimeout(5000);
+        if (!isEnabled) {
+            CSReporter.pass('Cancel button is disabled as expected');
+        } else {
+            CSReporter.fail('Cancel button should be disabled');
+            throw new Error('Cancel button should be disabled');
+        }
+    }
+
+    // ===================================================================
+    // FILE UPLOAD ACTION METHODS - Using Framework Wrapper Methods
+    // ===================================================================
+
+    /**
+     * Upload a file via file chooser dialog
+     * Uses framework uploadFileViaChooser method from CSBasePage
+     * @param filePath - Full path to the file to upload
+     */
+    public async uploadFile(filePath: string): Promise<void> {
+        await this.uploadFileViaChooser(this.addFilesButton, filePath, 30000);
+    }
+
+    /**
+     * Upload multiple files via file chooser dialog (one at a time)
+     * Uses framework uploadMultipleFilesViaChooser method from CSBasePage
+     * @param filePaths - Array of full paths to files to upload
+     */
+    public async uploadMultipleFiles(filePaths: string[]): Promise<void> {
+        await this.uploadMultipleFilesViaChooser(this.addFilesButton, filePaths, 30000);
+    }
+
+    /**
+     * Click Upload button to start upload
+     */
+    public async clickUploadButton(): Promise<void> {
+        CSReporter.info('Clicking Upload button');
+        await this.uploadButton.waitForVisible(10000);
+        await this.uploadButton.clickWithTimeout(10000);
+        await this.waitForPageLoad();
+        CSReporter.pass('Upload button clicked');
+    }
+
+    // ===================================================================
+    // FILE ROW VERIFICATION METHODS (DYNAMIC ELEMENTS)
+    // XPaths from requirements document
+    // ===================================================================
+
+    /**
+     * Get total row count in file uploader table
+     * XPath: //div[@class='sssss-fileuploader__list']//table[@class='sssss-table']//tbody/tr
+     * Using framework getElementCountByXPath() method from CSBasePage
+     */
+    public async getFileTableRowCount(): Promise<number> {
+        CSReporter.info('Getting file table row count');
+        const count = await this.getElementCountByXPath(
+            '//div[@class="sssss-fileuploader__list"]//table[@class="sssss-table"]//tbody/tr'
+        );
+        CSReporter.debug(`File table row count: ${count}`);
+        return count;
+    }
+
+    /**
+     * Verify file row checkbox is checked
+     * XPath: //div[@class='sssss-fileuploader__list']//table[@class='sssss-table']//tbody/tr[N]//td[1]//span[@role='checkbox']
+     * aria-checked="true" means checked
+     * @param rowNumber - Row number (1-based index)
+     */
+    public async verifyFileRowCheckboxChecked(rowNumber: number): Promise<void> {
+        CSReporter.info(`Verifying file row ${rowNumber} checkbox is checked`);
+        const checkbox = CSElementFactory.createByXPath(
+            `//div[@class='sssss-fileuploader__list']//table[@class='sssss-table']//tbody/tr[${rowNumber}]//td[1]//span[@role='checkbox']`,
+            `File row ${rowNumber} checkbox`,
+            this.getPage()
+        );
+        await checkbox.waitForVisible(10000);
+        const ariaChecked = await checkbox.getAttributeWithTimeout('aria-checked', 5000);
+        if (ariaChecked === 'true') {
+            CSReporter.pass(`File row ${rowNumber} checkbox is checked`);
+        } else {
+            CSReporter.fail(`File row ${rowNumber} checkbox is not checked`);
+            throw new Error(`File row ${rowNumber} checkbox should be checked`);
+        }
+    }
+
+    /**
+     * Verify file row checkbox is unchecked
+     * @param rowNumber - Row number (1-based index)
+     */
+    public async verifyFileRowCheckboxUnchecked(rowNumber: number): Promise<void> {
+        CSReporter.info(`Verifying file row ${rowNumber} checkbox is unchecked`);
+        const checkbox = CSElementFactory.createByXPath(
+            `//div[@class='sssss-fileuploader__list']//table[@class='sssss-table']//tbody/tr[${rowNumber}]//td[1]//span[@role='checkbox']`,
+            `File row ${rowNumber} checkbox`,
+            this.getPage()
+        );
+        await checkbox.waitForVisible(10000);
+        const ariaChecked = await checkbox.getAttributeWithTimeout('aria-checked', 5000);
+        if (ariaChecked === 'false') {
+            CSReporter.pass(`File row ${rowNumber} checkbox is unchecked`);
+        } else {
+            CSReporter.fail(`File row ${rowNumber} checkbox is checked`);
+            throw new Error(`File row ${rowNumber} checkbox should be unchecked`);
+        }
+    }
+
+    /**
+     * Verify file row checkbox is disabled
+     * aria-disabled="true" means disabled
+     * @param rowNumber - Row number (1-based index)
+     */
+    public async verifyFileRowCheckboxDisabled(rowNumber: number): Promise<void> {
+        CSReporter.info(`Verifying file row ${rowNumber} checkbox is disabled`);
+        const checkbox = CSElementFactory.createByXPath(
+            `//div[@class='sssss-fileuploader__list']//table[@class='sssss-table']//tbody/tr[${rowNumber}]//td[1]//span[@role='checkbox']`,
+            `File row ${rowNumber} checkbox`,
+            this.getPage()
+        );
+        await checkbox.waitForVisible(10000);
+        const ariaDisabled = await checkbox.getAttributeWithTimeout('aria-disabled', 5000);
+        if (ariaDisabled === 'true') {
+            CSReporter.pass(`File row ${rowNumber} checkbox is disabled`);
+        } else {
+            CSReporter.fail(`File row ${rowNumber} checkbox is not disabled`);
+            throw new Error(`File row ${rowNumber} checkbox should be disabled`);
+        }
+    }
+
+    /**
+     * Get file name from row
+     * XPath: //div[@class='sssss-fileuploader__list']//table[@class='sssss-table']//tbody/tr[N]//td[2]//div[@class='sssss-table__cell-content']
+     * @param rowNumber - Row number (1-based index)
+     */
+    public async getFileNameFromRow(rowNumber: number): Promise<string> {
+        const fileNameCell = CSElementFactory.createByXPath(
+            `//div[@class='sssss-fileuploader__list']//table[@class='sssss-table']//tbody/tr[${rowNumber}]//td[2]//div[@class='sssss-table__cell-content']`,
+            `File row ${rowNumber} file name`,
+            this.getPage()
+        );
+        await fileNameCell.waitForVisible(10000);
+        const fileName = await fileNameCell.textContentWithTimeout(5000);
+        return fileName?.trim() || '';
+    }
+
+    /**
+     * Verify file name in row
+     * @param rowNumber - Row number (1-based index)
+     * @param expectedFileName - Expected file name
+     */
+    public async verifyFileNameInRow(rowNumber: number, expectedFileName: string): Promise<void> {
+        CSReporter.info(`Verifying file name in row ${rowNumber}: ${expectedFileName}`);
+        const actualFileName = await this.getFileNameFromRow(rowNumber);
+        if (actualFileName === expectedFileName) {
+            CSReporter.pass(`File name verified in row ${rowNumber}: ${actualFileName}`);
+        } else {
+            CSReporter.fail(`File name mismatch in row ${rowNumber}. Expected: "${expectedFileName}", Actual: "${actualFileName}"`);
+            throw new Error(`File name verification failed. Expected: "${expectedFileName}", Actual: "${actualFileName}"`);
+        }
+    }
+
+    /**
+     * Get file type from row
+     * XPath: //div[@class='sssss-fileuploader__list']//table[@class='sssss-table']//tbody/tr[N]//td[3]//div[@class='sssss-table__cell-content']
+     * @param rowNumber - Row number (1-based index)
+     */
+    public async getFileTypeFromRow(rowNumber: number): Promise<string> {
+        const fileTypeCell = CSElementFactory.createByXPath(
+            `//div[@class='sssss-fileuploader__list']//table[@class='sssss-table']//tbody/tr[${rowNumber}]//td[3]//div[@class='sssss-table__cell-content']`,
+            `File row ${rowNumber} file type`,
+            this.getPage()
+        );
+        await fileTypeCell.waitForVisible(10000);
+        const fileType = await fileTypeCell.textContentWithTimeout(5000);
+        return fileType?.trim() || '';
+    }
+
+    /**
+     * Verify file type in row
+     * @param rowNumber - Row number (1-based index)
+     * @param expectedFileType - Expected file type (e.g., "xlsx", "xls")
+     */
+    public async verifyFileTypeInRow(rowNumber: number, expectedFileType: string): Promise<void> {
+        CSReporter.info(`Verifying file type in row ${rowNumber}: ${expectedFileType}`);
+        const actualFileType = await this.getFileTypeFromRow(rowNumber);
+        if (actualFileType.toLowerCase() === expectedFileType.toLowerCase()) {
+            CSReporter.pass(`File type verified in row ${rowNumber}: ${actualFileType}`);
+        } else {
+            CSReporter.fail(`File type mismatch in row ${rowNumber}. Expected: "${expectedFileType}", Actual: "${actualFileType}"`);
+            throw new Error(`File type verification failed. Expected: "${expectedFileType}", Actual: "${actualFileType}"`);
+        }
+    }
+
+    /**
+     * Get file status from row (Ready for upload, Upload complete)
+     * XPath: //div[@class='sssss-fileuploader__list']//table[@class='sssss-table']//tbody/tr[N]//td[5]//div[@class='sssss-fileuploader__status-container']/span
+     * @param rowNumber - Row number (1-based index)
+     */
+    public async getFileStatusFromRow(rowNumber: number): Promise<string> {
+        const statusCell = CSElementFactory.createByXPath(
+            `//div[@class='sssss-fileuploader__list']//table[@class='sssss-table']//tbody/tr[${rowNumber}]//td[5]//div[@class='sssss-fileuploader__status-container']/span`,
+            `File row ${rowNumber} status`,
+            this.getPage()
+        );
+        await statusCell.waitForVisible(10000);
+        const status = await statusCell.textContentWithTimeout(5000);
+        return status?.trim() || '';
+    }
+
+    /**
+     * Verify file status in row
+     * @param rowNumber - Row number (1-based index)
+     * @param expectedStatus - Expected status (e.g., "Ready for upload", "Upload complete")
+     */
+    public async verifyFileStatusInRow(rowNumber: number, expectedStatus: string): Promise<void> {
+        CSReporter.info(`Verifying file status in row ${rowNumber}: ${expectedStatus}`);
+        const actualStatus = await this.getFileStatusFromRow(rowNumber);
+        if (actualStatus === expectedStatus) {
+            CSReporter.pass(`File status verified in row ${rowNumber}: ${actualStatus}`);
+        } else {
+            CSReporter.fail(`File status mismatch in row ${rowNumber}. Expected: "${expectedStatus}", Actual: "${actualStatus}"`);
+            throw new Error(`File status verification failed. Expected: "${expectedStatus}", Actual: "${actualStatus}"`);
+        }
+    }
+
+    /**
+     * Get file error status from row (for invalid files BEFORE upload attempt)
+     * XPath: //div[@class='sssss-fileuploader__list']//table[@class='sssss-table']//tbody/tr[N]//td[5]//div[@class='sssss-fileuploader__status-container']//div[@class='sssss-error-message__content']
+     * This is for FU05 scenario - "File format not accepted"
+     * @param rowNumber - Row number (1-based index)
+     */
+    public async getFileErrorStatusFromRow(rowNumber: number): Promise<string> {
+        const errorCell = CSElementFactory.createByXPath(
+            `//div[@class='sssss-fileuploader__list']//table[@class='sssss-table']//tbody/tr[${rowNumber}]//td[5]//div[@class='sssss-fileuploader__status-container']//div[@class='sssss-error-message__content']`,
+            `File row ${rowNumber} error status`,
+            this.getPage()
+        );
+        await errorCell.waitForVisible(10000);
+        const errorStatus = await errorCell.textContentWithTimeout(5000);
+        return errorStatus?.trim() || '';
+    }
+
+    /**
+     * Get upload error message from row (AFTER upload attempt)
+     * XPath: //div[@class='sssss-fileuploader__list']//table[@class='sssss-table']//tbody/tr[N]//td[5]//div[@class='sssss-fileuploader__status-container']//div[@class='sssss-error-message']/span[not(@class='sssss-icon-container')]
+     * This is for FU07/FU08 scenarios - upload errors
+     * @param rowNumber - Row number (1-based index)
+     */
+    public async getUploadErrorMessageFromRow(rowNumber: number): Promise<string> {
+        const errorCell = CSElementFactory.createByXPath(
+            `//div[@class='sssss-fileuploader__list']//table[@class='sssss-table']//tbody/tr[${rowNumber}]//td[5]//div[@class='sssss-fileuploader__status-container']//div[@class='sssss-error-message']/span[not(@class='sssss-icon-container')]`,
+            `File row ${rowNumber} upload error message`,
+            this.getPage()
+        );
+        await errorCell.waitForVisible(10000);
+        const errorMessage = await errorCell.textContentWithTimeout(5000);
+        return errorMessage?.trim() || '';
+    }
+
+    /**
+     * Verify Remove button is enabled for row
+     * XPath: //div[@class='sssss-fileuploader__list']//table[@class='sssss-table']//tbody/tr[N]//td[6]//span[text()='Remove']/parent::button
+     * @param rowNumber - Row number (1-based index)
+     */
+    public async verifyRemoveButtonEnabledForRow(rowNumber: number): Promise<void> {
+        CSReporter.info(`Verifying Remove button is enabled for row ${rowNumber}`);
+        const removeButton = CSElementFactory.createByXPath(
+            `//div[@class='sssss-fileuploader__list']//table[@class='sssss-table']//tbody/tr[${rowNumber}]//td[6]//span[text()='Remove']/parent::button`,
+            `File row ${rowNumber} Remove button`,
+            this.getPage()
+        );
+        await removeButton.waitForVisible(10000);
+        const isEnabled = await removeButton.isEnabledWithTimeout(5000);
+        if (isEnabled) {
+            CSReporter.pass(`Remove button is enabled for row ${rowNumber}`);
+        } else {
+            CSReporter.fail(`Remove button is disabled for row ${rowNumber}`);
+            throw new Error(`Remove button should be enabled for row ${rowNumber}`);
+        }
+    }
+
+    /**
+     * Wait for upload complete status for row
+     * XPath: //div[@class='sssss-fileuploader__list']//table[@class='sssss-table']//tbody/tr[N]//td[5]//span[text()='Upload complete']
+     * @param rowNumber - Row number (1-based index)
+     * @param timeout - Timeout in milliseconds (default 30000)
+     */
+    public async waitForUploadComplete(rowNumber: number, timeout: number = 30000): Promise<void> {
+        CSReporter.info(`Waiting for upload complete for row ${rowNumber}`);
+        const uploadCompleteElement = CSElementFactory.createByXPath(
+            `//div[@class='sssss-fileuploader__list']//table[@class='sssss-table']//tbody/tr[${rowNumber}]//td[5]//span[text()='Upload complete']`,
+            `File row ${rowNumber} upload complete`,
+            this.getPage()
+        );
+        await uploadCompleteElement.waitForVisible(timeout);
+        const isVisible = await uploadCompleteElement.isVisibleWithTimeout(5000);
+        if (isVisible) {
+            CSReporter.pass(`Upload complete for row ${rowNumber}`);
+        } else {
+            CSReporter.fail(`Upload did not complete for row ${rowNumber}`);
+            throw new Error(`Upload did not complete for row ${rowNumber}`);
+        }
+    }
+
+    /**
+     * Wait for all uploads to complete
+     * @param fileCount - Number of files to wait for
+     * @param timeout - Timeout in milliseconds (default 60000)
+     */
+    public async waitForAllUploadsComplete(fileCount: number, timeout: number = 60000): Promise<void> {
+        CSReporter.info(`Waiting for all ${fileCount} uploads to complete`);
+        for (let i = 1; i <= fileCount; i++) {
+            await this.waitForUploadComplete(i, timeout);
+        }
+        CSReporter.pass(`All ${fileCount} uploads completed`);
+    }
+
+    /**
+     * Verify no files to display message is NOT present (files were added)
+     */
+    public async verifyFilesAreDisplayed(): Promise<void> {
+        CSReporter.info('Verifying files are displayed in the table');
+        const isVisible = await this.noFilesToDisplay.isVisibleWithTimeout(3000);
+        if (!isVisible) {
+            CSReporter.pass('Files are displayed in the table');
+        } else {
+            CSReporter.fail('No files to display message is present');
+            throw new Error('Files should be displayed in the table');
+        }
+    }
+
+    /**
+     * Verify no files to display message IS present (no files added)
+     */
+    public async verifyNoFilesToDisplayPresent(): Promise<void> {
+        CSReporter.info('Verifying "No files to display" message is present');
+        await this.noFilesToDisplay.waitForVisible(10000);
+        const isVisible = await this.noFilesToDisplay.isVisibleWithTimeout(5000);
+        if (isVisible) {
+            CSReporter.pass('"No files to display" message is present');
+        } else {
+            CSReporter.fail('"No files to display" message is not present');
+            throw new Error('"No files to display" message should be present');
+        }
+    }
+
+    /**
+     * Get top level file upload error message
+     * XPath: //div[@class='sssss-fileuploader']//span[@class='sssss-feedback__messages']/p
+     * For FU05: "There are errors in 1 or more files added."
+     */
+    public async getTopLevelFileUploadErrorMessage(): Promise<string> {
+        await this.fileUploadTopLevelErrorMessage.waitForVisible(10000);
+        const errorMessage = await this.fileUploadTopLevelErrorMessage.textContentWithTimeout(5000);
+        return errorMessage?.trim() || '';
+    }
+
+    /**
+     * Verify top level file upload error message
+     * @param expectedMessage - Expected error message
+     */
+    public async verifyTopLevelFileUploadErrorMessage(expectedMessage: string): Promise<void> {
+        CSReporter.info(`Verifying top level file upload error message: ${expectedMessage}`);
+        const actualMessage = await this.getTopLevelFileUploadErrorMessage();
+        if (actualMessage === expectedMessage) {
+            CSReporter.pass(`Top level file upload error message verified: ${actualMessage}`);
+        } else {
+            CSReporter.fail(`Top level file upload error message mismatch. Expected: "${expectedMessage}", Actual: "${actualMessage}"`);
+            throw new Error(`Top level file upload error message verification failed. Expected: "${expectedMessage}", Actual: "${actualMessage}"`);
+        }
+    }
+
+    /**
+     * Verify all genemmted files are displayed correctly in the table
+     * @param genemmtedFileNames - Array of file names to verify
+     */
+    public async verifyAllGenemmtedFilesDisplayed(genemmtedFileNames: string[]): Promise<void> {
+        CSReporter.info('Verifying all genemmted files are displayed correctly');
+
+        // Verify row count matches
+        const rowCount = await this.getFileTableRowCount();
+        if (rowCount !== genemmtedFileNames.length) {
+            throw new Error(`Row count mismatch. Expected: ${genemmtedFileNames.length}, Actual: ${rowCount}`);
+        }
+
+        // Verify each file row
+        for (let i = 0; i < genemmtedFileNames.length; i++) {
+            const rowNumber = i + 1;
+            await this.verifyFileRowCheckboxChecked(rowNumber);
+            await this.verifyFileStatusInRow(rowNumber, 'Ready for upload');
+            await this.verifyRemoveButtonEnabledForRow(rowNumber);
+        }
+
+        CSReporter.pass('All genemmted files displayed correctly');
+    }
+}
+
+export default TTTFFileUploadPage;
+
+
+------------------------------------------------------------------------------------------------------------------------------------------
+
+import { CSBDDStepDef, Page, StepDefinitions } from '@mdakhan.mak/cs-playwright-test-framework/bdd';
+import { CSReporter } from '@mdakhan.mak/cs-playwright-test-framework/reporter';
+import { CSBDDContext, CSScenarioContext } from '@mdakhan.mak/cs-playwright-test-framework/bdd';
+import { CSValueResolver, CSDateTimeUtility } from '@mdakhan.mak/cs-playwright-test-framework/utilities';
+import { CSConfigurationManager } from '@mdakhan.mak/cs-playwright-test-framework/core';
+import { TTTFFileUploadPage } from '../pages/TTTFFileUploadPage';
+import { TTTFFileUploadHelper, FileUploadTestData, ScatteredMmteUpdateRow } from '../helpers/TTTFFileUploadHelper';
+import path from 'path';
+
+/**
+ * TTTF File Upload Step Definitions
+ * Source: 03.TTTF_FileUpload_TestFlow.txt requirements document
+ * Handles file upload module test steps
+ *
+ * NOTE: Login and navigation steps are reused from tttf-login.steps.ts
+ * - 'I login to TTTF as {string}'
+ * - 'I click on menu item {string}'
+ * - 'I should see File Upload page'
+ * - 'I should see page header {string}'
+ */
+@StepDefinitions
+export class TTTFFileUploadSteps {
+
+    @Page('tttf-file-upload')
+    private fileUploadPage!: TTTFFileUploadPage;
+
+    private context = CSBDDContext.getInstance();
+    private scenarioContext = CSScenarioContext.getInstance();
+
+    // ===================================================================
+    // FILE UPLOAD PAGE VERIFICATION STEPS
+    // ===================================================================
+
+    @CSBDDStepDef('I verify File Upload page default elements')
+    async verifyFileUploadPageDefaultElements(): Promise<void> {
+        CSReporter.info('Verifying File Upload page default elements');
+
+        // Verify selected file count default text
+        await this.fileUploadPage.verifySelectedFileCountText('0 files selected');
+
+        // Verify file uploader table is displayed
+        await this.fileUploadPage.verifyFileUploaderTableDisplayed();
+
+        // Verify all column headers
+        await this.fileUploadPage.verifyAllFileTableColumnHeaders();
+
+        // Verify Add files button is enabled
+        await this.fileUploadPage.verifyAddFilesButtonEnabled();
+
+        // Verify Upload button is disabled by default
+        await this.fileUploadPage.verifyUploadButtonDisabled();
+
+        // Verify Cancel button is disabled by default
+        await this.fileUploadPage.verifyCancelButtonDisabled();
+
+        CSReporter.pass('File Upload page default elements verified');
+    }
+
+    @CSBDDStepDef('I verify file uploader table column header {string}')
+    async verifyFileUploaderTableColumnHeader(columnName: string): Promise<void> {
+        await this.fileUploadPage.verifyFileTableColumnHeader(columnName);
+    }
+
+    @CSBDDStepDef('I verify Add files button is enabled')
+    async verifyAddFilesButtonEnabled(): Promise<void> {
+        await this.fileUploadPage.verifyAddFilesButtonEnabled();
+    }
+
+    @CSBDDStepDef('I verify Add files button is disabled')
+    async verifyAddFilesButtonDisabled(): Promise<void> {
+        await this.fileUploadPage.verifyAddFilesButtonDisabled();
+    }
+
+    @CSBDDStepDef('I verify Upload button is enabled')
+    async verifyUploadButtonEnabled(): Promise<void> {
+        await this.fileUploadPage.verifyUploadButtonEnabled();
+    }
+
+    @CSBDDStepDef('I verify Upload button is disabled')
+    async verifyUploadButtonDisabled(): Promise<void> {
+        await this.fileUploadPage.verifyUploadButtonDisabled();
+    }
+
+    @CSBDDStepDef('I verify Cancel button is disabled')
+    async verifyCancelButtonDisabled(): Promise<void> {
+        await this.fileUploadPage.verifyCancelButtonDisabled();
+    }
+
+    @CSBDDStepDef('I verify selected file count text is {string}')
+    async verifySelectedFileCountText(expectedText: string): Promise<void> {
+        await this.fileUploadPage.verifySelectedFileCountText(expectedText);
+    }
+
+    @CSBDDStepDef('I verify Upload button file count is {string}')
+    async verifyUploadButtonFileCount(expectedCount: string): Promise<void> {
+        await this.fileUploadPage.verifyUploadButtonFileCount(expectedCount);
+    }
+
+    // ===================================================================
+    // TEST DATA PREPARATION STEPS - SINGLE ZEAL SCENARIOS
+    // ===================================================================
+
+    @CSBDDStepDef('I prepare file upload test data for single zeal scenario')
+    async prepareFileUploadTestDataForSingleZeal(): Promise<void> {
+        CSReporter.info('Preparing file upload test data for single zeal scenario');
+
+        // Get test data parameters from scenario context/Examples
+        const gggName = this.context.getVariable('gggName') || '';
+        const scatteredMmtesToUpdate = this.context.getVariable('scatteredMmtesToUpdate') || '';
+        const updateFfxOrderFlag = this.context.getVariable('updateFfxOrderFlag') === 'true';
+        const newScatteredMmtesFfxOrder = this.context.getVariable('newScatteredMmtesFfxOrder') || '';
+
+        // Call helper to prepare test data
+        const testData = await TTTFFileUploadHelper.prepareSingleZealTestData(
+            gggName,
+            scatteredMmtesToUpdate,
+            updateFfxOrderFlag,
+            newScatteredMmtesFfxOrder
+        );
+
+        // Store test data in scenario context
+        this.scenarioContext.set('fileUploadTestData', testData);
+        this.scenarioContext.set('gggName', testData.gggName);
+        this.scenarioContext.set('zealId', testData.zealId);
+        this.scenarioContext.set('zealKey', testData.zealKey);
+        this.scenarioContext.set('zealName', testData.zealName);
+        this.scenarioContext.set('finalTestData', testData.finalTestData);
+
+        CSReporter.pass(`Test data prepared for GGG: ${testData.gggName}`);
+    }
+
+    @CSBDDStepDef('I prepare file upload test data for multiple files scenario with {int} files')
+    async prepareFileUploadTestDataForMultipleFiles(numberOfFiles: number): Promise<void> {
+        CSReporter.info(`Preparing file upload test data for ${numberOfFiles} files scenario`);
+
+        const updateFfxOrderFlag = this.context.getVariable('updateFfxOrderFlag') === 'true';
+
+        const allZealsTestData = await TTTFFileUploadHelper.prepareMultipleFilesTestData(
+            numberOfFiles,
+            updateFfxOrderFlag
+        );
+
+        // Store test data in scenario context
+        this.scenarioContext.set('allZealsTestData', allZealsTestData);
+        this.scenarioContext.set('numberOfFiles', numberOfFiles);
+
+        CSReporter.pass(`Test data prepared for ${numberOfFiles} files with ${allZealsTestData.length} zeals`);
+    }
+
+    @CSBDDStepDef('I prepare file upload test data for single file with multiple zeals scenario with {int} zeals')
+    async prepareFileUploadTestDataForMultipleZeals(numberOfZeals: number): Promise<void> {
+        CSReporter.info(`Preparing file upload test data for single file with ${numberOfZeals} zeals`);
+
+        const updateFfxOrderFlag = this.context.getVariable('updateFfxOrderFlag') === 'true';
+
+        const result = await TTTFFileUploadHelper.prepareSingleFileMultipleZealsTestData(
+            numberOfZeals,
+            updateFfxOrderFlag
+        );
+
+        // Store test data in scenario context
+        this.scenarioContext.set('allZealsTestData', result.allZealsTestData);
+        this.scenarioContext.set('combinedFinalTestData', result.combinedFinalTestData);
+        this.scenarioContext.set('numberOfZeals', numberOfZeals);
+
+        CSReporter.pass(`Test data prepared for single file with ${numberOfZeals} zeals`);
+    }
+
+    // ===================================================================
+    // EXCEL FILE GENERATION STEPS
+    // ===================================================================
+
+    @CSBDDStepDef('I genemmte scattered mmte upload file')
+    async genemmteScatteredMmteUploadFile(): Promise<void> {
+        CSReporter.info('Generating scattered mmte upload file');
+
+        const finalTestData = this.scenarioContext.get('finalTestData') as ScatteredMmteUpdateRow[];
+        if (!finalTestData || finalTestData.length === 0) {
+            throw new Error('No test data available to genemmte file');
+        }
+
+        const downloadFolder = this.getDownloadFolder();
+        const filePath = await TTTFFileUploadHelper.createScatteredMmteLoadFile(
+            finalTestData,
+            downloadFolder,
+            'xlsx'
+        );
+
+        this.scenarioContext.set('genemmtedFilePath', filePath);
+        this.scenarioContext.set('genemmtedFileName', path.basename(filePath));
+
+        CSReporter.pass(`Genemmted scattered mmte upload file: ${filePath}`);
+    }
+
+    @CSBDDStepDef('I genemmte multiple scattered mmte upload files')
+    async genemmteMultipleScatteredMmteUploadFiles(): Promise<void> {
+        CSReporter.info('Generating multiple scattered mmte upload files');
+
+        const allZealsTestData = this.scenarioContext.get('allZealsTestData') as FileUploadTestData[];
+        if (!allZealsTestData || allZealsTestData.length === 0) {
+            throw new Error('No zeals test data available to genemmte files');
+        }
+
+        const downloadFolder = this.getDownloadFolder();
+        const filePaths = await TTTFFileUploadHelper.createMultipleScatteredMmteLoadFiles(
+            allZealsTestData,
+            downloadFolder,
+            'xlsx'
+        );
+
+        this.scenarioContext.set('genemmtedFilePaths', filePaths);
+        this.scenarioContext.set('genemmtedFileNames', filePaths.map(fp => path.basename(fp)));
+
+        CSReporter.pass(`Genemmted ${filePaths.length} scattered mmte upload files`);
+    }
+
+    @CSBDDStepDef('I genemmte single file with multiple zeals data')
+    async genemmteSingleFileWithMultipleZeals(): Promise<void> {
+        CSReporter.info('Generating single file with multiple zeals data');
+
+        const combinedFinalTestData = this.scenarioContext.get('combinedFinalTestData') as ScatteredMmteUpdateRow[];
+        if (!combinedFinalTestData || combinedFinalTestData.length === 0) {
+            throw new Error('No combined test data available to genemmte file');
+        }
+
+        const downloadFolder = this.getDownloadFolder();
+        const filePath = await TTTFFileUploadHelper.createScatteredMmteLoadFile(
+            combinedFinalTestData,
+            downloadFolder,
+            'xlsx'
+        );
+
+        this.scenarioContext.set('genemmtedFilePath', filePath);
+        this.scenarioContext.set('genemmtedFileName', path.basename(filePath));
+
+        CSReporter.pass(`Genemmted single file with multiple zeals: ${filePath}`);
+    }
+
+    // ===================================================================
+    // FILE UPLOAD ACTION STEPS
+    // ===================================================================
+
+    @CSBDDStepDef('I upload the genemmted scattered mmte file')
+    async uploadGenemmtedScatteredMmteFile(): Promise<void> {
+        const filePath = this.scenarioContext.get('genemmtedFilePath') as string;
+        if (!filePath) {
+            throw new Error('No genemmted file path available');
+        }
+
+        await this.fileUploadPage.uploadFile(filePath);
+    }
+
+    @CSBDDStepDef('I upload all genemmted scattered mmte files')
+    async uploadAllGenemmtedScatteredMmteFiles(): Promise<void> {
+        const filePaths = this.scenarioContext.get('genemmtedFilePaths') as string[];
+        if (!filePaths || filePaths.length === 0) {
+            throw new Error('No genemmted file paths available');
+        }
+
+        await this.fileUploadPage.uploadMultipleFiles(filePaths);
+    }
+
+    @CSBDDStepDef('I upload invalid file {string}')
+    async uploadInvalidFile(fileName: string): Promise<void> {
+        CSReporter.info(`Uploading invalid file: ${fileName}`);
+
+        // Invalid files are stored in test/tttf/data/FileUpload-InvalidFiles folder
+        const invalidFilesFolder = path.join(
+            process.cwd(),
+            'test',
+            'tttf',
+            'data',
+            'FileUpload-InvalidFiles'
+        );
+        const filePath = path.join(invalidFilesFolder, fileName);
+
+        await this.fileUploadPage.uploadFile(filePath);
+    }
+
+    @CSBDDStepDef('I click the Upload button')
+    async clickUploadButton(): Promise<void> {
+        await this.fileUploadPage.clickUploadButton();
+    }
+
+    // ===================================================================
+    // FILE TABLE VERIFICATION STEPS
+    // ===================================================================
+
+    @CSBDDStepDef('I verify files are displayed in the table')
+    async verifyFilesAreDisplayed(): Promise<void> {
+        await this.fileUploadPage.verifyFilesAreDisplayed();
+    }
+
+    @CSBDDStepDef('I verify file table has {int} rows')
+    async verifyFileTableRowCount(expectedCount: number): Promise<void> {
+        CSReporter.info(`Verifying file table has ${expectedCount} rows`);
+        const actualCount = await this.fileUploadPage.getFileTableRowCount();
+        if (actualCount === expectedCount) {
+            CSReporter.pass(`File table has ${actualCount} rows`);
+        } else {
+            CSReporter.fail(`File table row count mismatch. Expected: ${expectedCount}, Actual: ${actualCount}`);
+            throw new Error(`File table row count mismatch. Expected: ${expectedCount}, Actual: ${actualCount}`);
+        }
+    }
+
+    @CSBDDStepDef('I verify file row {int} checkbox is checked')
+    async verifyFileRowCheckboxChecked(rowNumber: number): Promise<void> {
+        await this.fileUploadPage.verifyFileRowCheckboxChecked(rowNumber);
+    }
+
+    @CSBDDStepDef('I verify file row {int} checkbox is unchecked')
+    async verifyFileRowCheckboxUnchecked(rowNumber: number): Promise<void> {
+        await this.fileUploadPage.verifyFileRowCheckboxUnchecked(rowNumber);
+    }
+
+    @CSBDDStepDef('I verify file row {int} checkbox is disabled')
+    async verifyFileRowCheckboxDisabled(rowNumber: number): Promise<void> {
+        await this.fileUploadPage.verifyFileRowCheckboxDisabled(rowNumber);
+    }
+
+    @CSBDDStepDef('I verify file row {int} displays file name from genemmted file')
+    async verifyFileRowDisplaysGenemmtedFileName(rowNumber: number): Promise<void> {
+        const genemmtedFileName = this.scenarioContext.get('genemmtedFileName') as string;
+        if (!genemmtedFileName) {
+            throw new Error('No genemmted file name available');
+        }
+        await this.fileUploadPage.verifyFileNameInRow(rowNumber, genemmtedFileName);
+    }
+
+    @CSBDDStepDef('I verify file row {int} displays file type {string}')
+    async verifyFileRowDisplaysFileType(rowNumber: number, expectedType: string): Promise<void> {
+        await this.fileUploadPage.verifyFileTypeInRow(rowNumber, expectedType);
+    }
+
+    @CSBDDStepDef('I verify file row {int} status is {string}')
+    async verifyFileRowStatus(rowNumber: number, expectedStatus: string): Promise<void> {
+        await this.fileUploadPage.verifyFileStatusInRow(rowNumber, expectedStatus);
+    }
+
+    @CSBDDStepDef('I verify file row {int} has Remove button enabled')
+    async verifyRemoveButtonEnabledForRow(rowNumber: number): Promise<void> {
+        await this.fileUploadPage.verifyRemoveButtonEnabledForRow(rowNumber);
+    }
+
+    @CSBDDStepDef('I wait for file row {int} upload to complete')
+    async waitForFileRowUploadComplete(rowNumber: number): Promise<void> {
+        await this.fileUploadPage.waitForUploadComplete(rowNumber);
+    }
+
+    @CSBDDStepDef('I wait for all {int} file uploads to complete')
+    async waitForAllUploadsComplete(fileCount: number): Promise<void> {
+        await this.fileUploadPage.waitForAllUploadsComplete(fileCount);
+    }
+
+    @CSBDDStepDef('I verify all genemmted files are displayed correctly')
+    async verifyAllGenemmtedFilesDisplayedCorrectly(): Promise<void> {
+        CSReporter.info('Verifying all genemmted files are displayed correctly');
+
+        const genemmtedFileNames = this.scenarioContext.get('genemmtedFileNames') as string[];
+        if (!genemmtedFileNames || genemmtedFileNames.length === 0) {
+            throw new Error('No genemmted file names available');
+        }
+
+        // Verify row count matches
+        const rowCount = await this.fileUploadPage.getFileTableRowCount();
+        if (rowCount !== genemmtedFileNames.length) {
+            throw new Error(`Row count mismatch. Expected: ${genemmtedFileNames.length}, Actual: ${rowCount}`);
+        }
+
+        // Verify each file row
+        for (let i = 0; i < genemmtedFileNames.length; i++) {
+            const rowNumber = i + 1;
+            const fileName = genemmtedFileNames[i];
+
+            await this.fileUploadPage.verifyFileRowCheckboxChecked(rowNumber);
+            await this.fileUploadPage.verifyFileStatusInRow(rowNumber, 'Ready for upload');
+            await this.fileUploadPage.verifyRemoveButtonEnabledForRow(rowNumber);
+        }
+
+        CSReporter.pass('All genemmted files displayed correctly');
+    }
+
+    // ===================================================================
+    // ERROR VERIFICATION STEPS
+    // ===================================================================
+
+    @CSBDDStepDef('I verify top level file upload error message is {string}')
+    async verifyTopLevelFileUploadErrorMessage(expectedMessage: string): Promise<void> {
+        await this.fileUploadPage.verifyTopLevelFileUploadErrorMessage(expectedMessage);
+    }
+
+    @CSBDDStepDef('I verify file row {int} error status is {string}')
+    async verifyFileRowErrorStatus(rowNumber: number, expectedError: string): Promise<void> {
+        CSReporter.info(`Verifying file row ${rowNumber} error status: ${expectedError}`);
+        const actualError = await this.fileUploadPage.getFileErrorStatusFromRow(rowNumber);
+        if (actualError === expectedError) {
+            CSReporter.pass(`File row ${rowNumber} error status verified: ${actualError}`);
+        } else {
+            CSReporter.fail(`File row ${rowNumber} error status mismatch. Expected: "${expectedError}", Actual: "${actualError}"`);
+            throw new Error(`File row error status verification failed. Expected: "${expectedError}", Actual: "${actualError}"`);
+        }
+    }
+
+    @CSBDDStepDef('I verify file row {int} upload error message is {string}')
+    async verifyFileRowUploadErrorMessage(rowNumber: number, expectedMessage: string): Promise<void> {
+        CSReporter.info(`Verifying file row ${rowNumber} upload error message`);
+        const actualMessage = await this.fileUploadPage.getUploadErrorMessageFromRow(rowNumber);
+        if (actualMessage === expectedMessage) {
+            CSReporter.pass(`File row ${rowNumber} upload error message verified: ${actualMessage}`);
+        } else {
+            CSReporter.fail(`File row ${rowNumber} upload error message mismatch. Expected: "${expectedMessage}", Actual: "${actualMessage}"`);
+            throw new Error(`File row upload error message verification failed. Expected: "${expectedMessage}", Actual: "${actualMessage}"`);
+        }
+    }
+
+    @CSBDDStepDef('I verify file row {int} upload error message contains {string}')
+    async verifyFileRowUploadErrorMessageContains(rowNumber: number, expectedContent: string): Promise<void> {
+        CSReporter.info(`Verifying file row ${rowNumber} upload error message contains: ${expectedContent}`);
+        const actualMessage = await this.fileUploadPage.getUploadErrorMessageFromRow(rowNumber);
+        if (actualMessage.includes(expectedContent)) {
+            CSReporter.pass(`File row ${rowNumber} upload error message contains expected content`);
+        } else {
+            CSReporter.fail(`File row ${rowNumber} upload error message does not contain expected content. Actual: "${actualMessage}"`);
+            throw new Error(`File row upload error message verification failed. Expected to contain: "${expectedContent}", Actual: "${actualMessage}"`);
+        }
+    }
+
+    // ===================================================================
+    // DATABASE VERIFICATION STEPS
+    // ===================================================================
+
+    @CSBDDStepDef('I verify database updates for single zeal upload')
+    async verifyDatabaseUpdatesForSingleZeal(): Promise<void> {
+        CSReporter.info('Verifying database updates for single zeal upload');
+
+        const gggName = this.scenarioContext.get('gggName') as string;
+        const finalTestData = this.scenarioContext.get('finalTestData') as ScatteredMmteUpdateRow[];
+
+        if (!gggName || !finalTestData) {
+            throw new Error('Missing test data for database verification');
+        }
+
+        await TTTFFileUploadHelper.verifyDatabaseUpdates(gggName, finalTestData);
+        CSReporter.pass('Database updates verified for single zeal');
+    }
+
+    @CSBDDStepDef('I verify database updates for all uploaded zeals')
+    async verifyDatabaseUpdatesForAllZeals(): Promise<void> {
+        CSReporter.info('Verifying database updates for all uploaded zeals');
+
+        const allZealsTestData = this.scenarioContext.get('allZealsTestData') as FileUploadTestData[];
+        if (!allZealsTestData || allZealsTestData.length === 0) {
+            throw new Error('Missing zeals test data for database verification');
+        }
+
+        for (const zealData of allZealsTestData) {
+            await TTTFFileUploadHelper.verifyDatabaseUpdates(zealData.gggName, zealData.finalTestData);
+        }
+
+        CSReporter.pass(`Database updates verified for all ${allZealsTestData.length} zeals`);
+    }
+
+    // ===================================================================
+    // NEGATIVE SCENARIO TEST DATA PREPARATION STEPS
+    // ===================================================================
+
+    @CSBDDStepDef('I prepare test data for unassociated scattered mmte scenario')
+    async prepareTestDataForUnassociatedScatteredMmte(): Promise<void> {
+        CSReporter.info('Preparing test data for unassociated scattered mmte scenario (FU07)');
+
+        const testData = await TTTFFileUploadHelper.prepareUnassociatedScatteredMmteTestData();
+
+        this.scenarioContext.set('fileUploadTestData', testData);
+        this.scenarioContext.set('gggName', testData.gggName);
+        this.scenarioContext.set('zealId', testData.zealId);
+        this.scenarioContext.set('zealKey', testData.zealKey);
+        this.scenarioContext.set('zealName', testData.zealName);
+        this.scenarioContext.set('finalTestData', testData.finalTestData);
+        this.scenarioContext.set('expectedErrorMessage', 'Data not valid in excel sheet, please check the data or contact your support team.');
+
+        CSReporter.pass('Test data prepared for unassociated scattered mmte scenario');
+    }
+
+    @CSBDDStepDef('I prepare test data for already associated scattered mmte scenario')
+    async prepareTestDataForAlreadyAssociatedScatteredMmte(): Promise<void> {
+        CSReporter.info('Preparing test data for already associated scattered mmte scenario (FU08)');
+
+        const testData = await TTTFFileUploadHelper.prepareAlreadyAssociatedScatteredMmteTestData();
+
+        this.scenarioContext.set('fileUploadTestData', testData);
+        this.scenarioContext.set('gggName', testData.gggName);
+        this.scenarioContext.set('zealId', testData.zealId);
+        this.scenarioContext.set('zealKey', testData.zealKey);
+        this.scenarioContext.set('zealName', testData.zealName);
+        this.scenarioContext.set('finalTestData', testData.finalTestData);
+        this.scenarioContext.set('newScatteredMmteName', testData.finalTestData[0]?.newScatteredMmteName);
+
+        CSReporter.pass('Test data prepared for already associated scattered mmte scenario');
+    }
+
+    @CSBDDStepDef('I verify upload error for already associated scattered mmte')
+    async verifyUploadErrorForAlreadyAssociatedMmte(): Promise<void> {
+        CSReporter.info('Verifying upload error for already associated scattered mmte');
+
+        const newScatteredMmteName = this.scenarioContext.get('newScatteredMmteName') as string;
+        const expectedMessage = `New Scattered Mmte i.e. ${newScatteredMmteName} already exist for the given Zeal and Old Scattered Mmte with row no. 1`;
+
+        const actualMessage = await this.fileUploadPage.getUploadErrorMessageFromRow(1);
+        if (actualMessage === expectedMessage) {
+            CSReporter.pass('Upload error message verified for already associated scattered mmte');
+        } else {
+            CSReporter.fail(`Upload error message mismatch. Expected: "${expectedMessage}", Actual: "${actualMessage}"`);
+            throw new Error(`Upload error verification failed`);
+        }
+    }
+
+    // ===================================================================
+    // HELPER METHODS
+    // ===================================================================
+
+    /**
+     * Get the download folder path for genemmted files
+     */
+    private getDownloadFolder(): string {
+        const config = CSConfigurationManager.getInstance();
+        const reportsDir = config.get('REPORTS_DIR') || 'reports';
+        const testResultsDir = this.scenarioContext.get('testResultsDir') || 'test-results';
+        const projectId = config.get('PROJECT_ID') || '';
+
+        let downloadFolder: string;
+        if (projectId) {
+            downloadFolder = path.join(process.cwd(), reportsDir, testResultsDir, projectId, 'downloads');
+        } else {
+            downloadFolder = path.join(process.cwd(), reportsDir, testResultsDir, 'downloads');
+        }
+
+        return downloadFolder;
+    }
+}
+
+export default TTTFFileUploadSteps;
