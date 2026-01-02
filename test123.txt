@@ -1,25 +1,10 @@
-// Extract project name from hostname
-            // e.g., "app.myproject.com" -> "myproject"
-            // e.g., "myproject-dev.company.com" -> "myproject"
-            // e.g., "demo.example.com" -> "example"
-            let projectName = 'myproject';
-
-            // Try different extraction patterns
-            const hostParts = hostname.split('.');
-
-            if (hostParts.length >= 2) {
-                // Get the main domain part (not TLD)
-                const mainPart = hostParts[hostParts.length - 2];
-
-                // Extract meaningful name from subdomain or main domain
-                if (hostParts[0] !== 'www' && hostParts[0] !== 'app' && hostParts[0] !== 'demo') {
-                    // Use first subdomain if meaningful, strip common env suffixes
-                    projectName = hostParts[0].replace(/[-_]?(demo|test|dev|qa|staging|prod|live)[-_]?/gi, '') || mainPart;
-                } else {
-                    // Use main domain part, strip common suffixes
-                    projectName = mainPart.replace(/[-_]?(demo|test|dev|qa|staging|prod|live)[-_]?/gi, '') || mainPart;
-                }
-            }
-
-            // Clean up project name - keep only alphanumeric
-            projectName = projectName.toLowerCase().replace(/[^a-z0-9]/g, '');
+/**
+     * Wait for actual changes data to load (not "No data available" placeholder)
+     * Uses generic waitForTableData from CSBasePage
+     * @param timeout - Maximum wait time in milliseconds (default: 15000)
+     * @returns true if data loaded, false if still showing "No data available"
+     */
+    public async waitForChangesDataToLoad(timeout: number = 15000): Promise<boolean> {
+        const result = await this.waitForTableData(this.changesTable, 'No data available', timeout);
+        return result.success;
+    }
