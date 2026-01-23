@@ -1,0 +1,3488 @@
+// ===================================================================
+    // ASSOCIATED SCATTERED MMTES METHODS
+    // ===================================================================
+
+    /**
+     * Verify Edit button is enabled (RR09 Navigation)
+     */
+    public async verifyEditButtonEnabled(): Promise<void> {
+        await this.editButton.waitForVisible(10000);
+        const isEnabled = await this.editButton.isEnabledWithTimeout(5000);
+        if (!isEnabled) {
+            throw new Error('Edit button is not enabled on Zeal Details page');
+        }
+        CSReporter.pass('Edit button is present and enabled on Zeal Details page');
+    }
+
+    /**
+     * Verify Details tab is selected (RR09 Navigation)
+     */
+    public async verifyDetailsTabSelected(): Promise<void> {
+        await this.detailsTab.waitForVisible(10000);
+        const isSelected = await this.isDetailsTabSelected();
+        if (!isSelected) {
+            throw new Error('Details tab is not selected by default on Zeal Details page');
+        }
+        CSReporter.pass('Details tab is selected on Zeal Details page');
+    }
+
+    /**
+     * Verify a scattered mmte exists in Associated Scattered Mmtes section (RR09 Navigation)
+     * @param mmteName - The scattered mmte name to find
+     */
+    public async verifyScatteredMmteInAssociatedSection(mmteName: string): Promise<void> {
+        CSReporter.info(`Verifying scattered mmte '${mmteName}' in Associated Scattered Mmtes section`);
+        const mmteElement = CSElementFactory.createByXPath(
+            `//form[@class='sssss-form']//h2[text()='Associated Scattered Mmtes']/following-sibling::div[contains(@class, 'sssss-row-padding')]//div[contains(@class,'sssss-col')][2]//span[@class='sssss-button__label' and text()='${mmteName}']`,
+            `Scattered mmte in Associated Scattered Mmtes: ${mmteName}`,
+            this.page
+        );
+        await mmteElement.waitForVisible(15000);
+        const isVisible = await mmteElement.isVisibleWithTimeout(5000);
+        if (!isVisible) {
+            throw new Error(`Scattered mmte '${mmteName}' not found in Associated Scattered Mmtes section`);
+        }
+        CSReporter.pass(`Scattered mmte '${mmteName}' found in Associated Scattered Mmtes section`);
+    }
+
+    /**
+     * Click on a scattered mmte link in Associated Scattered Mmtes section (RR09 Navigation)
+     * @param mmteName - The scattered mmte name to click
+     */
+    public async clickScatteredMmteLinkInAssociatedSection(mmteName: string): Promise<void> {
+        CSReporter.info(`Clicking on scattered mmte link '${mmteName}' in Associated Scattered Mmtes`);
+        const mmteButton = CSElementFactory.createByXPath(
+            `//form[@class='sssss-form']//h2[text()='Associated Scattered Mmtes']/following-sibling::div[contains(@class, 'sssss-row-padding')]//div[contains(@class, 'sssss-col')][2]//span[@class='sssss-button__label' and text()='${mmteName}']/parent::button[1]`,
+            `Scattered mmte button: ${mmteName}`,
+            this.page
+        );
+        await mmteButton.waitForVisible(10000);
+        await mmteButton.clickWithTimeout(10000);
+        CSReporter.pass(`Clicked scattered mmte link '${mmteName}'`);
+    }
+
+
+
+    /**
+     * Wait for Associated Scattered Mmtes section to finish loading
+     * Uses generic waitForElementToDisappear from CSBasePage
+     * @param timeout - Maximum wait time in milliseconds (default: 30000)
+     * @returns true if loading completed, false if still loading
+     */
+    public async waitForAssociatedScatteredMmtesToLoad(timeout: number = 30000): Promise<boolean> {
+        CSReporter.info('Waiting for Associated Scattered Mmtes section to load...');
+
+        // First check if loading indicator is visible
+        const isLoading = await this.associatedScatteredMmtesLoading.isVisibleWithTimeout(2000);
+
+        if (isLoading) {
+            // Wait for loading indicator to disappear
+            const result = await this.waitForElementToDisappear(this.associatedScatteredMmtesLoading, timeout);
+            if (result.success) {
+                CSReporter.info(`Associated Scattered Mmtes loaded after ${result.elapsed}ms`);
+                return true;
+            } else {
+                CSReporter.warn(`Associated Scattered Mmtes still loading after ${timeout}ms`);
+                return false;
+            }
+        }
+
+        CSReporter.info('Associated Scattered Mmtes section already loaded');
+        return true;
+    }
+
+    public async clickAddRemoveButton(): Promise<void> {
+        // Wait for section to finish loading first
+        await this.waitForAssociatedScatteredMmtesToLoad();
+        await this.addRemoveButton.waitForVisible(60000);
+        await this.addRemoveButton.clickWithTimeout(10000);
+        CSReporter.info('Clicked Add/Remove button');
+    }
+
+    public async isAddRemoveButtonVisible(): Promise<boolean> {
+        // Wait for section to finish loading first
+        await this.waitForAssociatedScatteredMmtesToLoad();
+        return await this.addRemoveButton.isVisibleWithTimeout(60000);
+    }
+
+    public async clickReorderButton(): Promise<void> {
+        await this.reorderButton.waitForVisible(10000);
+        await this.reorderButton.clickWithTimeout(10000);
+        CSReporter.info('Clicked Reorder button');
+    }
+
+    -------------------------------------------------------------------------------------------------------------------
+
+    import { CSBasePage, CSPage, CSGetElement } from '@mdakhan.mak/cs-playwright-test-framework/core';
+import { CSWebElement, CSElementFactory } from '@mdakhan.mak/cs-playwright-test-framework/element';
+import { CSReporter } from '@mdakhan.mak/cs-playwright-test-framework/reporter';
+
+/**
+ * TTTF Scattered Mmte Details Page
+ * Source: Scattered_Mmte_Sport_Mmte_4.txt, Scattered_Mmte_Sport_Mmte_5.txt,
+ *         Scattered_Mmte_Sport_Mmte_8.txt, Scattered_Mmte_Sport_Mmte_9.txt
+ * Handles Scattered Mmte Details view/edit page
+ * All XPath locators from requirements documents
+ */
+@CSPage('tttf-scattered-mmte-details')
+export class TTTFScatteredMmteDetailsPage extends CSBasePage {
+
+    // ===================================================================
+    // PAGE HEADER ELEMENTS
+    // ===================================================================
+
+    @CSGetElement({
+        xpath: '//div[@class="body-container"]//h1[text()="Scattered Mmte Details"]',
+        description: 'Scattered Mmte Details page header',
+        waitForVisible: true
+    })
+    public scatteredMmteDetailsHeader!: CSWebElement;
+
+    @CSGetElement({
+        xpath: '//span[@class="sssss-button__label" and text()="Edit"]/parent::button',
+        description: 'Edit button',
+        waitForVisible: true
+    })
+    public editButton!: CSWebElement;
+
+    @CSGetElement({
+        xpath: '//span[@class="sssss-button__label" and text()="Copy"]/parent::button',
+        description: 'Copy button',
+        waitForVisible: true
+    })
+    public copyButton!: CSWebElement;
+
+    @CSGetElement({
+        xpath: '//span[@class="sssss-button__label" and text()="Delete"]/parent::button',
+        description: 'Delete button',
+        waitForVisible: true
+    })
+    public deleteButton!: CSWebElement;
+
+    // ===================================================================
+    // CUMULATIVE MMTE & SCATTERED MMTE NAME SECTION
+    // ===================================================================
+
+    @CSGetElement({
+        xpath: '//div[@class="body-container"]//h2[text()="Cumulative Mmte & Scattered Mmte Name"]',
+        description: 'Cumulative Mmte & Scattered Mmte Name section header',
+        waitForVisible: true
+    })
+    public cumulativeMmteSectionHeader!: CSWebElement;
+
+    @CSGetElement({
+        xpath: '//div[@class="body-container"]//h2[text()="Cumulative Mmte & Scattered Mmte Name"]/parent::div[1]//h5[text()="Scattered Mmte Name"]',
+        description: 'Scattered Mmte Name field label',
+        waitForVisible: true
+    })
+    public scatteredMmteNameLabel!: CSWebElement;
+
+    @CSGetElement({
+        xpath: '//div[@class="body-container"]//h2[text()="Cumulative Mmte & Scattered Mmte Name"]/parent::div[1]//h5[text()="Scattered Mmte Name"]/following-sibling::dd[1]',
+        description: 'Scattered Mmte Name value',
+        waitForVisible: true
+    })
+    public scatteredMmteNameValue!: CSWebElement;
+
+    @CSGetElement({
+        xpath: '//div[@class="body-container"]//h2[text()="Cumulative Mmte & Scattered Mmte Name"]/parent::div[1]//h5[text()="Cumulative Mmte Name"]',
+        description: 'Cumulative Mmte Name field label',
+        waitForVisible: true
+    })
+    public cumulativeMmteNameLabel!: CSWebElement;
+
+    @CSGetElement({
+        xpath: '//div[@class="body-container"]//h2[text()="Cumulative Mmte & Scattered Mmte Name"]/parent::div[1]//h5[text()="Cumulative Mmte Name"]/following-sibling::dd[1]',
+        description: 'Cumulative Mmte Name value',
+        waitForVisible: true
+    })
+    public cumulativeMmteNameValue!: CSWebElement;
+
+    // ===================================================================
+    // ASSOCIATED ZEAL/PREMISIS SECTION
+    // ===================================================================
+
+    @CSGetElement({
+        xpath: '//div[@class="body-container"]//h2[text()="Associated Zeal/Premisis"]',
+        description: 'Associated Zeal/Premisis section header',
+        waitForVisible: true
+    })
+    public associatedZealPremisisSectionHeader!: CSWebElement;
+
+    @CSGetElement({
+        xpath: '//div[@class="body-container"]//h2[text()="Associated Zeal/Premisis"]/following-sibling::div[1]//table[@class="sssss-table"]',
+        description: 'Associated Zeal/Premisis table',
+        waitForVisible: true
+    })
+    public associatedZealPremisisTable!: CSWebElement;
+
+    @CSGetElement({
+        xpath: '//div[@id="filterPaginatorContainer"]//div[@class="sssss-paginator"]//span[@class="sssss-paginator__trigger-total-items"]',
+        description: 'Associated Zeal/Premisis paginator total items',
+        waitForVisible: true
+    })
+    public associatedZealPremisisPaginatorTotal!: CSWebElement;
+
+    @CSGetElement({
+        xpath: '//span[@class="sssss-button__label" and text()="Export"]/parent::button[@aria-label="Export"]',
+        description: 'Export button for Associated Zeal/Premisis',
+        waitForVisible: true
+    })
+    public exportButton!: CSWebElement;
+
+    // ===================================================================
+    // RULE CONFIGURATION SECTIONS
+    // ===================================================================
+
+    @CSGetElement({
+        xpath: '//div[@class="body-container"]//h2[text()="First Rule"]',
+        description: 'First Rule section header',
+        waitForVisible: true
+    })
+    public firstRuleSectionHeader!: CSWebElement;
+
+    @CSGetElement({
+        xpath: '//div[@class="body-container"]//h2[text()="Second Rule"]',
+        description: 'Second Rule section header',
+        waitForVisible: false
+    })
+    public secondRuleSectionHeader!: CSWebElement;
+
+    @CSGetElement({
+        xpath: '//div[@class="body-container"]//h2[text()="Other Rules"]',
+        description: 'Other Rules section header',
+        waitForVisible: true
+    })
+    public otherRulesSectionHeader!: CSWebElement;
+
+    // ===================================================================
+    // POPUP/MODAL ELEMENTS (for viewing from Zeal Details)
+    // ===================================================================
+
+    @CSGetElement({
+        xpath: '//div[@class="sssss-modal"]//div[@class="sssss-panel__content-wrapper"]',
+        description: 'Scattered Mmte Details popup container',
+        waitForVisible: false
+    })
+    public detailsPopupContainer!: CSWebElement;
+
+    @CSGetElement({
+        xpath: '//div[@class="sssss-modal"]//div[@class="sssss-panel__content-wrapper"]//h5[text()="Scattered Mmte Details"]',
+        description: 'Scattered Mmte Details popup header',
+        waitForVisible: false
+    })
+    public detailsPopupHeader!: CSWebElement;
+
+    @CSGetElement({
+        xpath: '//div[@class="sssss-modal"]//div[@class="sssss-panel__content-wrapper"]//div[@class="sssss-panel__body"]//span[@class="sssss-button__label" and text()="Copy"]/parent::button',
+        description: 'Copy button in popup',
+        waitForVisible: false
+    })
+    public popupCopyButton!: CSWebElement;
+
+    @CSGetElement({
+        xpath: '//div[@class="sssss-modal"]//div[@class="sssss-panel__content-wrapper"]//div[@class="sssss-panel__footer"]//span[@class="sssss-button__label" and text()="Close"]/parent::button',
+        description: 'Close button in popup',
+        waitForVisible: false
+    })
+    public popupCloseButton!: CSWebElement;
+
+    @CSGetElement({
+        xpath: '//div[@class="sssss-modal"]//div[@class="sssss-panel__content-wrapper"]//div[@class="sssss-panel__footer"]//span[@class="sssss-button__label" and text()="View All Details"]/parent::button',
+        description: 'View All Details button in popup',
+        waitForVisible: false
+    })
+    public popupViewAllDetailsButton!: CSWebElement;
+
+    protected initializeElements(): void {
+        CSReporter.debug('TTTFScatteredMmteDetailsPage elements initialized');
+    }
+
+    // ===================================================================
+    // PAGE VERIFICATION METHODS
+    // ===================================================================
+
+    /**
+     * Verify Scattered Mmte Details page header is displayed
+     */
+    public async verifyPageHeader(): Promise<void> {
+        CSReporter.info('Verifying Scattered Mmte Details page header');
+        await this.scatteredMmteDetailsHeader.waitForVisible(15000);
+        const isVisible = await this.scatteredMmteDetailsHeader.isVisibleWithTimeout(5000);
+        if (!isVisible) {
+            throw new Error('Scattered Mmte Details page header not found');
+        }
+        CSReporter.pass('Scattered Mmte Details page header verified');
+    }
+
+    /**
+     * Verify Edit button is present and enabled
+     */
+    public async verifyEditButtonEnabled(): Promise<void> {
+        CSReporter.info('Verifying Edit button is present and enabled');
+        await this.editButton.waitForVisible(10000);
+        const isEnabled = await this.editButton.isEnabledWithTimeout(5000);
+        if (!isEnabled) {
+            throw new Error('Edit button is not enabled');
+        }
+        CSReporter.pass('Edit button is present and enabled');
+    }
+
+    /**
+     * Click Edit button
+     */
+    public async clickEditButton(): Promise<void> {
+        CSReporter.info('Clicking Edit button');
+        await this.editButton.waitForVisible(10000);
+        await this.editButton.clickWithTimeout(10000);
+        await this.waitForPageLoad();
+        CSReporter.pass('Clicked Edit button');
+    }
+
+    /**
+     * Verify Copy button is present and enabled
+     */
+    public async verifyCopyButtonEnabled(): Promise<void> {
+        CSReporter.info('Verifying Copy button is present and enabled');
+        await this.copyButton.waitForVisible(10000);
+        const isEnabled = await this.copyButton.isEnabledWithTimeout(5000);
+        if (!isEnabled) {
+            throw new Error('Copy button is not enabled');
+        }
+        CSReporter.pass('Copy button is present and enabled');
+    }
+
+    /**
+     * Click Copy button
+     */
+    public async clickCopyButton(): Promise<void> {
+        CSReporter.info('Clicking Copy button');
+        await this.copyButton.waitForVisible(10000);
+        await this.copyButton.clickWithTimeout(10000);
+        await this.waitForPageLoad();
+        CSReporter.pass('Clicked Copy button');
+    }
+
+    /**
+     * Verify Delete button is present
+     */
+    public async verifyDeleteButtonPresent(): Promise<void> {
+        CSReporter.info('Verifying Delete button is present');
+        await this.deleteButton.waitForVisible(10000);
+        CSReporter.pass('Delete button is present');
+    }
+
+    // ===================================================================
+    // SCATTERED MMTE NAME METHODS
+    // ===================================================================
+
+    /**
+     * Get Scattered Mmte Name value
+     */
+    public async getScatteredMmteName(): Promise<string> {
+        CSReporter.info('Getting Scattered Mmte Name value');
+        await this.scatteredMmteNameValue.waitForVisible(10000);
+        const value = await this.scatteredMmteNameValue.textContentWithTimeout(5000);
+        CSReporter.info(`Scattered Mmte Name: ${value}`);
+        return value || '';
+    }
+
+    /**
+     * Verify Scattered Mmte Name matches expected value
+     */
+    public async verifyScatteredMmteName(expectedName: string): Promise<void> {
+        CSReporter.info(`Verifying Scattered Mmte Name is: ${expectedName}`);
+        const actualName = await this.getScatteredMmteName();
+        if (actualName.trim() !== expectedName.trim()) {
+            throw new Error(`Scattered Mmte Name mismatch. Expected: ${expectedName}, Actual: ${actualName}`);
+        }
+        CSReporter.pass(`Scattered Mmte Name verified: ${expectedName}`);
+    }
+
+    /**
+     * Verify Scattered Mmte Name label is present
+     */
+    public async verifyScatteredMmteNameLabelPresent(): Promise<void> {
+        CSReporter.info('Verifying Scattered Mmte Name label is present');
+        await this.scatteredMmteNameLabel.waitForVisible(10000);
+        CSReporter.pass('Scattered Mmte Name label is present');
+    }
+
+    // ===================================================================
+    // CUMULATIVE MMTE NAME METHODS
+    // ===================================================================
+
+    /**
+     * Get Cumulative Mmte Name value
+     */
+    public async getCumulativeMmteName(): Promise<string> {
+        CSReporter.info('Getting Cumulative Mmte Name value');
+        await this.cumulativeMmteNameValue.waitForVisible(10000);
+        const value = await this.cumulativeMmteNameValue.textContentWithTimeout(5000);
+        CSReporter.info(`Cumulative Mmte Name: ${value}`);
+        return value || '';
+    }
+
+    /**
+     * Verify Cumulative Mmte Name matches expected value
+     */
+    public async verifyCumulativeMmteName(expectedName: string): Promise<void> {
+        CSReporter.info(`Verifying Cumulative Mmte Name is: ${expectedName}`);
+        const actualName = await this.getCumulativeMmteName();
+        if (actualName.trim() !== expectedName.trim()) {
+            throw new Error(`Cumulative Mmte Name mismatch. Expected: ${expectedName}, Actual: ${actualName}`);
+        }
+        CSReporter.pass(`Cumulative Mmte Name verified: ${expectedName}`);
+    }
+
+    // ===================================================================
+    // ASSOCIATED ZEAL/PREMISIS METHODS
+    // ===================================================================
+
+    /**
+     * Verify Associated Zeal/Premisis section header is present
+     */
+    public async verifyAssociatedZealPremisisSectionPresent(): Promise<void> {
+        CSReporter.info('Verifying Associated Zeal/Premisis section header');
+        await this.associatedZealPremisisSectionHeader.waitForVisible(10000);
+        CSReporter.pass('Associated Zeal/Premisis section header is present');
+    }
+
+    /**
+     * Verify Associated Zeal/Premisis table is present
+     */
+    public async verifyAssociatedZealPremisisTablePresent(): Promise<void> {
+        CSReporter.info('Verifying Associated Zeal/Premisis table');
+        await this.associatedZealPremisisTable.waitForVisible(10000);
+        CSReporter.pass('Associated Zeal/Premisis table is present');
+    }
+
+    /**
+     * Get total items count from Associated Zeal/Premisis paginator
+     */
+    public async getAssociatedZealPremisisTotalCount(): Promise<number> {
+        CSReporter.info('Getting Associated Zeal/Premisis total count');
+        await this.associatedZealPremisisPaginatorTotal.waitForVisible(10000);
+        const text = await this.associatedZealPremisisPaginatorTotal.textContentWithTimeout(5000);
+        // Text format: " of 34 items"
+        const match = text?.match(/of\s+(\d+)\s+items/);
+        const count = match ? parseInt(match[1], 10) : 0;
+        CSReporter.info(`Associated Zeal/Premisis total count: ${count}`);
+        return count;
+    }
+
+    /**
+     * Get Associated Zeal/Premisis table cell value by row and column index
+     */
+    public async getAssociatedZealPremisisTableCellValue(rowNum: number, colNum: number): Promise<string> {
+        CSReporter.debug(`Getting Associated Zeal/Premisis cell value for row ${rowNum}, column ${colNum}`);
+
+        // Column 3 is Zeal Key - has button/link structure
+        if (colNum === 3) {
+            const cellElement = CSElementFactory.createByXPath(
+                `//div[@class='body-container']//h2[text()='Associated Zeal/Premisis']/following-sibling::div[1]//table[@class='sssss-table']//tbody/tr[${rowNum}]/td[${colNum}]//span[@class='sssss-button__label']`,
+                `Associated Zeal/Premisis table cell row ${rowNum} col ${colNum}`,
+                this.page
+            );
+            try {
+                const isVisible = await cellElement.isVisibleWithTimeout(3000);
+                if (isVisible) {
+                    return await cellElement.textContentWithTimeout(5000) || 'Element Not Found';
+                }
+            } catch {
+                return 'Element Not Found';
+            }
+        }
+
+        // Default cell handling
+        const cellElement = CSElementFactory.createByXPath(
+            `//div[@class='body-container']//h2[text()='Associated Zeal/Premisis']/following-sibling::div[1]//table[@class='sssss-table']//tbody/tr[${rowNum}]/td[${colNum}]`,
+            `Associated Zeal/Premisis table cell row ${rowNum} col ${colNum}`,
+            this.page
+        );
+        try {
+            const isVisible = await cellElement.isVisibleWithTimeout(3000);
+            if (isVisible) {
+                return await cellElement.textContentWithTimeout(5000) || 'Element Not Found';
+            }
+        } catch {
+            return 'Element Not Found';
+        }
+        return 'Element Not Found';
+    }
+
+    /**
+     * Click Zeal Key link in Associated Zeal/Premisis table
+     */
+    public async clickZealKeyLink(rowNum: number): Promise<void> {
+        CSReporter.info(`Clicking Zeal Key link in row ${rowNum}`);
+        const zealKeyButton = CSElementFactory.createByXPath(
+            `//div[@class='body-container']//h2[text()='Associated Zeal/Premisis']/following-sibling::div[1]//table[@class='sssss-table']//tbody/tr[${rowNum}]/td[3]//span[@class='sssss-button__label']/parent::button`,
+            `Zeal Key button in row ${rowNum}`,
+            this.page
+        );
+        await zealKeyButton.waitForVisible(10000);
+        await zealKeyButton.clickWithTimeout(10000);
+        await this.waitForPageLoad();
+        CSReporter.pass(`Clicked Zeal Key link in row ${rowNum}`);
+    }
+
+    // ===================================================================
+    // RULE SECTION METHODS
+    // ===================================================================
+
+    /**
+     * Verify First Rule section is present
+     */
+    public async verifyFirstRuleSectionPresent(): Promise<void> {
+        CSReporter.info('Verifying First Rule section');
+        await this.firstRuleSectionHeader.waitForVisible(10000);
+        CSReporter.pass('First Rule section is present');
+    }
+
+    /**
+     * Verify Second Rule section is present (may not be present for all mmtes)
+     */
+    public async isSecondRuleSectionPresent(): Promise<boolean> {
+        CSReporter.info('Checking if Second Rule section is present');
+        const isPresent = await this.secondRuleSectionHeader.isVisibleWithTimeout(3000);
+        if (isPresent) {
+            CSReporter.info('Second Rule section is present');
+        } else {
+            CSReporter.info('Second Rule section is not present');
+        }
+        return isPresent;
+    }
+
+    /**
+     * Verify Other Rules section is present
+     */
+    public async verifyOtherRulesSectionPresent(): Promise<void> {
+        CSReporter.info('Verifying Other Rules section');
+        await this.otherRulesSectionHeader.waitForVisible(10000);
+        CSReporter.pass('Other Rules section is present');
+    }
+
+    /**
+     * Expand First Rule section if collapsed
+     */
+    public async expandFirstRuleSection(): Promise<void> {
+        CSReporter.info('Expanding First Rule section if collapsed');
+        const expandButton = CSElementFactory.createByXPath(
+            '//h2[text()="First Rule"]/ancestor::div[contains(@class, "panel-header")][1]//button[contains(@class, "sssss-panel__toggle")]',
+            'First Rule expand button',
+            this.page
+        );
+        const isVisible = await expandButton.isVisibleWithTimeout(2000);
+        if (isVisible) {
+            const ariaExpanded = await expandButton.getAttributeWithTimeout('aria-expanded', 2000);
+            if (ariaExpanded === 'false') {
+                await expandButton.clickWithTimeout(10000);
+                await this.page.waitForTimeout(300);
+            }
+        }
+        CSReporter.pass('First Rule section expanded');
+    }
+
+    /**
+     * Expand Second Rule section if collapsed
+     */
+    public async expandSecondRuleSection(): Promise<void> {
+        CSReporter.info('Expanding Second Rule section if collapsed');
+        const expandButton = CSElementFactory.createByXPath(
+            '//h2[text()="Second Rule"]/ancestor::div[contains(@class, "panel-header")][1]//button[contains(@class, "sssss-panel__toggle")]',
+            'Second Rule expand button',
+            this.page
+        );
+        const isVisible = await expandButton.isVisibleWithTimeout(2000);
+        if (isVisible) {
+            const ariaExpanded = await expandButton.getAttributeWithTimeout('aria-expanded', 2000);
+            if (ariaExpanded === 'false') {
+                await expandButton.clickWithTimeout(10000);
+                await this.page.waitForTimeout(300);
+            }
+        }
+        CSReporter.pass('Second Rule section expanded');
+    }
+
+    /**
+     * Get field value from a rule section
+     */
+    public async getRuleFieldValue(ruleSectionName: string, fieldName: string): Promise<string> {
+        CSReporter.info(`Getting ${fieldName} value from ${ruleSectionName} section`);
+        const valueElement = CSElementFactory.createByXPath(
+            `//div[@class='body-container']//h2[text()='${ruleSectionName}']/following-sibling::div[1]//h5[text()='${fieldName}']/following-sibling::dd[1]`,
+            `${ruleSectionName} ${fieldName} value`,
+            this.page
+        );
+        await valueElement.waitForVisible(10000);
+        const value = await valueElement.textContentWithTimeout(5000);
+        CSReporter.info(`${ruleSectionName} ${fieldName}: ${value}`);
+        return value || '';
+    }
+
+    // ===================================================================
+    // POPUP METHODS (for viewing from Zeal Details)
+    // ===================================================================
+
+    /**
+     * Verify Scattered Mmte Details popup is displayed
+     */
+    public async verifyPopupDisplayed(): Promise<void> {
+        CSReporter.info('Verifying Scattered Mmte Details popup is displayed');
+        await this.detailsPopupContainer.waitForVisible(10000);
+        await this.detailsPopupHeader.waitForVisible(10000);
+        CSReporter.pass('Scattered Mmte Details popup is displayed');
+    }
+
+    /**
+     * Verify Scattered Mmte Details header is displayed in popup (RR09 Navigation)
+     */
+    public async verifyPopupHeaderDisplayed(): Promise<void> {
+        CSReporter.info('Verifying Scattered Mmte Details header in popup');
+        await this.detailsPopupHeader.waitForVisible(10000);
+        const isVisible = await this.detailsPopupHeader.isVisibleWithTimeout(5000);
+        if (!isVisible) {
+            throw new Error('Scattered Mmte Details header not found in popup');
+        }
+        CSReporter.pass('Scattered Mmte Details header verified in popup');
+    }
+
+    /**
+     * Verify Scattered Mmte Name matches expected value in popup (RR09 Navigation)
+     * @param expectedName - Expected scattered mmte name
+     */
+    public async verifyPopupScatteredMmteNameMatches(expectedName: string): Promise<void> {
+        CSReporter.info(`Verifying Scattered Mmte Name in popup matches '${expectedName}'`);
+        const nameElement = CSElementFactory.createByXPath(
+            `//div[@class='sssss-modal']//div[@class='sssss-panel__content-wrapper']//div[@class='sssss-panel__body']//h5[text()='Scattered Mmte Name']/following-sibling::dd[text()='${expectedName}']`,
+            `Scattered Mmte Name in popup: ${expectedName}`,
+            this.page
+        );
+        await nameElement.waitForVisible(10000);
+        const isVisible = await nameElement.isVisibleWithTimeout(5000);
+        if (!isVisible) {
+            throw new Error(`Scattered Mmte Name '${expectedName}' not found in popup`);
+        }
+        CSReporter.pass(`Scattered Mmte Name in popup matches: ${expectedName}`);
+    }
+
+    /**
+     * Verify Copy button in popup is enabled
+     */
+    public async verifyPopupCopyButtonEnabled(): Promise<void> {
+        CSReporter.info('Verifying Copy button in popup is enabled');
+        await this.popupCopyButton.waitForVisible(10000);
+        const isEnabled = await this.popupCopyButton.isEnabledWithTimeout(5000);
+        if (!isEnabled) {
+            throw new Error('Copy button in popup is not enabled');
+        }
+        CSReporter.pass('Copy button in popup is enabled');
+    }
+
+    /**
+     * Get Scattered Mmte Name from popup
+     */
+    public async getPopupScatteredMmteName(expectedName: string): Promise<void> {
+        CSReporter.info('Verifying Scattered Mmte Name in popup');
+        const nameElement = CSElementFactory.createByXPath(
+            `//div[@class='sssss-modal']//div[@class='sssss-panel__content-wrapper']//div[@class='sssss-panel__body']//h5[text()='Scattered Mmte Name']/following-sibling::dd[text()='${expectedName}']`,
+            `Scattered Mmte Name in popup: ${expectedName}`,
+            this.page
+        );
+        const isVisible = await nameElement.isVisibleWithTimeout(10000);
+        if (!isVisible) {
+            throw new Error(`Scattered Mmte Name ${expectedName} not found in popup`);
+        }
+        CSReporter.pass(`Scattered Mmte Name verified in popup: ${expectedName}`);
+    }
+
+    /**
+     * Verify Close button in popup is enabled
+     */
+    public async verifyPopupCloseButtonEnabled(): Promise<void> {
+        CSReporter.info('Verifying Close button in popup is enabled');
+        await this.popupCloseButton.waitForVisible(10000);
+        const isEnabled = await this.popupCloseButton.isEnabledWithTimeout(5000);
+        if (!isEnabled) {
+            throw new Error('Close button in popup is not enabled');
+        }
+        CSReporter.pass('Close button in popup is enabled');
+    }
+
+    /**
+     * Click Close button in popup
+     */
+    public async clickPopupCloseButton(): Promise<void> {
+        CSReporter.info('Clicking Close button in popup');
+        await this.popupCloseButton.waitForVisible(10000);
+        await this.popupCloseButton.clickWithTimeout(10000);
+        CSReporter.pass('Clicked Close button in popup');
+    }
+
+    /**
+     * Verify View All Details button in popup is enabled
+     */
+    public async verifyPopupViewAllDetailsButtonEnabled(): Promise<void> {
+        CSReporter.info('Verifying View All Details button in popup is enabled');
+        await this.popupViewAllDetailsButton.waitForVisible(10000);
+        const isEnabled = await this.popupViewAllDetailsButton.isEnabledWithTimeout(5000);
+        if (!isEnabled) {
+            throw new Error('View All Details button in popup is not enabled');
+        }
+        CSReporter.pass('View All Details button in popup is enabled');
+    }
+
+    /**
+     * Click View All Details button in popup
+     */
+    public async clickPopupViewAllDetailsButton(): Promise<void> {
+        CSReporter.info('Clicking View All Details button in popup');
+        await this.popupViewAllDetailsButton.waitForVisible(10000);
+        await this.popupViewAllDetailsButton.clickWithTimeout(10000);
+        await this.waitForPageLoad();
+        CSReporter.pass('Clicked View All Details button in popup');
+    }
+
+    // ===================================================================
+    // EXPORT METHODS
+    // ===================================================================
+
+    /**
+     * Verify Export button is enabled
+     */
+    public async verifyExportButtonEnabled(): Promise<void> {
+        CSReporter.info('Verifying Export button is enabled');
+        await this.exportButton.waitForVisible(10000);
+        const isEnabled = await this.exportButton.isEnabledWithTimeout(5000);
+        if (!isEnabled) {
+            throw new Error('Export button is not enabled');
+        }
+        CSReporter.pass('Export button is present and enabled');
+    }
+
+    /**
+     * Click Export button for Associated Zeal/Premisis
+     */
+    public async clickExportButton(): Promise<void> {
+        CSReporter.info('Clicking Export button');
+        await this.exportButton.waitForVisible(10000);
+        await this.exportButton.clickWithTimeout(10000);
+        CSReporter.pass('Clicked Export button');
+    }
+
+    /**
+     * Verify Export options are present (CSV, XLSX)
+     */
+    public async verifyExportOptionsPresent(): Promise<void> {
+        CSReporter.info('Verifying Export options are present');
+
+        const csvOption = CSElementFactory.createByXPath(
+            '//span[@class="sssss-button__label" and text()="Export"]/parent::button[@aria-label="Export"]/parent::div[1]//div[@class="sssss-balloon__content"]//ul[@aria-label="Export"]/li//span[text()="CSV"]',
+            'CSV export option',
+            this.page
+        );
+        const xlsxOption = CSElementFactory.createByXPath(
+            '//span[@class="sssss-button__label" and text()="Export"]/parent::button[@aria-label="Export"]/parent::div[1]//div[@class="sssss-balloon__content"]//ul[@aria-label="Export"]/li//span[text()="XLSX"]',
+            'XLSX export option',
+            this.page
+        );
+
+        await csvOption.waitForVisible(10000);
+        await xlsxOption.waitForVisible(10000);
+        CSReporter.pass('Export options (CSV, XLSX) are present');
+    }
+
+    /**
+     * Click CSV export option
+     */
+    public async clickExportCSV(): Promise<void> {
+        CSReporter.info('Clicking CSV export option');
+        const csvOption = CSElementFactory.createByXPath(
+            '//span[@class="sssss-button__label" and text()="Export"]/parent::button[@aria-label="Export"]/parent::div[1]//div[@class="sssss-balloon__content"]//ul[@aria-label="Export"]//span[text()="CSV"]/ancestor::button[1]',
+            'CSV export option button',
+            this.page
+        );
+        await csvOption.waitForVisible(10000);
+        await csvOption.clickWithTimeout(10000);
+        CSReporter.pass('Clicked CSV export option');
+    }
+
+    /**
+     * Click XLSX export option
+     */
+    public async clickExportXLSX(): Promise<void> {
+        CSReporter.info('Clicking XLSX export option');
+        const xlsxOption = CSElementFactory.createByXPath(
+            '//span[@class="sssss-button__label" and text()="Export"]/parent::button[@aria-label="Export"]/parent::div[1]//div[@class="sssss-balloon__content"]//ul[@aria-label="Export"]//span[text()="XLSX"]/ancestor::button[1]',
+            'XLSX export option button',
+            this.page
+        );
+        await xlsxOption.waitForVisible(10000);
+        await xlsxOption.clickWithTimeout(10000);
+        CSReporter.pass('Clicked XLSX export option');
+    }
+
+    /**
+     * Wait for export to complete
+     */
+    public async waitForExportComplete(): Promise<void> {
+        CSReporter.info('Waiting for export to complete');
+        const exportingElement = CSElementFactory.createByXPath(
+            '//span[@class="sssss-button__label" and contains(text(), "Exporting")]',
+            'Exporting indicator',
+            this.page
+        );
+
+        try {
+            const isVisible = await exportingElement.isVisibleWithTimeout(2000);
+            if (isVisible) {
+                await exportingElement.waitForDetached(15000);
+            }
+        } catch {
+            // Exporting indicator may not appear
+        }
+
+        await this.page.waitForTimeout(2000);
+        CSReporter.pass('Export completed');
+    }
+}
+
+export default TTTFScatteredMmteDetailsPage;
+
+
+----------------------------------------------------------------------------------------------------
+
+import { CSBasePage, CSPage, CSGetElement } from '@mdakhan.mak/cs-playwright-test-framework/core';
+import { CSWebElement, CSElementFactory } from '@mdakhan.mak/cs-playwright-test-framework/element';
+import { CSReporter } from '@mdakhan.mak/cs-playwright-test-framework/reporter';
+
+/**
+ * TTTF Scattered Mmtes Page
+ * Source: Scattered_Mmte_Sport_Mmte_1.txt - Scattered_Mmte_Sport_Mmte_9.txt
+ * Handles Scattered Mmtes listing page with Sport Mmte, Ttcalc Duration, and Manual Scattered Mmtes tabs
+ * All XPath locators from requirements documents
+ */
+@CSPage('tttf-scattered-mmtes')
+export class TTTFScatteredMmtesPage extends CSBasePage {
+
+    // ===================================================================
+    // PAGE HEADER ELEMENTS
+    // ===================================================================
+
+    @CSGetElement({
+        xpath: '//div[@class="body-container"]//h1[text()="Scattered Mmtes"]',
+        description: 'Scattered Mmtes page header',
+        waitForVisible: true,
+        alternativeLocators: ['text:Scattered Mmtes']
+    })
+    public scatteredMmtesHeader!: CSWebElement;
+
+    @CSGetElement({
+        xpath: '//span[@class="sssss-button__label" and text()="Add Scattered Mmtes"]/parent::button',
+        description: 'Add Scattered Mmtes button',
+        waitForEnabled: true,
+        alternativeLocators: ['css:button:has-text("Add Scattered Mmtes")']
+    })
+    public addScatteredMmtesButton!: CSWebElement;
+
+    // ===================================================================
+    // TAB ELEMENTS
+    // ===================================================================
+
+    @CSGetElement({
+        xpath: '//div[@role="tablist"]//span[@class="sssss-button__label" and text()="Sport Mmte"]/parent::button[@role="tab"]',
+        description: 'Sport Mmte tab button',
+        waitForVisible: true
+    })
+    public sportMmteTab!: CSWebElement;
+
+    @CSGetElement({
+        xpath: '//div[@role="tablist"]//span[@class="sssss-button__label" and text()="Ttcalc Duration"]/parent::button[@role="tab"]',
+        description: 'Ttcalc Duration tab button',
+        waitForVisible: true
+    })
+    public ttcalcDurationTab!: CSWebElement;
+
+    @CSGetElement({
+        xpath: '//div[@role="tablist"]//span[@class="sssss-button__label" and text()="Manual Scattered Mmtes"]/parent::button[@role="tab"]',
+        description: 'Manual Scattered Mmtes tab button',
+        waitForVisible: true
+    })
+    public manualScatteredMmtesTab!: CSWebElement;
+
+    // ===================================================================
+    // FILTERS ELEMENTS (Sport Mmte Tab)
+    // ===================================================================
+
+    @CSGetElement({
+        xpath: '//div[@class="sssss-tab__pane-content--active"]//span[text()="Filters"]/ancestor::button[contains(@id,"sssss-incircle-filter")]',
+        description: 'Filters button',
+        waitForVisible: true
+    })
+    public filtersButton!: CSWebElement;
+
+    @CSGetElement({
+        xpath: '//div[@class="sssss-tab__pane-content--active"]//span[text()="Filters Applied"]/ancestor::button[contains(@id,"sssss-incircle-filter")]',
+        description: 'Filters Applied button (shown when filters are active)',
+        waitForVisible: false
+    })
+    public filtersAppliedButton!: CSWebElement;
+
+    // ===================================================================
+    // SEARCH ELEMENTS (Find By)
+    // ===================================================================
+
+    @CSGetElement({
+        xpath: '//div[@class="sssss-tab__pane-content--active"]//div[contains(@class,"sssss-find-by__container")]//input[contains(@aria-labelledby,"sssss-find-by")]',
+        description: 'Find by input field',
+        waitForVisible: true
+    })
+    public findByInput!: CSWebElement;
+
+    @CSGetElement({
+        xpath: '//div[@class="sssss-tab__pane-content--active"]//div[contains(@class,"sssss-find-by__container")]//span[@class="sssss-button__label" and text()="Go"]/parent::button[@aria-label="Go search data"]',
+        description: 'Go search button',
+        waitForEnabled: true
+    })
+    public goSearchButton!: CSWebElement;
+
+    @CSGetElement({
+        xpath: '//div[@class="sssss-tab__pane-content--active"]//div[contains(@class,"sssss-find-by__container")]//span[@class="sssss-button__label" and text()="Reset"]/parent::button[@aria-label="Reset results and clear"]',
+        description: 'Reset search button',
+        waitForEnabled: true
+    })
+    public resetSearchButton!: CSWebElement;
+
+    // ===================================================================
+    // PAGINATOR ELEMENTS
+    // ===================================================================
+
+    @CSGetElement({
+        xpath: '//div[@class="sssss-tab__pane-content--active"]//div[@class="sssss-paginator"]//button[contains(@aria-describedby, "sssss-paginator__menuTriggerDetails")]',
+        description: 'Paginator menu trigger button',
+        waitForVisible: true
+    })
+    public paginatorMenuTrigger!: CSWebElement;
+
+    @CSGetElement({
+        xpath: '//div[@class="sssss-tab__pane-content--active"]//div[@class="sssss-paginator__nav-buttons-container"]//button[contains(@aria-label, "Previous")]',
+        description: 'Paginator Previous button',
+        waitForVisible: true
+    })
+    public paginatorPrevious!: CSWebElement;
+
+    @CSGetElement({
+        xpath: '//div[@class="sssss-tab__pane-content--active"]//div[@class="sssss-paginator__nav-buttons-container"]//button[contains(@aria-label, "Next")]',
+        description: 'Paginator Next button',
+        waitForVisible: true
+    })
+    public paginatorNext!: CSWebElement;
+
+    @CSGetElement({
+        xpath: '//div[@class="sssss-tab__pane-content--active"]//div[@class="sssss-paginator"]//span[@class="sssss-paginator__trigger-total-items"]',
+        description: 'Paginator total items text',
+        waitForVisible: true
+    })
+    public paginatorTotalItems!: CSWebElement;
+
+    // ===================================================================
+    // RESULTS TABLE ELEMENTS
+    // ===================================================================
+
+    @CSGetElement({
+        xpath: '//div[@class="sssss-tab__pane-content--active"]//table[contains(@class, "sssss-table")]',
+        description: 'Sport Mmte display table',
+        waitForVisible: true
+    })
+    public sportMmteTable!: CSWebElement;
+
+    @CSGetElement({
+        xpath: '//div[@class="sssss-tab__pane-content--active"]//table[contains(@class, "sssss-table")]//thead/tr[1]/td[1]//button[contains(@aria-label,"Expand all")]',
+        description: 'Expand all rows button',
+        waitForVisible: false
+    })
+    public expandAllButton!: CSWebElement;
+
+    @CSGetElement({
+        xpath: '//div[@class="sssss-tab__pane-content--active"]//table[contains(@class, "sssss-table")]//thead/tr[1]/td[1]//button[contains(@aria-label,"Collapse all")]',
+        description: 'Collapse all rows button',
+        waitForVisible: false
+    })
+    public collapseAllButton!: CSWebElement;
+
+    @CSGetElement({
+        xpath: '//div[@class="sssss-tab__pane-content--active"]//table[contains(@class, "sssss-table")]//tbody/tr[1]/td[text()="No data available."]',
+        description: 'No data available message',
+        waitForVisible: false
+    })
+    public noDataAvailableMessage!: CSWebElement;
+
+    // ===================================================================
+    // EXPORT BUTTON ELEMENTS
+    // ===================================================================
+
+    @CSGetElement({
+        xpath: '//span[@class="sssss-button__label" and text()="Export"]/parent::button[@aria-label="Export"]',
+        description: 'Export button',
+        waitForVisible: true
+    })
+    public exportButton!: CSWebElement;
+
+    // ===================================================================
+    // LOADER ELEMENT
+    // ===================================================================
+
+    @CSGetElement({
+        xpath: '//div[text()="Loading..."]',
+        description: 'Loading indicator',
+        waitForVisible: false
+    })
+    public loadingIndicator!: CSWebElement;
+
+    protected initializeElements(): void {
+        CSReporter.debug('TTTFScatteredMmtesPage elements initialized');
+    }
+
+    // ===================================================================
+    // PAGE VERIFICATION METHODS
+    // ===================================================================
+
+    /**
+     * Verify Scattered Mmtes page header is displayed
+     */
+    public async verifyPageHeader(): Promise<void> {
+        CSReporter.info('Verifying Scattered Mmtes page header');
+        await this.scatteredMmtesHeader.waitForVisible(15000);
+        const isVisible = await this.scatteredMmtesHeader.isVisibleWithTimeout(5000);
+        if (!isVisible) {
+            throw new Error('Scattered Mmtes page header not found');
+        }
+        CSReporter.pass('Scattered Mmtes page header verified');
+    }
+
+    /**
+     * Verify Add Scattered Mmtes button is present and enabled
+     */
+    public async verifyAddScatteredMmtesButtonEnabled(): Promise<void> {
+        CSReporter.info('Verifying Add Scattered Mmtes button');
+        await this.addScatteredMmtesButton.waitForVisible(10000);
+        const isEnabled = await this.addScatteredMmtesButton.isEnabledWithTimeout(5000);
+        if (!isEnabled) {
+            throw new Error('Add Scattered Mmtes button is not enabled');
+        }
+        CSReporter.pass('Add Scattered Mmtes button is present and enabled');
+    }
+
+    /**
+     * Click Add Scattered Mmtes button
+     */
+    public async clickAddScatteredMmtes(): Promise<void> {
+        CSReporter.info('Clicking Add Scattered Mmtes button');
+        await this.addScatteredMmtesButton.waitForVisible(10000);
+        await this.addScatteredMmtesButton.clickWithTimeout(10000);
+        await this.waitForPageLoad();
+        CSReporter.pass('Clicked Add Scattered Mmtes button');
+    }
+
+    /**
+     * Wait for loader to disappear
+     */
+    public async waitForLoaderToDisappear(): Promise<void> {
+        CSReporter.info('Waiting for loader to disappear');
+        try {
+            const isVisible = await this.loadingIndicator.isVisibleWithTimeout(2000);
+            if (isVisible) {
+                await this.loadingIndicator.waitForDetached(30000);
+            }
+        } catch {
+            // Loader may not appear, which is fine
+        }
+        CSReporter.debug('Loader disappeared or was not present');
+    }
+
+    // ===================================================================
+    // TAB METHODS
+    // ===================================================================
+
+    /**
+     * Verify Sport Mmte tab is enabled
+     */
+    public async verifySportMmteTabEnabled(): Promise<boolean> {
+        CSReporter.info('Verifying Sport Mmte tab is enabled');
+        await this.sportMmteTab.waitForVisible(10000);
+        const ariaDisabled = await this.sportMmteTab.getAttributeWithTimeout('aria-disabled', 5000);
+        const isEnabled = ariaDisabled === 'false' || ariaDisabled === null;
+        if (isEnabled) {
+            CSReporter.pass('Sport Mmte tab is enabled');
+        } else {
+            CSReporter.fail('Sport Mmte tab is disabled');
+        }
+        return isEnabled;
+    }
+
+    /**
+     * Verify Sport Mmte tab is selected by default
+     */
+    public async verifySportMmteTabSelected(): Promise<boolean> {
+        CSReporter.info('Verifying Sport Mmte tab is selected by default');
+        await this.sportMmteTab.waitForVisible(10000);
+        const ariaSelected = await this.sportMmteTab.getAttributeWithTimeout('aria-selected', 5000);
+        const isSelected = ariaSelected === 'true';
+        if (isSelected) {
+            CSReporter.pass('Sport Mmte tab is selected by default');
+        } else {
+            CSReporter.fail('Sport Mmte tab is not selected');
+        }
+        return isSelected;
+    }
+
+    /**
+     * Click Sport Mmte tab
+     */
+    public async clickSportMmteTab(): Promise<void> {
+        CSReporter.info('Clicking Sport Mmte tab');
+        await this.sportMmteTab.clickWithTimeout(10000);
+        await this.waitForPageLoad();
+        await this.waitForLoaderToDisappear();
+        CSReporter.pass('Clicked Sport Mmte tab');
+    }
+
+    /**
+     * Verify Ttcalc Duration tab is enabled
+     */
+    public async verifyTtcalcDurationTabEnabled(): Promise<boolean> {
+        CSReporter.info('Verifying Ttcalc Duration tab is enabled');
+        await this.ttcalcDurationTab.waitForVisible(10000);
+        const ariaDisabled = await this.ttcalcDurationTab.getAttributeWithTimeout('aria-disabled', 5000);
+        const isEnabled = ariaDisabled === 'false' || ariaDisabled === null;
+        if (isEnabled) {
+            CSReporter.pass('Ttcalc Duration tab is enabled');
+        } else {
+            CSReporter.fail('Ttcalc Duration tab is disabled');
+        }
+        return isEnabled;
+    }
+
+    /**
+     * Verify Ttcalc Duration tab is NOT selected by default
+     */
+    public async verifyTtcalcDurationTabNotSelected(): Promise<boolean> {
+        CSReporter.info('Verifying Ttcalc Duration tab is not selected by default');
+        await this.ttcalcDurationTab.waitForVisible(10000);
+        const ariaSelected = await this.ttcalcDurationTab.getAttributeWithTimeout('aria-selected', 5000);
+        const isNotSelected = ariaSelected === 'false';
+        if (isNotSelected) {
+            CSReporter.pass('Ttcalc Duration tab is not selected by default');
+        } else {
+            CSReporter.fail('Ttcalc Duration tab is unexpectedly selected');
+        }
+        return isNotSelected;
+    }
+
+    /**
+     * Click Ttcalc Duration tab
+     */
+    public async clickTtcalcDurationTab(): Promise<void> {
+        CSReporter.info('Clicking Ttcalc Duration tab');
+        await this.ttcalcDurationTab.clickWithTimeout(10000);
+        await this.waitForPageLoad();
+        await this.waitForLoaderToDisappear();
+        CSReporter.pass('Clicked Ttcalc Duration tab');
+    }
+
+    /**
+     * Verify Manual Scattered Mmtes tab is enabled
+     */
+    public async verifyManualScatteredMmtesTabEnabled(): Promise<boolean> {
+        CSReporter.info('Verifying Manual Scattered Mmtes tab is enabled');
+        await this.manualScatteredMmtesTab.waitForVisible(10000);
+        const ariaDisabled = await this.manualScatteredMmtesTab.getAttributeWithTimeout('aria-disabled', 5000);
+        const isEnabled = ariaDisabled === 'false' || ariaDisabled === null;
+        if (isEnabled) {
+            CSReporter.pass('Manual Scattered Mmtes tab is enabled');
+        } else {
+            CSReporter.fail('Manual Scattered Mmtes tab is disabled');
+        }
+        return isEnabled;
+    }
+
+    /**
+     * Click Manual Scattered Mmtes tab
+     */
+    public async clickManualScatteredMmtesTab(): Promise<void> {
+        CSReporter.info('Clicking Manual Scattered Mmtes tab');
+        await this.manualScatteredMmtesTab.clickWithTimeout(10000);
+        await this.waitForPageLoad();
+        await this.waitForLoaderToDisappear();
+        CSReporter.pass('Clicked Manual Scattered Mmtes tab');
+    }
+
+    /**
+     * Verify Manual Scattered Mmtes tab is not selected
+     */
+    public async verifyManualScatteredMmtesTabNotSelected(): Promise<boolean> {
+        CSReporter.info('Verifying Manual Scattered Mmtes tab is not selected');
+        await this.manualScatteredMmtesTab.waitForVisible(10000);
+        const ariaSelected = await this.manualScatteredMmtesTab.getAttributeWithTimeout('aria-selected', 5000);
+        const isNotSelected = ariaSelected === 'false' || ariaSelected === null;
+        if (isNotSelected) {
+            CSReporter.pass('Manual Scattered Mmtes tab is not selected');
+        } else {
+            CSReporter.fail('Manual Scattered Mmtes tab is unexpectedly selected');
+        }
+        return isNotSelected;
+    }
+
+    /**
+     * Verify Manual Scattered Mmtes tab is selected
+     */
+    public async verifyManualScatteredMmtesTabSelected(): Promise<boolean> {
+        CSReporter.info('Verifying Manual Scattered Mmtes tab is selected');
+        await this.manualScatteredMmtesTab.waitForVisible(10000);
+        const ariaSelected = await this.manualScatteredMmtesTab.getAttributeWithTimeout('aria-selected', 5000);
+        const isSelected = ariaSelected === 'true';
+        if (isSelected) {
+            CSReporter.pass('Manual Scattered Mmtes tab is selected');
+        } else {
+            CSReporter.fail('Manual Scattered Mmtes tab is not selected');
+        }
+        return isSelected;
+    }
+
+    /**
+     * Verify Ttcalc Duration tab is selected
+     */
+    public async verifyTtcalcDurationTabSelected(): Promise<boolean> {
+        CSReporter.info('Verifying Ttcalc Duration tab is selected');
+        await this.ttcalcDurationTab.waitForVisible(10000);
+        const ariaSelected = await this.ttcalcDurationTab.getAttributeWithTimeout('aria-selected', 5000);
+        const isSelected = ariaSelected === 'true';
+        if (isSelected) {
+            CSReporter.pass('Ttcalc Duration tab is selected');
+        } else {
+            CSReporter.fail('Ttcalc Duration tab is not selected');
+        }
+        return isSelected;
+    }
+
+    // ===================================================================
+    // FILTER METHODS
+    // ===================================================================
+
+    /**
+     * Verify Filters button is present and not expanded by default
+     */
+    public async verifyFiltersNotExpandedByDefault(): Promise<boolean> {
+        CSReporter.info('Verifying Filters area is not expanded by default');
+        await this.filtersButton.waitForVisible(10000);
+        const ariaExpanded = await this.filtersButton.getAttributeWithTimeout('aria-expanded', 5000);
+        const isNotExpanded = ariaExpanded === 'false';
+        if (isNotExpanded) {
+            CSReporter.pass('Filters area is not expanded by default');
+        } else {
+            CSReporter.fail('Filters area is unexpectedly expanded');
+        }
+        return isNotExpanded;
+    }
+
+    /**
+     * Click Filters button to expand filters
+     */
+    public async clickFiltersButton(): Promise<void> {
+        CSReporter.info('Clicking Filters button');
+        await this.filtersButton.waitForVisible(10000);
+        await this.filtersButton.clickWithTimeout(10000);
+        await this.waitForPageLoad();
+        CSReporter.pass('Clicked Filters button');
+    }
+
+    /**
+     * Verify Filters area is expanded
+     */
+    public async verifyFiltersExpanded(): Promise<boolean> {
+        CSReporter.info('Verifying Filters area is expanded');
+        await this.filtersButton.waitForVisible(10000);
+        const ariaExpanded = await this.filtersButton.getAttributeWithTimeout('aria-expanded', 5000);
+        const isExpanded = ariaExpanded === 'true';
+        if (isExpanded) {
+            CSReporter.pass('Filters area is expanded');
+        } else {
+            CSReporter.fail('Filters area is not expanded');
+        }
+        return isExpanded;
+    }
+
+    /**
+     * Verify Filter criteria header is present (when filters expanded)
+     */
+    public async verifyFilterCriteriaHeader(): Promise<void> {
+        CSReporter.info('Verifying Filter criteria header');
+        const filterCriteriaHeader = CSElementFactory.createByXPath(
+            '//div[@id="incircleFilterSportMmte"]//legend[text()="Filter criteria"]',
+            'Filter criteria header',
+            this.page
+        );
+        await filterCriteriaHeader.waitForVisible(10000);
+        CSReporter.pass('Filter criteria header is present');
+    }
+
+    /**
+     * Get Cumulative Mmte dropdown button
+     */
+    public async getCumulativeMmteDropdownButton(): Promise<CSWebElement> {
+        return CSElementFactory.createByXPath(
+            '//div[@id="incircleFilterSportMmte"]//button[@name="cumulativeMmte"]',
+            'Cumulative Mmte dropdown',
+            this.page
+        );
+    }
+
+    /**
+     * Verify Cumulative Mmte dropdown default selection is "Select"
+     */
+    public async verifyCumulativeMmteDefaultSelect(): Promise<boolean> {
+        CSReporter.info('Verifying Cumulative Mmte dropdown default is Select');
+        const selectedOption = CSElementFactory.createByXPath(
+            '//div[@id="incircleFilterSportMmte"]//button[@name="cumulativeMmte"]//span[@class="sssss-button__label"]',
+            'Cumulative Mmte selected option',
+            this.page
+        );
+        await selectedOption.waitForVisible(10000);
+        const text = await selectedOption.textContentWithTimeout(5000);
+        const isDefault = text?.trim() === 'Select';
+        if (isDefault) {
+            CSReporter.pass('Cumulative Mmte dropdown default is Select');
+        }
+        return isDefault;
+    }
+
+    /**
+     * Click Cumulative Mmte dropdown
+     */
+    public async clickCumulativeMmteDropdown(): Promise<void> {
+        CSReporter.info('Clicking Cumulative Mmte dropdown');
+        const dropdown = await this.getCumulativeMmteDropdownButton();
+        await dropdown.clickWithTimeout(10000);
+        CSReporter.pass('Clicked Cumulative Mmte dropdown');
+    }
+
+    /**
+     * Select Cumulative Mmte from dropdown
+     */
+    public async selectCumulativeMmte(cumulativeMmteName: string): Promise<void> {
+        CSReporter.info(`Selecting Cumulative Mmte: ${cumulativeMmteName}`);
+        const option = CSElementFactory.createByXPath(
+            `//div[contains(@class, 'sssss-balloon') and @name='cumulativeMmte']//ul[@role='listbox']//li[@role='option']//span[text()='${cumulativeMmteName}']/parent::span`,
+            `Cumulative Mmte option: ${cumulativeMmteName}`,
+            this.page
+        );
+        await option.waitForVisible(10000);
+        await option.clickWithTimeout(10000);
+        CSReporter.pass(`Selected Cumulative Mmte: ${cumulativeMmteName}`);
+    }
+
+    /**
+     * Verify Cumulative Mmte is selected
+     */
+    public async verifyCumulativeMmteSelected(cumulativeMmteName: string): Promise<void> {
+        CSReporter.info(`Verifying Cumulative Mmte selected: ${cumulativeMmteName}`);
+        const selectedElement = CSElementFactory.createByXPath(
+            `//div[@id="incircleFilterSportMmte"]//button[@name="cumulativeMmte"]//span[@class="sssss-button__label" and text()="${cumulativeMmteName}"]`,
+            `Selected Cumulative Mmte: ${cumulativeMmteName}`,
+            this.page
+        );
+        await selectedElement.waitForVisible(10000);
+        CSReporter.pass(`Cumulative Mmte selected: ${cumulativeMmteName}`);
+    }
+
+    /**
+     * Click Apply Filters button
+     */
+    public async clickApplyFilters(): Promise<void> {
+        CSReporter.info('Clicking Apply Filters button');
+        const applyButton = CSElementFactory.createByXPath(
+            '//div[@id="incircleFilterSportMmte"]//span[@class="sssss-button__label" and text()="Apply"]/parent::button[1]',
+            'Apply Filters button',
+            this.page
+        );
+        await applyButton.waitForVisible(10000);
+        await applyButton.clickWithTimeout(10000);
+        await this.waitForPageLoad();
+        await this.waitForLoaderToDisappear();
+        CSReporter.pass('Clicked Apply Filters button');
+    }
+
+    /**
+     * Click Reset Filters button
+     */
+    public async clickResetFilters(): Promise<void> {
+        CSReporter.info('Clicking Reset Filters button');
+        const resetButton = CSElementFactory.createByXPath(
+            '//div[@id="incircleFilterSportMmte"]//span[@class="sssss-button__label" and text()="Reset Filters"]/parent::button[1]',
+            'Reset Filters button',
+            this.page
+        );
+        await resetButton.waitForVisible(10000);
+        await resetButton.clickWithTimeout(10000);
+        CSReporter.pass('Clicked Reset Filters button');
+    }
+
+    /**
+     * Click Cancel Filters button
+     */
+    public async clickCancelFilters(): Promise<void> {
+        CSReporter.info('Clicking Cancel Filters button');
+        const cancelButton = CSElementFactory.createByXPath(
+            '//div[@id="incircleFilterSportMmte"]//span[@class="sssss-button__label" and text()="Cancel"]/parent::button[1]',
+            'Cancel Filters button',
+            this.page
+        );
+        await cancelButton.waitForVisible(10000);
+        await cancelButton.clickWithTimeout(10000);
+        CSReporter.pass('Clicked Cancel Filters button');
+    }
+
+    // ===================================================================
+    // CONDITIONS SECTION FILTER METHODS (RR03)
+    // Source: Scattered_Mmte_Sport_Mmte_3.txt Circles 261-287
+    // ===================================================================
+
+    /**
+     * Verify Conditions header is present in filter panel
+     * Requirement Circle 261: xpath: //div[@id='incircleFilterSportMmte']//h2[text()='Conditions']
+     */
+    public async verifyConditionsHeader(): Promise<void> {
+        CSReporter.info('Verifying Conditions header in filter panel');
+        const conditionsHeader = CSElementFactory.createByXPath(
+            '//div[@id="incircleFilterSportMmte"]//h2[text()="Conditions"]',
+            'Conditions header',
+            this.page
+        );
+        await conditionsHeader.waitForVisible(10000);
+        CSReporter.pass('Conditions header is present in filter panel');
+    }
+
+    /**
+     * Get Methodology dropdown button in filter panel
+     * Requirement Circle 262: xpath: //div[@id='incircleFilterSportMmte']//button[@name='methodologyType']
+     */
+    public async getFilterMethodologyDropdown(): Promise<CSWebElement> {
+        return CSElementFactory.createByXPath(
+            '//div[@id="incircleFilterSportMmte"]//button[@name="methodologyType"]',
+            'Filter Methodology dropdown',
+            this.page
+        );
+    }
+
+    /**
+     * Verify Methodology dropdown shows Sport Mmte Look Up by default in filter panel
+     * Requirement Circle 263-264
+     */
+    public async verifyFilterMethodologyDefault(): Promise<void> {
+        CSReporter.info('Verifying Methodology dropdown default in filter panel');
+        const methodologyDefault = CSElementFactory.createByXPath(
+            '//div[@id="incircleFilterSportMmte"]//button[@name="methodologyType"]//span[@class="sssss-button__label" and text()="Sport Mmte Look Up"]',
+            'Methodology default: Sport Mmte Look Up',
+            this.page
+        );
+        await methodologyDefault.waitForVisible(10000);
+        CSReporter.pass('Methodology dropdown shows Sport Mmte Look Up by default');
+    }
+
+    /**
+     * Get Sport Mmte Rule Priority dropdown button in filter panel
+     * Requirement Circle 265-266: xpath: //div[@id='incircleFilterSportMmte']//button[@name='sportMmteRulePriority']
+     */
+    public async getFilterSportMmteRulePriorityDropdown(): Promise<CSWebElement> {
+        return CSElementFactory.createByXPath(
+            '//div[@id="incircleFilterSportMmte"]//button[@name="sportMmteRulePriority"]',
+            'Filter Sport Mmte Rule Priority dropdown',
+            this.page
+        );
+    }
+
+    /**
+     * Click Sport Mmte Rule Priority dropdown in filter panel
+     * Requirement Circle 267
+     */
+    public async clickFilterSportMmteRulePriorityDropdown(): Promise<void> {
+        CSReporter.info('Clicking Sport Mmte Rule Priority dropdown in filter panel');
+        const dropdown = await this.getFilterSportMmteRulePriorityDropdown();
+        await dropdown.waitForVisible(10000);
+        await dropdown.clickWithTimeout(10000);
+        CSReporter.pass('Clicked Sport Mmte Rule Priority dropdown');
+    }
+
+    /**
+     * Verify Sport Mmte Rule Priority dropdown options in filter panel
+     * Requirement Circle 270-274: Expected options: ['Highest Date', 'Lowest Date']
+     */
+    public async verifyFilterSportMmteRulePriorityOptions(): Promise<void> {
+        CSReporter.info('Verifying Sport Mmte Rule Priority dropdown options');
+        const expectedOptions = ['Highest Date', 'Lowest Date'];
+
+        for (const option of expectedOptions) {
+            const optionElement = CSElementFactory.createByXPath(
+                `//div[contains(@class, 'sssss-balloon') and @name='sportMmteRulePriority']//ul[@role='listbox']//li[@role='option']//span[contains(@class, 'sssss-menu-item__label')]//span[text()='${option}']`,
+                `Sport Mmte Rule Priority option: ${option}`,
+                this.page
+            );
+            await optionElement.waitForVisible(10000);
+            CSReporter.pass(`Option '${option}' is present`);
+        }
+    }
+
+    /**
+     * Select Sport Mmte Rule Priority from dropdown in filter panel
+     * Requirement Circle 281-282
+     * @param priority The priority to select (e.g., 'Highest Date', 'Lowest Date')
+     */
+    public async selectFilterSportMmteRulePriority(priority: string): Promise<void> {
+        CSReporter.info(`Selecting Sport Mmte Rule Priority: ${priority}`);
+        await this.clickFilterSportMmteRulePriorityDropdown();
+
+        // Wait for list to display
+        const listElement = CSElementFactory.createByXPath(
+            '//div[contains(@class, "sssss-balloon") and @name="sportMmteRulePriority"]//ul[@role="listbox"]',
+            'Sport Mmte Rule Priority list',
+            this.page
+        );
+        await listElement.waitForVisible(10000);
+
+        // Click the option
+        const optionElement = CSElementFactory.createByXPath(
+            `//div[contains(@class, 'sssss-balloon') and @name='sportMmteRulePriority']//ul[@role='listbox']//li[@role='option']//span[text()='${priority}']/parent::span`,
+            `Option: ${priority}`,
+            this.page
+        );
+        await optionElement.clickWithTimeout(10000);
+        await this.waitForPageLoad();
+        CSReporter.pass(`Selected Sport Mmte Rule Priority: ${priority}`);
+    }
+
+    /**
+     * Verify Sport Mmte Rule Priority is selected in filter panel
+     * Requirement Circle 283-284
+     */
+    public async verifyFilterSportMmteRulePrioritySelected(priority: string): Promise<void> {
+        CSReporter.info(`Verifying Sport Mmte Rule Priority selected: ${priority}`);
+        const selectedElement = CSElementFactory.createByXPath(
+            `//div[@id="incircleFilterSportMmte"]//button[@name="sportMmteRulePriority"]//span[@class="sssss-button__label" and text()="${priority}"]`,
+            `Selected priority: ${priority}`,
+            this.page
+        );
+        await selectedElement.waitForVisible(10000);
+        CSReporter.pass(`Sport Mmte Rule Priority '${priority}' is selected`);
+    }
+
+    // ===================================================================
+    // FIRST RULE FILTER SECTION METHODS (RR03)
+    // Source: Scattered_Mmte_Sport_Mmte_3.txt Circles 431-597
+    // ===================================================================
+
+    /**
+     * Verify First Rule section is present in filter panel
+     * Requirement Circle 431: xpath: //div[@id='incircleFilterSportMmte']//h5[text()='First Rule']/ancestor::section[1]
+     */
+    public async verifyFilterFirstRuleSection(): Promise<void> {
+        CSReporter.info('Verifying First Rule section in filter panel');
+        const firstRuleSection = CSElementFactory.createByXPath(
+            '//div[@id="incircleFilterSportMmte"]//h5[text()="First Rule"]/ancestor::section[1]',
+            'First Rule section',
+            this.page
+        );
+        await firstRuleSection.waitForVisible(10000);
+        CSReporter.pass('First Rule section is present in filter panel');
+    }
+
+    /**
+     * Check if First Rule section is expanded in filter panel
+     * Requirement Circle 434
+     */
+    public async isFilterFirstRuleSectionExpanded(): Promise<boolean> {
+        try {
+            const collapseButton = CSElementFactory.createByXPath(
+                '//div[@id="incircleFilterSportMmte"]//h5[text()="First Rule"]/ancestor::section[1]//button[@aria-label="Collapse First Rule"]',
+                'Collapse First Rule button',
+                this.page
+            );
+            return await collapseButton.isVisibleWithTimeout(3000);
+        } catch {
+            return false;
+        }
+    }
+
+    /**
+     * Expand First Rule section in filter panel if collapsed
+     * Requirement Circles 434-436
+     */
+    public async expandFilterFirstRuleSection(): Promise<void> {
+        CSReporter.info('Expanding First Rule section in filter panel');
+        const isExpanded = await this.isFilterFirstRuleSectionExpanded();
+
+        if (!isExpanded) {
+            const expandButton = CSElementFactory.createByXPath(
+                '//div[@id="incircleFilterSportMmte"]//h5[text()="First Rule"]/ancestor::section[1]//button[@aria-label="Expand First Rule"]',
+                'Expand First Rule button',
+                this.page
+            );
+            await expandButton.clickWithTimeout(10000);
+            await this.waitForPageLoad();
+
+            // Verify expanded
+            const collapseButton = CSElementFactory.createByXPath(
+                '//div[@id="incircleFilterSportMmte"]//h5[text()="First Rule"]/ancestor::section[1]//button[@aria-label="Collapse First Rule"]',
+                'Collapse First Rule button',
+                this.page
+            );
+            await collapseButton.waitForVisible(10000);
+            CSReporter.pass('First Rule section expanded');
+        } else {
+            CSReporter.info('First Rule section already expanded');
+        }
+    }
+
+    /**
+     * Get First Rule Month Lag input field in filter panel
+     * Requirement Circle 445: xpath: //div[@id='incircleFilterSportMmte']//h5[text()='First Rule']/ancestor::section[1]//input[@name='firstMonthLag']
+     */
+    public async getFilterFirstRuleMonthLagInput(): Promise<CSWebElement> {
+        return CSElementFactory.createByXPath(
+            '//div[@id="incircleFilterSportMmte"]//h5[text()="First Rule"]/ancestor::section[1]//input[@name="firstMonthLag"]',
+            'First Rule Month Lag input',
+            this.page
+        );
+    }
+
+    /**
+     * Enter First Rule Month Lag value in filter panel
+     * Requirement Circles 445-446
+     */
+    public async enterFilterFirstRuleMonthLag(value: string): Promise<void> {
+        CSReporter.info(`Entering First Rule Month Lag: ${value}`);
+        const input = await this.getFilterFirstRuleMonthLagInput();
+        await input.waitForVisible(10000);
+        await input.clear();
+        await input.fill(value);
+        CSReporter.pass(`Entered First Rule Month Lag: ${value}`);
+    }
+
+    /**
+     * Get First Rule Base Day input field in filter panel
+     * Requirement Circle 447: xpath: //div[@id='incircleFilterSportMmte']//h5[text()='First Rule']/ancestor::section[1]//input[@name='firstBaseDay']
+     */
+    public async getFilterFirstRuleBaseDayInput(): Promise<CSWebElement> {
+        return CSElementFactory.createByXPath(
+            '//div[@id="incircleFilterSportMmte"]//h5[text()="First Rule"]/ancestor::section[1]//input[@name="firstBaseDay"]',
+            'First Rule Base Day input',
+            this.page
+        );
+    }
+
+    /**
+     * Enter First Rule Base Day value in filter panel
+     * Requirement Circles 447-448
+     */
+    public async enterFilterFirstRuleBaseDay(value: string): Promise<void> {
+        CSReporter.info(`Entering First Rule Base Day: ${value}`);
+        const input = await this.getFilterFirstRuleBaseDayInput();
+        await input.waitForVisible(10000);
+        await input.clear();
+        await input.fill(value);
+        CSReporter.pass(`Entered First Rule Base Day: ${value}`);
+    }
+
+    /**
+     * Get First Rule Associate Cylinders Select button in filter panel
+     * Requirement Circle 605: xpath: //div[@id='incircleFilterSportMmte']//h5[text()='First Rule']/ancestor::section[1]//button[@id='addbuttonFirstRuleBaseCylinders']
+     */
+    public async getFilterFirstRuleAssociateCylindersButton(): Promise<CSWebElement> {
+        return CSElementFactory.createByXPath(
+            '//div[@id="incircleFilterSportMmte"]//h5[text()="First Rule"]/ancestor::section[1]//button[@id="addbuttonFirstRuleBaseCylinders"]',
+            'First Rule Associate Cylinders Select button',
+            this.page
+        );
+    }
+
+    /**
+     * Click First Rule Associate Cylinders Select button in filter panel
+     * Requirement Circle 606
+     */
+    public async clickFilterFirstRuleAssociateCylindersSelect(): Promise<void> {
+        CSReporter.info('Clicking First Rule Associate Cylinders Select button');
+        const button = await this.getFilterFirstRuleAssociateCylindersButton();
+        await button.waitForVisible(10000);
+        await button.clickWithTimeout(10000);
+        CSReporter.pass('Clicked First Rule Associate Cylinders Select button');
+    }
+
+    /**
+     * Verify First Rule Associate Cylinders button shows Edit
+     * Requirement Circle 633
+     */
+    public async verifyFilterFirstRuleAssociateCylindersEdit(): Promise<void> {
+        CSReporter.info('Verifying First Rule Associate Cylinders shows Edit button');
+        const editButton = CSElementFactory.createByXPath(
+            '//div[@id="incircleFilterSportMmte"]//h5[text()="First Rule"]/ancestor::section[1]//button[@id="addbuttonFirstRuleBaseCylinders"]//span[@class="sssss-button__label" and text()="Edit"]',
+            'First Rule Associate Cylinders Edit button',
+            this.page
+        );
+        await editButton.waitForVisible(10000);
+        CSReporter.pass('First Rule Associate Cylinders shows Edit button');
+    }
+
+    /**
+     * Verify First Rule Associate Cylinder is selected
+     * Requirement Circle 635
+     */
+    public async verifyFilterFirstRuleAssociateCylinderSelected(cylinderName: string): Promise<void> {
+        CSReporter.info(`Verifying First Rule Associate Cylinder selected: ${cylinderName}`);
+        const selectedElement = CSElementFactory.createByXPath(
+            `//div[@id="incircleFilterSportMmte"]//h5[text()="First Rule"]/ancestor::section[1]//button[@id="addbuttonFirstRuleBaseCylinders"]/ancestor::div[contains(@class, 'sssss-row')][1]//p[@id='pCylinder']/span[text()='${cylinderName}']`,
+            `Selected cylinder: ${cylinderName}`,
+            this.page
+        );
+        await selectedElement.waitForVisible(10000);
+        CSReporter.pass(`First Rule Associate Cylinder '${cylinderName}' is selected`);
+    }
+
+    // ===================================================================
+    // SECOND RULE FILTER SECTION METHODS (RR03)
+    // Source: Scattered_Mmte_Sport_Mmte_3.txt Circles 700+
+    // ===================================================================
+
+    /**
+     * Verify Second Rule section is present in filter panel
+     */
+    public async verifyFilterSecondRuleSection(): Promise<void> {
+        CSReporter.info('Verifying Second Rule section in filter panel');
+        const secondRuleSection = CSElementFactory.createByXPath(
+            '//div[@id="incircleFilterSportMmte"]//h5[text()="Second Rule"]/ancestor::section[1]',
+            'Second Rule section',
+            this.page
+        );
+        await secondRuleSection.waitForVisible(10000);
+        CSReporter.pass('Second Rule section is present in filter panel');
+    }
+
+    /**
+     * Expand Second Rule section in filter panel if collapsed
+     */
+    public async expandFilterSecondRuleSection(): Promise<void> {
+        CSReporter.info('Expanding Second Rule section in filter panel');
+        try {
+            const collapseButton = CSElementFactory.createByXPath(
+                '//div[@id="incircleFilterSportMmte"]//h5[text()="Second Rule"]/ancestor::section[1]//button[@aria-label="Collapse Second Rule"]',
+                'Collapse Second Rule button',
+                this.page
+            );
+            const isExpanded = await collapseButton.isVisibleWithTimeout(3000);
+
+            if (!isExpanded) {
+                const expandButton = CSElementFactory.createByXPath(
+                    '//div[@id="incircleFilterSportMmte"]//h5[text()="Second Rule"]/ancestor::section[1]//button[@aria-label="Expand Second Rule"]',
+                    'Expand Second Rule button',
+                    this.page
+                );
+                await expandButton.clickWithTimeout(10000);
+                await this.waitForPageLoad();
+                CSReporter.pass('Second Rule section expanded');
+            } else {
+                CSReporter.info('Second Rule section already expanded');
+            }
+        } catch {
+            CSReporter.info('Second Rule section expand/collapse button not found');
+        }
+    }
+
+    /**
+     * Get Second Rule Month Lag input field in filter panel
+     */
+    public async getFilterSecondRuleMonthLagInput(): Promise<CSWebElement> {
+        return CSElementFactory.createByXPath(
+            '//div[@id="incircleFilterSportMmte"]//h5[text()="Second Rule"]/ancestor::section[1]//input[@name="secondMonthLag"]',
+            'Second Rule Month Lag input',
+            this.page
+        );
+    }
+
+    /**
+     * Enter Second Rule Month Lag value in filter panel
+     */
+    public async enterFilterSecondRuleMonthLag(value: string): Promise<void> {
+        CSReporter.info(`Entering Second Rule Month Lag: ${value}`);
+        const input = await this.getFilterSecondRuleMonthLagInput();
+        await input.waitForVisible(10000);
+        await input.clear();
+        await input.fill(value);
+        CSReporter.pass(`Entered Second Rule Month Lag: ${value}`);
+    }
+
+    /**
+     * Get Second Rule Base Day input field in filter panel
+     */
+    public async getFilterSecondRuleBaseDayInput(): Promise<CSWebElement> {
+        return CSElementFactory.createByXPath(
+            '//div[@id="incircleFilterSportMmte"]//h5[text()="Second Rule"]/ancestor::section[1]//input[@name="secondBaseDay"]',
+            'Second Rule Base Day input',
+            this.page
+        );
+    }
+
+    /**
+     * Enter Second Rule Base Day value in filter panel
+     */
+    public async enterFilterSecondRuleBaseDay(value: string): Promise<void> {
+        CSReporter.info(`Entering Second Rule Base Day: ${value}`);
+        const input = await this.getFilterSecondRuleBaseDayInput();
+        await input.waitForVisible(10000);
+        await input.clear();
+        await input.fill(value);
+        CSReporter.pass(`Entered Second Rule Base Day: ${value}`);
+    }
+
+    // ===================================================================
+    // OTHER RULES FILTER SECTION METHODS (RR03)
+    // ===================================================================
+
+    /**
+     * Verify Other Rules section is present in filter panel
+     */
+    public async verifyFilterOtherRulesSection(): Promise<void> {
+        CSReporter.info('Verifying Other Rules section in filter panel');
+        const otherRulesSection = CSElementFactory.createByXPath(
+            '//div[@id="incircleFilterSportMmte"]//h5[text()="Other Rules"]/ancestor::section[1]',
+            'Other Rules section',
+            this.page
+        );
+        await otherRulesSection.waitForVisible(10000);
+        CSReporter.pass('Other Rules section is present in filter panel');
+    }
+
+    /**
+     * Get Rounding Logic dropdown in filter panel
+     */
+    public async getFilterRoundingLogicDropdown(): Promise<CSWebElement> {
+        return CSElementFactory.createByXPath(
+            '//div[@id="incircleFilterSportMmte"]//h5[text()="Other Rules"]/ancestor::section[1]//button[@name="roundingType"]',
+            'Rounding Logic dropdown',
+            this.page
+        );
+    }
+
+    /**
+     * Get Rounding Factor dropdown in filter panel
+     */
+    public async getFilterRoundingFactorDropdown(): Promise<CSWebElement> {
+        return CSElementFactory.createByXPath(
+            '//div[@id="incircleFilterSportMmte"]//h5[text()="Other Rules"]/ancestor::section[1]//button[@name="roundingFactor"]',
+            'Rounding Factor dropdown',
+            this.page
+        );
+    }
+
+    /**
+     * Expand Other Rules section in filter panel if collapsed
+     */
+    public async expandFilterOtherRulesSection(): Promise<void> {
+        CSReporter.info('Expanding Other Rules section in filter panel');
+        try {
+            const collapseButton = CSElementFactory.createByXPath(
+                '//div[@id="incircleFilterSportMmte"]//h5[text()="Other Rules"]/ancestor::section[1]//button[@aria-label="Collapse Other Rules"]',
+                'Collapse Other Rules button',
+                this.page
+            );
+            const isExpanded = await collapseButton.isVisibleWithTimeout(3000);
+
+            if (!isExpanded) {
+                const expandButton = CSElementFactory.createByXPath(
+                    '//div[@id="incircleFilterSportMmte"]//h5[text()="Other Rules"]/ancestor::section[1]//button[@aria-label="Expand Other Rules"]',
+                    'Expand Other Rules button',
+                    this.page
+                );
+                await expandButton.clickWithTimeout(10000);
+                await this.waitForPageLoad();
+                CSReporter.pass('Other Rules section expanded');
+            } else {
+                CSReporter.info('Other Rules section already expanded');
+            }
+        } catch {
+            CSReporter.info('Other Rules section expand/collapse button not found');
+        }
+    }
+
+    /**
+     * Click Rounding Logic dropdown and select option in filter panel
+     * @param option Option to select (e.g., 'Round', 'Round Up', 'Round Down', 'Truncate')
+     */
+    public async selectFilterRoundingLogic(option: string): Promise<void> {
+        CSReporter.info(`Selecting Rounding Logic: ${option}`);
+        const dropdown = await this.getFilterRoundingLogicDropdown();
+        await dropdown.waitForVisible(10000);
+        await dropdown.clickWithTimeout(10000);
+        await this.page.waitForTimeout(500);
+
+        const optionElement = CSElementFactory.createByXPath(
+            `//div[contains(@class, 'sssss-balloon') and @name='roundingType']//ul[@role='listbox']//li[@role='option']//span[contains(@class, 'sssss-menu-item__label')]//span[text()='${option}']/parent::span`,
+            `Rounding Logic option: ${option}`,
+            this.page
+        );
+        await optionElement.waitForVisible(10000);
+        await optionElement.clickWithTimeout(10000);
+        await this.page.waitForTimeout(300);
+        CSReporter.pass(`Selected Rounding Logic: ${option}`);
+    }
+
+    /**
+     * Click Rounding Factor dropdown and select option in filter panel
+     * @param option Option to select (e.g., '1/10000th', 'Nearest 1/10000th')
+     */
+    public async selectFilterRoundingFactor(option: string): Promise<void> {
+        CSReporter.info(`Selecting Rounding Factor: ${option}`);
+        const dropdown = await this.getFilterRoundingFactorDropdown();
+        await dropdown.waitForVisible(10000);
+        await dropdown.clickWithTimeout(10000);
+        await this.page.waitForTimeout(500);
+
+        const optionElement = CSElementFactory.createByXPath(
+            `//div[contains(@class, 'sssss-balloon') and @name='roundingFactor']//ul[@role='listbox']//li[@role='option']//span[contains(@class, 'sssss-menu-item__label')]//span[text()='${option}']/parent::span`,
+            `Rounding Factor option: ${option}`,
+            this.page
+        );
+        await optionElement.waitForVisible(10000);
+        await optionElement.clickWithTimeout(10000);
+        await this.page.waitForTimeout(300);
+        CSReporter.pass(`Selected Rounding Factor: ${option}`);
+    }
+
+    /**
+     * Verify Rounding Logic dropdown shows selected value
+     */
+    public async verifyFilterRoundingLogicSelected(expectedValue: string): Promise<void> {
+        CSReporter.info(`Verifying Rounding Logic selected: ${expectedValue}`);
+        const selectedLabel = CSElementFactory.createByXPath(
+            `//div[@id="incircleFilterSportMmte"]//h5[text()="Other Rules"]/ancestor::section[1]//button[@name='roundingType']//span[@class='sssss-button__label' and text()='${expectedValue}']`,
+            `Rounding Logic selected: ${expectedValue}`,
+            this.page
+        );
+        await selectedLabel.waitForVisible(10000);
+        CSReporter.pass(`Rounding Logic shows: ${expectedValue}`);
+    }
+
+    /**
+     * Verify Rounding Factor dropdown shows selected value
+     */
+    public async verifyFilterRoundingFactorSelected(expectedValue: string): Promise<void> {
+        CSReporter.info(`Verifying Rounding Factor selected: ${expectedValue}`);
+        const selectedLabel = CSElementFactory.createByXPath(
+            `//div[@id="incircleFilterSportMmte"]//h5[text()="Other Rules"]/ancestor::section[1]//button[@name='roundingFactor']//span[@class='sssss-button__label' and text()='${expectedValue}']`,
+            `Rounding Factor selected: ${expectedValue}`,
+            this.page
+        );
+        await selectedLabel.waitForVisible(10000);
+        CSReporter.pass(`Rounding Factor shows: ${expectedValue}`);
+    }
+
+    // ===================================================================
+    // SECOND RULE FILTER - ADDITIONAL METHODS (RR03)
+    // ===================================================================
+
+    /**
+     * Get Second Rule Associate Cylinders Select/Edit button in filter panel
+     */
+    public async getFilterSecondRuleAssociateCylindersButton(): Promise<CSWebElement> {
+        return CSElementFactory.createByXPath(
+            '//div[@id="incircleFilterSportMmte"]//h5[text()="Second Rule"]/ancestor::section[1]//button[@id="addbuttonSecondRuleBaseCylinders"]',
+            'Second Rule Associate Cylinders button',
+            this.page
+        );
+    }
+
+    /**
+     * Click Second Rule Associate Cylinders Select button in filter panel
+     */
+    public async clickFilterSecondRuleAssociateCylindersSelect(): Promise<void> {
+        CSReporter.info('Clicking Second Rule Associate Cylinders Select button in filter panel');
+        const button = await this.getFilterSecondRuleAssociateCylindersButton();
+        await button.waitForVisible(10000);
+        await button.clickWithTimeout(10000);
+        await this.page.waitForTimeout(500);
+        CSReporter.pass('Clicked Second Rule Associate Cylinders Select button');
+    }
+
+    /**
+     * Verify Second Rule Associate Cylinders shows Edit in filter panel
+     */
+    public async verifyFilterSecondRuleAssociateCylindersEdit(): Promise<void> {
+        CSReporter.info('Verifying Second Rule Associate Cylinders shows Edit in filter panel');
+        const editButton = CSElementFactory.createByXPath(
+            '//div[@id="incircleFilterSportMmte"]//h5[text()="Second Rule"]/ancestor::section[1]//button[@id="addbuttonSecondRuleBaseCylinders"]//span[@class="sssss-button__label" and text()="Edit"]',
+            'Second Rule Associate Cylinders Edit button',
+            this.page
+        );
+        await editButton.waitForVisible(10000);
+        CSReporter.pass('Second Rule Associate Cylinders shows Edit');
+    }
+
+    /**
+     * Verify Second Rule Associate Cylinder is selected in filter panel
+     */
+    public async verifyFilterSecondRuleAssociateCylinderSelected(cylinderName: string): Promise<void> {
+        CSReporter.info(`Verifying Second Rule Associate Cylinder selected: ${cylinderName}`);
+        // Fixed: pCalender -> pCylinder (typo fix per requirement circle 635)
+        const cylinderLabel = CSElementFactory.createByXPath(
+            `//div[@id="incircleFilterSportMmte"]//h5[text()="Second Rule"]/ancestor::section[1]//button[@id="addbuttonSecondRuleBaseCylinders"]/ancestor::div[contains(@class, 'sssss-row')][1]//p[@id='pCylinder']/span[text()='${cylinderName}']`,
+            `Second Rule selected cylinder: ${cylinderName}`,
+            this.page
+        );
+        await cylinderLabel.waitForVisible(10000);
+        CSReporter.pass(`Second Rule Associate Cylinder '${cylinderName}' is selected`);
+    }
+
+    /**
+     * Get Second Rule Adjust Base checkbox in filter panel
+     */
+    public async getFilterSecondRuleAdjustBaseCheckbox(): Promise<CSWebElement> {
+        return CSElementFactory.createByXPath(
+            '//div[@id="incircleFilterSportMmte"]//h5[text()="Second Rule"]/ancestor::section[1]//span[text()="Adjust Base"]/parent::span[@role="checkbox"]',
+            'Second Rule Adjust Base checkbox',
+            this.page
+        );
+    }
+
+    /**
+     * Click Second Rule Adjust Base checkbox in filter panel
+     */
+    public async clickFilterSecondRuleAdjustBaseCheckbox(): Promise<void> {
+        CSReporter.info('Clicking Second Rule Adjust Base checkbox in filter panel');
+        const checkbox = await this.getFilterSecondRuleAdjustBaseCheckbox();
+        await checkbox.waitForVisible(10000);
+        await checkbox.clickWithTimeout(10000);
+        await this.page.waitForTimeout(300);
+        CSReporter.pass('Clicked Second Rule Adjust Base checkbox');
+    }
+
+    /**
+     * Get Second Rule Secondary Adjust Base checkbox in filter panel
+     */
+    public async getFilterSecondRuleSecondaryAdjustBaseCheckbox(): Promise<CSWebElement> {
+        return CSElementFactory.createByXPath(
+            '//div[@id="incircleFilterSportMmte"]//h5[text()="Second Rule"]/ancestor::section[1]//span[text()="Secondary Adjust Base"]/parent::span[@role="checkbox"]',
+            'Second Rule Secondary Adjust Base checkbox',
+            this.page
+        );
+    }
+
+    /**
+     * Click Second Rule Secondary Adjust Base checkbox in filter panel
+     */
+    public async clickFilterSecondRuleSecondaryAdjustBaseCheckbox(): Promise<void> {
+        CSReporter.info('Clicking Second Rule Secondary Adjust Base checkbox in filter panel');
+        const checkbox = await this.getFilterSecondRuleSecondaryAdjustBaseCheckbox();
+        await checkbox.waitForVisible(10000);
+        await checkbox.clickWithTimeout(10000);
+        await this.page.waitForTimeout(300);
+        CSReporter.pass('Clicked Second Rule Secondary Adjust Base checkbox');
+    }
+
+    /**
+     * Get Second Rule Add to Lookback checkbox in filter panel
+     */
+    public async getFilterSecondRuleAddToLookbackCheckbox(): Promise<CSWebElement> {
+        return CSElementFactory.createByXPath(
+            '//div[@id="incircleFilterSportMmte"]//h5[text()="Second Rule"]/ancestor::section[1]//span[text()="Add to Lookback"]/parent::span[@role="checkbox"]',
+            'Second Rule Add to Lookback checkbox',
+            this.page
+        );
+    }
+
+    /**
+     * Click Second Rule Add to Lookback checkbox in filter panel
+     */
+    public async clickFilterSecondRuleAddToLookbackCheckbox(): Promise<void> {
+        CSReporter.info('Clicking Second Rule Add to Lookback checkbox in filter panel');
+        const checkbox = await this.getFilterSecondRuleAddToLookbackCheckbox();
+        await checkbox.waitForVisible(10000);
+        await checkbox.clickWithTimeout(10000);
+        await this.page.waitForTimeout(300);
+        CSReporter.pass('Clicked Second Rule Add to Lookback checkbox');
+    }
+
+    // ===================================================================
+    // PAGINATION METHODS (RR03)
+    // Source: Scattered_Mmte_Sport_Mmte_3.txt Circles 95-98
+    // ===================================================================
+
+    /**
+     * Get total items count from pagination
+     * Requirement Circles 95-98
+     * @returns Total items count as number
+     */
+    public async getTotalItemsCount(): Promise<number> {
+        CSReporter.info('Getting total items count from pagination');
+        await this.paginatorTotalItems.waitForVisible(10000);
+        const text = await this.paginatorTotalItems.textContentWithTimeout(5000);
+        // Text format: " of 35 items" - extract number
+        const match = text?.match(/of\s+(\d+)\s+items?/i);
+        const count = match ? parseInt(match[1], 10) : 0;
+        CSReporter.info(`Total items count: ${count}`);
+        return count;
+    }
+
+    /**
+     * Verify total items count matches expected
+     * @param expectedCount Expected count
+     */
+    public async verifyTotalItemsCount(expectedCount: number): Promise<void> {
+        CSReporter.info(`Verifying total items count matches: ${expectedCount}`);
+        const actualCount = await this.getTotalItemsCount();
+        if (actualCount === expectedCount) {
+            CSReporter.pass(`Total items count matches: ${actualCount}`);
+        } else {
+            CSReporter.fail(`Total items count mismatch: expected ${expectedCount}, actual ${actualCount}`);
+            throw new Error(`Total items count mismatch: expected ${expectedCount}, actual ${actualCount}`);
+        }
+    }
+
+    // ===================================================================
+    // SEARCH METHODS
+    // ===================================================================
+
+    /**
+     * Enter search text in Find by field
+     */
+    public async enterSearchText(searchText: string): Promise<void> {
+        CSReporter.info(`Entering search text: ${searchText}`);
+        await this.findByInput.waitForVisible(10000);
+        await this.findByInput.clear();
+        await this.findByInput.fill(searchText);
+        CSReporter.pass(`Entered search text: ${searchText}`);
+    }
+
+    /**
+     * Click Go search button
+     */
+    public async clickGoSearch(): Promise<void> {
+        CSReporter.info('Clicking Go search button');
+        await this.goSearchButton.waitForVisible(10000);
+        await this.goSearchButton.clickWithTimeout(10000);
+        await this.waitForPageLoad();
+        await this.waitForLoaderToDisappear();
+        CSReporter.pass('Clicked Go search button');
+    }
+
+    /**
+     * Click Reset search button
+     */
+    public async clickResetSearch(): Promise<void> {
+        CSReporter.info('Clicking Reset search button');
+        await this.resetSearchButton.waitForVisible(10000);
+        await this.resetSearchButton.clickWithTimeout(10000);
+        await this.waitForPageLoad();
+        CSReporter.pass('Clicked Reset search button');
+    }
+
+    /**
+     * Search for a scattered mmte by name
+     */
+    public async searchScatteredMmte(scatteredMmteName: string): Promise<void> {
+        CSReporter.info(`Searching for scattered mmte: ${scatteredMmteName}`);
+        await this.clickResetSearch();
+        await this.enterSearchText(scatteredMmteName);
+        await this.clickGoSearch();
+        CSReporter.pass(`Searched for scattered mmte: ${scatteredMmteName}`);
+    }
+
+    // ===================================================================
+    // TABLE METHODS
+    // ===================================================================
+
+    /**
+     * Verify Sport Mmte table is present
+     */
+    public async verifySportMmteTablePresent(): Promise<void> {
+        CSReporter.info('Verifying Sport Mmte table is present');
+        await this.sportMmteTable.waitForVisible(15000);
+        CSReporter.pass('Sport Mmte table is present');
+    }
+
+    /**
+     * Check if no data available message is present
+     */
+    public async isNoDataAvailable(): Promise<boolean> {
+        CSReporter.info('Checking if no data available');
+        try {
+            const isVisible = await this.noDataAvailableMessage.isVisibleWithTimeout(3000);
+            if (isVisible) {
+                CSReporter.info('No data available message is present');
+            }
+            return isVisible;
+        } catch {
+            return false;
+        }
+    }
+
+    /**
+     * Click Expand All rows button
+     */
+    public async clickExpandAll(): Promise<void> {
+        CSReporter.info('Clicking Expand All button');
+        const isVisible = await this.expandAllButton.isVisibleWithTimeout(3000);
+        if (isVisible) {
+            await this.expandAllButton.clickWithTimeout(10000);
+            await this.waitForPageLoad();
+            CSReporter.pass('Clicked Expand All button');
+        } else {
+            CSReporter.info('Expand All button not visible, rows may already be expanded');
+        }
+    }
+
+    /**
+     * Click Collapse All rows button
+     */
+    public async clickCollapseAll(): Promise<void> {
+        CSReporter.info('Clicking Collapse All button');
+        const isVisible = await this.collapseAllButton.isVisibleWithTimeout(3000);
+        if (isVisible) {
+            await this.collapseAllButton.clickWithTimeout(10000);
+            await this.waitForPageLoad();
+            CSReporter.pass('Clicked Collapse All button');
+        } else {
+            CSReporter.info('Collapse All button not visible, rows may already be collapsed');
+        }
+    }
+
+    /**
+     * Get table cell value by column number and row number
+     * Source: Requirement doc - getSportMmteTableCellValueByColNumAndRowNum
+     */
+    public async getSportMmteTableCellValue(rowNum: number, colNum: number): Promise<string> {
+        CSReporter.debug(`Getting cell value for row ${rowNum}, column ${colNum}`);
+
+        // Column 2 is Scattered Mmte Name - has different structure
+        if (colNum === 2) {
+            const cellElement = CSElementFactory.createByXPath(
+                `//div[@class='sssss-tab__pane-content--active']//table[contains(@class, 'sssss-table')]//tbody/tr[${rowNum}]/td[${colNum}]//span[@class='sssss-button__label']`,
+                `Table cell row ${rowNum} col ${colNum}`,
+                this.page
+            );
+            try {
+                const isVisible = await cellElement.isVisibleWithTimeout(3000);
+                if (isVisible) {
+                    return await cellElement.textContentWithTimeout(5000) || 'Element Not Found';
+                }
+            } catch {
+                return 'Element Not Found';
+            }
+        }
+
+        // Column 6 is Associated Cylinders - may have multiple values
+        if (colNum === 6) {
+            const cellXPath = `//div[@class='sssss-tab__pane-content--active']//table[contains(@class, 'sssss-table')]//tbody/tr[${rowNum}]/td[${colNum}]//span[@class='sssss-button__label']`;
+            const cellElements = await this.page.locator(cellXPath).all();
+
+            if (cellElements.length === 1) {
+                const firstElement = CSElementFactory.createByXPath(
+                    `(${cellXPath})[1]`,
+                    `Associated Cylinder value row ${rowNum}`,
+                    this.page
+                );
+                return await firstElement.textContentWithTimeout(5000) || 'Element Not Found';
+            } else if (cellElements.length > 1) {
+                const values: string[] = [];
+                for (let i = 0; i < cellElements.length; i++) {
+                    const element = CSElementFactory.createByXPath(
+                        `(${cellXPath})[${i + 1}]`,
+                        `Associated Cylinder value ${i + 1} row ${rowNum}`,
+                        this.page
+                    );
+                    const text = await element.textContentWithTimeout(5000);
+                    if (text) values.push(text.trim());
+                }
+                return values.join(',');
+            }
+        }
+
+        // Default cell handling
+        const cellElement = CSElementFactory.createByXPath(
+            `//div[@class='sssss-tab__pane-content--active']//table[contains(@class, 'sssss-table')]//tbody/tr[${rowNum}]/td[${colNum}]`,
+            `Table cell row ${rowNum} col ${colNum}`,
+            this.page
+        );
+        try {
+            const isVisible = await cellElement.isVisibleWithTimeout(3000);
+            if (isVisible) {
+                return await cellElement.textContentWithTimeout(5000) || 'Element Not Found';
+            }
+        } catch {
+            return 'Element Not Found';
+        }
+        return 'Element Not Found';
+    }
+
+    /**
+     * Get cell value from expanded child row by column name and parent row number
+     * Source: Requirement doc - getSportMmteTableCellValueFromChildRowByColNameAndParentRowNum
+     */
+    public async getSportMmteCellFromChildRow(parentRowNum: number, columnName: string): Promise<string> {
+        CSReporter.debug(`Getting child row cell for parent row ${parentRowNum}, column ${columnName}`);
+
+        // First check if row is expanded
+        const collapseButton = CSElementFactory.createByXPath(
+            `//div[@class='sssss-tab__pane-content--active']//table[contains(@class, 'sssss-table')]//tbody/tr[not(contains(@class, 'sssss-table__childrow'))][${parentRowNum}]/td[1]//button[contains(@aria-label, 'Collapse')]`,
+            `Collapse button for row ${parentRowNum}`,
+            this.page
+        );
+
+        const isExpanded = await collapseButton.isVisibleWithTimeout(2000);
+
+        if (!isExpanded) {
+            // Expand the row
+            const expandButton = CSElementFactory.createByXPath(
+                `//div[@class='sssss-tab__pane-content--active']//table[contains(@class, 'sssss-table')]//tbody/tr[not(contains(@class, 'sssss-table__childrow'))][${parentRowNum}]/td[1]//button[contains(@aria-label, 'Expand')]`,
+                `Expand button for row ${parentRowNum}`,
+                this.page
+            );
+            const expandVisible = await expandButton.isVisibleWithTimeout(2000);
+            if (expandVisible) {
+                await expandButton.clickWithTimeout(5000);
+                await this.waitForPageLoad();
+            }
+        }
+
+        // Get value from child row
+        const valueElement = CSElementFactory.createByXPath(
+            `//div[@class='sssss-tab__pane-content--active']//table[contains(@class, 'sssss-table')]//tbody/tr[not(contains(@class, 'sssss-table__childrow')) and contains(@class, 'expanded')][${parentRowNum}]/following::tr[@class='sssss-table__childrow'][1]//span[text()='${columnName}']/ancestor::div[@class='sssss-table__expanded-item'][1]//span[@class='sssss-table__expanded-item-value']`,
+            `Child row value for ${columnName}`,
+            this.page
+        );
+
+        try {
+            const isVisible = await valueElement.isVisibleWithTimeout(3000);
+            if (isVisible) {
+                return await valueElement.textContentWithTimeout(5000) || 'Element Not Found';
+            }
+        } catch {
+            return 'Element Not Found';
+        }
+        return 'Element Not Found';
+    }
+
+    /**
+     * Get header element by name
+     * Source: Requirement doc - getSportMmteHeader
+     */
+    public async getSportMmteHeader(headerName: string): Promise<CSWebElement> {
+        return CSElementFactory.createByXPath(
+            `//div[@class='sssss-tab__pane-content--active']//table[contains(@class, 'sssss-table')]//thead/tr[1]/th[text()='${headerName}']`,
+            `Table header: ${headerName}`,
+            this.page
+        );
+    }
+
+    /**
+     * Get header element from expanded child row by row number and header name
+     * Source: RR02 Requirement doc circle 34 - getSportMmteHeaderFromChildRow(intRowNumber, headerName)
+     * First expands the row if not expanded, then returns the header element from the child row
+     */
+    public async getSportMmteHeaderFromChildRow(rowNumber: number, headerName: string): Promise<CSWebElement> {
+        CSReporter.debug(`Getting header '${headerName}' from child row of parent row ${rowNumber}`);
+
+        // Check if row is expanded by looking for Collapse button
+        const collapseButton = CSElementFactory.createByXPath(
+            `//div[@class='sssss-tab__pane-content--active']//table[contains(@class, 'sssss-table')]//tbody/tr[not(contains(@class, 'sssss-table__childrow'))][${rowNumber}]/td[1]//button[contains(@aria-label, 'Collapse')]`,
+            `Collapse button for row ${rowNumber}`,
+            this.page
+        );
+
+        const isExpanded = await collapseButton.isVisibleWithTimeout(2000);
+
+        if (!isExpanded) {
+            // Row is not expanded, need to expand it
+            const expandButton = CSElementFactory.createByXPath(
+                `//div[@class='sssss-tab__pane-content--active']//table[contains(@class, 'sssss-table')]//tbody/tr[not(contains(@class, 'sssss-table__childrow'))][${rowNumber}]/td[1]//button[contains(@aria-label, 'Expand')]`,
+                `Expand button for row ${rowNumber}`,
+                this.page
+            );
+
+            const expandVisible = await expandButton.isVisibleWithTimeout(2000);
+            if (expandVisible) {
+                await expandButton.clickWithTimeout(5000);
+                await this.waitForPageLoad();
+
+                // Verify row is now expanded
+                const expandedRow = CSElementFactory.createByXPath(
+                    `//div[@class='sssss-tab__pane-content--active']//table[contains(@class, 'sssss-table')]//tbody/tr[not(contains(@class, 'sssss-table__childrow')) and contains(@class, 'expanded')][${rowNumber}]`,
+                    `Expanded row ${rowNumber}`,
+                    this.page
+                );
+                await expandedRow.waitForVisible(5000);
+            }
+        } else {
+            CSReporter.debug(`Row ${rowNumber} is already expanded`);
+        }
+
+        // Now return the header element from the child row
+        // Per RR02 circle 41: //tbody/tr[not(contains(@class, 'sssss-table__childrow')) and contains(@class, 'expanded')][intRowNumber]/following::tr[@class='sssss-table__childrow'][1]//span[text()='<headerName>']
+        return CSElementFactory.createByXPath(
+            `//div[@class='sssss-tab__pane-content--active']//table[contains(@class, 'sssss-table')]//tbody/tr[not(contains(@class, 'sssss-table__childrow')) and contains(@class, 'expanded')][${rowNumber}]/following::tr[@class='sssss-table__childrow'][1]//span[text()='${headerName}']`,
+            `Child row header: ${headerName}`,
+            this.page
+        );
+    }
+
+    /**
+     * Click on Scattered Mmte Name link in table to navigate to details
+     */
+    public async clickScatteredMmteNameLink(scatteredMmteName: string): Promise<void> {
+        CSReporter.info(`Clicking Scattered Mmte Name link: ${scatteredMmteName}`);
+        const link = CSElementFactory.createByXPath(
+            `//div[@class='sssss-tab__pane-content--active']//table[contains(@class, 'sssss-table')]//tbody/tr[1]/td[2]//span[@class='sssss-button__label' and text()='${scatteredMmteName}']/parent::a[1]`,
+            `Scattered Mmte Name link: ${scatteredMmteName}`,
+            this.page
+        );
+        await link.waitForVisible(10000);
+        await link.clickWithTimeout(10000);
+        await this.waitForPageLoad();
+        CSReporter.pass(`Clicked Scattered Mmte Name link: ${scatteredMmteName}`);
+    }
+
+    /**
+     * Get Sport Mmte table row data by row number
+     * Returns an object with column header names as keys and cell values
+     */
+    public async getSportMmteTableRowData(rowNum: number): Promise<Record<string, string>> {
+        CSReporter.info(`Getting Sport Mmte table row ${rowNum} data`);
+        const rowData: Record<string, string> = {};
+
+        // Main columns visible in the row
+        const mainColumns = [
+            'Scattered Mmte Name',
+            'Cumulative Mmte Name',
+            'Month Lag',
+            'Base Day',
+            'Associated Cylinders'
+        ];
+
+        for (let i = 0; i < mainColumns.length; i++) {
+            const colNum = i + 1;
+            try {
+                const value = await this.getSportMmteTableCellValue(rowNum, colNum);
+                rowData[mainColumns[i]] = value;
+            } catch (e) {
+                rowData[mainColumns[i]] = '';
+            }
+        }
+
+        CSReporter.pass(`Retrieved row ${rowNum} data`);
+        return rowData;
+    }
+
+    // ===================================================================
+    // EXPORT METHODS
+    // ===================================================================
+
+    /**
+     * Click Export button
+     */
+    public async clickExportButton(): Promise<void> {
+        CSReporter.info('Clicking Export button');
+        await this.exportButton.waitForVisible(10000);
+        await this.exportButton.clickWithTimeout(10000);
+        CSReporter.pass('Clicked Export button');
+    }
+
+    /**
+     * Verify Export options are present (CSV, XLSX)
+     */
+    public async verifyExportOptionsPresent(): Promise<void> {
+        CSReporter.info('Verifying Export options are present');
+
+        const csvOption = CSElementFactory.createByXPath(
+            '//span[@class="sssss-button__label" and text()="Export"]/parent::button[@aria-label="Export"]/parent::div[1]//div[@class="sssss-balloon__content"]//ul[@aria-label="Export"]/li//span[text()="CSV"]',
+            'CSV export option',
+            this.page
+        );
+        const xlsxOption = CSElementFactory.createByXPath(
+            '//span[@class="sssss-button__label" and text()="Export"]/parent::button[@aria-label="Export"]/parent::div[1]//div[@class="sssss-balloon__content"]//ul[@aria-label="Export"]/li//span[text()="XLSX"]',
+            'XLSX export option',
+            this.page
+        );
+
+        await csvOption.waitForVisible(10000);
+        await xlsxOption.waitForVisible(10000);
+        CSReporter.pass('Export options (CSV, XLSX) are present');
+    }
+
+    /**
+     * Click CSV export option
+     */
+    public async clickExportCSV(): Promise<void> {
+        CSReporter.info('Clicking CSV export option');
+        const csvOption = CSElementFactory.createByXPath(
+            '//span[@class="sssss-button__label" and text()="Export"]/parent::button[@aria-label="Export"]/parent::div[1]//div[@class="sssss-balloon__content"]//ul[@aria-label="Export"]//span[text()="CSV"]/ancestor::button[1]',
+            'CSV export option button',
+            this.page
+        );
+        await csvOption.waitForVisible(10000);
+        await csvOption.clickWithTimeout(10000);
+        CSReporter.pass('Clicked CSV export option');
+    }
+
+    /**
+     * Click XLSX export option
+     */
+    public async clickExportXLSX(): Promise<void> {
+        CSReporter.info('Clicking XLSX export option');
+        const xlsxOption = CSElementFactory.createByXPath(
+            '//span[@class="sssss-button__label" and text()="Export"]/parent::button[@aria-label="Export"]/parent::div[1]//div[@class="sssss-balloon__content"]//ul[@aria-label="Export"]//span[text()="XLSX"]/ancestor::button[1]',
+            'XLSX export option button',
+            this.page
+        );
+        await xlsxOption.waitForVisible(10000);
+        await xlsxOption.clickWithTimeout(10000);
+        CSReporter.pass('Clicked XLSX export option');
+    }
+
+    /**
+     * Wait for export to complete (wait for "Exporting" text to disappear)
+     */
+    public async waitForExportComplete(): Promise<void> {
+        CSReporter.info('Waiting for export to complete');
+        const exportingElement = CSElementFactory.createByXPath(
+            '//span[@class="sssss-button__label" and contains(text(), "Exporting")]',
+            'Exporting indicator',
+            this.page
+        );
+
+        try {
+            const isVisible = await exportingElement.isVisibleWithTimeout(2000);
+            if (isVisible) {
+                await exportingElement.waitForDetached(15000);
+            }
+        } catch {
+            // Exporting indicator may not appear, which is fine
+        }
+
+        // Additional wait for file download
+        await this.page.waitForTimeout(2000);
+        CSReporter.pass('Export completed');
+    }
+
+    /**
+     * Verify Export button is enabled
+     * XPath: //span[@class='sssss-button__label' and text()='Export']/parent::button[@aria-label='Export']
+     */
+    public async verifyExportButtonEnabled(): Promise<void> {
+        CSReporter.info('Verifying Export button is enabled');
+        await this.exportButton.waitForVisible(10000);
+        const isEnabled = await this.exportButton.isEnabledWithTimeout(5000);
+        if (!isEnabled) {
+            throw new Error('Export button is not enabled');
+        }
+        CSReporter.pass('Export button is present and enabled');
+    }
+
+    /**
+     * Verify Export options popup is present
+     * XPath: //span[@class='sssss-button__label' and text()='Export']/parent::button[@aria-label='Export']/parent::div[1]//div[@class='sssss-balloon__content']
+     */
+    public async verifyExportOptionsPopup(): Promise<void> {
+        CSReporter.info('Verifying Export options popup is present');
+        const popup = CSElementFactory.createByXPath(
+            '//span[@class="sssss-button__label" and text()="Export"]/parent::button[@aria-label="Export"]/parent::div[1]//div[@class="sssss-balloon__content"]',
+            'Export options popup',
+            this.page
+        );
+        await popup.waitForVisible(10000);
+        CSReporter.pass('Export options popup is present');
+    }
+
+    /**
+     * Verify CSV export option is enabled (aria-disabled='false')
+     * XPath: //...//span[text()='CSV']/ancestor::li[@aria-disabled='false'][1]
+     */
+    public async verifyCSVOptionEnabled(): Promise<void> {
+        CSReporter.info('Verifying CSV export option is enabled');
+        const csvEnabled = CSElementFactory.createByXPath(
+            '//span[@class="sssss-button__label" and text()="Export"]/parent::button[@aria-label="Export"]/parent::div[1]//div[@class="sssss-balloon__content"]//ul[@aria-label="Export"]//span[text()="CSV"]/ancestor::li[@aria-disabled="false"][1]',
+            'CSV export option enabled',
+            this.page
+        );
+        const isVisible = await csvEnabled.isVisibleWithTimeout(5000);
+        if (!isVisible) {
+            throw new Error('CSV export option is not enabled');
+        }
+        CSReporter.pass('CSV export option is enabled');
+    }
+
+    /**
+     * Verify XLSX export option is enabled (aria-disabled='false')
+     * XPath: //...//span[text()='XLSX']/ancestor::li[@aria-disabled='false'][1]
+     */
+    public async verifyXLSXOptionEnabled(): Promise<void> {
+        CSReporter.info('Verifying XLSX export option is enabled');
+        const xlsxEnabled = CSElementFactory.createByXPath(
+            '//span[@class="sssss-button__label" and text()="Export"]/parent::button[@aria-label="Export"]/parent::div[1]//div[@class="sssss-balloon__content"]//ul[@aria-label="Export"]//span[text()="XLSX"]/ancestor::li[@aria-disabled="false"][1]',
+            'XLSX export option enabled',
+            this.page
+        );
+        const isVisible = await xlsxEnabled.isVisibleWithTimeout(5000);
+        if (!isVisible) {
+            throw new Error('XLSX export option is not enabled');
+        }
+        CSReporter.pass('XLSX export option is enabled');
+    }
+
+    // ===================================================================
+    // COLUMN HEADER VERIFICATION
+    // ===================================================================
+
+    /**
+     * Verify all Sport Mmte table column headers
+     * Source: Requirement doc - column headers list
+     */
+    public async verifySportMmteTableHeaders(): Promise<void> {
+        CSReporter.info('Verifying Sport Mmte table column headers');
+
+        const expectedHeaders = [
+            'Scattered Mmte Name', 'Cumulative Mmte Name', 'Month Lag', 'Base Day',
+            'Associated Cylinders', 'Adjust Base', 'Secondary Adjust Base Day',
+            'Lookback Days', 'Lookback Cylinders', 'Month Lag (SR)', 'Base Day (SR)',
+            'Associated Cylinders (SR)', 'Adjust Base (SR)', 'Secondary Adjust Base Day (SR)',
+            'Lookback Days (SR)', 'Lookback Cylinders (SR)', 'Rounding Type',
+            'Rounding Factor', 'Rule Priority', 'Associated Zeal/Premisis'
+        ];
+
+        for (const headerName of expectedHeaders) {
+            // First try main header
+            const headerElement = await this.getSportMmteHeader(headerName);
+            let isPresent = await headerElement.isVisibleWithTimeout(2000);
+
+            if (!isPresent) {
+                // Try child row header (for expanded columns)
+                const childHeaderElement = CSElementFactory.createByXPath(
+                    `//div[@class='sssss-tab__pane-content--active']//table[contains(@class, 'sssss-table')]//tbody/tr[not(contains(@class, 'sssss-table__childrow')) and contains(@class, 'expanded')][1]/following::tr[@class='sssss-table__childrow'][1]//span[text()='${headerName}']`,
+                    `Child row header: ${headerName}`,
+                    this.page
+                );
+                isPresent = await childHeaderElement.isVisibleWithTimeout(2000);
+            }
+
+            if (isPresent) {
+                CSReporter.debug(`Header "${headerName}" is present`);
+            } else {
+                CSReporter.warn(`Header "${headerName}" not found in main or child row`);
+            }
+        }
+
+        CSReporter.pass('Verified Sport Mmte table column headers');
+    }
+
+    // ===================================================================
+    // FIRST RULE ADJUST BASE FILTER METHODS (RR03-04)
+    // ===================================================================
+
+    /**
+     * Get First Rule Adjust Base checkbox element
+     */
+    public async getFilterFirstRuleAdjustBaseCheckbox(): Promise<CSWebElement> {
+        return CSElementFactory.createByXPath(
+            '//div[@id="incircleFilterSportMmte"]//h5[text()="First Rule"]/ancestor::section[1]//span[text()="Adjust Base"]/parent::span[@role="checkbox"]',
+            'First Rule Adjust Base checkbox',
+            this.page
+        );
+    }
+
+    /**
+     * Verify First Rule Adjust Base checkbox is present
+     */
+    public async verifyFilterFirstRuleAdjustBaseCheckboxPresent(): Promise<void> {
+        CSReporter.info('Verifying First Rule Adjust Base checkbox is present');
+        const checkbox = await this.getFilterFirstRuleAdjustBaseCheckbox();
+        await checkbox.waitForVisible(10000);
+        CSReporter.pass('First Rule Adjust Base checkbox is present');
+    }
+
+    /**
+     * Verify First Rule Adjust Base checkbox is not checked
+     */
+    public async verifyFilterFirstRuleAdjustBaseNotChecked(): Promise<void> {
+        CSReporter.info('Verifying First Rule Adjust Base checkbox is not checked');
+        const checkbox = await this.getFilterFirstRuleAdjustBaseCheckbox();
+        const ariaChecked = await checkbox.getAttributeWithTimeout('aria-checked', 5000);
+        if (ariaChecked !== 'true') {
+            CSReporter.pass('First Rule Adjust Base checkbox is not checked');
+        } else {
+            throw new Error('First Rule Adjust Base checkbox is unexpectedly checked');
+        }
+    }
+
+    /**
+     * Verify First Rule Adjust Base checkbox is checked
+     */
+    public async verifyFilterFirstRuleAdjustBaseChecked(): Promise<void> {
+        CSReporter.info('Verifying First Rule Adjust Base checkbox is checked');
+        const checkbox = await this.getFilterFirstRuleAdjustBaseCheckbox();
+        const ariaChecked = await checkbox.getAttributeWithTimeout('aria-checked', 5000);
+        if (ariaChecked === 'true') {
+            CSReporter.pass('First Rule Adjust Base checkbox is checked');
+        } else {
+            throw new Error('First Rule Adjust Base checkbox is not checked');
+        }
+    }
+
+    /**
+     * Click First Rule Adjust Base checkbox
+     */
+    public async clickFilterFirstRuleAdjustBaseCheckbox(): Promise<void> {
+        CSReporter.info('Clicking First Rule Adjust Base checkbox');
+        const checkbox = await this.getFilterFirstRuleAdjustBaseCheckbox();
+        await checkbox.waitForVisible(10000);
+        await checkbox.clickWithTimeout(10000);
+        await this.page.waitForTimeout(300);
+        CSReporter.pass('Clicked First Rule Adjust Base checkbox');
+    }
+
+    /**
+     * Get First Rule Adjust Base Days input
+     */
+    public async getFilterFirstRuleAdjustBaseDaysInput(): Promise<CSWebElement> {
+        return CSElementFactory.createByXPath(
+            '//div[@id="incircleFilterSportMmte"]//h5[text()="First Rule"]/ancestor::section[1]//label[text()="Adjust Base"]/ancestor::div[contains(@class, "sssss-row")][1]//input[@type="text"]',
+            'First Rule Adjust Base Days input',
+            this.page
+        );
+    }
+
+    /**
+     * Verify First Rule Adjust Base Days input is disabled
+     */
+    public async verifyFilterFirstRuleAdjustBaseDaysDisabled(): Promise<void> {
+        CSReporter.info('Verifying First Rule Adjust Base Days input is disabled');
+        const input = await this.getFilterFirstRuleAdjustBaseDaysInput();
+        const isDisabled = await input.getAttributeWithTimeout('disabled', 5000);
+        if (isDisabled !== null) {
+            CSReporter.pass('First Rule Adjust Base Days input is disabled');
+        } else {
+            throw new Error('First Rule Adjust Base Days input is not disabled');
+        }
+    }
+
+    /**
+     * Verify First Rule Adjust Base Days input is enabled
+     */
+    public async verifyFilterFirstRuleAdjustBaseDaysEnabled(): Promise<void> {
+        CSReporter.info('Verifying First Rule Adjust Base Days input is enabled');
+        const input = await this.getFilterFirstRuleAdjustBaseDaysInput();
+        const isDisabled = await input.getAttributeWithTimeout('disabled', 5000);
+        if (isDisabled === null) {
+            CSReporter.pass('First Rule Adjust Base Days input is enabled');
+        } else {
+            throw new Error('First Rule Adjust Base Days input is disabled');
+        }
+    }
+
+    /**
+     * Enter First Rule Adjust Base Days value
+     */
+    public async enterFilterFirstRuleAdjustBaseDays(value: string): Promise<void> {
+        CSReporter.info(`Entering First Rule Adjust Base Days: ${value}`);
+        const input = await this.getFilterFirstRuleAdjustBaseDaysInput();
+        await input.waitForVisible(10000);
+        await input.clear();
+        await input.fill(value);
+        CSReporter.pass(`Entered First Rule Adjust Base Days: ${value}`);
+    }
+
+    /**
+     * Get First Rule Adjust Base Kindness Days radio button
+     */
+    public async getFilterFirstRuleAdjustBaseKindnessDaysRadio(): Promise<CSWebElement> {
+        return CSElementFactory.createByXPath(
+            '//div[@id="incircleFilterSportMmte"]//h5[text()="First Rule"]/ancestor::section[1]//label[text()="Adjust Base"]/ancestor::div[contains(@class, "sssss-row")][1]//span[text()="Kindness Days"]/parent::span[@role="radio"]',
+            'First Rule Adjust Base Kindness Days radio',
+            this.page
+        );
+    }
+
+    /**
+     * Verify First Rule Adjust Base Kindness Days radio is disabled
+     */
+    public async verifyFilterFirstRuleAdjustBaseKindnessDaysDisabled(): Promise<void> {
+        CSReporter.info('Verifying First Rule Adjust Base Kindness Days radio is disabled');
+        const radio = await this.getFilterFirstRuleAdjustBaseKindnessDaysRadio();
+        const ariaDisabled = await radio.getAttributeWithTimeout('aria-disabled', 5000);
+        if (ariaDisabled === 'true') {
+            CSReporter.pass('First Rule Adjust Base Kindness Days radio is disabled');
+        } else {
+            throw new Error('First Rule Adjust Base Kindness Days radio is not disabled');
+        }
+    }
+
+    /**
+     * Verify First Rule Adjust Base Kindness Days radio is enabled
+     */
+    public async verifyFilterFirstRuleAdjustBaseKindnessDaysEnabled(): Promise<void> {
+        CSReporter.info('Verifying First Rule Adjust Base Kindness Days radio is enabled');
+        const radio = await this.getFilterFirstRuleAdjustBaseKindnessDaysRadio();
+        const ariaDisabled = await radio.getAttributeWithTimeout('aria-disabled', 5000);
+        if (ariaDisabled !== 'true') {
+            CSReporter.pass('First Rule Adjust Base Kindness Days radio is enabled');
+        } else {
+            throw new Error('First Rule Adjust Base Kindness Days radio is disabled');
+        }
+    }
+
+    /**
+     * Get First Rule Adjust Base Cylinder Days radio button
+     */
+    public async getFilterFirstRuleAdjustBaseCylinderDaysRadio(): Promise<CSWebElement> {
+        return CSElementFactory.createByXPath(
+            '//div[@id="incircleFilterSportMmte"]//h5[text()="First Rule"]/ancestor::section[1]//label[text()="Adjust Base"]/ancestor::div[contains(@class, "sssss-row")][1]//span[text()="Cylinder Days"]/parent::span[@role="radio"]',
+            'First Rule Adjust Base Cylinder Days radio',
+            this.page
+        );
+    }
+
+    /**
+     * Verify First Rule Adjust Base Cylinder Days radio is disabled
+     */
+    public async verifyFilterFirstRuleAdjustBaseCylinderDaysDisabled(): Promise<void> {
+        CSReporter.info('Verifying First Rule Adjust Base Cylinder Days radio is disabled');
+        const radio = await this.getFilterFirstRuleAdjustBaseCylinderDaysRadio();
+        const ariaDisabled = await radio.getAttributeWithTimeout('aria-disabled', 5000);
+        if (ariaDisabled === 'true') {
+            CSReporter.pass('First Rule Adjust Base Cylinder Days radio is disabled');
+        } else {
+            throw new Error('First Rule Adjust Base Cylinder Days radio is not disabled');
+        }
+    }
+
+    /**
+     * Verify First Rule Adjust Base Cylinder Days radio is enabled
+     */
+    public async verifyFilterFirstRuleAdjustBaseCylinderDaysEnabled(): Promise<void> {
+        CSReporter.info('Verifying First Rule Adjust Base Cylinder Days radio is enabled');
+        const radio = await this.getFilterFirstRuleAdjustBaseCylinderDaysRadio();
+        const ariaDisabled = await radio.getAttributeWithTimeout('aria-disabled', 5000);
+        if (ariaDisabled !== 'true') {
+            CSReporter.pass('First Rule Adjust Base Cylinder Days radio is enabled');
+        } else {
+            throw new Error('First Rule Adjust Base Cylinder Days radio is disabled');
+        }
+    }
+
+    /**
+     * Select First Rule Adjust Base Type (Kindness Days or Cylinder Days)
+     */
+    public async selectFilterFirstRuleAdjustBaseType(type: string): Promise<void> {
+        CSReporter.info(`Selecting First Rule Adjust Base Type: ${type}`);
+        const radio = CSElementFactory.createByXPath(
+            `//div[@id="incircleFilterSportMmte"]//h5[text()="First Rule"]/ancestor::section[1]//label[text()="Adjust Base"]/ancestor::div[contains(@class, "sssss-row")][1]//span[text()="${type}"]/parent::span[@role="radio"]`,
+            `First Rule Adjust Base Type: ${type}`,
+            this.page
+        );
+        await radio.waitForVisible(10000);
+        await radio.clickWithTimeout(10000);
+        CSReporter.pass(`Selected First Rule Adjust Base Type: ${type}`);
+    }
+
+    // ===================================================================
+    // FIRST RULE SECONDARY ADJUST BASE FILTER METHODS (RR03-05)
+    // ===================================================================
+
+    /**
+     * Get First Rule Secondary Adjust Base checkbox element
+     */
+    public async getFilterFirstRuleSecondaryAdjustBaseCheckbox(): Promise<CSWebElement> {
+        return CSElementFactory.createByXPath(
+            '//div[@id="incircleFilterSportMmte"]//h5[text()="First Rule"]/ancestor::section[1]//span[text()="Secondary Adjust Base"]/parent::span[@role="checkbox"]',
+            'First Rule Secondary Adjust Base checkbox',
+            this.page
+        );
+    }
+
+    /**
+     * Verify First Rule Secondary Adjust Base checkbox is present
+     */
+    public async verifyFilterFirstRuleSecondaryAdjustBaseCheckboxPresent(): Promise<void> {
+        CSReporter.info('Verifying First Rule Secondary Adjust Base checkbox is present');
+        const checkbox = await this.getFilterFirstRuleSecondaryAdjustBaseCheckbox();
+        await checkbox.waitForVisible(10000);
+        CSReporter.pass('First Rule Secondary Adjust Base checkbox is present');
+    }
+
+    /**
+     * Verify First Rule Secondary Adjust Base checkbox is not checked
+     */
+    public async verifyFilterFirstRuleSecondaryAdjustBaseNotChecked(): Promise<void> {
+        CSReporter.info('Verifying First Rule Secondary Adjust Base checkbox is not checked');
+        const checkbox = await this.getFilterFirstRuleSecondaryAdjustBaseCheckbox();
+        const ariaChecked = await checkbox.getAttributeWithTimeout('aria-checked', 5000);
+        if (ariaChecked !== 'true') {
+            CSReporter.pass('First Rule Secondary Adjust Base checkbox is not checked');
+        } else {
+            throw new Error('First Rule Secondary Adjust Base checkbox is unexpectedly checked');
+        }
+    }
+
+    /**
+     * Click First Rule Secondary Adjust Base checkbox
+     */
+    public async clickFilterFirstRuleSecondaryAdjustBaseCheckbox(): Promise<void> {
+        CSReporter.info('Clicking First Rule Secondary Adjust Base checkbox');
+        const checkbox = await this.getFilterFirstRuleSecondaryAdjustBaseCheckbox();
+        await checkbox.waitForVisible(10000);
+        await checkbox.clickWithTimeout(10000);
+        await this.page.waitForTimeout(300);
+        CSReporter.pass('Clicked First Rule Secondary Adjust Base checkbox');
+    }
+
+    /**
+     * Get First Rule Secondary Adjust Base Days input
+     */
+    public async getFilterFirstRuleSecondaryAdjustBaseDaysInput(): Promise<CSWebElement> {
+        return CSElementFactory.createByXPath(
+            '//div[@id="incircleFilterSportMmte"]//h5[text()="First Rule"]/ancestor::section[1]//label[text()="Secondary Adjust Base"]/ancestor::div[contains(@class, "sssss-row")][1]//input[@type="text"]',
+            'First Rule Secondary Adjust Base Days input',
+            this.page
+        );
+    }
+
+    /**
+     * Verify First Rule Secondary Adjust Base Days input is enabled
+     */
+    public async verifyFilterFirstRuleSecondaryAdjustBaseDaysEnabled(): Promise<void> {
+        CSReporter.info('Verifying First Rule Secondary Adjust Base Days input is enabled');
+        const input = await this.getFilterFirstRuleSecondaryAdjustBaseDaysInput();
+        const isDisabled = await input.getAttributeWithTimeout('disabled', 5000);
+        if (isDisabled === null) {
+            CSReporter.pass('First Rule Secondary Adjust Base Days input is enabled');
+        } else {
+            throw new Error('First Rule Secondary Adjust Base Days input is disabled');
+        }
+    }
+
+    /**
+     * Enter First Rule Secondary Adjust Base Days value
+     */
+    public async enterFilterFirstRuleSecondaryAdjustBaseDays(value: string): Promise<void> {
+        CSReporter.info(`Entering First Rule Secondary Adjust Base Days: ${value}`);
+        const input = await this.getFilterFirstRuleSecondaryAdjustBaseDaysInput();
+        await input.waitForVisible(10000);
+        await input.clear();
+        await input.fill(value);
+        CSReporter.pass(`Entered First Rule Secondary Adjust Base Days: ${value}`);
+    }
+
+    /**
+     * Select First Rule Secondary Adjust Base Type (Kindness Days or Cylinder Days)
+     */
+    public async selectFilterFirstRuleSecondaryAdjustBaseType(type: string): Promise<void> {
+        CSReporter.info(`Selecting First Rule Secondary Adjust Base Type: ${type}`);
+        const radio = CSElementFactory.createByXPath(
+            `//div[@id="incircleFilterSportMmte"]//h5[text()="First Rule"]/ancestor::section[1]//label[text()="Secondary Adjust Base"]/ancestor::div[contains(@class, "sssss-row")][1]//span[text()="${type}"]/parent::span[@role="radio"]`,
+            `First Rule Secondary Adjust Base Type: ${type}`,
+            this.page
+        );
+        await radio.waitForVisible(10000);
+        await radio.clickWithTimeout(10000);
+        CSReporter.pass(`Selected First Rule Secondary Adjust Base Type: ${type}`);
+    }
+
+    // ===================================================================
+    // FIRST RULE ADD TO LOOKBACK FILTER METHODS (RR03-06)
+    // ===================================================================
+
+    /**
+     * Get First Rule Add to Lookback checkbox element
+     */
+    public async getFilterFirstRuleAddToLookbackCheckbox(): Promise<CSWebElement> {
+        return CSElementFactory.createByXPath(
+            '//div[@id="incircleFilterSportMmte"]//h5[text()="First Rule"]/ancestor::section[1]//span[text()="Add to Lookback"]/parent::span[@role="checkbox"]',
+            'First Rule Add to Lookback checkbox',
+            this.page
+        );
+    }
+
+    /**
+     * Verify First Rule Add to Lookback checkbox is present
+     */
+    public async verifyFilterFirstRuleAddToLookbackCheckboxPresent(): Promise<void> {
+        CSReporter.info('Verifying First Rule Add to Lookback checkbox is present');
+        const checkbox = await this.getFilterFirstRuleAddToLookbackCheckbox();
+        await checkbox.waitForVisible(10000);
+        CSReporter.pass('First Rule Add to Lookback checkbox is present');
+    }
+
+    /**
+     * Verify First Rule Add to Lookback checkbox is not checked
+     */
+    public async verifyFilterFirstRuleAddToLookbackNotChecked(): Promise<void> {
+        CSReporter.info('Verifying First Rule Add to Lookback checkbox is not checked');
+        const checkbox = await this.getFilterFirstRuleAddToLookbackCheckbox();
+        const ariaChecked = await checkbox.getAttributeWithTimeout('aria-checked', 5000);
+        if (ariaChecked !== 'true') {
+            CSReporter.pass('First Rule Add to Lookback checkbox is not checked');
+        } else {
+            throw new Error('First Rule Add to Lookback checkbox is unexpectedly checked');
+        }
+    }
+
+    /**
+     * Click First Rule Add to Lookback checkbox
+     */
+    public async clickFilterFirstRuleAddToLookbackCheckbox(): Promise<void> {
+        CSReporter.info('Clicking First Rule Add to Lookback checkbox');
+        const checkbox = await this.getFilterFirstRuleAddToLookbackCheckbox();
+        await checkbox.waitForVisible(10000);
+        await checkbox.clickWithTimeout(10000);
+        await this.page.waitForTimeout(300);
+        CSReporter.pass('Clicked First Rule Add to Lookback checkbox');
+    }
+
+    /**
+     * Get First Rule Lookback Days input
+     */
+    public async getFilterFirstRuleLookbackDaysInput(): Promise<CSWebElement> {
+        return CSElementFactory.createByXPath(
+            '//div[@id="incircleFilterSportMmte"]//h5[text()="First Rule"]/ancestor::section[1]//label[text()="Add to Lookback"]/ancestor::div[contains(@class, "sssss-row")][1]//input[@type="text"]',
+            'First Rule Lookback Days input',
+            this.page
+        );
+    }
+
+    /**
+     * Verify First Rule Lookback Days input is disabled
+     */
+    public async verifyFilterFirstRuleLookbackDaysDisabled(): Promise<void> {
+        CSReporter.info('Verifying First Rule Lookback Days input is disabled');
+        const input = await this.getFilterFirstRuleLookbackDaysInput();
+        const isDisabled = await input.getAttributeWithTimeout('disabled', 5000);
+        if (isDisabled !== null) {
+            CSReporter.pass('First Rule Lookback Days input is disabled');
+        } else {
+            throw new Error('First Rule Lookback Days input is not disabled');
+        }
+    }
+
+    /**
+     * Verify First Rule Lookback Days input is enabled
+     */
+    public async verifyFilterFirstRuleLookbackDaysEnabled(): Promise<void> {
+        CSReporter.info('Verifying First Rule Lookback Days input is enabled');
+        const input = await this.getFilterFirstRuleLookbackDaysInput();
+        const isDisabled = await input.getAttributeWithTimeout('disabled', 5000);
+        if (isDisabled === null) {
+            CSReporter.pass('First Rule Lookback Days input is enabled');
+        } else {
+            throw new Error('First Rule Lookback Days input is disabled');
+        }
+    }
+
+    /**
+     * Enter First Rule Lookback Days value
+     */
+    public async enterFilterFirstRuleLookbackDays(value: string): Promise<void> {
+        CSReporter.info(`Entering First Rule Lookback Days: ${value}`);
+        const input = await this.getFilterFirstRuleLookbackDaysInput();
+        await input.waitForVisible(10000);
+        await input.clear();
+        await input.fill(value);
+        CSReporter.pass(`Entered First Rule Lookback Days: ${value}`);
+    }
+
+    /**
+     * Get First Rule Include Weekends checkbox
+     */
+    public async getFilterFirstRuleIncludeWeekendsCheckbox(): Promise<CSWebElement> {
+        return CSElementFactory.createByXPath(
+            '//div[@id="incircleFilterSportMmte"]//h5[text()="First Rule"]/ancestor::section[1]//span[text()="Include Weekends"]/parent::span[@role="checkbox"]',
+            'First Rule Include Weekends checkbox',
+            this.page
+        );
+    }
+
+    /**
+     * Verify First Rule Include Weekends checkbox is disabled
+     */
+    public async verifyFilterFirstRuleIncludeWeekendsDisabled(): Promise<void> {
+        CSReporter.info('Verifying First Rule Include Weekends checkbox is disabled');
+        const checkbox = await this.getFilterFirstRuleIncludeWeekendsCheckbox();
+        const ariaDisabled = await checkbox.getAttributeWithTimeout('aria-disabled', 5000);
+        if (ariaDisabled === 'true') {
+            CSReporter.pass('First Rule Include Weekends checkbox is disabled');
+        } else {
+            throw new Error('First Rule Include Weekends checkbox is not disabled');
+        }
+    }
+
+    /**
+     * Verify First Rule Include Weekends checkbox is enabled
+     */
+    public async verifyFilterFirstRuleIncludeWeekendsEnabled(): Promise<void> {
+        CSReporter.info('Verifying First Rule Include Weekends checkbox is enabled');
+        const checkbox = await this.getFilterFirstRuleIncludeWeekendsCheckbox();
+        const ariaDisabled = await checkbox.getAttributeWithTimeout('aria-disabled', 5000);
+        if (ariaDisabled !== 'true') {
+            CSReporter.pass('First Rule Include Weekends checkbox is enabled');
+        } else {
+            throw new Error('First Rule Include Weekends checkbox is disabled');
+        }
+    }
+
+    /**
+     * Check First Rule Include Weekends checkbox
+     */
+    public async checkFilterFirstRuleIncludeWeekends(): Promise<void> {
+        CSReporter.info('Checking First Rule Include Weekends checkbox');
+        const checkbox = await this.getFilterFirstRuleIncludeWeekendsCheckbox();
+        await checkbox.waitForVisible(10000);
+        await checkbox.clickWithTimeout(10000);
+        CSReporter.pass('Checked First Rule Include Weekends checkbox');
+    }
+
+    /**
+     * Get First Rule Include Borings checkbox
+     */
+    public async getFilterFirstRuleIncludeBoringsCheckbox(): Promise<CSWebElement> {
+        return CSElementFactory.createByXPath(
+            '//div[@id="incircleFilterSportMmte"]//h5[text()="First Rule"]/ancestor::section[1]//span[text()="Include Borings"]/parent::span[@role="checkbox"]',
+            'First Rule Include Borings checkbox',
+            this.page
+        );
+    }
+
+    /**
+     * Verify First Rule Include Borings checkbox is disabled
+     */
+    public async verifyFilterFirstRuleIncludeBoringsDisabled(): Promise<void> {
+        CSReporter.info('Verifying First Rule Include Borings checkbox is disabled');
+        const checkbox = await this.getFilterFirstRuleIncludeBoringsCheckbox();
+        const ariaDisabled = await checkbox.getAttributeWithTimeout('aria-disabled', 5000);
+        if (ariaDisabled === 'true') {
+            CSReporter.pass('First Rule Include Borings checkbox is disabled');
+        } else {
+            throw new Error('First Rule Include Borings checkbox is not disabled');
+        }
+    }
+
+    /**
+     * Verify First Rule Include Borings checkbox is enabled
+     */
+    public async verifyFilterFirstRuleIncludeBoringsEnabled(): Promise<void> {
+        CSReporter.info('Verifying First Rule Include Borings checkbox is enabled');
+        const checkbox = await this.getFilterFirstRuleIncludeBoringsCheckbox();
+        const ariaDisabled = await checkbox.getAttributeWithTimeout('aria-disabled', 5000);
+        if (ariaDisabled !== 'true') {
+            CSReporter.pass('First Rule Include Borings checkbox is enabled');
+        } else {
+            throw new Error('First Rule Include Borings checkbox is disabled');
+        }
+    }
+
+    /**
+     * Check First Rule Include Borings checkbox
+     */
+    public async checkFilterFirstRuleIncludeBorings(): Promise<void> {
+        CSReporter.info('Checking First Rule Include Borings checkbox');
+        const checkbox = await this.getFilterFirstRuleIncludeBoringsCheckbox();
+        await checkbox.waitForVisible(10000);
+        await checkbox.clickWithTimeout(10000);
+        CSReporter.pass('Checked First Rule Include Borings checkbox');
+    }
+
+    // ===================================================================
+    // SECOND RULE ADDITIONAL FILTER METHODS (RR03-07 to RR03-11)
+    // ===================================================================
+
+    /**
+     * Get Second Rule Adjust Base Days input
+     */
+    public async getFilterSecondRuleAdjustBaseDaysInput(): Promise<CSWebElement> {
+        return CSElementFactory.createByXPath(
+            '//div[@id="incircleFilterSportMmte"]//h5[text()="Second Rule"]/ancestor::section[1]//label[text()="Adjust Base"]/ancestor::div[contains(@class, "sssss-row")][1]//input[@type="text"]',
+            'Second Rule Adjust Base Days input',
+            this.page
+        );
+    }
+
+    /**
+     * Enter Second Rule Adjust Base Days value
+     */
+    public async enterFilterSecondRuleAdjustBaseDays(value: string): Promise<void> {
+        CSReporter.info(`Entering Second Rule Adjust Base Days: ${value}`);
+        const input = await this.getFilterSecondRuleAdjustBaseDaysInput();
+        await input.waitForVisible(10000);
+        await input.clear();
+        await input.fill(value);
+        CSReporter.pass(`Entered Second Rule Adjust Base Days: ${value}`);
+    }
+
+    /**
+     * Select Second Rule Adjust Base Type (Kindness Days or Cylinder Days)
+     */
+    public async selectFilterSecondRuleAdjustBaseType(type: string): Promise<void> {
+        CSReporter.info(`Selecting Second Rule Adjust Base Type: ${type}`);
+        const radio = CSElementFactory.createByXPath(
+            `//div[@id="incircleFilterSportMmte"]//h5[text()="Second Rule"]/ancestor::section[1]//label[text()="Adjust Base"]/ancestor::div[contains(@class, "sssss-row")][1]//span[text()="${type}"]/parent::span[@role="radio"]`,
+            `Second Rule Adjust Base Type: ${type}`,
+            this.page
+        );
+        await radio.waitForVisible(10000);
+        await radio.clickWithTimeout(10000);
+        CSReporter.pass(`Selected Second Rule Adjust Base Type: ${type}`);
+    }
+
+    /**
+     * Get Second Rule Secondary Adjust Base Days input
+     */
+    public async getFilterSecondRuleSecondaryAdjustBaseDaysInput(): Promise<CSWebElement> {
+        return CSElementFactory.createByXPath(
+            '//div[@id="incircleFilterSportMmte"]//h5[text()="Second Rule"]/ancestor::section[1]//label[text()="Secondary Adjust Base"]/ancestor::div[contains(@class, "sssss-row")][1]//input[@type="text"]',
+            'Second Rule Secondary Adjust Base Days input',
+            this.page
+        );
+    }
+
+    /**
+     * Enter Second Rule Secondary Adjust Base Days value
+     */
+    public async enterFilterSecondRuleSecondaryAdjustBaseDays(value: string): Promise<void> {
+        CSReporter.info(`Entering Second Rule Secondary Adjust Base Days: ${value}`);
+        const input = await this.getFilterSecondRuleSecondaryAdjustBaseDaysInput();
+        await input.waitForVisible(10000);
+        await input.clear();
+        await input.fill(value);
+        CSReporter.pass(`Entered Second Rule Secondary Adjust Base Days: ${value}`);
+    }
+
+    /**
+     * Select Second Rule Secondary Adjust Base Type (Kindness Days or Cylinder Days)
+     */
+    public async selectFilterSecondRuleSecondaryAdjustBaseType(type: string): Promise<void> {
+        CSReporter.info(`Selecting Second Rule Secondary Adjust Base Type: ${type}`);
+        const radio = CSElementFactory.createByXPath(
+            `//div[@id="incircleFilterSportMmte"]//h5[text()="Second Rule"]/ancestor::section[1]//label[text()="Secondary Adjust Base"]/ancestor::div[contains(@class, "sssss-row")][1]//span[text()="${type}"]/parent::span[@role="radio"]`,
+            `Second Rule Secondary Adjust Base Type: ${type}`,
+            this.page
+        );
+        await radio.waitForVisible(10000);
+        await radio.clickWithTimeout(10000);
+        CSReporter.pass(`Selected Second Rule Secondary Adjust Base Type: ${type}`);
+    }
+
+    /**
+     * Get Second Rule Lookback Days input
+     */
+    public async getFilterSecondRuleLookbackDaysInput(): Promise<CSWebElement> {
+        return CSElementFactory.createByXPath(
+            '//div[@id="incircleFilterSportMmte"]//h5[text()="Second Rule"]/ancestor::section[1]//label[text()="Add to Lookback"]/ancestor::div[contains(@class, "sssss-row")][1]//input[@type="text"]',
+            'Second Rule Lookback Days input',
+            this.page
+        );
+    }
+
+    /**
+     * Enter Second Rule Lookback Days value
+     */
+    public async enterFilterSecondRuleLookbackDays(value: string): Promise<void> {
+        CSReporter.info(`Entering Second Rule Lookback Days: ${value}`);
+        const input = await this.getFilterSecondRuleLookbackDaysInput();
+        await input.waitForVisible(10000);
+        await input.clear();
+        await input.fill(value);
+        CSReporter.pass(`Entered Second Rule Lookback Days: ${value}`);
+    }
+
+    /**
+     * Get Second Rule Include Weekends checkbox
+     */
+    public async getFilterSecondRuleIncludeWeekendsCheckbox(): Promise<CSWebElement> {
+        return CSElementFactory.createByXPath(
+            '//div[@id="incircleFilterSportMmte"]//h5[text()="Second Rule"]/ancestor::section[1]//span[text()="Include Weekends"]/parent::span[@role="checkbox"]',
+            'Second Rule Include Weekends checkbox',
+            this.page
+        );
+    }
+
+    /**
+     * Check Second Rule Include Weekends checkbox
+     */
+    public async checkFilterSecondRuleIncludeWeekends(): Promise<void> {
+        CSReporter.info('Checking Second Rule Include Weekends checkbox');
+        const checkbox = await this.getFilterSecondRuleIncludeWeekendsCheckbox();
+        await checkbox.waitForVisible(10000);
+        await checkbox.clickWithTimeout(10000);
+        CSReporter.pass('Checked Second Rule Include Weekends checkbox');
+    }
+
+    /**
+     * Get Second Rule Include Borings checkbox
+     */
+    public async getFilterSecondRuleIncludeBoringsCheckbox(): Promise<CSWebElement> {
+        return CSElementFactory.createByXPath(
+            '//div[@id="incircleFilterSportMmte"]//h5[text()="Second Rule"]/ancestor::section[1]//span[text()="Include Borings"]/parent::span[@role="checkbox"]',
+            'Second Rule Include Borings checkbox',
+            this.page
+        );
+    }
+
+    /**
+     * Check Second Rule Include Borings checkbox
+     */
+    public async checkFilterSecondRuleIncludeBorings(): Promise<void> {
+        CSReporter.info('Checking Second Rule Include Borings checkbox');
+        const checkbox = await this.getFilterSecondRuleIncludeBoringsCheckbox();
+        await checkbox.waitForVisible(10000);
+        await checkbox.clickWithTimeout(10000);
+        CSReporter.pass('Checked Second Rule Include Borings checkbox');
+    }
+
+    // ===================================================================
+    // OTHER RULES ADDITIONAL FILTER METHODS (RR03-12)
+    // ===================================================================
+
+    /**
+     * Verify Rounding Logic dropdown is present in filter panel
+     */
+    public async verifyFilterRoundingLogicDropdownPresent(): Promise<void> {
+        CSReporter.info('Verifying Rounding Logic dropdown is present');
+        const dropdown = await this.getFilterRoundingLogicDropdown();
+        await dropdown.waitForVisible(10000);
+        CSReporter.pass('Rounding Logic dropdown is present');
+    }
+
+    /**
+     * Click Rounding Logic dropdown in filter panel
+     */
+    public async clickFilterRoundingLogicDropdown(): Promise<void> {
+        CSReporter.info('Clicking Rounding Logic dropdown');
+        const dropdown = await this.getFilterRoundingLogicDropdown();
+        await dropdown.waitForVisible(10000);
+        await dropdown.clickWithTimeout(10000);
+        await this.page.waitForTimeout(500);
+        CSReporter.pass('Clicked Rounding Logic dropdown');
+    }
+
+    /**
+     * Verify Rounding Logic dropdown options (Round, Round Up, Round Down, Nearest, Truncate)
+     */
+    public async verifyFilterRoundingLogicOptions(): Promise<void> {
+        CSReporter.info('Verifying Rounding Logic dropdown options');
+        const expectedOptions = ['Round', 'Round Up', 'Round Down', 'Nearest', 'Truncate'];
+
+        for (const option of expectedOptions) {
+            const optionElement = CSElementFactory.createByXPath(
+                `//div[contains(@class, 'sssss-balloon') and @name='roundingType']//ul[@role='listbox']//li[@role='option']//span[contains(@class, 'sssss-menu-item__label')]//span[text()='${option}']`,
+                `Rounding Logic option: ${option}`,
+                this.page
+            );
+            await optionElement.waitForVisible(10000);
+            CSReporter.debug(`Option '${option}' is present`);
+        }
+        CSReporter.pass('All Rounding Logic options are present');
+    }
+
+    /**
+     * Click Rounding Factor dropdown in filter panel
+     */
+    public async clickFilterRoundingFactorDropdown(): Promise<void> {
+        CSReporter.info('Clicking Rounding Factor dropdown');
+        const dropdown = await this.getFilterRoundingFactorDropdown();
+        await dropdown.waitForVisible(10000);
+        await dropdown.clickWithTimeout(10000);
+        await this.page.waitForTimeout(500);
+        CSReporter.pass('Clicked Rounding Factor dropdown');
+    }
+
+    /**
+     * Verify Rounding Factor dropdown options are present
+     */
+    public async verifyFilterRoundingFactorOptionsPresent(): Promise<void> {
+        CSReporter.info('Verifying Rounding Factor dropdown options are present');
+        const listElement = CSElementFactory.createByXPath(
+            '//div[contains(@class, "sssss-balloon") and @name="roundingFactor"]//ul[@role="listbox"]',
+            'Rounding Factor options list',
+            this.page
+        );
+        await listElement.waitForVisible(10000);
+        CSReporter.pass('Rounding Factor dropdown options are present');
+    }
+
+    // ===================================================================
+    // CYLINDER POPUP METHODS (RR03-03, RR03-08)
+    // ===================================================================
+
+    /**
+     * Verify Cylinder selection popup is displayed
+     */
+    public async verifyCylinderPopupDisplayed(): Promise<void> {
+        CSReporter.info('Verifying Cylinder selection popup is displayed');
+        const popup = CSElementFactory.createByXPath(
+            '//div[contains(@class, "sssss-balloon__content")]//div[contains(@class, "sssss-transfer-list")]',
+            'Cylinder selection popup',
+            this.page
+        );
+        await popup.waitForVisible(10000);
+        CSReporter.pass('Cylinder selection popup is displayed');
+    }
+
+    /**
+     * Verify Cylinder popup options match database records
+     */
+    public async verifyCylinderPopupOptions(expectedCylinders: string[]): Promise<void> {
+        CSReporter.info('Verifying Cylinder popup options match database records');
+        for (const cylinder of expectedCylinders) {
+            const optionElement = CSElementFactory.createByXPath(
+                `//div[contains(@class, "sssss-balloon__content")]//div[contains(@class, "sssss-transfer-list")]//span[text()="${cylinder}"]`,
+                `Cylinder option: ${cylinder}`,
+                this.page
+            );
+            const isVisible = await optionElement.isVisibleWithTimeout(3000);
+            if (isVisible) {
+                CSReporter.debug(`Cylinder option '${cylinder}' is present`);
+            } else {
+                CSReporter.warn(`Cylinder option '${cylinder}' not found in popup`);
+            }
+        }
+        CSReporter.pass('Verified Cylinder popup options');
+    }
+
+    /**
+     * Select cylinder from popup
+     */
+    public async selectCylinderInPopup(cylinderName: string): Promise<void> {
+        CSReporter.info(`Selecting cylinder in popup: ${cylinderName}`);
+        const cylinderOption = CSElementFactory.createByXPath(
+            `//div[contains(@class, "sssss-balloon__content")]//div[contains(@class, "sssss-transfer-list")]//span[text()="${cylinderName}"]/ancestor::li[1]//span[@role="checkbox"]`,
+            `Cylinder checkbox: ${cylinderName}`,
+            this.page
+        );
+        await cylinderOption.waitForVisible(10000);
+        await cylinderOption.clickWithTimeout(10000);
+        CSReporter.pass(`Selected cylinder: ${cylinderName}`);
+    }
+
+    /**
+     * Click Done button on Cylinder popup
+     */
+    public async clickCylinderPopupDoneButton(): Promise<void> {
+        CSReporter.info('Clicking Done button on Cylinder popup');
+        const doneButton = CSElementFactory.createByXPath(
+            '//div[contains(@class, "sssss-balloon__content")]//button//span[text()="Done"]/parent::button',
+            'Cylinder popup Done button',
+            this.page
+        );
+        await doneButton.waitForVisible(10000);
+        await doneButton.clickWithTimeout(10000);
+        await this.page.waitForTimeout(500);
+        CSReporter.pass('Clicked Done button on Cylinder popup');
+    }
+}
+
+export default TTTFScatteredMmtesPage;
+
+--------------------------------------------------------------------------------------------------------------

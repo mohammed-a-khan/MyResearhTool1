@@ -1,0 +1,2069 @@
+@scattered-mmtes @sport-mmte @page-elements @RR01
+Feature: Scattered Mmtes - Page Elements Verification
+    As a TTTF user
+    I want to verify all elements on the Scattered Mmtes page
+    So that I can ensure the page is properly rendered and functional
+
+    Scenario Outcircle: RR01 - Verify Scattered Mmtes page elements across all tabs
+        # Login and navigate to Scattered Mmtes
+        Given I login to TTTF as "<userName>"
+        Then I should see Home page header
+        And I should see welcome message with username "<userName>"
+        And I should see Scattered Mmtes menu item in navigation
+
+        When I click on Scattered Mmtes menu item
+        Then I should see Scattered Mmtes page header
+
+        # Verify Add Scattered Mmtes button
+        Then I should see Add Scattered Mmtes button
+        And Add Scattered Mmtes button should be enabled
+
+        # Verify all three tabs are present
+        Then I should see Sport Mmte tab
+        And Sport Mmte tab should be enabled
+        And Sport Mmte tab should be selected by default
+
+        And I should see Ttcalc Duration tab
+        And Ttcalc Duration tab should be enabled
+        And Ttcalc Duration tab should not be selected by default
+
+        And I should see Manual Scattered Mmtes tab
+        And Manual Scattered Mmtes tab should be enabled
+        And Manual Scattered Mmtes tab should not be selected by default
+
+        # Verify Sport Mmte tab elements
+        Then I should see Filters button on active tab
+        And Filters area should not be expanded by default
+        And I should see Find by input field on active tab
+        And I should see Go button on active tab
+        And Go button should be enabled
+        And I should see Reset button on active tab
+        And Reset button should be enabled
+        And I should see paginator menu trigger button on active tab
+        And I should see paginator Previous button on active tab
+        And I should see paginator Next button on active tab
+
+        # Verify Ttcalc Duration tab elements
+        When I click on Ttcalc Duration tab
+        Then Ttcalc Duration tab should be selected
+        And I should see Filters button on active tab
+        And Filters area should not be expanded by default
+        And I should see Find by input field on active tab
+        And I should see Go button on active tab
+        And Go button should be enabled
+        And I should see Reset button on active tab
+        And Reset button should be enabled
+        And I should see paginator menu trigger button on active tab
+        And I should see paginator Previous button on active tab
+        And I should see paginator Next button on active tab
+
+        # Verify Manual Scattered Mmtes tab elements
+        When I click on Manual Scattered Mmtes tab
+        Then Manual Scattered Mmtes tab should be selected
+        And I should see Filters button on active tab
+        And Filters area should not be expanded by default
+        And I should see Find by input field on active tab
+        And I should see Go button on active tab
+        And Go button should be enabled
+        And I should see Reset button on active tab
+        And Reset button should be enabled
+        And I should see paginator menu trigger button on active tab
+        And I should see paginator Previous button on active tab
+        And I should see paginator Next button on active tab
+
+        Examples: {"type": "json", "source": "test/tttf/data/scattered_mmte_page_verification_scenarios.json", "path": "$", "filter": "scenarioId=RR01-01 AND runFlag=Yes"}
+
+--------------------------------------------------------------------------------------------------------------------
+
+@scattered-mmtes @sport-mmte @search @RR02
+Feature: Scattered Mmtes - Sport Mmte Search and Table Verification
+    As a TTTF user
+    I want to search for Sport Scattered Mmtes and verify table data
+    So that I can validate the search functionality and data accuracy
+
+    Scenario Outcircle: RR02 - Search sport mmte and verify table data matches database
+        # Resolve test data
+        Given I resolve scattered mmte name from database if not provided "<scatteredMmteName>"
+
+        # Login and navigate to Scattered Mmtes
+        Given I login to TTTF as "<userName>"
+        Then I should see Home page header
+        And I should see welcome message with username "<userName>"
+        And I should see Scattered Mmtes menu item in navigation
+
+        When I click on Scattered Mmtes menu item
+        Then I should see Scattered Mmtes page header
+        And Sport Mmte tab should be enabled
+        And Sport Mmte tab should be selected by default
+
+        # Verify Sport Mmte table structure
+        Then I should see Sport Mmte display table
+        Then I should see Expand all button in table header
+
+        When I click on Expand all button
+        Then I should see Collapse all button in table header
+
+        When I click on Collapse all button
+        Then I should see Expand all button in table header
+
+        # Verify all column headers
+        Then I should see all Sport Mmte table column headers
+
+        # Search for specific scattered mmte
+        When I click Reset button on Sport Mmte tab
+        And I enter "{scenario:scatteredMmteName}" in Find by input field
+        And I click Go button on Sport Mmte tab
+        Then I should not see No data available message
+
+        # Get expected data from database
+        Given I get sport mmte details from database for scattered mmte "{scenario:scatteredMmteName}"
+
+        # Capture UI data and verify against database
+        Then I capture Sport Mmte table row 1 data from UI
+        And the sport mmte details should match database record
+
+        Examples: {"type": "json", "source": "test/tttf/data/scattered_mmte_search_scenarios.json", "path": "$", "filter": "scenarioId=RR02-01 AND runFlag=Yes"}
+
+
+--------------------------------------------------------------------------------------------------------------------------------
+
+@scattered-mmtes @sport-mmte @filter @RR03
+Feature: Scattered Mmtes - Sport Mmte Filter Options and Functionality
+    As a TTTF user
+    I want to filter Sport Scattered Mmtes using various filter options
+    So that I can validate the filter functionality and data accuracy
+
+    Scenario Outcircle: RR03-01 - Filter by Cumulative Mmte and Rule Priority
+        # Test data setup
+        Given I resolve cumulative mmte name with sport mmtes from database if not provided "<cumulativeMmteName>"
+
+        # Login and navigate
+        Given I login to TTTF as "<userName>"
+        Then I should see Home page header
+        And I should see welcome message with username "<userName>"
+        And I should see Scattered Mmtes menu item in navigation
+
+        When I click on Scattered Mmtes menu item
+        Then I should see Scattered Mmtes page header
+        And Sport Mmte tab should be enabled
+        And Sport Mmte tab should be selected by default
+        And I should see Sport Mmte display table
+
+        # Expand filters panel
+        Then I should see Filters button on active tab
+        And Filters area should not be expanded by default
+
+        When I click Filters button on Sport Mmte tab
+        Then Filters area should be expanded
+        And I should see Filter criteria header
+
+        # Cumulative Mmte dropdown verification
+        Then I should see Cumulative Mmte dropdown button
+        And Cumulative Mmte dropdown should show Select by default
+
+        When I click Cumulative Mmte dropdown button
+        Then I should see Cumulative Mmte dropdown list
+        And all Cumulative Mmte options should match database records
+
+        # Select Cumulative Mmte and apply
+        When I select "{scenario:cumulativeMmteName}" from Cumulative Mmte dropdown
+        Then Cumulative Mmte dropdown should show "{scenario:cumulativeMmteName}"
+        And I should see Reset Filters button enabled
+        And I should see Apply button enabled
+        And I should see Cancel button enabled
+
+        When I click Apply button on filter panel
+        Then Filter criteria section should be collapsed
+        And I should see Filters Applied button
+
+        # Database verification
+        Given I get sport mmtes filtered by cumulative mmte "{scenario:cumulativeMmteName}" from database
+        Then the UI total items count should match database filtered count
+
+        When I expand all rows in Sport Mmte table
+        And I capture all visible Sport Mmte table rows data from UI
+        Then all captured UI rows should match database records
+
+        # Reset and verify Conditions section
+        When I expand Filters Applied panel if collapsed
+        And I click Reset Filters button
+        Then Reset Filters button should be disabled
+        And Apply button should be enabled
+        And Cancel button should be enabled
+
+        # Conditions section verification
+        Then I should see Conditions header
+        And I should see Methodology dropdown button
+        And Methodology dropdown should show Sport Mmte Look Up by default
+        And I should see Sport Mmte Rule Priority dropdown button
+
+        When I click Sport Mmte Rule Priority dropdown button
+        Then I should see Sport Mmte Rule Priority options Highest Date and Lowest Date
+        When I press Escape key
+
+        # Filter by Rule Priority
+        When I select sport mmte rule priority "<sportMmteRulePriority>" defaulting to Lowest Date
+        And I click Apply button on filter panel
+        Then I should see Filters Applied button
+
+        Given I get sport mmtes filtered by rule priority "{scenario:sportMmteRulePriority}" from database
+        Then the UI total items count should match database filtered count
+
+        When I expand all rows in Sport Mmte table
+        And I capture all visible Sport Mmte table rows data from UI
+        Then all captured UI rows should match database records
+
+        Examples: {"type": "json", "source": "test/tttf/data/scattered_mmte_filter_scenarios.json", "path": "$", "filter": "scenarioId=RR03-01 AND runFlag=Yes"}
+
+    Scenario Outcircle: RR03-02 - Filter by First Rule Month Lag and Base Day
+        Given I resolve first rule month lag and base day from database if not provided "<firstRuleMonthLag>" "<firstRuleBaseDay>"
+
+        Given I login to TTTF as "<userName>"
+        Then I should see Home page header
+        When I click on Scattered Mmtes menu item
+        Then I should see Scattered Mmtes page header
+        And Sport Mmte tab should be selected by default
+        And I should see Sport Mmte display table
+
+        When I click Filters button on Sport Mmte tab
+        Then Filters area should be expanded
+        And I should see Filter criteria header
+
+        Then I should see First Rule section in filter panel
+        When I expand First Rule section in filter panel
+        And I enter First Rule Month Lag "{scenario:firstRuleMonthLag}" in filter panel
+        And I enter First Rule Base Day "{scenario:firstRuleBaseDay}" in filter panel
+
+        When I click Apply button on filter panel
+        Then I should see Filters Applied button
+
+        Given I get sport mmtes filtered by first rule month lag "{scenario:firstRuleMonthLag}" and base day "{scenario:firstRuleBaseDay}" from database
+        Then the UI total items count should match database filtered count
+
+        When I expand all rows in Sport Mmte table
+        And I capture all visible Sport Mmte table rows data from UI
+        Then all captured UI rows should match database records
+
+        Examples: {"type": "json", "source": "test/tttf/data/scattered_mmte_filter_scenarios.json", "path": "$", "filter": "scenarioId=RR03-02 AND runFlag=Yes"}
+
+    Scenario Outcircle: RR03-03 - Filter by First Rule Associate Cylinders
+        Given I resolve first rule associate cylinder from database if not provided "<firstRuleAssociateCylinder>"
+
+        Given I login to TTTF as "<userName>"
+        Then I should see Home page header
+        When I click on Scattered Mmtes menu item
+        Then I should see Scattered Mmtes page header
+        And Sport Mmte tab should be selected by default
+
+        When I click Filters button on Sport Mmte tab
+        Then Filters area should be expanded
+
+        When I expand First Rule section in filter panel
+        When I click First Rule Associate Cylinders Select button in filter panel
+        Then I should see cylinder selection popup
+        And all cylinder options should match database records
+
+        When I select cylinder "{scenario:firstRuleAssociateCylinder}" from cylinder popup
+        And I click Done button on cylinder popup
+        Then First Rule Associate Cylinders should show Edit in filter panel
+        And I should see cylinder "{scenario:firstRuleAssociateCylinder}" selected in First Rule
+
+        When I click Apply button on filter panel
+        Then I should see Filters Applied button
+
+        Given I get sport mmtes filtered by first rule associate cylinder "{scenario:firstRuleAssociateCylinder}" from database
+        Then the UI total items count should match database filtered count
+
+        When I expand all rows in Sport Mmte table
+        And I capture all visible Sport Mmte table rows data from UI
+        Then all captured UI rows should match database records
+
+        Examples: {"type": "json", "source": "test/tttf/data/scattered_mmte_filter_scenarios.json", "path": "$", "filter": "scenarioId=RR03-03 AND runFlag=Yes"}
+
+    Scenario Outcircle: RR03-04 - Filter by First Rule Adjust Base
+        Given I resolve first rule adjust base days and type from database if not provided "<firstRuleAdjustBaseDays>" "<firstRuleAdjustBaseType>"
+
+        Given I login to TTTF as "<userName>"
+        Then I should see Home page header
+        When I click on Scattered Mmtes menu item
+        Then I should see Scattered Mmtes page header
+
+        When I click Filters button on Sport Mmte tab
+        Then Filters area should be expanded
+
+        When I expand First Rule section in filter panel
+
+        # Verify Adjust Base checkbox behavior
+        Then I should see First Rule Adjust Base checkbox in filter panel
+        And First Rule Adjust Base checkbox should not be checked by default
+        And First Rule Adjust Base Days input should be disabled
+        And First Rule Adjust Base Kindness Days radio should be disabled
+        And First Rule Adjust Base Cylinder Days radio should be disabled
+
+        When I check First Rule Adjust Base checkbox in filter panel
+        Then First Rule Adjust Base checkbox should be checked
+        And First Rule Adjust Base Days input should be enabled
+        And First Rule Adjust Base Kindness Days radio should be enabled
+        And First Rule Adjust Base Cylinder Days radio should be enabled
+
+        When I enter First Rule Adjust Base Days "{scenario:firstRuleAdjustBaseDays}" in filter panel
+        And I select First Rule Adjust Base Type "{scenario:firstRuleAdjustBaseType}" in filter panel
+
+        When I click Apply button on filter panel
+        Then I should see Filters Applied button
+
+        Given I get sport mmtes filtered by first rule adjust base "{scenario:firstRuleAdjustBaseDays}" "{scenario:firstRuleAdjustBaseType}" from database
+        Then the UI total items count should match database filtered count
+
+        When I expand all rows in Sport Mmte table
+        And I capture all visible Sport Mmte table rows data from UI
+        Then all captured UI rows should match database records
+
+        Examples: {"type": "json", "source": "test/tttf/data/scattered_mmte_filter_scenarios.json", "path": "$", "filter": "scenarioId=RR03-04 AND runFlag=Yes"}
+
+    Scenario Outcircle: RR03-05 - Filter by First Rule Secondary Adjust Base
+        Given I resolve first rule secondary adjust base days and type from database if not provided "<firstRuleSecondaryAdjustBaseDays>" "<firstRuleSecondaryAdjustBaseType>"
+
+        Given I login to TTTF as "<userName>"
+        Then I should see Home page header
+        When I click on Scattered Mmtes menu item
+        Then I should see Scattered Mmtes page header
+
+        When I click Filters button on Sport Mmte tab
+        Then Filters area should be expanded
+
+        When I expand First Rule section in filter panel
+
+        Then I should see First Rule Secondary Adjust Base checkbox in filter panel
+        And First Rule Secondary Adjust Base checkbox should not be checked by default
+
+        When I check First Rule Secondary Adjust Base checkbox in filter panel
+        Then First Rule Secondary Adjust Base Days input should be enabled
+
+        When I enter First Rule Secondary Adjust Base Days "{scenario:firstRuleSecondaryAdjustBaseDays}" in filter panel
+        And I select First Rule Secondary Adjust Base Type "{scenario:firstRuleSecondaryAdjustBaseType}" in filter panel
+
+        When I click Apply button on filter panel
+        Then I should see Filters Applied button
+
+        Given I get sport mmtes filtered by first rule secondary adjust base "{scenario:firstRuleSecondaryAdjustBaseDays}" "{scenario:firstRuleSecondaryAdjustBaseType}" from database
+        Then the UI total items count should match database filtered count
+
+        When I expand all rows in Sport Mmte table
+        And I capture all visible Sport Mmte table rows data from UI
+        Then all captured UI rows should match database records
+
+        Examples: {"type": "json", "source": "test/tttf/data/scattered_mmte_filter_scenarios.json", "path": "$", "filter": "scenarioId=RR03-05 AND runFlag=Yes"}
+
+    Scenario Outcircle: RR03-06 - Filter by First Rule Add to Lookback
+        Given I resolve first rule lookback days from database if not provided "<firstRuleLookbackDays>"
+
+        Given I login to TTTF as "<userName>"
+        Then I should see Home page header
+        When I click on Scattered Mmtes menu item
+        Then I should see Scattered Mmtes page header
+
+        When I click Filters button on Sport Mmte tab
+        Then Filters area should be expanded
+
+        When I expand First Rule section in filter panel
+
+        # Verify Add to Lookback checkbox behavior
+        Then I should see First Rule Add to Lookback checkbox in filter panel
+        And First Rule Add to Lookback checkbox should not be checked by default
+        And First Rule Lookback Days input should be disabled
+        And First Rule Include Weekends checkbox should be disabled
+        And First Rule Include Borings checkbox should be disabled
+
+        When I check First Rule Add to Lookback checkbox in filter panel
+        Then First Rule Lookback Days input should be enabled
+        And First Rule Include Weekends checkbox should be enabled
+        And First Rule Include Borings checkbox should be enabled
+
+        When I enter First Rule Lookback Days "{scenario:firstRuleLookbackDays}" in filter panel
+        And I configure First Rule Include Weekends "<firstRuleLookbackIncludeWeekends>" in filter panel
+        And I configure First Rule Include Borings "<firstRuleLookbackIncludeBorings>" in filter panel
+
+        When I click Apply button on filter panel
+        Then I should see Filters Applied button
+
+        Given I get sport mmtes filtered by first rule lookback days "{scenario:firstRuleLookbackDays}" from database
+        Then the UI total items count should match database filtered count
+
+        When I expand all rows in Sport Mmte table
+        And I capture all visible Sport Mmte table rows data from UI
+        Then all captured UI rows should match database records
+
+        Examples: {"type": "json", "source": "test/tttf/data/scattered_mmte_filter_scenarios.json", "path": "$", "filter": "scenarioId=RR03-06 AND runFlag=Yes"}
+
+    Scenario Outcircle: RR03-07 - Filter by Second Rule Month Lag and Base Day
+        Given I resolve second rule month lag and base day from database if not provided "<secondRuleMonthLag>" "<secondRuleBaseDay>"
+
+        Given I login to TTTF as "<userName>"
+        Then I should see Home page header
+        When I click on Scattered Mmtes menu item
+        Then I should see Scattered Mmtes page header
+
+        When I click Filters button on Sport Mmte tab
+        Then Filters area should be expanded
+
+        Then I should see Second Rule section in filter panel
+        When I expand Second Rule section in filter panel
+        And I enter Second Rule Month Lag "{scenario:secondRuleMonthLag}" in filter panel
+        And I enter Second Rule Base Day "{scenario:secondRuleBaseDay}" in filter panel
+
+        When I click Apply button on filter panel
+        Then I should see Filters Applied button
+
+        Given I get sport mmtes filtered by second rule month lag "{scenario:secondRuleMonthLag}" and base day "{scenario:secondRuleBaseDay}" from database
+        Then the UI total items count should match database filtered count
+
+        When I expand all rows in Sport Mmte table
+        And I capture all visible Sport Mmte table rows data from UI
+        Then all captured UI rows should match database records
+
+        Examples: {"type": "json", "source": "test/tttf/data/scattered_mmte_filter_scenarios.json", "path": "$", "filter": "scenarioId=RR03-07 AND runFlag=Yes"}
+
+    Scenario Outcircle: RR03-08 - Filter by Second Rule Associate Cylinders
+        Given I resolve second rule associate cylinder from database if not provided "<secondRuleAssociateCylinder>"
+
+        Given I login to TTTF as "<userName>"
+        Then I should see Home page header
+        When I click on Scattered Mmtes menu item
+        Then I should see Scattered Mmtes page header
+
+        When I click Filters button on Sport Mmte tab
+        Then Filters area should be expanded
+
+        When I expand Second Rule section in filter panel
+        When I click Second Rule Associate Cylinders Select button in filter panel
+        Then I should see cylinder selection popup
+
+        When I select cylinder "{scenario:secondRuleAssociateCylinder}" from cylinder popup
+        And I click Done button on cylinder popup
+        Then Second Rule Associate Cylinders should show Edit in filter panel
+
+        When I click Apply button on filter panel
+        Then I should see Filters Applied button
+
+        Given I get sport mmtes filtered by second rule associate cylinder "{scenario:secondRuleAssociateCylinder}" from database
+        Then the UI total items count should match database filtered count
+
+        When I expand all rows in Sport Mmte table
+        And I capture all visible Sport Mmte table rows data from UI
+        Then all captured UI rows should match database records
+
+        Examples: {"type": "json", "source": "test/tttf/data/scattered_mmte_filter_scenarios.json", "path": "$", "filter": "scenarioId=RR03-08 AND runFlag=Yes"}
+
+    Scenario Outcircle: RR03-09 - Filter by Second Rule Adjust Base
+        Given I resolve second rule adjust base days and type from database if not provided "<secondRuleAdjustBaseDays>" "<secondRuleAdjustBaseType>"
+
+        Given I login to TTTF as "<userName>"
+        Then I should see Home page header
+        When I click on Scattered Mmtes menu item
+        Then I should see Scattered Mmtes page header
+
+        When I click Filters button on Sport Mmte tab
+        Then Filters area should be expanded
+
+        When I expand Second Rule section in filter panel
+        When I check Second Rule Adjust Base checkbox in filter panel
+        And I enter Second Rule Adjust Base Days "{scenario:secondRuleAdjustBaseDays}" in filter panel
+        And I select Second Rule Adjust Base Type "{scenario:secondRuleAdjustBaseType}" in filter panel
+
+        When I click Apply button on filter panel
+        Then I should see Filters Applied button
+
+        Given I get sport mmtes filtered by second rule adjust base "{scenario:secondRuleAdjustBaseDays}" "{scenario:secondRuleAdjustBaseType}" from database
+        Then the UI total items count should match database filtered count
+
+        When I expand all rows in Sport Mmte table
+        And I capture all visible Sport Mmte table rows data from UI
+        Then all captured UI rows should match database records
+
+        Examples: {"type": "json", "source": "test/tttf/data/scattered_mmte_filter_scenarios.json", "path": "$", "filter": "scenarioId=RR03-09 AND runFlag=Yes"}
+
+    Scenario Outcircle: RR03-10 - Filter by Second Rule Secondary Adjust Base
+        Given I resolve second rule secondary adjust base days and type from database if not provided "<secondRuleSecondaryAdjustBaseDays>" "<secondRuleSecondaryAdjustBaseType>"
+
+        Given I login to TTTF as "<userName>"
+        Then I should see Home page header
+        When I click on Scattered Mmtes menu item
+        Then I should see Scattered Mmtes page header
+
+        When I click Filters button on Sport Mmte tab
+        Then Filters area should be expanded
+
+        When I expand Second Rule section in filter panel
+        When I check Second Rule Secondary Adjust Base checkbox in filter panel
+        And I enter Second Rule Secondary Adjust Base Days "{scenario:secondRuleSecondaryAdjustBaseDays}" in filter panel
+        And I select Second Rule Secondary Adjust Base Type "{scenario:secondRuleSecondaryAdjustBaseType}" in filter panel
+
+        When I click Apply button on filter panel
+        Then I should see Filters Applied button
+
+        Given I get sport mmtes filtered by second rule secondary adjust base "{scenario:secondRuleSecondaryAdjustBaseDays}" "{scenario:secondRuleSecondaryAdjustBaseType}" from database
+        Then the UI total items count should match database filtered count
+
+        When I expand all rows in Sport Mmte table
+        And I capture all visible Sport Mmte table rows data from UI
+        Then all captured UI rows should match database records
+
+        Examples: {"type": "json", "source": "test/tttf/data/scattered_mmte_filter_scenarios.json", "path": "$", "filter": "scenarioId=RR03-10 AND runFlag=Yes"}
+
+    Scenario Outcircle: RR03-11 - Filter by Second Rule Add to Lookback
+        Given I resolve second rule lookback days from database if not provided "<secondRuleLookbackDays>"
+
+        Given I login to TTTF as "<userName>"
+        Then I should see Home page header
+        When I click on Scattered Mmtes menu item
+        Then I should see Scattered Mmtes page header
+
+        When I click Filters button on Sport Mmte tab
+        Then Filters area should be expanded
+
+        When I expand Second Rule section in filter panel
+        When I check Second Rule Add to Lookback checkbox in filter panel
+        And I enter Second Rule Lookback Days "{scenario:secondRuleLookbackDays}" in filter panel
+        And I configure Second Rule Include Weekends "<secondRuleLookbackIncludeWeekends>" in filter panel
+        And I configure Second Rule Include Borings "<secondRuleLookbackIncludeBorings>" in filter panel
+
+        When I click Apply button on filter panel
+        Then I should see Filters Applied button
+
+        Given I get sport mmtes filtered by second rule lookback days "{scenario:secondRuleLookbackDays}" from database
+        Then the UI total items count should match database filtered count
+
+        When I expand all rows in Sport Mmte table
+        And I capture all visible Sport Mmte table rows data from UI
+        Then all captured UI rows should match database records
+
+        Examples: {"type": "json", "source": "test/tttf/data/scattered_mmte_filter_scenarios.json", "path": "$", "filter": "scenarioId=RR03-11 AND runFlag=Yes"}
+
+    Scenario Outcircle: RR03-12 - Filter by Other Rules Rounding Logic and Factor
+        Given I resolve rounding logic and factor from database if not provided "<otherRulesRoundingLogic>" "<otherRulesRoundingFactor>"
+
+        Given I login to TTTF as "<userName>"
+        Then I should see Home page header
+        When I click on Scattered Mmtes menu item
+        Then I should see Scattered Mmtes page header
+
+        When I click Filters button on Sport Mmte tab
+        Then Filters area should be expanded
+
+        Then I should see Other Rules section in filter panel
+        When I expand Other Rules section in filter panel
+
+        Then I should see Rounding Logic dropdown in filter panel
+        When I click Rounding Logic dropdown in filter panel
+        Then I should see Rounding Logic options Round, Round Up, Round Down, Nearest, Truncate
+
+        When I select Rounding Logic "{scenario:otherRulesRoundingLogic}" in filter panel
+        Then Rounding Logic dropdown should show "{scenario:otherRulesRoundingLogic}"
+
+        When I click Rounding Factor dropdown in filter panel
+        Then I should see Rounding Factor options based on selected Rounding Logic
+
+        When I select Rounding Factor "{scenario:otherRulesRoundingFactor}" in filter panel
+        Then Rounding Factor dropdown should show "{scenario:otherRulesRoundingFactor}"
+
+        When I click Apply button on filter panel
+        Then I should see Filters Applied button
+
+        Given I get sport mmtes filtered by rounding logic "{scenario:otherRulesRoundingLogic}" and factor "{scenario:otherRulesRoundingFactor}" from database
+        Then the UI total items count should match database filtered count
+
+        When I expand all rows in Sport Mmte table
+        And I capture all visible Sport Mmte table rows data from UI
+        Then all captured UI rows should match database records
+
+        Examples: {"type": "json", "source": "test/tttf/data/scattered_mmte_filter_scenarios.json", "path": "$", "filter": "scenarioId=RR03-12 AND runFlag=Yes"}
+
+
+-------------------------------------------------------------------------------------------------------------------------------
+
+@scattered-mmtes @sport-mmte @add-scattered-mmte @elements @RR04
+Feature: Scattered Mmtes - Add Scattered Mmte Screen Elements Verification
+    As a TTTF user
+    I want to verify all elements on the Add Scattered Mmte screen
+    So that I can ensure the screen is properly rendered and functional
+
+    Scenario Outcircle: RR04 - Verify Add Scattered Mmte screen elements
+        # Test data setup
+        Given I resolve cumulative mmte name with sport mmtes from database if not provided "<cumulativeMmteName>"
+
+        # Login and navigate
+        Given I login to TTTF as "<userName>"
+        Then I should see Home page header
+        And I should see welcome message with username "<userName>"
+
+        When I click on Scattered Mmtes menu item
+        Then I should see Scattered Mmtes page header
+        And I wait for loader to complete
+
+        Then I should see Add Scattered Mmtes button
+        And Add Scattered Mmtes button should be enabled
+        When I click Add Scattered Mmtes button
+
+        # Add Scattered Mmte screen header verification
+        Then I should see Add Scattered Mmte header
+        And I should see Add Scattered Mmte note message
+        And I should see Cumulative Mmte and Scattered Name header
+
+        # Cumulative Scattered dropdown verification
+        When I click Cumulative Scattered dropdown button on Add screen
+        Then I should see Cumulative Scattered dropdown list
+        And all Cumulative Scattered options should match database records
+
+        When I select "{scenario:cumulativeMmteName}" from Cumulative Scattered dropdown on Add screen
+        Then Cumulative Scattered dropdown should show "{scenario:cumulativeMmteName}" on Add screen
+
+        # Scattered Mmte Name field verification
+        Then I should see Scattered Mmte Name field
+        And Scattered Mmte Name value should match database expected value
+
+        # Type of Scattered Mmte radio buttons
+        Then I should see Choose a Type of Scattered Mmte message
+        And I should see System Calculated radio button
+        And System Calculated radio button should be selected by default
+        And I should see Manual radio button
+        And Manual radio button should not be selected by default
+        And I should see Conditions section
+        And I should see Rules section
+
+        # Manual radio button behavior
+        When I click Manual radio button
+        Then Manual radio button should be selected
+        And Conditions section should not be present
+        And Rules section should not be present
+        And I should see Save button enabled
+        And I should see Cancel button enabled
+
+        # Switch back to System Calculated
+        When I click System Calculated radio button
+        Then System Calculated radio button should be selected
+        And I should see Conditions section
+        And I should see Rules section
+
+        # Conditions section - Method dropdown
+        Then I should see Choose a Methodology Type message
+        And I should see Method dropdown
+        And Method dropdown should show Sport Mmte Look Up by default
+
+        When I click Method dropdown on Add screen
+        Then I should see Method dropdown options Sport Mmte Look Up and Ttcalc Duration
+        When I select Sport Mmte Look Up from Method dropdown
+
+        # Sport Mmte Rule Priority dropdown
+        Then I should see Sport Mmte Rule Priority dropdown
+        And Sport Mmte Rule Priority dropdown should show Highest Date by default
+
+        When I click Sport Mmte Rule Priority dropdown on Add screen
+        Then I should see Sport Mmte Rule Priority options Highest Date and Lowest Date
+        When I press Escape key
+
+        # Ttcalc Duration method - dynamic fields
+        When I click Method dropdown on Add screen
+        And I select Ttcalc Duration from Method dropdown
+        Then I should see Primary Ttcalc dropdown
+        And Primary Ttcalc dropdown should show Compound by default
+
+        When I click Primary Ttcalc dropdown
+        Then I should see Primary Ttcalc options Compound and Simple
+        When I press Escape key
+
+        Then I should see Annual Accrual Days dropdown
+        And Annual Accrual Days dropdown should show 360 by default
+
+        When I click Annual Accrual Days dropdown
+        Then I should see Annual Accrual Days options 360 and 365
+        When I press Escape key
+
+        # Mmte Start Date Determination Rule section
+        Then I should see Mmte Start Date Determination Rule section
+        When I expand Mmte Start Date Determination Rule section if collapsed
+        And I should see Define the Primary Rule message
+        And I should see Month Lag input with default value 0
+        And I should see Base Day input with default value 1
+
+        # Next/Previous Kindness Day radio buttons
+        Then I should see Next Kindness Day radio button selected by default
+        And Optional Adjust to Last Kindness Day checkbox should be enabled
+        And I should see Previous Kindness Day radio button not selected
+
+        When I click Previous Kindness Day radio button
+        Then Previous Kindness Day radio button should be selected
+        And Optional Adjust to Last Kindness Day checkbox should be disabled
+
+        # Associate Cylinders popup verification
+        When I click Associate Cylinders Select button for Mmte Start Date Determination Rule
+        Then I should see Add modal popup
+        And I should see Add header on popup
+        And I should see X close button on popup
+        And I should see Select items to continue message
+        And I should see Cylinder table on popup
+        And Select all checkbox should be unchecked by default
+        And I should see Cylinder Name column header
+        And all Cylinder options should match database records
+        And I should see Apply button on popup
+        And I should see Cancel button on popup
+
+        When I select USA cylinder from table
+        And I click Apply button on popup
+        Then Add modal popup should be closed
+        And Associate Cylinders button should show Edit
+        And I should see USA in Associate Cylinders field
+        And I should see borings link next to USA cylinder
+
+        # USA borings list verification
+        When I click borings link next to USA cylinder for Associate Cylinders
+        Then I should see USA borings popup
+
+        When I set items per page to 50 on borings popup
+        Then I should see Boring list table
+        And I should see Description column header
+        And I should see Date column header
+        And USA borings should match database records
+
+        When I click X close button on popup
+
+        # Adjust Base checkbox and dependent fields
+        Then I should see Adjust Base checkbox enabled
+        And Adjust Base Days input should be disabled
+        And Kindness Days radio button for Adjust Base should be disabled
+        And Cylinder Days radio button for Adjust Base should be disabled
+
+        When I click Adjust Base checkbox
+        Then Adjust Base checkbox should be checked
+        And Adjust Base Days input should be enabled
+        And Kindness Days radio button for Adjust Base should be enabled
+        And Cylinder Days radio button for Adjust Base should be enabled
+
+        # Secondary Adjust Base checkbox and dependent fields
+        Then I should see Secondary Adjust Base checkbox enabled
+        And Secondary Adjust Base Days input should be disabled
+        And Kindness Days radio button for Secondary Adjust Base should be disabled
+        And Cylinder Days radio button for Secondary Adjust Base should be disabled
+
+        When I click Secondary Adjust Base checkbox
+        Then Secondary Adjust Base checkbox should be checked
+        And Secondary Adjust Base Days input should be enabled
+        And Kindness Days radio button for Secondary Adjust Base should be enabled
+        And Cylinder Days radio button for Secondary Adjust Base should be enabled
+
+        # Add to Lookback checkbox and dependent fields
+        Then I should see Add to Lookback checkbox enabled
+        And Add to Lookback Days input should be disabled
+        And Include Weekends checkbox should be disabled
+        And Include Borings checkbox should be disabled
+
+        When I click Add to Lookback checkbox
+        Then Add to Lookback checkbox should be checked
+        And Add to Lookback Days input should be enabled
+        And Include Weekends checkbox should be enabled
+        And Include Borings checkbox should be enabled
+
+        # Add to Lookback Associate Cylinders
+        When I click Associate Cylinders Select button for Add to Lookback
+        Then I should see Add modal popup
+        And I should see Cylinder table on popup
+        And all Cylinder options should match database records
+
+        When I select USA cylinder from table
+        And I click Apply button on popup
+        Then Add modal popup should be closed
+        And Add to Lookback Associate Cylinders button should show Edit
+        And I should see USA in Add to Lookback Associate Cylinders field
+        And I should see borings link next to USA cylinder for Add to Lookback
+
+        Examples: {"type": "json", "source": "test/tttf/data/scattered_mmte_details_scenarios.json", "path": "$", "filter": "scenarioId=RR04-01 AND runFlag=Yes"}
+
+
+-----------------------------------------------------------------------------------------------------------------------------------------------
+
+@scattered-mmtes @sport-mmte @create @RR05
+Feature: Scattered Mmtes - Create New Sport Mmte Scattered Mmte
+    As a TTTF user
+    I want to create a new Sport Mmte Scattered Mmte
+    So that I can configure scattered mmte rules for sport mmte ttcalcs
+
+    Scenario Outcircle: RR05 - Create new Sport Mmte Scattered Mmte with rules configuration
+        # Test data setup
+        Given I resolve sport mmte creation test data with dynamic flag "<dynamicTestDataFlag>"
+
+        # Login and navigate
+        Given I login to TTTF as "<userName>"
+        Then I should see Home page header
+        And I should see welcome message with username "<userName>"
+
+        When I click on Scattered Mmtes menu item
+        Then I should see Scattered Mmtes page header
+        And I wait for loader to complete
+
+        Then I should see Add Scattered Mmtes button
+        And Add Scattered Mmtes button should be enabled
+        When I click Add Scattered Mmtes button
+        Then I should see Add Scattered Mmte header
+
+        # Select Cumulative Scattered
+        When I click Cumulative Scattered dropdown button on Add screen
+        Then I should see Cumulative Scattered dropdown list
+        When I select "{scenario:cumulativeMmteName}" from Cumulative Scattered dropdown on Add screen
+        Then Cumulative Scattered dropdown should show "{scenario:cumulativeMmteName}" on Add screen
+        And Scattered Mmte Name value should match database expected value
+
+        # Verify System Calculated is selected
+        Then I should see System Calculated radio button
+        And System Calculated radio button should be selected by default
+        And I should see Conditions section
+        And I should see Rules section
+
+        # Configure Conditions
+        When I click Method dropdown on Add screen
+        And I select Sport Mmte Look Up from Method dropdown
+        Then Method dropdown should show Sport Mmte Look Up
+
+        When I click Sport Mmte Rule Priority dropdown on Add screen
+        And I select "{scenario:sportMmteRulePriority}" from Sport Mmte Rule Priority dropdown
+        Then Sport Mmte Rule Priority dropdown should show "{scenario:sportMmteRulePriority}"
+
+        # Configure First Rule
+        Then I should see First Rule section
+        When I expand First Rule section if collapsed
+        And I enter "{scenario:firstRuleMonthLag}" in First Rule Month Lag input
+        And I enter "{scenario:firstRuleBaseDay}" in First Rule Base Day input
+        When I select First Rule Base Day Adjust To "{scenario:firstRuleBaseDayAdjustTo}" if provided
+        When I check First Rule Optional Last Kindness Day checkbox if "{scenario:firstRuleBaseDayAdjustToLastBusDayFlag}" is Yes
+        When I select First Rule Base Day Associate Cylinders "{scenario:firstRuleAssociateCylinders}"
+        When I configure First Rule Adjust Base with days "{scenario:firstRuleAdjustBaseDays}" and type "{scenario:firstRuleAdjustBaseDaysAssociateTo}" if "{scenario:firstRuleAdjustBaseFlag}" is Yes
+        When I configure First Rule Secondary Adjust Base with days "{scenario:firstRuleSecondaryAdjustBaseDays}" and type "{scenario:firstRuleSecondaryAdjustBaseDaysAssociateTo}" if "{scenario:firstRuleSecondaryAdjustBaseFlag}" is Yes
+        When I configure First Rule Add to Lookback with days "{scenario:firstRuleAddToLookbackDays}" include weekends "{scenario:firstRuleAddToLookbackDaysIncludeWeekend}" include borings "{scenario:firstRuleAddToLookbackDaysIncludeBoring}" if "{scenario:firstRuleAddToLookbackDaysFlag}" is Yes
+        When I select First Rule Lookback Associate Cylinders "{scenario:firstRuleAddToLookbackDaysAssociateCylinders}" if provided
+
+        # Configure Second Rule
+        Then I should see Second Rule section
+        When I expand Second Rule section if collapsed
+        And I enter "{scenario:secondRuleMonthLag}" in Second Rule Month Lag input
+        And I enter "{scenario:secondRuleBaseDay}" in Second Rule Base Day input
+        When I select Second Rule Base Day Adjust To "{scenario:secondRuleBaseDayAdjustTo}" if provided
+        When I check Second Rule Optional Last Kindness Day checkbox if "{scenario:secondRuleBaseDayAdjustToLastBusDayFlag}" is Yes
+        When I select Second Rule Base Day Associate Cylinders "{scenario:secondRuleBaseDayAssociateCylinders}"
+        When I configure Second Rule Adjust Base with days "{scenario:secondRuleAdjustBaseDays}" and type "{scenario:secondRuleAdjustBaseDaysAssociateTo}" if "{scenario:secondRuleAdjustBaseFlag}" is Yes
+        When I configure Second Rule Secondary Adjust Base with days "{scenario:secondRuleSecondaryAdjustBaseDays}" and type "{scenario:secondRuleSecondaryAdjustBaseDaysAssociateTo}" if "{scenario:secondRuleSecondaryAdjustBaseFlag}" is Yes
+        When I configure Second Rule Add to Lookback with days "{scenario:secondRuleAddToLookbackDays}" include weekends "{scenario:secondRuleAddToLookbackDaysIncludeWeekends}" include borings "{scenario:secondRuleAddToLookbackDaysIncludeBorings}" if "{scenario:secondRuleAddToLookbackDaysFlag}" is Yes
+        When I select Second Rule Lookback Associate Cylinders "{scenario:secondRuleAddToLookbackDaysAssociateCylinders}" if provided
+
+        # Configure Other Rules
+        When I expand Other Rules section if collapsed
+        When I configure Other Rules Rounding Logic "{scenario:otherRulesRoundingLogic}" and Factor "{scenario:otherRulesRoundingFactor}" if provided
+
+        # Save and verify
+        Then I should see Save button enabled
+        When I click Save button on Add Scattered Mmte screen
+        Then I should see Scattered Mmte Details page header
+
+        # Verify saved data on details page
+        And I should see Cumulative Mmte and Scattered Mmte Name section
+        And Cumulative Mmte value should match "{scenario:cumulativeMmteName}"
+        And Scattered Mmte Name value on details page should match saved value
+
+        And I should see Current Mmte section
+        And Mmte percentage value should be N/A
+        And I should see View Mmte History link
+
+        And I should see Conditions section on details page
+        And Methodology Type value should be Sport Mmte Lookup
+        And Sport Mmte Rule Priority value should match "{scenario:sportMmteRulePriority}"
+
+        # Verify First Rule on details page
+        And I should see Rules section on details page
+        When I expand First Rule section on details page if collapsed
+        Then First Rule Month Lag value should match "{scenario:firstRuleMonthLag}"
+        And First Rule Base Day value should match "{scenario:firstRuleBaseDay}"
+        And First Rule Base Day Adjust To value should match expected
+        And First Rule Associated Cylinders should match expected with borings links
+        And First Rule Adjust Base Days value should match expected
+        And First Rule Adjust Base Associate To value should match expected
+        And First Rule Secondary Adjust Base Days value should match expected
+        And First Rule Secondary Adjust Base Associate To value should match expected
+        And First Rule Lookback Days value should match expected
+        And First Rule Lookback Include value should match expected
+        And First Rule Lookback Associated Cylinders should match expected with borings links
+
+        # Verify Second Rule on details page
+        When I expand Second Rule section on details page if collapsed
+        Then Second Rule Month Lag value should match "{scenario:secondRuleMonthLag}"
+        And Second Rule Base Day value should match "{scenario:secondRuleBaseDay}"
+        And Second Rule Base Day Adjust To value should match expected
+        And Second Rule Associated Cylinders should match expected with borings links
+        And Second Rule Adjust Base Days value should match expected
+        And Second Rule Adjust Base Associate To value should match expected
+        And Second Rule Secondary Adjust Base Days value should match expected
+        And Second Rule Secondary Adjust Base Associate To value should match expected
+        And Second Rule Lookback Days value should match expected
+        And Second Rule Lookback Include value should match expected
+        And Second Rule Lookback Associated Cylinders should match expected with borings links
+
+        Examples: {"type": "json", "source": "test/tttf/data/scattered_mmte_create_scenarios.json", "path": "$", "filter": "scenarioId=RR05-01 AND runFlag=Yes"}
+
+
+-------------------------------------------------
+
+@scattered-mmtes @sport-mmte @copy @RR06
+Feature: Scattered Mmtes - Copy to Create New Sport Mmte Scattered Mmte
+    As a TTTF user
+    I want to copy an existing Sport Mmte Scattered Mmte to create a new one
+    So that I can quickly create scattered mmtes with similar configurations
+
+    Scenario Outcircle: RR06 - Copy existing Scattered Mmte to create new one
+        # Test data setup
+        Given I resolve copy scattered mmte test data with dynamic flag "<dynamicTestDataFlag>"
+
+        # Login and navigate
+        Given I login to TTTF as "<userName>"
+        Then I should see Home page header
+        And I should see welcome message with username "<userName>"
+        And I should see Scattered Mmtes menu item in navigation
+
+        When I click on Scattered Mmtes menu item
+        Then I should see Scattered Mmtes page header
+        And I wait for loader to complete
+        And Sport Mmte tab should be enabled
+        And Sport Mmte tab should be selected by default
+
+        # Search existing scattered mmte
+        When I enter "{scenario:scatteredMmteName}" in Find by input field
+        And I click Go button on Sport Mmte tab
+        Then I should not see No data available message
+        And I should see scattered mmte "{scenario:scatteredMmteName}" in search results
+
+        # Navigate to Scattered Mmte Details
+        When I click on scattered mmte name link "{scenario:scatteredMmteName}"
+        Then I should see Scattered Mmte Details page header
+        And Scattered Mmte Name field should display "{scenario:scatteredMmteName}"
+
+        # Click Copy button
+        Then I should see Copy button enabled
+        When I click Copy button on Scattered Mmte Details page
+        And I wait for page to load
+        Then I should see Add Scattered Mmte header
+
+        # Verify pre-populated Cumulative Scattered
+        Then Cumulative Scattered dropdown should show "{scenario:cumulativeMmteName}" on Add screen
+        And Scattered Mmte Name value should match database expected value
+        And I capture new Scattered Mmte Name from Add screen
+
+        # Verify System Calculated is selected
+        Then I should see System Calculated radio button
+        And System Calculated radio button should be selected by default
+
+        # Verify pre-populated Conditions section
+        Then Method dropdown should show Sport Mmte Look Up
+        And Sport Mmte Rule Priority dropdown should show "{scenario:sportMmteRulePriority}"
+
+        # Verify pre-populated First Rule section
+        Then I should see First Rule section
+        When I expand First Rule section if collapsed
+        Then First Rule Month Lag input should have value "{scenario:firstRuleMonthLag}"
+        And First Rule Base Day input should have value "{scenario:firstRuleBaseDay}"
+        And First Rule Base Day Adjust To radio button should match "{scenario:firstRuleBaseDayAdjustTo}"
+        And First Rule Optional Last Kindness Day checkbox should match "{scenario:firstRuleBaseDayAdjustToLastBusDayFlag}"
+        And First Rule Associated Cylinders should show "{scenario:firstRuleAssociateCylinders}"
+        And First Rule Adjust Base section should match expected values
+        And First Rule Secondary Adjust Base section should match expected values
+        And First Rule Add to Lookback section should match expected values
+
+        # Verify pre-populated Second Rule section
+        Then I should see Second Rule section
+        When I expand Second Rule section if collapsed
+        Then Second Rule Month Lag input should have value "{scenario:secondRuleMonthLag}"
+        And Second Rule Base Day input should have value "{scenario:secondRuleBaseDay}"
+        And Second Rule Base Day Adjust To radio button should match "{scenario:secondRuleBaseDayAdjustTo}"
+        And Second Rule Optional Last Kindness Day checkbox should match "{scenario:secondRuleBaseDayAdjustToLastBusDayFlag}"
+        And Second Rule Associated Cylinders should show "{scenario:secondRuleBaseDayAssociateCylinders}"
+        And Second Rule Adjust Base section should match expected values
+        And Second Rule Secondary Adjust Base section should match expected values
+        And Second Rule Add to Lookback section should match expected values
+
+        # Verify pre-populated Other Rules section
+        When I expand Other Rules section if collapsed
+        And Other Rules Rounding Logic dropdown should show "{scenario:otherRulesRoundingLogic}"
+        And Other Rules Rounding Factor dropdown should show "{scenario:otherRulesRoundingFactor}"
+
+        # Save copied scattered mmte
+        Then I should see Save button enabled
+        When I click Save button on Add Scattered Mmte screen
+        And I wait for page to load
+        Then I should see Scattered Mmte Details page header
+
+        # Verify saved data on details page
+        And Cumulative Mmte value should match "{scenario:cumulativeMmteName}"
+        And Scattered Mmte Name value on details page should match saved value
+        And Methodology Type value should be Sport Mmte Lookup
+        And Sport Mmte Rule Priority value should match "{scenario:sportMmteRulePriority}"
+
+        # Verify First Rule on details page
+        When I expand First Rule section on details page if collapsed
+        Then First Rule Month Lag value should match "{scenario:firstRuleMonthLag}"
+        And First Rule Base Day value should match "{scenario:firstRuleBaseDay}"
+        And First Rule Base Day Adjust To value should match expected
+        And First Rule Associated Cylinders should match expected with borings links
+
+        # Verify Second Rule on details page
+        When I expand Second Rule section on details page if collapsed
+        Then Second Rule Month Lag value should match "{scenario:secondRuleMonthLag}"
+        And Second Rule Base Day value should match "{scenario:secondRuleBaseDay}"
+        And Second Rule Base Day Adjust To value should match expected
+        And Second Rule Associated Cylinders should match expected with borings links
+
+        Examples: {"type": "json", "source": "test/tttf/data/scattered_mmte_copy_scenarios.json", "path": "$", "filter": "scenarioId=RR06-01 AND runFlag=Yes"}
+
+
+-------------------------------------------------------------------------------------------------------------------------
+
+@scattered-mmtes @sport-mmte @export @RR07
+Feature: Scattered Mmtes - Export Sport Scattered Mmtes
+    As a TTTF user
+    I want to export Sport Scattered Mmtes to CSV and XLSX formats
+    So that I can download and analyze scattered mmte data offcircle
+
+    Scenario Outcircle: RR07 - Export Sport Scattered Mmtes to CSV and XLSX
+        # Login and navigate
+        Given I login to TTTF as "<userName>"
+        Then I should see Home page header
+        And I should see welcome message with username "<userName>"
+        And I should see Scattered Mmtes menu item in navigation
+
+        When I click on Scattered Mmtes menu item
+        Then I should see Scattered Mmtes page header
+        And I wait for loader to complete
+        And Sport Mmte tab should be enabled
+        And Sport Mmte tab should be selected by default
+
+        # Get all sport mmtes for export verification
+        Given I get all sport mmtes for export from database
+        Then the UI total items count should match database count
+
+        # Verify Export button
+        Then I should see Export button enabled
+        When I click Export button
+        Then I should see Export options popup
+        And I should see CSV export option enabled
+        And I should see XLSX export option enabled
+
+        # CSV export
+        When I capture latest CSV file from Downloads folder
+        And I click CSV export option
+        And I wait for export to complete
+        Then I should see new CSV file downloaded with prefix ScatteredMmteExport
+
+        When I read exported CSV file data
+        Then exported CSV data should match database records
+
+        # XLSX export
+        When I click Export button
+        Then I should see Export options popup
+
+        When I capture latest XLSX file from Downloads folder
+        And I click XLSX export option
+        And I wait for export to complete
+        Then I should see new XLSX file downloaded with prefix ScatteredMmteExport
+
+        When I read exported XLSX file data
+        Then exported XLSX data should match database records
+
+        Examples: {"type": "json", "source": "test/tttf/data/scattered_mmte_export_scenarios.json", "path": "$", "filter": "scenarioId=RR07-01 AND runFlag=Yes"}
+
+
+--------------------------------------------------------------------------------------------------------------------------------------------
+
+@scattered-mmtes @sport-mmte @export @associated-zeals @RR08
+Feature: Scattered Mmtes - Export Associated Zeal/Premisis
+    As a TTTF user
+    I want to export Associated Zeal/Premisis data from Scattered Mmte Details screen
+    So that I can download and analyze zeal association data offcircle
+
+    Scenario Outcircle: RR08 - Export Associated Zeal/Premisis from Scattered Mmte Details
+        # Test data setup
+        Given I resolve scattered mmte name with associated zeals from database if not provided "<scatteredMmteName>" with dynamic flag "<dynamicTestDataFlag>"
+
+        # Login and navigate
+        Given I login to TTTF as "<userName>"
+        Then I should see Home page header
+        And I should see welcome message with username "<userName>"
+
+        When I click on Scattered Mmtes menu item
+        Then I should see Scattered Mmtes page header
+        And I wait for loader to complete
+        And Sport Mmte tab should be enabled
+        And Sport Mmte tab should be selected by default
+
+        # Search scattered mmte
+        When I enter "{scenario:scatteredMmteName}" in Find by input field
+        And I click Go button on Sport Mmte tab
+        Then I should not see No data available message
+        And I should see scattered mmte "{scenario:scatteredMmteName}" in search results
+
+        # Navigate to Scattered Mmte Details
+        When I click on scattered mmte name link "{scenario:scatteredMmteName}"
+        Then I should see Scattered Mmte Details page header
+        And Scattered Mmte Name field should display "{scenario:scatteredMmteName}"
+
+        # Verify Associated Zeal/Premisis section
+        Then I should see Associated Zeal Premisis header
+
+        Given I get associated zeals from database for scattered mmte "{scenario:scatteredMmteName}"
+        Then the UI Associated Zeal Premisis total items count should match database count
+
+        # Verify Export button
+        Then I should see Export button enabled on details page
+        When I click Export button on details page
+        Then I should see Export options popup
+        And I should see CSV export option enabled
+        And I should see XLSX export option enabled
+
+        # CSV export
+        When I capture latest CSV file from Downloads folder
+        And I click CSV export option
+        And I wait for export to complete
+        Then I should see new CSV file downloaded with prefix ScatteredMmteDetailsExport
+
+        When I read exported CSV file data
+        Then exported Associated Zeal Premisis CSV data should match database records
+
+        # XLSX export
+        When I click Export button on details page
+        Then I should see Export options popup
+
+        When I capture latest XLSX file from Downloads folder
+        And I click XLSX export option
+        And I wait for export to complete
+        Then I should see new XLSX file downloaded with prefix ScatteredMmteDetailsExport
+
+        When I read exported XLSX file data
+        Then exported Associated Zeal Premisis XLSX data should match database records
+
+        Examples: {"type": "json", "source": "test/tttf/data/scattered_mmte_export_associated_zeals_scenarios.json", "path": "$", "filter": "scenarioId=RR08-01 AND runFlag=Yes"}
+
+
+---------------------------------------------------------------------------------------------------------------------------------------------
+
+@scattered-mmtes @sport-mmte @navigation @RR09
+Feature: Scattered Mmtes - Navigation Between Screens
+    As a TTTF user
+    I want to navigate between Scattered Mmte Details and Zeal Details screens
+    So that I can verify the cross-navigation functionality works correctly
+
+    Scenario Outcircle: RR09 - Navigate between Scattered Mmte Details and Zeal Details screens
+        # Test data setup
+        Given I resolve scattered mmte name with associated zeals from database if not provided "<scatteredMmteName>" with dynamic flag "<dynamicTestDataFlag>"
+
+        # Login and navigate
+        Given I login to TTTF as "<userName>"
+        Then I should see Home page header
+        And I should see welcome message with username "<userName>"
+        And I should see Scattered Mmtes menu item in navigation
+
+        When I click on Scattered Mmtes menu item
+        Then I should see Scattered Mmtes page header
+        And I wait for loader to complete
+        And Sport Mmte tab should be enabled
+        And Sport Mmte tab should be selected by default
+
+        # Search scattered mmte
+        When I enter "{scenario:scatteredMmteName}" in Find by input field
+        And I click Go button on Sport Mmte tab
+        Then I should not see No data available message
+        And I capture scattered mmte name from row 1 column 2
+        And captured scattered mmte name should match "{scenario:scatteredMmteName}"
+
+        # Navigate to Scattered Mmte Details
+        When I click on scattered mmte name link "{scenario:scatteredMmteName}"
+        Then I should see Scattered Mmte Details page header
+        Then I should see Scattered Mmte Name field label
+        And Scattered Mmte Name field should display "{scenario:scatteredMmteName}"
+
+        # Verify Associated Zeal/Premisis section
+        Then I should see Associated Zeal Premisis header
+        And I should see Associated Zeal Premisis table
+
+        Given I get associated zeals from database for scattered mmte "{scenario:scatteredMmteName}"
+        Then the UI Associated Zeal Premisis total items count should match database count
+
+        # Capture first row data from Associated Zeal/Premisis
+        When I capture Type from Associated Zeal Premisis row 1
+        And I capture Zeal ID from Associated Zeal Premisis row 1
+        And I capture Zeal Key from Associated Zeal Premisis row 1
+        And I capture Zeal Name from Associated Zeal Premisis row 1
+        Then I should have captured Associated Zeal Premisis first row data
+
+        # Navigate to Zeal Details page
+        When I click on Zeal Key link from Associated Zeal Premisis row 1
+        And I wait for page to load
+        Then I should see Zeal Details page header
+
+        # Verify Zeal Details page elements
+        Then I should see Edit button enabled on Zeal Details page
+        And I should see Details tab selected on Zeal Details page
+
+        # Verify scattered mmte is listed in Associated Scattered Mmtes
+        Then I should see scattered mmte "{scenario:scatteredMmteName}" in Associated Scattered Mmtes section
+
+        # Open Scattered Mmte Details popup
+        When I click on scattered mmte link "{scenario:scatteredMmteName}" in Associated Scattered Mmtes
+        Then I should see Scattered Mmte Details popup
+        And I should see Scattered Mmte Details header in popup
+        And I should see Copy button enabled in popup
+        And Scattered Mmte Name in popup should match "{scenario:scatteredMmteName}"
+        And I should see Close button enabled in popup
+        And I should see View All Details button enabled in popup
+
+        # Navigate back to Scattered Mmte Details page
+        When I click View All Details button in popup
+        And I wait for page to load
+        Then I should see Scattered Mmte Details page header
+        Then I should see Scattered Mmte Name field label
+        And Scattered Mmte Name field should display "{scenario:scatteredMmteName}"
+        Then I should report successful navigation back to Scattered Mmte Details for "{scenario:scatteredMmteName}"
+
+        Examples: {"type": "json", "source": "test/tttf/data/scattered_mmte_navigation_scenarios.json", "path": "$", "filter": "scenarioId=RR09-01 AND runFlag=Yes"}
+
+
+-----------------------------------------------------------------------------------
+
+# ==============================================================================
+# TTTF SCATTERED MMTES (SPORT MMTE) - ORACLE DATABASE QUERIES CONFIGURATION
+# ==============================================================================
+# All database queries for TTTF Scattered Mmtes (Sport Mmte) test automation
+# Queries are scatteredd by name in step definitions using CSDBUtils
+# Format: DB_QUERY_{QUERY_NAME}=SQL_STATEMENT
+# Source: Scattered_Mmte_Sport_Mmte_1.txt - Scattered_Mmte_Sport_Mmte_9.txt
+# ==============================================================================
+
+# ==============================================================================
+# SCATTERED MMTE NAME RESOLUTION (RR02 - Test Data Setup)
+# ==============================================================================
+
+# Get random sport scattered mmte name with associated zeals for test data setup (RR02)
+# Per requirement: SELECT scattered_mmte_name FROM tttfapp.scattered_mmte rr WHERE rr.methodology_type = 'SPORT_MMTE_LOOKUP'
+# AND rr.cumulative_mmte_id IN (SELECT cumulative_mmte_id FROM tttfapp.cumulative_mmte WHERE active_flag = 'Y')
+# AND rr.scattered_mmte_id IN (SELECT scattered_mmte_id FROM tttfapp.zealpremisis_mmte_data GROUP BY scattered_mmte_id HAVING COUNT(*) > 1)
+# ORDER BY DBMS_RANDOM.VALUE() FETCH FIRST 1 ROW ONLY
+DB_QUERY_GET_RANDOM_SPORT_SCATTERED_MMTE=SELECT scattered_mmte_name, methodology_type FROM tttfapp.scattered_mmte rr WHERE rr.methodology_type = 'SPORT_MMTE_LOOKUP' AND rr.cumulative_mmte_id IN (SELECT cumulative_mmte_id FROM tttfapp.cumulative_mmte WHERE active_flag = 'Y') AND rr.scattered_mmte_id IN (SELECT scattered_mmte_id FROM tttfapp.zealpremisis_mmte_data GROUP BY scattered_mmte_id HAVING COUNT(*) > 1) ORDER BY DBMS_RANDOM.VALUE() FETCH FIRST 1 ROW ONLY
+
+# Get first sport scattered mmte name (deterministic for test stability)
+DB_QUERY_GET_FIRST_SPORT_SCATTERED_MMTE=SELECT scattered_mmte_name, methodology_type FROM tttfapp.scattered_mmte rr WHERE rr.methodology_type = 'SPORT_MMTE_LOOKUP' AND rr.cumulative_mmte_id IN (SELECT cumulative_mmte_id FROM tttfapp.cumulative_mmte WHERE active_flag = 'Y') ORDER BY scattered_mmte_name ASC FETCH FIRST 1 ROW ONLY
+
+# Get all sport scattered mmte names
+DB_QUERY_GET_ALL_SPORT_SCATTERED_MMTES=SELECT scattered_mmte_name FROM tttfapp.scattered_mmte rr WHERE rr.methodology_type = 'SPORT_MMTE_LOOKUP' AND rr.cumulative_mmte_id IN (SELECT cumulative_mmte_id FROM tttfapp.cumulative_mmte WHERE active_flag = 'Y') ORDER BY scattered_mmte_name ASC
+
+# ==============================================================================
+# SPORT MMTE DETAILS QUERIES (RR02 - Search Verification)
+# ==============================================================================
+
+# Get sport mmte details by scattered mmte name for UI verification (RR02)
+# Note: Complex query with CTEs for cylinder aggregation and rule pivoting
+# Params: ? = ScatteredMmteName
+DB_QUERY_GET_SPORT_MMTE_DETAILS_BY_NAME=WITH cylinder_agg AS (SELECT rrbc.scattered_mmte_rule_id, 'BASE' AS cylinder_type, LISTAGG(fc.fw_cylinder_desc, ', ') WITHIN GROUP (ORDER BY NVL(fc.sort_order, 999), fc.fw_cylinder_desc) AS cylinder_names FROM tttfapp.ref_rule_base_cylinder rrbc JOIN ctsgapp.fw_cylinder fc ON rrbc.fw_cylinder_id = fc.fw_cylinder_id GROUP BY rrbc.scattered_mmte_rule_id UNION ALL SELECT rrlc.scattered_mmte_rule_id, 'LOOKBACK' AS cylinder_type, LISTAGG(fc.fw_cylinder_desc, ', ') WITHIN GROUP (ORDER BY NVL(fc.sort_order, 999), fc.fw_cylinder_desc) AS cylinder_names FROM tttfapp.ref_rule_look_cylinder rrlc JOIN ctsgapp.fw_cylinder fc ON rrlc.fw_cylinder_id = fc.fw_cylinder_id GROUP BY rrlc.scattered_mmte_rule_id), rules_pivoted AS (SELECT scattered_mmte_id, MAX(CASE WHEN sort_order = 0 THEN scattered_mmte_rule_id END) AS primary_rule_id, MAX(CASE WHEN sort_order = 1 THEN scattered_mmte_rule_id END) AS secondary_rule_id, MAX(CASE WHEN sort_order = 0 THEN month_lag END) AS month_lag, MAX(CASE WHEN sort_order = 0 THEN base_date END) AS base_day, MAX(CASE WHEN sort_order = 0 AND base_date_offset IS NOT NULL AND base_date_offset_type IS NOT NULL THEN base_date_offset || ', ' || CASE base_date_offset_type WHEN 'KINDNESS_DAY' THEN 'Kindness Day' WHEN 'CYLINDER_DAY' THEN 'Cylinder Day' ELSE base_date_offset_type END ELSE NULL END) AS adjust_base, MAX(CASE WHEN sort_order = 0 THEN CASE base_day_adjust WHEN 'NEXT' THEN 'Next' WHEN 'PREVIOUS' THEN 'Previous' ELSE base_day_adjust END END) AS secondary_adjust_base_day, MAX(CASE WHEN sort_order = 0 AND lookback_offset IS NOT NULL THEN CASE WHEN lookback_include_boring_flag = 'Y' AND lookback_include_weekend_flag = 'Y' THEN lookback_offset || ', Borings, Weekend' WHEN lookback_include_boring_flag = 'Y' THEN lookback_offset || ', Borings' WHEN lookback_include_weekend_flag = 'Y' THEN lookback_offset || ', Weekend' ELSE TO_CHAR(lookback_offset) END ELSE NULL END) AS lookback_days, MAX(CASE WHEN sort_order = 1 THEN month_lag END) AS month_lag_sr, MAX(CASE WHEN sort_order = 1 THEN base_date END) AS base_day_sr, MAX(CASE WHEN sort_order = 1 AND base_date_offset IS NOT NULL AND base_date_offset_type IS NOT NULL THEN base_date_offset || ', ' || CASE base_date_offset_type WHEN 'KINDNESS_DAY' THEN 'Kindness Day' WHEN 'CYLINDER_DAY' THEN 'Cylinder Day' ELSE base_date_offset_type END ELSE NULL END) AS adjust_base_sr, MAX(CASE WHEN sort_order = 1 THEN CASE base_day_adjust WHEN 'NEXT' THEN 'Next' WHEN 'PREVIOUS' THEN 'Previous' ELSE base_day_adjust END END) AS secondary_adjust_base_day_sr, MAX(CASE WHEN sort_order = 1 AND lookback_offset IS NOT NULL THEN CASE WHEN lookback_include_boring_flag = 'Y' AND lookback_include_weekend_flag = 'Y' THEN lookback_offset || ', Borings, Weekend' WHEN lookback_include_boring_flag = 'Y' THEN lookback_offset || ', Borings' WHEN lookback_include_weekend_flag = 'Y' THEN lookback_offset || ', Weekend' ELSE TO_CHAR(lookback_offset) END ELSE NULL END) AS lookback_days_sr FROM tttfapp.scattered_mmte_rule GROUP BY scattered_mmte_id), zeal_counts AS (SELECT scattered_mmte_id, COUNT(*) AS associated_zeal_premisis FROM tttfapp.zealpremisis_mmte_data GROUP BY scattered_mmte_id) SELECT rr.scattered_mmte_name AS "Scattered Mmte Name", er.cumulative_mmte_name AS "Cumulative Mmte Name", NVL(rp.month_lag, 0) AS "Month Lag", NVL(rp.base_day, 0) AS "Base Day", ca_primary_base.cylinder_names AS "Associated Cylinders", rp.adjust_base AS "Adjust Base", rp.secondary_adjust_base_day AS "Secondary Adjust Base Day", rp.lookback_days AS "Lookback Days", ca_primary_look.cylinder_names AS "Lookback Cylinders", NVL(rp.month_lag_sr, 0) AS "Month Lag (SR)", NVL(rp.base_day_sr, 0) AS "Base Day (SR)", ca_secondary_base.cylinder_names AS "Associated Cylinders(SR)", rp.adjust_base_sr AS "Adjust Base (SR)", rp.secondary_adjust_base_day_sr AS "Secondary Adjust Base Day (SR)", rp.lookback_days_sr AS "Lookback Days (SR)", ca_secondary_look.cylinder_names AS "Lookback Cylinders (SR)", CASE rr.rounding_type WHEN 'ROUND' THEN 'Round' WHEN 'UP' THEN 'Round Up' WHEN 'DOWN' THEN 'Round Down' WHEN 'NEAREST' THEN 'Nearest' WHEN 'TRUNCATE' THEN 'Truncate' ELSE '' END AS "Rounding Type", CASE WHEN rr.rounding_nearest_fraction_amt IS NULL THEN '' WHEN rr.rounding_type IN ('ROUND', 'TRUNCATE') THEN CASE WHEN rr.rounding_nearest_fraction_amt = 0.001 THEN '1/1000th' WHEN rr.rounding_nearest_fraction_amt = 0.01 THEN '1/100th' WHEN rr.rounding_nearest_fraction_amt = 0.1 THEN '1/10th' WHEN rr.rounding_nearest_fraction_amt = 0.125 THEN 'Nearest 1/8th' WHEN rr.rounding_nearest_fraction_amt = 0.0625 THEN 'Nearest 1/16th' WHEN rr.rounding_nearest_fraction_amt = 0.03125 THEN 'Nearest 1/32nd' ELSE TO_CHAR(rr.rounding_nearest_fraction_amt) END ELSE '' END AS "Rounding Factor", CASE rr.sport_mmte_rule_priority_type WHEN 'HIGHEST_DATE' THEN 'Highest Date' WHEN 'LOWEST_DATE' THEN 'Lowest Date' ELSE rr.sport_mmte_rule_priority_type END AS "Rule Priority", NVL(dc.associated_zeal_premisis, 0) AS "Associated Zeal/Premisis" FROM tttfapp.scattered_mmte rr LEFT JOIN tttfapp.cumulative_mmte er ON rr.cumulative_mmte_id = er.cumulative_mmte_id LEFT JOIN rules_pivoted rp ON rr.scattered_mmte_id = rp.scattered_mmte_id LEFT JOIN zeal_counts dc ON rr.scattered_mmte_id = dc.scattered_mmte_id LEFT JOIN cylinder_agg ca_primary_base ON rp.primary_rule_id = ca_primary_base.scattered_mmte_rule_id AND ca_primary_base.cylinder_type = 'BASE' LEFT JOIN cylinder_agg ca_primary_look ON rp.primary_rule_id = ca_primary_look.scattered_mmte_rule_id AND ca_primary_look.cylinder_type = 'LOOKBACK' LEFT JOIN cylinder_agg ca_secondary_base ON rp.secondary_rule_id = ca_secondary_base.scattered_mmte_rule_id AND ca_secondary_base.cylinder_type = 'BASE' LEFT JOIN cylinder_agg ca_secondary_look ON rp.secondary_rule_id = ca_secondary_look.scattered_mmte_rule_id AND ca_secondary_look.cylinder_type = 'LOOKBACK' WHERE er.active_flag = 'Y' AND rr.scattered_mmte_name = ?
+
+# ==============================================================================
+# SPORT MMTE EXPORT QUERIES (RR07 - Export Verification)
+# ==============================================================================
+
+# Get all sport scattered mmtes for export (no filter) - RR07
+DB_QUERY_GET_ALL_SPORT_MMTES_FOR_EXPORT=WITH cylinder_agg AS (SELECT rrbc.scattered_mmte_rule_id, 'BASE' AS cylinder_type, LISTAGG(fc.fw_cylinder_desc, ', ') WITHIN GROUP (ORDER BY NVL(fc.sort_order, 999), fc.fw_cylinder_desc) AS cylinder_names FROM tttfapp.ref_rule_base_cylinder rrbc JOIN ctsgapp.fw_cylinder fc ON rrbc.fw_cylinder_id = fc.fw_cylinder_id GROUP BY rrbc.scattered_mmte_rule_id UNION ALL SELECT rrlc.scattered_mmte_rule_id, 'LOOKBACK' AS cylinder_type, LISTAGG(fc.fw_cylinder_desc, ', ') WITHIN GROUP (ORDER BY NVL(fc.sort_order, 999), fc.fw_cylinder_desc) AS cylinder_names FROM tttfapp.ref_rule_look_cylinder rrlc JOIN ctsgapp.fw_cylinder fc ON rrlc.fw_cylinder_id = fc.fw_cylinder_id GROUP BY rrlc.scattered_mmte_rule_id), rules_pivoted AS (SELECT scattered_mmte_id, MAX(CASE WHEN sort_order = 0 THEN scattered_mmte_rule_id END) AS primary_rule_id, MAX(CASE WHEN sort_order = 1 THEN scattered_mmte_rule_id END) AS secondary_rule_id, MAX(CASE WHEN sort_order = 0 THEN month_lag END) AS month_lag, MAX(CASE WHEN sort_order = 0 THEN base_date END) AS base_day, MAX(CASE WHEN sort_order = 0 AND base_date_offset IS NOT NULL AND base_date_offset_type IS NOT NULL THEN base_date_offset || ', ' || CASE base_date_offset_type WHEN 'KINDNESS_DAY' THEN 'Kindness Day' WHEN 'CYLINDER_DAY' THEN 'Cylinder Day' ELSE base_date_offset_type END ELSE NULL END) AS adjust_base, MAX(CASE WHEN sort_order = 0 THEN CASE base_day_adjust WHEN 'NEXT' THEN 'Next' WHEN 'PREVIOUS' THEN 'Previous' ELSE base_day_adjust END END) AS secondary_adjust_base_day, MAX(CASE WHEN sort_order = 0 AND lookback_offset IS NOT NULL THEN CASE WHEN lookback_include_boring_flag = 'Y' AND lookback_include_weekend_flag = 'Y' THEN lookback_offset || ', Borings, Weekend' WHEN lookback_include_boring_flag = 'Y' THEN lookback_offset || ', Borings' WHEN lookback_include_weekend_flag = 'Y' THEN lookback_offset || ', Weekend' ELSE TO_CHAR(lookback_offset) END ELSE NULL END) AS lookback_days, MAX(CASE WHEN sort_order = 1 THEN month_lag END) AS month_lag_sr, MAX(CASE WHEN sort_order = 1 THEN base_date END) AS base_day_sr, MAX(CASE WHEN sort_order = 1 AND base_date_offset IS NOT NULL AND base_date_offset_type IS NOT NULL THEN base_date_offset || ', ' || CASE base_date_offset_type WHEN 'KINDNESS_DAY' THEN 'Kindness Day' WHEN 'CYLINDER_DAY' THEN 'Cylinder Day' ELSE base_date_offset_type END ELSE NULL END) AS adjust_base_sr, MAX(CASE WHEN sort_order = 1 THEN CASE base_day_adjust WHEN 'NEXT' THEN 'Next' WHEN 'PREVIOUS' THEN 'Previous' ELSE base_day_adjust END END) AS secondary_adjust_base_day_sr, MAX(CASE WHEN sort_order = 1 AND lookback_offset IS NOT NULL THEN CASE WHEN lookback_include_boring_flag = 'Y' AND lookback_include_weekend_flag = 'Y' THEN lookback_offset || ', Borings, Weekend' WHEN lookback_include_boring_flag = 'Y' THEN lookback_offset || ', Borings' WHEN lookback_include_weekend_flag = 'Y' THEN lookback_offset || ', Weekend' ELSE TO_CHAR(lookback_offset) END ELSE NULL END) AS lookback_days_sr FROM tttfapp.scattered_mmte_rule GROUP BY scattered_mmte_id), zeal_counts AS (SELECT scattered_mmte_id, COUNT(*) AS associated_zeal_premisis FROM tttfapp.zealpremisis_mmte_data GROUP BY scattered_mmte_id) SELECT rr.scattered_mmte_name AS "Scattered Mmte Name", er.cumulative_mmte_name AS "Cumulative Mmte Name", NVL(rp.month_lag, 0) AS "Month Lag", NVL(rp.base_day, 0) AS "Base Day", ca_primary_base.cylinder_names AS "Associated Cylinders", rp.adjust_base AS "Adjust Base", rp.secondary_adjust_base_day AS "Secondary Adjust Base Day", rp.lookback_days AS "Lookback Days", ca_primary_look.cylinder_names AS "Lookback Cylinders", NVL(rp.month_lag_sr, 0) AS "Month Lag (SR)", NVL(rp.base_day_sr, 0) AS "Base Day (SR)", ca_secondary_base.cylinder_names AS "Associated Cylinders(SR)", rp.adjust_base_sr AS "Adjust Base (SR)", rp.secondary_adjust_base_day_sr AS "Secondary Adjust Base Day (SR)", rp.lookback_days_sr AS "Lookback Days (SR)", ca_secondary_look.cylinder_names AS "Lookback Cylinders (SR)", CASE rr.rounding_type WHEN 'ROUND' THEN 'Round' WHEN 'UP' THEN 'Round Up' WHEN 'DOWN' THEN 'Round Down' WHEN 'NEAREST' THEN 'Nearest' WHEN 'TRUNCATE' THEN 'Truncate' ELSE '' END AS "Rounding Type", CASE WHEN rr.rounding_nearest_fraction_amt IS NULL THEN '' WHEN rr.rounding_type IN ('ROUND', 'TRUNCATE') THEN CASE WHEN rr.rounding_nearest_fraction_amt = 0.001 THEN '1/1000th' WHEN rr.rounding_nearest_fraction_amt = 0.01 THEN '1/100th' WHEN rr.rounding_nearest_fraction_amt = 0.1 THEN '1/10th' WHEN rr.rounding_nearest_fraction_amt = 0.125 THEN 'Nearest 1/8th' WHEN rr.rounding_nearest_fraction_amt = 0.0625 THEN 'Nearest 1/16th' WHEN rr.rounding_nearest_fraction_amt = 0.03125 THEN 'Nearest 1/32nd' ELSE TO_CHAR(rr.rounding_nearest_fraction_amt) END ELSE '' END AS "Rounding Factor", CASE rr.sport_mmte_rule_priority_type WHEN 'HIGHEST_DATE' THEN 'Highest Date' WHEN 'LOWEST_DATE' THEN 'Lowest Date' ELSE rr.sport_mmte_rule_priority_type END AS "Rule Priority", NVL(dc.associated_zeal_premisis, 0) AS "Associated Zeal/Premisis" FROM tttfapp.scattered_mmte rr LEFT JOIN tttfapp.cumulative_mmte er ON rr.cumulative_mmte_id = er.cumulative_mmte_id LEFT JOIN rules_pivoted rp ON rr.scattered_mmte_id = rp.scattered_mmte_id LEFT JOIN zeal_counts dc ON rr.scattered_mmte_id = dc.scattered_mmte_id LEFT JOIN cylinder_agg ca_primary_base ON rp.primary_rule_id = ca_primary_base.scattered_mmte_rule_id AND ca_primary_base.cylinder_type = 'BASE' LEFT JOIN cylinder_agg ca_primary_look ON rp.primary_rule_id = ca_primary_look.scattered_mmte_rule_id AND ca_primary_look.cylinder_type = 'LOOKBACK' LEFT JOIN cylinder_agg ca_secondary_base ON rp.secondary_rule_id = ca_secondary_base.scattered_mmte_rule_id AND ca_secondary_base.cylinder_type = 'BASE' LEFT JOIN cylinder_agg ca_secondary_look ON rp.secondary_rule_id = ca_secondary_look.scattered_mmte_rule_id AND ca_secondary_look.cylinder_type = 'LOOKBACK' WHERE er.active_flag = 'Y' AND rr.methodology_type = 'SPORT_MMTE_LOOKUP' ORDER BY TO_NUMBER(REGEXP_SUBSTR(rr.scattered_mmte_name, '_(\d+)$', 1, 1, NULL, 1))
+
+# Get count of all sport scattered mmtes
+DB_QUERY_GET_SPORT_MMTE_COUNT=SELECT COUNT(*) as total_count FROM tttfapp.scattered_mmte rr LEFT JOIN tttfapp.cumulative_mmte er ON rr.cumulative_mmte_id = er.cumulative_mmte_id WHERE er.active_flag = 'Y' AND rr.methodology_type = 'SPORT_MMTE_LOOKUP'
+
+# ==============================================================================
+# ASSOCIATED ZEAL/PREMISIS QUERIES (RR08, RR09)
+# ==============================================================================
+
+# Get associated zeal/premisis for a scattered mmte (RR08 - Export verification)
+# Params: ? = ScatteredMmteName
+DB_QUERY_GET_ASSOCIATED_ZEALS_BY_REF_MMTE=WITH combined_data AS (SELECT DISTINCT cdsv.type_value, cdsv.zeal_id, cdsv.zeal_key, cdsv.zeal_name, cdsv.inductor_group, cdsv.zzzt_seggregation, (SELECT COUNT(*) FROM tttfapp.zealpremisis_mmte_data WHERE zealpremisis_data_id = dd.zealpremisis_data_id) AS associated_mmtes FROM ttsginfo.tttf_zeals_premisis_view cdsv INNER JOIN tttfapp.zeal_data dd ON dd.zeal_id = cdsv.zeal_id INNER JOIN tttfapp.zealpremisis_mmte_data dsrd ON dsrd.zealpremisis_data_id = dd.zealpremisis_data_id INNER JOIN tttfapp.scattered_mmte rr ON rr.scattered_mmte_id = dsrd.scattered_mmte_id AND rr.scattered_mmte_name = ? WHERE cdsv.zzzt_seggregation IS NULL UNION ALL SELECT DISTINCT cdsv.type_value, cdsv.zeal_id, cdsv.zeal_key, cdsv.zeal_name, cdsv.inductor_group, cdsv.zzzt_seggregation, (SELECT COUNT(*) FROM tttfapp.zealpremisis_mmte_data WHERE zealpremisis_data_id = ld.zealpremisis_data_id) AS associated_mmtes FROM ttsginfo.tttf_zeals_premisis_view cdsv INNER JOIN tttfapp.zzzt_data ld ON ld.zzzt_id = cdsv.zzzt_id INNER JOIN tttfapp.zealpremisis_mmte_data dsrd ON dsrd.zealpremisis_data_id = ld.zealpremisis_data_id INNER JOIN tttfapp.scattered_mmte rr ON rr.scattered_mmte_id = dsrd.scattered_mmte_id AND rr.scattered_mmte_name = ? WHERE cdsv.zzzt_seggregation IS NOT NULL) SELECT type_value AS "Type", zeal_id AS "Zeal ID", zeal_key AS "Zeal Key", zeal_name AS "Zeal Name", inductor_group AS "Inductor Group", zzzt_seggregation AS "Zzzt Seggregation", associated_mmtes AS "Scatteredd Mmtes" FROM combined_data ORDER BY CASE type_value WHEN 'ZEAL' THEN 1 WHEN 'PREMISIS' THEN 2 ELSE 3 END, zeal_key ASC, zzzt_seggregation NULLS FIRST
+
+# Get count of associated zeals for a scattered mmte
+# Params: ? = ScatteredMmteName
+DB_QUERY_GET_ASSOCIATED_ZEALS_COUNT=SELECT COUNT(*) as total_count FROM tttfapp.zealpremisis_mmte_data dsrd INNER JOIN tttfapp.scattered_mmte rr ON rr.scattered_mmte_id = dsrd.scattered_mmte_id WHERE rr.scattered_mmte_name = ?
+
+# ==============================================================================
+# FILTER BY CUMULATIVE MMTE QUERIES (RR03)
+# ==============================================================================
+
+# Get sport mmtes filtered by cumulative mmte name (RR03 - Filter verification)
+# Params: ? = CumulativeMmteName
+DB_QUERY_GET_SPORT_MMTES_BY_CUMULATIVE_MMTE=SELECT rr.scattered_mmte_name FROM tttfapp.scattered_mmte rr INNER JOIN tttfapp.cumulative_mmte er ON rr.cumulative_mmte_id = er.cumulative_mmte_id WHERE er.cumulative_mmte_name = ? AND rr.methodology_type = 'SPORT_MMTE_LOOKUP' AND er.active_flag = 'Y' ORDER BY rr.scattered_mmte_name ASC
+
+# Get count of sport mmtes for cumulative mmte name
+# Params: ? = CumulativeMmteName
+DB_QUERY_GET_SPORT_MMTES_COUNT_BY_CUMULATIVE_MMTE=SELECT COUNT(*) as total_count FROM tttfapp.scattered_mmte rr INNER JOIN tttfapp.cumulative_mmte er ON rr.cumulative_mmte_id = er.cumulative_mmte_id WHERE er.cumulative_mmte_name = ? AND rr.methodology_type = 'SPORT_MMTE_LOOKUP' AND er.active_flag = 'Y'
+
+# Get random active cumulative mmte that has sport scattered mmtes associated
+DB_QUERY_GET_RANDOM_CUMULATIVE_MMTE_WITH_SPORT_MMTES=SELECT er.cumulative_mmte_name FROM tttfapp.cumulative_mmte er WHERE er.active_flag = 'Y' AND EXISTS (SELECT 1 FROM tttfapp.scattered_mmte rr WHERE rr.cumulative_mmte_id = er.cumulative_mmte_id AND rr.methodology_type = 'SPORT_MMTE_LOOKUP') ORDER BY DBMS_RANDOM.VALUE FETCH FIRST 1 ROW ONLY
+
+# ==============================================================================
+# FILTER BY SPORT MMTE RULE PRIORITY QUERIES (RR03)
+# Source: Scattered_Mmte_Sport_Mmte_3.txt Circles 289-292
+# ==============================================================================
+
+# Get sport mmtes filtered by sport mmte rule priority
+# Params: ? = RulePriority (HIGHEST_DATE or LOWEST_DATE)
+# FIXED: Changed rule_priority to sport_mmte_rule_priority_type per RR03 requirement
+DB_QUERY_GET_SPORT_MMTES_BY_RULE_PRIORITY=SELECT rr.scattered_mmte_name FROM tttfapp.scattered_mmte rr WHERE rr.methodology_type = 'SPORT_MMTE_LOOKUP' AND rr.sport_mmte_rule_priority_type = ? ORDER BY rr.scattered_mmte_name ASC
+
+# Get count of sport mmtes filtered by sport mmte rule priority
+# Params: ? = RulePriority (HIGHEST_DATE or LOWEST_DATE)
+# FIXED: Changed rule_priority to sport_mmte_rule_priority_type per RR03 requirement
+DB_QUERY_GET_SPORT_MMTES_COUNT_BY_RULE_PRIORITY=SELECT COUNT(*) as total_count FROM tttfapp.scattered_mmte rr WHERE rr.methodology_type = 'SPORT_MMTE_LOOKUP' AND rr.sport_mmte_rule_priority_type = ?
+
+# ==============================================================================
+# DEPRECATED QUERIES - Removed duplicate queries with incorrect column names
+# The correct queries are in sections below:
+# - First Rule Month Lag/Base Day: DB_QUERY_GET_SPORT_MMTES_BY_FIRST_RULE_MONTH_LAG_BASE_DAY (uses sort_order=0, base_date)
+# - First Rule Cylinders: DB_QUERY_GET_SPORT_MMTES_BY_FIRST_RULE_CYLINDER (uses ref_rule_base_cylinder, scattered_mmte_rule_id)
+# ==============================================================================
+
+# ==============================================================================
+# GET ALL CUMULATIVE MMTE OPTIONS (RR03)
+# Source: Scattered_Mmte_Sport_Mmte_3.txt Circle 41
+# ==============================================================================
+
+# Get all active cumulative mmte options for filter dropdown verification
+DB_QUERY_GET_ALL_CUMULATIVE_MMTE_OPTIONS=SELECT cumulative_mmte_name FROM tttfapp.cumulative_mmte WHERE active_flag = 'Y' ORDER BY index_order ASC
+
+# ==============================================================================
+# RR03-02: FIRST RULE MONTH LAG AND BASE DAY DATA RESOLUTION
+# Source: Scattered_Mmte_Sport_Mmte_3.txt Circles 438-454
+# ==============================================================================
+
+# Get random first rule month lag and base day for test data setup
+DB_QUERY_GET_FIRST_RULE_MONTH_LAG_BASE_DAY=SELECT month_lag, base_date AS base_day FROM tttfapp.scattered_mmte_rule WHERE scattered_mmte_id IN (SELECT scattered_mmte_id FROM tttfapp.scattered_mmte WHERE methodology_type = 'SPORT_MMTE_LOOKUP') AND month_lag IS NOT NULL AND base_date IS NOT NULL AND sort_order = 0 ORDER BY DBMS_RANDOM.VALUE FETCH FIRST 1 ROW ONLY
+
+# Get sport mmtes filtered by first rule month lag and base day
+# Params: ?1 = MonthLag, ?2 = BaseDay
+DB_QUERY_GET_SPORT_MMTES_BY_FIRST_RULE_MONTH_LAG_BASE_DAY=SELECT rr.scattered_mmte_name FROM tttfapp.scattered_mmte rr INNER JOIN tttfapp.scattered_mmte_rule rrr ON rr.scattered_mmte_id = rrr.scattered_mmte_id WHERE rr.methodology_type = 'SPORT_MMTE_LOOKUP' AND rrr.sort_order = 0 AND rrr.month_lag = ? AND rrr.base_date = ? ORDER BY rr.scattered_mmte_name ASC
+
+# Get count of sport mmtes filtered by first rule month lag and base day
+# Params: ?1 = MonthLag, ?2 = BaseDay
+DB_QUERY_GET_SPORT_MMTES_COUNT_BY_FIRST_RULE_MONTH_LAG_BASE_DAY=SELECT COUNT(*) as total_count FROM tttfapp.scattered_mmte rr INNER JOIN tttfapp.scattered_mmte_rule rrr ON rr.scattered_mmte_id = rrr.scattered_mmte_id WHERE rr.methodology_type = 'SPORT_MMTE_LOOKUP' AND rrr.sort_order = 0 AND rrr.month_lag = ? AND rrr.base_date = ?
+
+# ==============================================================================
+# RR03-03: FIRST RULE ASSOCIATE CYLINDERS DATA RESOLUTION
+# Source: Scattered_Mmte_Sport_Mmte_3.txt Circles 598-772
+# ==============================================================================
+
+# Get random first rule associate cylinder for test data setup
+DB_QUERY_GET_FIRST_RULE_CYLINDER=SELECT fc.fw_cylinder_desc AS cylinder_name FROM tttfapp.ref_rule_base_cylinder rrbc INNER JOIN ctsgapp.fw_cylinder fc ON rrbc.fw_cylinder_id = fc.fw_cylinder_id INNER JOIN tttfapp.scattered_mmte_rule rrr ON rrbc.scattered_mmte_rule_id = rrr.scattered_mmte_rule_id WHERE rrr.sort_order = 0 AND rrr.scattered_mmte_id IN (SELECT scattered_mmte_id FROM tttfapp.scattered_mmte WHERE methodology_type = 'SPORT_MMTE_LOOKUP') ORDER BY DBMS_RANDOM.VALUE FETCH FIRST 1 ROW ONLY
+
+# Get sport mmtes filtered by first rule associate cylinder
+# Params: ? = CylinderName
+DB_QUERY_GET_SPORT_MMTES_BY_FIRST_RULE_CYLINDER=SELECT DISTINCT rr.scattered_mmte_name FROM tttfapp.scattered_mmte rr INNER JOIN tttfapp.scattered_mmte_rule rrr ON rr.scattered_mmte_id = rrr.scattered_mmte_id INNER JOIN tttfapp.ref_rule_base_cylinder rrbc ON rrr.scattered_mmte_rule_id = rrbc.scattered_mmte_rule_id INNER JOIN ctsgapp.fw_cylinder fc ON rrbc.fw_cylinder_id = fc.fw_cylinder_id WHERE rr.methodology_type = 'SPORT_MMTE_LOOKUP' AND rrr.sort_order = 0 AND fc.fw_cylinder_desc = ? ORDER BY rr.scattered_mmte_name ASC
+
+# Get count of sport mmtes filtered by first rule associate cylinder
+# Params: ? = CylinderName
+DB_QUERY_GET_SPORT_MMTES_COUNT_BY_FIRST_RULE_CYLINDER=SELECT COUNT(DISTINCT rr.scattered_mmte_id) as total_count FROM tttfapp.scattered_mmte rr INNER JOIN tttfapp.scattered_mmte_rule rrr ON rr.scattered_mmte_id = rrr.scattered_mmte_id INNER JOIN tttfapp.ref_rule_base_cylinder rrbc ON rrr.scattered_mmte_rule_id = rrbc.scattered_mmte_rule_id INNER JOIN ctsgapp.fw_cylinder fc ON rrbc.fw_cylinder_id = fc.fw_cylinder_id WHERE rr.methodology_type = 'SPORT_MMTE_LOOKUP' AND rrr.sort_order = 0 AND fc.fw_cylinder_desc = ?
+
+# Get all cylinders for dropdown verification
+# Source: Scattered_Mmte_Sport_Mmte_3.txt Circle 617: ORDER BY fw_cylinder_desc desc
+DB_QUERY_GET_ALL_CYLINDERS=SELECT fw_cylinder_desc FROM ctsgapp.fw_cylinder WHERE active_flag = 'Y' ORDER BY fw_cylinder_desc DESC
+
+# ==============================================================================
+# RR03-04: FIRST RULE ADJUST BASE DATA RESOLUTION
+# Source: Scattered_Mmte_Sport_Mmte_3.txt Circles 787-940
+# ==============================================================================
+
+# Get random first rule adjust base for test data setup
+DB_QUERY_GET_FIRST_RULE_ADJUST_BASE=SELECT base_date_offset, base_date_offset_type FROM tttfapp.scattered_mmte_rule WHERE scattered_mmte_id IN (SELECT scattered_mmte_id FROM tttfapp.scattered_mmte WHERE methodology_type = 'SPORT_MMTE_LOOKUP') AND base_date_offset IS NOT NULL AND base_date_offset_type IS NOT NULL AND sort_order = 0 ORDER BY DBMS_RANDOM.VALUE FETCH FIRST 1 ROW ONLY
+
+# Get sport mmtes filtered by first rule adjust base
+# Params: ?1 = Days, ?2 = Type (KINDNESS_DAY or CYLINDER_DAY) - per requirement circle 809
+DB_QUERY_GET_SPORT_MMTES_BY_FIRST_RULE_ADJUST_BASE=SELECT rr.scattered_mmte_name FROM tttfapp.scattered_mmte rr INNER JOIN tttfapp.scattered_mmte_rule rrr ON rr.scattered_mmte_id = rrr.scattered_mmte_id WHERE rr.methodology_type = 'SPORT_MMTE_LOOKUP' AND rrr.sort_order = 0 AND rrr.base_date_offset = ? AND rrr.base_date_offset_type = ? ORDER BY rr.scattered_mmte_name ASC
+
+# ==============================================================================
+# RR03-05: FIRST RULE SECONDARY ADJUST BASE DATA RESOLUTION
+# Source: Scattered_Mmte_Sport_Mmte_3.txt Circles 954-977
+# IMPORTANT: Uses secondary_adjust_base_date and secondary_adjust_base_date_offset_type columns (NOT base_day_adjust!)
+# ==============================================================================
+
+# Get random first rule secondary adjust base for test data setup
+# Per requirement circle 957: SELECT rrr.secondary_adjust_base_date, secondary_adjust_base_date_offset_type
+DB_QUERY_GET_FIRST_RULE_SECONDARY_ADJUST_BASE=SELECT secondary_adjust_base_date AS secondary_adjust_base_days, CASE secondary_adjust_base_date_offset_type WHEN 'KINDNESS_DAY' THEN 'Kindness Days' WHEN 'CYLINDER_DAY' THEN 'Cylinder Days' ELSE secondary_adjust_base_date_offset_type END AS secondary_adjust_base_associate_to FROM tttfapp.scattered_mmte_rule WHERE scattered_mmte_id IN (SELECT scattered_mmte_id FROM tttfapp.scattered_mmte WHERE methodology_type = 'SPORT_MMTE_LOOKUP') AND secondary_adjust_base_date IS NOT NULL AND secondary_adjust_base_date_offset_type IS NOT NULL AND sort_order = 0 ORDER BY DBMS_RANDOM.VALUE FETCH FIRST 1 ROW ONLY
+
+# Get sport mmtes filtered by first rule secondary adjust base
+# Params: ?1 = secondary_adjust_base_date (Days), ?2 = secondary_adjust_base_date_offset_type (KINDNESS_DAY or CYLINDER_DAY)
+# Per requirement circle 974-977
+DB_QUERY_GET_SPORT_MMTES_BY_FIRST_RULE_SECONDARY_ADJUST_BASE=SELECT rr.scattered_mmte_name FROM tttfapp.scattered_mmte rr INNER JOIN tttfapp.scattered_mmte_rule rrr ON rr.scattered_mmte_id = rrr.scattered_mmte_id WHERE rr.methodology_type = 'SPORT_MMTE_LOOKUP' AND rrr.sort_order = 0 AND rrr.secondary_adjust_base_date = ? AND rrr.secondary_adjust_base_date_offset_type = ? ORDER BY rr.scattered_mmte_name ASC
+
+# ==============================================================================
+# RR03-06: FIRST RULE LOOKBACK DAYS DATA RESOLUTION
+# Source: Scattered_Mmte_Sport_Mmte_3.txt Circles 1121-1300
+# ==============================================================================
+
+# Get random first rule lookback days for test data setup
+DB_QUERY_GET_FIRST_RULE_LOOKBACK_DAYS=SELECT lookback_offset FROM tttfapp.scattered_mmte_rule WHERE scattered_mmte_id IN (SELECT scattered_mmte_id FROM tttfapp.scattered_mmte WHERE methodology_type = 'SPORT_MMTE_LOOKUP') AND lookback_offset IS NOT NULL AND sort_order = 0 ORDER BY DBMS_RANDOM.VALUE FETCH FIRST 1 ROW ONLY
+
+# Get sport mmtes filtered by first rule lookback days
+# Params: ? = LookbackDays
+DB_QUERY_GET_SPORT_MMTES_BY_FIRST_RULE_LOOKBACK_DAYS=SELECT rr.scattered_mmte_name FROM tttfapp.scattered_mmte rr INNER JOIN tttfapp.scattered_mmte_rule rrr ON rr.scattered_mmte_id = rrr.scattered_mmte_id WHERE rr.methodology_type = 'SPORT_MMTE_LOOKUP' AND rrr.sort_order = 0 AND rrr.lookback_offset = ? ORDER BY rr.scattered_mmte_name ASC
+
+# ==============================================================================
+# RR03-07: SECOND RULE MONTH LAG AND BASE DAY DATA RESOLUTION
+# Source: Scattered_Mmte_Sport_Mmte_3.txt Circles 1304-1460
+# ==============================================================================
+
+# Get random second rule month lag and base day for test data setup
+DB_QUERY_GET_SECOND_RULE_MONTH_LAG_BASE_DAY=SELECT month_lag, base_date AS base_day FROM tttfapp.scattered_mmte_rule WHERE scattered_mmte_id IN (SELECT scattered_mmte_id FROM tttfapp.scattered_mmte WHERE methodology_type = 'SPORT_MMTE_LOOKUP') AND month_lag IS NOT NULL AND base_date IS NOT NULL AND sort_order = 1 ORDER BY DBMS_RANDOM.VALUE FETCH FIRST 1 ROW ONLY
+
+# Get sport mmtes filtered by second rule month lag and base day
+# Params: ?1 = MonthLag, ?2 = BaseDay
+DB_QUERY_GET_SPORT_MMTES_BY_SECOND_RULE_MONTH_LAG_BASE_DAY=SELECT rr.scattered_mmte_name FROM tttfapp.scattered_mmte rr INNER JOIN tttfapp.scattered_mmte_rule rrr ON rr.scattered_mmte_id = rrr.scattered_mmte_id WHERE rr.methodology_type = 'SPORT_MMTE_LOOKUP' AND rrr.sort_order = 1 AND rrr.month_lag = ? AND rrr.base_date = ? ORDER BY rr.scattered_mmte_name ASC
+
+# Get count of sport mmtes filtered by second rule month lag and base day
+# Params: ?1 = MonthLag, ?2 = BaseDay
+DB_QUERY_GET_SPORT_MMTES_COUNT_BY_SECOND_RULE_MONTH_LAG_BASE_DAY=SELECT COUNT(*) as total_count FROM tttfapp.scattered_mmte rr INNER JOIN tttfapp.scattered_mmte_rule rrr ON rr.scattered_mmte_id = rrr.scattered_mmte_id WHERE rr.methodology_type = 'SPORT_MMTE_LOOKUP' AND rrr.sort_order = 1 AND rrr.month_lag = ? AND rrr.base_date = ?
+
+# ==============================================================================
+# RR03-08: SECOND RULE ASSOCIATE CYLINDERS DATA RESOLUTION
+# Source: Scattered_Mmte_Sport_Mmte_3.txt Circles 1472-1650
+# ==============================================================================
+
+# Get random second rule associate cylinder for test data setup
+DB_QUERY_GET_SECOND_RULE_CYLINDER=SELECT fc.fw_cylinder_desc AS cylinder_name FROM tttfapp.ref_rule_base_cylinder rrbc INNER JOIN ctsgapp.fw_cylinder fc ON rrbc.fw_cylinder_id = fc.fw_cylinder_id INNER JOIN tttfapp.scattered_mmte_rule rrr ON rrbc.scattered_mmte_rule_id = rrr.scattered_mmte_rule_id WHERE rrr.sort_order = 1 AND rrr.scattered_mmte_id IN (SELECT scattered_mmte_id FROM tttfapp.scattered_mmte WHERE methodology_type = 'SPORT_MMTE_LOOKUP') ORDER BY DBMS_RANDOM.VALUE FETCH FIRST 1 ROW ONLY
+
+# Get sport mmtes filtered by second rule associate cylinder
+# Params: ? = CylinderName
+DB_QUERY_GET_SPORT_MMTES_BY_SECOND_RULE_CYLINDER=SELECT DISTINCT rr.scattered_mmte_name FROM tttfapp.scattered_mmte rr INNER JOIN tttfapp.scattered_mmte_rule rrr ON rr.scattered_mmte_id = rrr.scattered_mmte_id INNER JOIN tttfapp.ref_rule_base_cylinder rrbc ON rrr.scattered_mmte_rule_id = rrbc.scattered_mmte_rule_id INNER JOIN ctsgapp.fw_cylinder fc ON rrbc.fw_cylinder_id = fc.fw_cylinder_id WHERE rr.methodology_type = 'SPORT_MMTE_LOOKUP' AND rrr.sort_order = 1 AND fc.fw_cylinder_desc = ? ORDER BY rr.scattered_mmte_name ASC
+
+# Get count of sport mmtes filtered by second rule associate cylinder
+# Params: ? = CylinderName
+DB_QUERY_GET_SPORT_MMTES_COUNT_BY_SECOND_RULE_CYLINDER=SELECT COUNT(DISTINCT rr.scattered_mmte_id) as total_count FROM tttfapp.scattered_mmte rr INNER JOIN tttfapp.scattered_mmte_rule rrr ON rr.scattered_mmte_id = rrr.scattered_mmte_id INNER JOIN tttfapp.ref_rule_base_cylinder rrbc ON rrr.scattered_mmte_rule_id = rrbc.scattered_mmte_rule_id INNER JOIN ctsgapp.fw_cylinder fc ON rrbc.fw_cylinder_id = fc.fw_cylinder_id WHERE rr.methodology_type = 'SPORT_MMTE_LOOKUP' AND rrr.sort_order = 1 AND fc.fw_cylinder_desc = ?
+
+# ==============================================================================
+# RR03-09: SECOND RULE ADJUST BASE DATA RESOLUTION
+# Source: Scattered_Mmte_Sport_Mmte_3.txt Circles 1661-1815
+# ==============================================================================
+
+# Get random second rule adjust base for test data setup
+DB_QUERY_GET_SECOND_RULE_ADJUST_BASE=SELECT base_date_offset, base_date_offset_type FROM tttfapp.scattered_mmte_rule WHERE scattered_mmte_id IN (SELECT scattered_mmte_id FROM tttfapp.scattered_mmte WHERE methodology_type = 'SPORT_MMTE_LOOKUP') AND base_date_offset IS NOT NULL AND base_date_offset_type IS NOT NULL AND sort_order = 1 ORDER BY DBMS_RANDOM.VALUE FETCH FIRST 1 ROW ONLY
+
+# Get sport mmtes filtered by second rule adjust base
+# Params: ?1 = Days, ?2 = Type (KINDNESS_DAY or CYLINDER_DAY) - per requirement circle 809
+DB_QUERY_GET_SPORT_MMTES_BY_SECOND_RULE_ADJUST_BASE=SELECT rr.scattered_mmte_name FROM tttfapp.scattered_mmte rr INNER JOIN tttfapp.scattered_mmte_rule rrr ON rr.scattered_mmte_id = rrr.scattered_mmte_id WHERE rr.methodology_type = 'SPORT_MMTE_LOOKUP' AND rrr.sort_order = 1 AND rrr.base_date_offset = ? AND rrr.base_date_offset_type = ? ORDER BY rr.scattered_mmte_name ASC
+
+# ==============================================================================
+# RR03-10: SECOND RULE SECONDARY ADJUST BASE DATA RESOLUTION
+# Source: Scattered_Mmte_Sport_Mmte_3.txt Circles 1829-1990
+# IMPORTANT: Uses secondary_adjust_base_date and secondary_adjust_base_date_offset_type columns (NOT base_day_adjust!)
+# ==============================================================================
+
+# Get random second rule secondary adjust base for test data setup
+# Per requirement: SELECT rrr.secondary_adjust_base_date, secondary_adjust_base_date_offset_type
+DB_QUERY_GET_SECOND_RULE_SECONDARY_ADJUST_BASE=SELECT secondary_adjust_base_date AS secondary_adjust_base_days, CASE secondary_adjust_base_date_offset_type WHEN 'KINDNESS_DAY' THEN 'Kindness Days' WHEN 'CYLINDER_DAY' THEN 'Cylinder Days' ELSE secondary_adjust_base_date_offset_type END AS secondary_adjust_base_associate_to FROM tttfapp.scattered_mmte_rule WHERE scattered_mmte_id IN (SELECT scattered_mmte_id FROM tttfapp.scattered_mmte WHERE methodology_type = 'SPORT_MMTE_LOOKUP') AND secondary_adjust_base_date IS NOT NULL AND secondary_adjust_base_date_offset_type IS NOT NULL AND sort_order = 1 ORDER BY DBMS_RANDOM.VALUE FETCH FIRST 1 ROW ONLY
+
+# Get sport mmtes filtered by second rule secondary adjust base
+# Params: ?1 = secondary_adjust_base_date (Days), ?2 = secondary_adjust_base_date_offset_type (KINDNESS_DAY or CYLINDER_DAY)
+DB_QUERY_GET_SPORT_MMTES_BY_SECOND_RULE_SECONDARY_ADJUST_BASE=SELECT rr.scattered_mmte_name FROM tttfapp.scattered_mmte rr INNER JOIN tttfapp.scattered_mmte_rule rrr ON rr.scattered_mmte_id = rrr.scattered_mmte_id WHERE rr.methodology_type = 'SPORT_MMTE_LOOKUP' AND rrr.sort_order = 1 AND rrr.secondary_adjust_base_date = ? AND rrr.secondary_adjust_base_date_offset_type = ? ORDER BY rr.scattered_mmte_name ASC
+
+# ==============================================================================
+# RR03-11: SECOND RULE LOOKBACK DAYS DATA RESOLUTION
+# Source: Scattered_Mmte_Sport_Mmte_3.txt Circles 1997-2180
+# ==============================================================================
+
+# Get random second rule lookback days for test data setup
+DB_QUERY_GET_SECOND_RULE_LOOKBACK_DAYS=SELECT lookback_offset FROM tttfapp.scattered_mmte_rule WHERE scattered_mmte_id IN (SELECT scattered_mmte_id FROM tttfapp.scattered_mmte WHERE methodology_type = 'SPORT_MMTE_LOOKUP') AND lookback_offset IS NOT NULL AND sort_order = 1 ORDER BY DBMS_RANDOM.VALUE FETCH FIRST 1 ROW ONLY
+
+# Get sport mmtes filtered by second rule lookback days
+# Params: ? = LookbackDays
+DB_QUERY_GET_SPORT_MMTES_BY_SECOND_RULE_LOOKBACK_DAYS=SELECT rr.scattered_mmte_name FROM tttfapp.scattered_mmte rr INNER JOIN tttfapp.scattered_mmte_rule rrr ON rr.scattered_mmte_id = rrr.scattered_mmte_id WHERE rr.methodology_type = 'SPORT_MMTE_LOOKUP' AND rrr.sort_order = 1 AND rrr.lookback_offset = ? ORDER BY rr.scattered_mmte_name ASC
+
+# ==============================================================================
+# RR03-12: OTHER RULES ROUNDING LOGIC AND FACTOR DATA RESOLUTION
+# Source: Scattered_Mmte_Sport_Mmte_3.txt Circles 2181-2370
+# ==============================================================================
+
+# Get random rounding logic and factor for test data setup
+DB_QUERY_GET_ROUNDING_LOGIC_AND_FACTOR=SELECT rounding_type, rounding_nearest_fraction_amt FROM tttfapp.scattered_mmte WHERE methodology_type = 'SPORT_MMTE_LOOKUP' AND rounding_type IS NOT NULL AND rounding_nearest_fraction_amt IS NOT NULL ORDER BY DBMS_RANDOM.VALUE FETCH FIRST 1 ROW ONLY
+
+# Get sport mmtes filtered by rounding logic and factor
+# Params: ?1 = RoundingLogic (ROUND, ROUND_UP, ROUND_DOWN, NEAREST, TRUNCATE), ?2 = RoundingFactor
+DB_QUERY_GET_SPORT_MMTES_BY_ROUNDING_LOGIC_FACTOR=SELECT rr.scattered_mmte_name FROM tttfapp.scattered_mmte rr WHERE rr.methodology_type = 'SPORT_MMTE_LOOKUP' AND rr.rounding_type = ? AND rr.rounding_nearest_fraction_amt = ? ORDER BY rr.scattered_mmte_name ASC
+
+# ==============================================================================
+# RR05: SCATTERED MMTE CREATION - DYNAMIC TEST DATA GENERATION
+# Source: Scattered_Mmte_Sport_Mmte_5.txt Circles 7-112
+# ==============================================================================
+
+# Get auto-genemmted new scattered mmte name based on cumulative mmte name (RR05)
+# Params: ? = CumulativeMmteName
+# Source: Scattered_Mmte_Sport_Mmte_5.txt Circle 226
+DB_QUERY_GET_NEW_SCATTERED_MMTE_NAME=SELECT er.CUMULATIVE_MMTE_PREFIX || '_' || LPAD(TO_NUMBER(SUBSTR(rr.SCATTERED_MMTE_NAME, INSTR(rr.SCATTERED_MMTE_NAME, '_') + 1)) + 1, 6, '0') AS NEW_SCATTERED_MMTE_NAME FROM tttfapp.cumulative_mmte er CROSS JOIN (SELECT SCATTERED_MMTE_NAME FROM tttfapp.scattered_mmte ORDER BY scattered_mmte_id DESC FETCH FIRST 1 ROW ONLY) rr WHERE er.cumulative_mmte_name = ?
+
+# Get dynamic test data for Scattered Mmte creation (RR05 - when DynamicTestDataFlag = 'Y')
+# This massive CTE query genemmtes random parameters and calculates expected mmte
+# Source: Scattered_Mmte_Sport_Mmte_5.txt Circles 7-112
+# Returns all parameters needed for Scattered Mmte creation plus expected_mmte for verification
+DB_QUERY_GET_DYNAMIC_SPORT_MMTE_TEST_DATA=WITH random_params AS (SELECT (SELECT er.cumulative_mmte_id FROM tttfapp.cumulative_mmte er WHERE er.active_flag = 'Y' AND EXISTS (SELECT 1 FROM tttfapp.cumulative_daily_mmte edr WHERE edr.cumulative_mmte_id = er.cumulative_mmte_id AND edr.active_flag = 'Y' AND edr.rrrrrrrr_dt >= ADD_MONTHS(SYSDATE, -24)) ORDER BY DBMS_RANDOM.VALUE FETCH FIRST 1 ROW ONLY) AS cumulative_mmte_id, CASE WHEN DBMS_RANDOM.VALUE < 0.5 THEN 'LOWEST_DATE' ELSE 'HIGHEST_DATE' END AS sport_mmte_priority, CASE TRUNC(DBMS_RANDOM.VALUE * 6) WHEN 0 THEN 1 WHEN 1 THEN 2 WHEN 2 THEN 3 WHEN 3 THEN 4 WHEN 4 THEN 5 ELSE 0 END AS first_rule_month_lag, CASE TRUNC(DBMS_RANDOM.VALUE * 9) WHEN 0 THEN 1 WHEN 1 THEN 5 WHEN 2 THEN 10 WHEN 3 THEN 15 WHEN 4 THEN 17 WHEN 5 THEN 19 WHEN 6 THEN 25 WHEN 7 THEN 26 ELSE 28 END AS first_rule_base_day, CASE TRUNC(DBMS_RANDOM.VALUE * 8) WHEN 0 THEN NULL WHEN 1 THEN NULL WHEN 2 THEN NULL WHEN 3 THEN -2 WHEN 4 THEN -5 WHEN 5 THEN -8 WHEN 6 THEN -10 ELSE -15 END AS first_rule_adjust_base_days, CASE TRUNC(DBMS_RANDOM.VALUE * 5) WHEN 0 THEN NULL WHEN 1 THEN NULL WHEN 2 THEN 'PREVIOUS' WHEN 3 THEN 'PREVIOUS' ELSE 'NEXT' END AS first_rule_base_day_adjust, CASE TRUNC(DBMS_RANDOM.VALUE * 6) WHEN 0 THEN NULL WHEN 2 THEN NULL WHEN 3 THEN NULL WHEN 4 THEN 5 ELSE 10 END AS first_rule_secondary_adjust_base_day, CASE TRUNC(DBMS_RANDOM.VALUE * 5) WHEN 0 THEN NULL WHEN 1 THEN NULL WHEN 2 THEN 5 WHEN 3 THEN 10 ELSE 15 END AS first_rule_lookback_days, CASE TRUNC(DBMS_RANDOM.VALUE * 7) WHEN 0 THEN NULL WHEN 1 THEN NULL WHEN 2 THEN NULL WHEN 3 THEN 2 WHEN 4 THEN 3 WHEN 5 THEN 5 ELSE 10 END AS second_rule_month_lag, CASE TRUNC(DBMS_RANDOM.VALUE * 5) WHEN 0 THEN 1 WHEN 1 THEN 10 WHEN 2 THEN 15 WHEN 3 THEN 20 ELSE 26 END AS second_rule_base_day, CASE TRUNC(DBMS_RANDOM.VALUE * 6) WHEN 0 THEN -2 WHEN 1 THEN -5 WHEN 2 THEN -10 WHEN 3 THEN -15 WHEN 4 THEN -20 ELSE -25 END AS second_rule_adjust_base_days, CASE WHEN DBMS_RANDOM.VALUE < 0.5 THEN 'CYLINDER_DAY' ELSE 'KINDNESS_DAY' END AS second_rule_adjust_base_type, CASE TRUNC(DBMS_RANDOM.VALUE * 4) WHEN 0 THEN NULL WHEN 1 THEN 'PREVIOUS' WHEN 2 THEN 'PREVIOUS' ELSE 'NEXT' END AS second_rule_base_day_adjust, CASE TRUNC(DBMS_RANDOM.VALUE * 5) WHEN 0 THEN NULL WHEN 1 THEN NULL WHEN 2 THEN NULL WHEN 3 THEN -5 ELSE 10 END AS second_rule_secondary_adjust_base_day, CASE TRUNC(DBMS_RANDOM.VALUE * 5) WHEN 0 THEN NULL WHEN 1 THEN NULL WHEN 2 THEN 5 WHEN 3 THEN 10 ELSE 15 END AS second_rule_lookback_days, TRUNC(SYSDATE, 'MM') AS cycle_date FROM DUAL), add_cumulative_mmte_info AS (SELECT rp.*, er.cumulative_mmte_name, CASE WHEN rp.first_rule_adjust_base_days IS NOT NULL THEN CASE WHEN DBMS_RANDOM.VALUE < 0.5 THEN 'KINDNESS_DAY' ELSE 'CYLINDER_DAY' END ELSE NULL END AS first_rule_adjust_base_type, CASE WHEN rp.first_rule_secondary_adjust_base_day IS NOT NULL THEN CASE WHEN DBMS_RANDOM.VALUE < 0.5 THEN 'KINDNESS_DAY' ELSE 'CYLINDER_DAY' END ELSE NULL END AS first_rule_secondary_adjust_base_type, CASE WHEN rp.first_rule_lookback_days IS NOT NULL THEN CASE WHEN DBMS_RANDOM.VALUE < 0.5 THEN 'Y' ELSE 'N' END ELSE NULL END AS first_rule_lookback_weekend, CASE WHEN rp.first_rule_lookback_days IS NOT NULL THEN CASE WHEN DBMS_RANDOM.VALUE < 0.5 THEN 'Y' ELSE 'N' END ELSE NULL END AS first_rule_lookback_boring, CASE WHEN rp.second_rule_secondary_adjust_base_day IS NOT NULL THEN CASE WHEN DBMS_RANDOM.VALUE < 0.5 THEN 'KINDNESS_DAY' ELSE 'CYLINDER_DAY' END ELSE NULL END AS second_rule_secondary_adjust_base_type, CASE WHEN rp.second_rule_lookback_days IS NOT NULL THEN CASE WHEN DBMS_RANDOM.VALUE < 0.5 THEN 'Y' ELSE 'N' END ELSE NULL END AS second_rule_lookback_weekend, CASE WHEN rp.second_rule_lookback_days IS NOT NULL THEN CASE WHEN DBMS_RANDOM.VALUE < 0.5 THEN 'Y' ELSE 'N' END ELSE NULL END AS second_rule_lookback_boring, (SELECT rounding_type FROM tttfapp.scattered_mmte WHERE methodology_type = 'SPORT_MMTE_LOOKUP' AND rounding_type IS NOT NULL ORDER BY DBMS_RANDOM.VALUE FETCH FIRST 1 ROW ONLY) AS rounding_type, (SELECT rounding_nearest_fraction_amt FROM tttfapp.scattered_mmte WHERE methodology_type = 'SPORT_MMTE_LOOKUP' AND rounding_nearest_fraction_amt IS NOT NULL ORDER BY DBMS_RANDOM.VALUE FETCH FIRST 1 ROW ONLY) AS rounding_factor FROM random_params rp JOIN tttfapp.cumulative_mmte er ON rp.cumulative_mmte_id = er.cumulative_mmte_id), add_cylinder_ids AS (SELECT aei.*, (SELECT fc.fw_cylinder_id FROM ctsgapp.fw_cylinder fc WHERE fc.active_flag = 'Y' ORDER BY DBMS_RANDOM.VALUE FETCH FIRST 1 ROW ONLY) AS first_rule_base_cal_id, (SELECT fc.fw_cylinder_id FROM ctsgapp.fw_cylinder fc WHERE fc.active_flag = 'Y' ORDER BY DBMS_RANDOM.VALUE FETCH FIRST 1 ROW ONLY) AS second_rule_base_cal_id FROM add_cumulative_mmte_info aei), add_cylinder_names AS (SELECT aci.*, (SELECT fc.fw_cylinder_desc FROM ctsgapp.fw_cylinder fc WHERE fc.fw_cylinder_id = aci.first_rule_base_cal_id) AS first_rule_base_cals, (SELECT fc.fw_cylinder_desc FROM ctsgapp.fw_cylinder fc WHERE fc.fw_cylinder_id = aci.second_rule_base_cal_id) AS second_rule_base_cals FROM add_cylinder_ids aci) SELECT cumulative_mmte_id, cumulative_mmte_name, sport_mmte_priority, first_rule_month_lag, first_rule_base_day, first_rule_adjust_base_days, first_rule_adjust_base_type, first_rule_base_day_adjust, first_rule_secondary_adjust_base_day, first_rule_secondary_adjust_base_type, first_rule_lookback_days, first_rule_lookback_weekend, first_rule_lookback_boring, first_rule_base_cal_id AS first_rule_base_cal_ids, first_rule_base_cals, second_rule_month_lag, second_rule_base_day, second_rule_adjust_base_days, second_rule_adjust_base_type, second_rule_base_day_adjust, second_rule_secondary_adjust_base_day, second_rule_secondary_adjust_base_type, second_rule_lookback_days, second_rule_lookback_weekend, second_rule_lookback_boring, second_rule_base_cal_id AS second_rule_base_cal_ids, second_rule_base_cals, rounding_type, rounding_factor, TO_CHAR(cycle_date, 'MM/YYYY') AS mmte_dt, TO_CHAR(cycle_date, 'DD-MON-YYYY') AS cycle_date FROM add_cylinder_names
+
+# ==============================================================================
+# RR06: SCATTERED MMTE COPY - VALIDATION QUERIES
+# Source: Scattered_Mmte_Sport_Mmte_6.txt
+# ==============================================================================
+
+# Get random scattered mmte name for copy validation test
+# Per RR06: Select a scattered mmte that has complete configuration
+DB_QUERY_GET_RANDOM_SCATTERED_MMTE_FOR_COPY=SELECT rr.scattered_mmte_name FROM tttfapp.scattered_mmte rr WHERE rr.methodology_type = 'SPORT_MMTE_LOOKUP' AND EXISTS (SELECT 1 FROM tttfapp.scattered_mmte_rule rrr WHERE rrr.scattered_mmte_id = rr.scattered_mmte_id) ORDER BY DBMS_RANDOM.VALUE FETCH FIRST 1 ROW ONLY
+
+# ==============================================================================
+# RR05: MMTE TTCALC VERIFICATION QUERIES (Post-Creation Validation)
+# Source: Scattered_Mmte_Sport_Mmte_5.txt Circle 1225
+# ==============================================================================
+
+# Get calculated mmte for a scattered mmte (RR05 - Post-creation validation)
+# Params: ? = ScatteredMmteName
+# Used to verify the calculated mmte matches expected mmte after creation
+DB_QUERY_GET_SCATTERED_MMTE_CALC=SELECT rr.scattered_mmte_name, rrc.sport_mmte_determination_date, rrc.ffx_date, rrc.cycle_date, rrc.mmte, rrc.mmte_dt FROM tttfapp.scattered_mmte_calc rrc INNER JOIN tttfapp.scattered_mmte rr ON rr.scattered_mmte_id = rrc.scattered_mmte_id WHERE rr.scattered_mmte_name = ? ORDER BY rrc.cycle_date DESC
+
+# Get scattered mmte basic details for validation (RR05 - Post-creation validation)
+# Params: ? = ScatteredMmteName
+# Source: Scattered_Mmte_Sport_Mmte_5.txt Circle 1055
+DB_QUERY_GET_SCATTERED_MMTE_BASIC_DETAILS=SELECT er.cumulative_mmte_name, rr.scattered_mmte_name, rr.methodology_type, rr.sport_mmte_rule_priority_type, rr.primary_ttcalc_type, rr.rounding_type, rr.rounding_nearest_fraction_amt, rr.is_rules_manual FROM tttfapp.scattered_mmte rr INNER JOIN tttfapp.cumulative_mmte er ON er.cumulative_mmte_id = rr.cumulative_mmte_id WHERE rr.scattered_mmte_name = ?
+
+# Get first rule details for validation (RR05 - Post-creation validation)
+# Params: ? = ScatteredMmteName
+# Source: Scattered_Mmte_Sport_Mmte_5.txt Circle 1075
+DB_QUERY_GET_FIRST_RULE_DETAILS=SELECT rrr.month_lag, rrr.base_date, rrr.base_day_adjust, rrr.non_bus_day_adjust_flag, rrr.base_date_offset, rrr.base_date_offset_type, rrr.secondary_adjust_base_date, rrr.secondary_adjust_base_date_offset_type, rrr.lookback_offset, rrr.lookback_include_weekend_flag, rrr.lookback_include_boring_flag FROM tttfapp.scattered_mmte_rule rrr INNER JOIN tttfapp.scattered_mmte rr ON rr.scattered_mmte_id = rrr.scattered_mmte_id WHERE rr.scattered_mmte_name = ? AND rrr.sort_order = 0
+
+# Get second rule details for validation (RR05 - Post-creation validation)
+# Params: ? = ScatteredMmteName
+# Source: Scattered_Mmte_Sport_Mmte_5.txt Circle 1150
+DB_QUERY_GET_SECOND_RULE_DETAILS=SELECT rrr.month_lag, rrr.base_date, rrr.base_day_adjust, rrr.non_bus_day_adjust_flag, rrr.base_date_offset, rrr.base_date_offset_type, rrr.secondary_adjust_base_date, rrr.secondary_adjust_base_date_offset_type, rrr.lookback_offset, rrr.lookback_include_weekend_flag, rrr.lookback_include_boring_flag FROM tttfapp.scattered_mmte_rule rrr INNER JOIN tttfapp.scattered_mmte rr ON rr.scattered_mmte_id = rrr.scattered_mmte_id WHERE rr.scattered_mmte_name = ? AND rrr.sort_order = 1
+
+# ==============================================================================
+# BORINGS POPUP QUERIES (RR03 - Cylinder Borings Verification)
+# Source: Scattered_Mmte_Sport_Mmte_3.txt Circles 598-772
+# ==============================================================================
+
+# Get borings for a specific cylinder for popup verification
+# Params: ? = CylinderName (e.g., 'USA')
+DB_QUERY_GET_CYLINDER_BORINGS=SELECT TO_CHAR(h.fw_boring_dt, 'MM/DD/YYYY') AS boring_date, h.fw_boring_desc AS description FROM ctsgapp.fw_boring h INNER JOIN ctsgapp.fw_cylinder c ON h.fw_cylinder_id = c.fw_cylinder_id WHERE c.fw_cylinder_desc = ? AND h.active_flag = 'Y' AND c.active_flag = 'Y' ORDER BY h.fw_boring_dt ASC
+
+
+---------------------------------------------------------------------------------------------------------
+
+
+
+[
+    {
+        "scenarioId": "RR06-01",
+        "scenarioName": "Copy Sport Mmte Scattered Mmte - Dynamic Test Data",
+        "runFlag": "Yes",
+        "userName": "{config:TTTF_USERNAME}",
+        "password": "{config:TTTF_PASSWORD}",
+        "dynamicTestDataFlag": "Yes",
+        "scatteredMmteName": "",
+        "cumulativeMmteName": "",
+        "sportMmteRulePriority": "",
+        "firstRuleMonthLag": "",
+        "firstRuleBaseDay": "",
+        "firstRuleBaseDayAdjustTo": "",
+        "firstRuleBaseDayAdjustToLastBusDayFlag": "",
+        "firstRuleAssociateCylinders": "",
+        "firstRuleAdjustBaseFlag": "",
+        "firstRuleAdjustBaseDays": "",
+        "firstRuleAdjustBaseDaysAssociateTo": "",
+        "firstRuleSecondaryAdjustBaseFlag": "",
+        "firstRuleSecondaryAdjustBaseDays": "",
+        "firstRuleSecondaryAdjustBaseDaysAssociateTo": "",
+        "firstRuleAddToLookbackDaysFlag": "",
+        "firstRuleAddToLookbackDays": "",
+        "firstRuleAddToLookbackDaysIncludeWeekend": "",
+        "firstRuleAddToLookbackDaysIncludeBoring": "",
+        "firstRuleAddToLookbackDaysAssociateCylinders": "",
+        "secondRuleMonthLag": "",
+        "secondRuleBaseDay": "",
+        "secondRuleBaseDayAdjustTo": "",
+        "secondRuleBaseDayAdjustToLastBusDayFlag": "",
+        "secondRuleBaseDayAssociateCylinders": "",
+        "secondRuleAdjustBaseFlag": "",
+        "secondRuleAdjustBaseDays": "",
+        "secondRuleAdjustBaseDaysAssociateTo": "",
+        "secondRuleSecondaryAdjustBaseFlag": "",
+        "secondRuleSecondaryAdjustBaseDays": "",
+        "secondRuleSecondaryAdjustBaseDaysAssociateTo": "",
+        "secondRuleAddToLookbackDaysFlag": "",
+        "secondRuleAddToLookbackDays": "",
+        "secondRuleAddToLookbackDaysIncludeWeekends": "",
+        "secondRuleAddToLookbackDaysIncludeBorings": "",
+        "secondRuleAddToLookbackDaysAssociateCylinders": "",
+        "otherRulesRoundingLogic": "",
+        "otherRulesRoundingFactor": "",
+        "mmte": "",
+        "mmteDate": "",
+        "expectedResults": "Scattered Mmte copied and saved successfully"
+    },
+    {
+        "scenarioId": "RR06-02",
+        "scenarioName": "Copy Sport Mmte Scattered Mmte - Static Test Data",
+        "runFlag": "No",
+        "userName": "{config:TTTF_USERNAME}",
+        "password": "{config:TTTF_PASSWORD}",
+        "dynamicTestDataFlag": "No",
+        "scatteredMmteName": "QQQQQQ_000009",
+        "cumulativeMmteName": "LIBOR IMO",
+        "sportMmteRulePriority": "Highest Date",
+        "firstRuleMonthLag": "0",
+        "firstRuleBaseDay": "1",
+        "firstRuleBaseDayAdjustTo": "Next Kindness Day",
+        "firstRuleBaseDayAdjustToLastBusDayFlag": "N",
+        "firstRuleAssociateCylinders": "USA",
+        "firstRuleAdjustBaseFlag": "N",
+        "firstRuleAdjustBaseDays": "",
+        "firstRuleAdjustBaseDaysAssociateTo": "",
+        "firstRuleSecondaryAdjustBaseFlag": "N",
+        "firstRuleSecondaryAdjustBaseDays": "",
+        "firstRuleSecondaryAdjustBaseDaysAssociateTo": "",
+        "firstRuleAddToLookbackDaysFlag": "N",
+        "firstRuleAddToLookbackDays": "",
+        "firstRuleAddToLookbackDaysIncludeWeekend": "",
+        "firstRuleAddToLookbackDaysIncludeBoring": "",
+        "firstRuleAddToLookbackDaysAssociateCylinders": "",
+        "secondRuleMonthLag": "1",
+        "secondRuleBaseDay": "15",
+        "secondRuleBaseDayAdjustTo": "Previous Kindness Day",
+        "secondRuleBaseDayAdjustToLastBusDayFlag": "N",
+        "secondRuleBaseDayAssociateCylinders": "USA",
+        "secondRuleAdjustBaseFlag": "N",
+        "secondRuleAdjustBaseDays": "",
+        "secondRuleAdjustBaseDaysAssociateTo": "",
+        "secondRuleSecondaryAdjustBaseFlag": "N",
+        "secondRuleSecondaryAdjustBaseDays": "",
+        "secondRuleSecondaryAdjustBaseDaysAssociateTo": "",
+        "secondRuleAddToLookbackDaysFlag": "N",
+        "secondRuleAddToLookbackDays": "",
+        "secondRuleAddToLookbackDaysIncludeWeekends": "",
+        "secondRuleAddToLookbackDaysIncludeBorings": "",
+        "secondRuleAddToLookbackDaysAssociateCylinders": "",
+        "otherRulesRoundingLogic": "Round",
+        "otherRulesRoundingFactor": "1/1000th",
+        "mmte": "5.25",
+        "mmteDate": "01/15/2024",
+        "expectedResults": "Scattered Mmte copied and saved successfully"
+    }
+]
+
+
+
+--------------------------------------------------------------------------------------------------
+
+[
+    {
+        "scenarioId": "RR05-01",
+        "scenarioName": "Create Sport Mmte Scattered Mmte - Dynamic Test Data",
+        "runFlag": "Yes",
+        "userName": "{config:TTTF_USERNAME}",
+        "password": "{config:TTTF_PASSWORD}",
+        "dynamicTestDataFlag": "Yes",
+        "cumulativeMmteName": "",
+        "sportMmteRulePriority": "",
+        "firstRuleMonthLag": "",
+        "firstRuleBaseDay": "",
+        "firstRuleBaseDayAdjustTo": "",
+        "firstRuleBaseDayAdjustToLastBusDayFlag": "",
+        "firstRuleAssociateCylinders": "",
+        "firstRuleAdjustBaseFlag": "",
+        "firstRuleAdjustBaseDays": "",
+        "firstRuleAdjustBaseDaysAssociateTo": "",
+        "firstRuleSecondaryAdjustBaseFlag": "",
+        "firstRuleSecondaryAdjustBaseDays": "",
+        "firstRuleSecondaryAdjustBaseDaysAssociateTo": "",
+        "firstRuleAddToLookbackDaysFlag": "",
+        "firstRuleAddToLookbackDays": "",
+        "firstRuleAddToLookbackDaysIncludeWeekend": "",
+        "firstRuleAddToLookbackDaysIncludeBoring": "",
+        "firstRuleAddToLookbackDaysAssociateCylinders": "",
+        "secondRuleMonthLag": "",
+        "secondRuleBaseDay": "",
+        "secondRuleBaseDayAdjustTo": "",
+        "secondRuleBaseDayAdjustToLastBusDayFlag": "",
+        "secondRuleBaseDayAssociateCylinders": "",
+        "secondRuleAdjustBaseFlag": "",
+        "secondRuleAdjustBaseDays": "",
+        "secondRuleAdjustBaseDaysAssociateTo": "",
+        "secondRuleSecondaryAdjustBaseFlag": "",
+        "secondRuleSecondaryAdjustBaseDays": "",
+        "secondRuleSecondaryAdjustBaseDaysAssociateTo": "",
+        "secondRuleAddToLookbackDaysFlag": "",
+        "secondRuleAddToLookbackDays": "",
+        "secondRuleAddToLookbackDaysIncludeWeekends": "",
+        "secondRuleAddToLookbackDaysIncludeBorings": "",
+        "secondRuleAddToLookbackDaysAssociateCylinders": "",
+        "otherRulesRoundingLogic": "",
+        "otherRulesRoundingFactor": "",
+        "expectedResults": "Scattered Mmte created and verified successfully"
+    },
+    {
+        "scenarioId": "RR05-02",
+        "scenarioName": "Create Sport Mmte Scattered Mmte - Static Test Data",
+        "runFlag": "No",
+        "userName": "{config:TTTF_USERNAME}",
+        "password": "{config:TTTF_PASSWORD}",
+        "dynamicTestDataFlag": "No",
+        "cumulativeMmteName": "LIBOR IMO",
+        "sportMmteRulePriority": "Highest Date",
+        "firstRuleMonthLag": "0",
+        "firstRuleBaseDay": "1",
+        "firstRuleBaseDayAdjustTo": "Next Kindness Day",
+        "firstRuleBaseDayAdjustToLastBusDayFlag": "N",
+        "firstRuleAssociateCylinders": "USA",
+        "firstRuleAdjustBaseFlag": "N",
+        "firstRuleAdjustBaseDays": "",
+        "firstRuleAdjustBaseDaysAssociateTo": "",
+        "firstRuleSecondaryAdjustBaseFlag": "N",
+        "firstRuleSecondaryAdjustBaseDays": "",
+        "firstRuleSecondaryAdjustBaseDaysAssociateTo": "",
+        "firstRuleAddToLookbackDaysFlag": "N",
+        "firstRuleAddToLookbackDays": "",
+        "firstRuleAddToLookbackDaysIncludeWeekend": "",
+        "firstRuleAddToLookbackDaysIncludeBoring": "",
+        "firstRuleAddToLookbackDaysAssociateCylinders": "",
+        "secondRuleMonthLag": "1",
+        "secondRuleBaseDay": "15",
+        "secondRuleBaseDayAdjustTo": "Previous Kindness Day",
+        "secondRuleBaseDayAdjustToLastBusDayFlag": "N",
+        "secondRuleBaseDayAssociateCylinders": "USA",
+        "secondRuleAdjustBaseFlag": "N",
+        "secondRuleAdjustBaseDays": "",
+        "secondRuleAdjustBaseDaysAssociateTo": "",
+        "secondRuleSecondaryAdjustBaseFlag": "N",
+        "secondRuleSecondaryAdjustBaseDays": "",
+        "secondRuleSecondaryAdjustBaseDaysAssociateTo": "",
+        "secondRuleAddToLookbackDaysFlag": "N",
+        "secondRuleAddToLookbackDays": "",
+        "secondRuleAddToLookbackDaysIncludeWeekends": "",
+        "secondRuleAddToLookbackDaysIncludeBorings": "",
+        "secondRuleAddToLookbackDaysAssociateCylinders": "",
+        "otherRulesRoundingLogic": "ROUND",
+        "otherRulesRoundingFactor": "0.001",
+        "expectedResults": "Scattered Mmte created and verified successfully"
+    }
+]
+
+
+--------------------------------------------------------------------
+
+[
+    {
+        "scenarioId": "RR08-01",
+        "scenarioName": "Export Associated Zeal/Premisis to CSV - Verify Data",
+        "runFlag": "Yes",
+        "userName": "{config:TTTF_USERNAME}",
+        "password": "{config:TTTF_PASSWORD}",
+        "scatteredMmteName": "",
+        "dynamicTestDataFlag": "Yes",
+        "exportFormat": "CSV",
+        "expectedResults": "Exported CSV matches database records"
+    },
+    {
+        "scenarioId": "RR08-02",
+        "scenarioName": "Export Associated Zeal/Premisis to XLSX - Verify Data",
+        "runFlag": "Yes",
+        "userName": "{config:TTTF_USERNAME}",
+        "password": "{config:TTTF_PASSWORD}",
+        "scatteredMmteName": "",
+        "dynamicTestDataFlag": "Yes",
+        "exportFormat": "XLSX",
+        "expectedResults": "Exported XLSX matches database records"
+    }
+]
+
+
+--------------------------------------------------------------------------
+
+[
+    {
+        "scenarioId": "RR04-01",
+        "scenarioName": "Verify Scattered Mmte Details Page - Dynamic Data",
+        "runFlag": "Yes",
+        "userName": "{config:TTTF_USERNAME}",
+        "password": "{config:TTTF_PASSWORD}",
+        "scatteredMmteName": "",
+        "dynamicTestDataFlag": "Yes",
+        "expectedResults": "Scattered Mmte Details page displays correctly"
+    },
+    {
+        "scenarioId": "RR04-02",
+        "scenarioName": "Verify Scattered Mmte Details Page - Static Data",
+        "runFlag": "No",
+        "userName": "{config:TTTF_USERNAME}",
+        "password": "{config:TTTF_PASSWORD}",
+        "scatteredMmteName": "QQQQQQ_000009",
+        "dynamicTestDataFlag": "No",
+        "expectedResults": "Scattered Mmte Details page displays correctly"
+    }
+]
+
+
+---------------------------------------------------------------------------
+
+[
+    {
+        "scenarioId": "RR08-01",
+        "scenarioName": "Export Associated Zeal Premisis - Dynamic Test Data",
+        "runFlag": "Yes",
+        "userName": "{config:TTTF_USERNAME}",
+        "password": "{config:TTTF_PASSWORD}",
+        "dynamicTestDataFlag": "Yes",
+        "scatteredMmteName": "",
+        "expectedResults": "Associated Zeal/Premisis data exported and verified successfully"
+    },
+    {
+        "scenarioId": "RR08-02",
+        "scenarioName": "Export Associated Zeal Premisis - Static Test Data",
+        "runFlag": "No",
+        "userName": "{config:TTTF_USERNAME}",
+        "password": "{config:TTTF_PASSWORD}",
+        "dynamicTestDataFlag": "No",
+        "scatteredMmteName": "QQQQQQ_000009",
+        "expectedResults": "Associated Zeal/Premisis data exported and verified successfully"
+    }
+]
+
+
+-------------------------------------------------------------------------------------
+
+[
+    {
+        "scenarioId": "RR07-01",
+        "scenarioName": "Export Sport Scattered Mmtes to CSV - Verify Data",
+        "runFlag": "Yes",
+        "userName": "{config:TTTF_USERNAME}",
+        "password": "{config:TTTF_PASSWORD}",
+        "exportFormat": "CSV",
+        "expectedResults": "Exported CSV matches database records"
+    },
+    {
+        "scenarioId": "RR07-02",
+        "scenarioName": "Export Sport Scattered Mmtes to XLSX - Verify Data",
+        "runFlag": "Yes",
+        "userName": "{config:TTTF_USERNAME}",
+        "password": "{config:TTTF_PASSWORD}",
+        "exportFormat": "XLSX",
+        "expectedResults": "Exported XLSX matches database records"
+    }
+]
+
+
+---------------------------------------------------------------------------------
+
+[
+    {
+        "scenarioId": "RR03-01",
+        "scenarioName": "Filter Sport Mmtes by Cumulative Mmte and Sport Mmte Rule Priority",
+        "runFlag": "Yes",
+        "userName": "{config:TTTF_USERNAME}",
+        "password": "{config:TTTF_PASSWORD}",
+        "cumulativeMmteName": "",
+        "sportMmteRulePriority": "",
+        "dynamicTestDataFlag": "Yes",
+        "expectedResults": "Filtered results match database records"
+    },
+    {
+        "scenarioId": "RR03-02",
+        "scenarioName": "Filter Sport Mmtes by First Rule Month Lag and Base Day",
+        "runFlag": "Yes",
+        "userName": "{config:TTTF_USERNAME}",
+        "password": "{config:TTTF_PASSWORD}",
+        "firstRuleMonthLag": "",
+        "firstRuleBaseDay": "",
+        "dynamicTestDataFlag": "Yes",
+        "expectedResults": "Filtered results match database records"
+    },
+    {
+        "scenarioId": "RR03-03",
+        "scenarioName": "Filter Sport Mmtes by First Rule Associate Cylinders",
+        "runFlag": "Yes",
+        "userName": "{config:TTTF_USERNAME}",
+        "password": "{config:TTTF_PASSWORD}",
+        "firstRuleAssociateCylinder": "",
+        "dynamicTestDataFlag": "Yes",
+        "expectedResults": "Filtered results match database records"
+    },
+    {
+        "scenarioId": "RR03-04",
+        "scenarioName": "Filter Sport Mmtes by First Rule Adjust Base",
+        "runFlag": "Yes",
+        "userName": "{config:TTTF_USERNAME}",
+        "password": "{config:TTTF_PASSWORD}",
+        "firstRuleAdjustBaseDays": "",
+        "firstRuleAdjustBaseType": "",
+        "dynamicTestDataFlag": "Yes",
+        "expectedResults": "Filtered results match database records"
+    },
+    {
+        "scenarioId": "RR03-05",
+        "scenarioName": "Filter Sport Mmtes by First Rule Secondary Adjust Base",
+        "runFlag": "Yes",
+        "userName": "{config:TTTF_USERNAME}",
+        "password": "{config:TTTF_PASSWORD}",
+        "firstRuleSecondaryAdjustBaseDays": "",
+        "firstRuleSecondaryAdjustBaseType": "",
+        "dynamicTestDataFlag": "Yes",
+        "expectedResults": "Filtered results match database records"
+    },
+    {
+        "scenarioId": "RR03-06",
+        "scenarioName": "Filter Sport Mmtes by First Rule Add to Lookback",
+        "runFlag": "Yes",
+        "userName": "{config:TTTF_USERNAME}",
+        "password": "{config:TTTF_PASSWORD}",
+        "firstRuleLookbackDays": "",
+        "firstRuleLookbackIncludeWeekends": "",
+        "firstRuleLookbackIncludeBorings": "",
+        "dynamicTestDataFlag": "Yes",
+        "expectedResults": "Filtered results match database records"
+    },
+    {
+        "scenarioId": "RR03-07",
+        "scenarioName": "Filter Sport Mmtes by Second Rule Month Lag and Base Day",
+        "runFlag": "Yes",
+        "userName": "{config:TTTF_USERNAME}",
+        "password": "{config:TTTF_PASSWORD}",
+        "secondRuleMonthLag": "",
+        "secondRuleBaseDay": "",
+        "dynamicTestDataFlag": "Yes",
+        "expectedResults": "Filtered results match database records"
+    },
+    {
+        "scenarioId": "RR03-08",
+        "scenarioName": "Filter Sport Mmtes by Second Rule Associate Cylinders",
+        "runFlag": "Yes",
+        "userName": "{config:TTTF_USERNAME}",
+        "password": "{config:TTTF_PASSWORD}",
+        "secondRuleAssociateCylinder": "",
+        "dynamicTestDataFlag": "Yes",
+        "expectedResults": "Filtered results match database records"
+    },
+    {
+        "scenarioId": "RR03-09",
+        "scenarioName": "Filter Sport Mmtes by Second Rule Adjust Base",
+        "runFlag": "Yes",
+        "userName": "{config:TTTF_USERNAME}",
+        "password": "{config:TTTF_PASSWORD}",
+        "secondRuleAdjustBaseDays": "",
+        "secondRuleAdjustBaseType": "",
+        "dynamicTestDataFlag": "Yes",
+        "expectedResults": "Filtered results match database records"
+    },
+    {
+        "scenarioId": "RR03-10",
+        "scenarioName": "Filter Sport Mmtes by Second Rule Secondary Adjust Base",
+        "runFlag": "Yes",
+        "userName": "{config:TTTF_USERNAME}",
+        "password": "{config:TTTF_PASSWORD}",
+        "secondRuleSecondaryAdjustBaseDays": "",
+        "secondRuleSecondaryAdjustBaseType": "",
+        "dynamicTestDataFlag": "Yes",
+        "expectedResults": "Filtered results match database records"
+    },
+    {
+        "scenarioId": "RR03-11",
+        "scenarioName": "Filter Sport Mmtes by Second Rule Add to Lookback",
+        "runFlag": "Yes",
+        "userName": "{config:TTTF_USERNAME}",
+        "password": "{config:TTTF_PASSWORD}",
+        "secondRuleLookbackDays": "",
+        "secondRuleLookbackIncludeWeekends": "",
+        "secondRuleLookbackIncludeBorings": "",
+        "dynamicTestDataFlag": "Yes",
+        "expectedResults": "Filtered results match database records"
+    },
+    {
+        "scenarioId": "RR03-12",
+        "scenarioName": "Filter Sport Mmtes by Other Rules Rounding Logic and Factor",
+        "runFlag": "Yes",
+        "userName": "{config:TTTF_USERNAME}",
+        "password": "{config:TTTF_PASSWORD}",
+        "otherRulesRoundingLogic": "",
+        "otherRulesRoundingFactor": "",
+        "dynamicTestDataFlag": "Yes",
+        "expectedResults": "Filtered results match database records"
+    }
+]
+
+
+----------------------------------------------------------------------------
+
+[
+    {
+        "scenarioId": "RR09-01",
+        "scenarioName": "Navigate from Scattered Mmte to Zeal Details and Back",
+        "runFlag": "Yes",
+        "userName": "{config:TTTF_USERNAME}",
+        "password": "{config:TTTF_PASSWORD}",
+        "scatteredMmteName": "",
+        "dynamicTestDataFlag": "Yes",
+        "expectedResults": "Navigation between screens successful"
+    },
+    {
+        "scenarioId": "RR09-02",
+        "scenarioName": "Navigate Scattered Mmte Details Popup - View All Details",
+        "runFlag": "Yes",
+        "userName": "{config:TTTF_USERNAME}",
+        "password": "{config:TTTF_PASSWORD}",
+        "scatteredMmteName": "",
+        "dynamicTestDataFlag": "Yes",
+        "expectedResults": "Popup navigation successful"
+    }
+]
+
+
+----------------------------------------------------------------
+
+[
+    {
+        "scenarioId": "RR01-01",
+        "scenarioName": "Scattered Mmtes Page Elements Verification - Valid User",
+        "runFlag": "Yes",
+        "userName": "{config:TTTF_USERNAME}",
+        "password": "{config:TTTF_PASSWORD}",
+        "expectedResults": "All page elements verified"
+    },
+    {
+        "scenarioId": "RR01-02",
+        "scenarioName": "Scattered Mmtes Page Elements Verification - Tabs Navigation",
+        "runFlag": "Yes",
+        "userName": "{config:TTTF_USERNAME}",
+        "password": "{config:TTTF_PASSWORD}",
+        "expectedResults": "All tabs navigated successfully"
+    }
+]
+
+
+-----------------------------------------------------------------------------
+
+[
+    {
+        "scenarioId": "RR02-01",
+        "scenarioName": "Search Sport Scattered Mmte by Name - Dynamic Data",
+        "runFlag": "Yes",
+        "userName": "{config:TTTF_USERNAME}",
+        "password": "{config:TTTF_PASSWORD}",
+        "scatteredMmteName": "",
+        "dynamicTestDataFlag": "Yes",
+        "expectedResults": "Search results match database record"
+    },
+    {
+        "scenarioId": "RR02-02",
+        "scenarioName": "Search Sport Scattered Mmte by Name - Static Data",
+        "runFlag": "No",
+        "userName": "{config:TTTF_USERNAME}",
+        "password": "{config:TTTF_PASSWORD}",
+        "scatteredMmteName": "QQQQQQ_000009",
+        "dynamicTestDataFlag": "No",
+        "expectedResults": "Search results match database record"
+    }
+]
+
+
