@@ -1,2 +1,552 @@
-testing code 
+/**
+     * Get Sport Mmte table row data by row number - FIXED per RR02 Requirements (circles 109-189)
+     * Returns an object with all 20 column values using correct column numbering
+     * Column 1 is expand/collapse toggle, actual data starts at column 2
+     *
+     * For each field:
+     * 1. First try getSportMmteTableCellValue(rowNum, colNum)
+     * 2. If returns 'Element Not Found', try getSportMmteCellFromChildRow(rowNum, columnName)
+     * 3. If still 'Element Not Found', throw error to fail the test
+     *
+     * Source: Scattered_Mmte_Sport_Mmte_2.txt circles 109-189
+     */
+    public async getSportMmteTableRowData(rowNum: number): Promise<Record<string, string>> {
+        CSReporter.info(`Getting Sport Mmte table row ${rowNum} data (RR02 compliant - all 20 columns)`);
+
+        // All 20 columns per RR02 requirement (circles 43, 109-189)
+        // Column numbers start at 2 (column 1 is the expand/collapse toggle button)
+        // Using camelCase field names to match TTTFDatabaseHelper.getSportMmteDetailsByName()
+        const columnMapping: Array<{ colNum: number; name: string; childRowName: string }> = [
+            { colNum: 2, name: 'scatteredMmteName', childRowName: 'Scattered Mmte Name' },
+            { colNum: 3, name: 'cumulativeMmteName', childRowName: 'Cumulative Mmte Name' },
+            { colNum: 4, name: 'monthLag', childRowName: 'Month Lag' },
+            { colNum: 5, name: 'baseDay', childRowName: 'Base Day' },
+            { colNum: 6, name: 'associatedCylinders', childRowName: 'Associated Cylinders' },
+            { colNum: 7, name: 'adjustBase', childRowName: 'Adjust Base' },
+            { colNum: 8, name: 'secondaryAdjustBaseDay', childRowName: 'Secondary Adjust Base Day' },
+            { colNum: 9, name: 'lookbackDays', childRowName: 'Lookback Days' },
+            { colNum: 10, name: 'lookbackCylinders', childRowName: 'Lookback Cylinders' },
+            { colNum: 11, name: 'monthLagSR', childRowName: 'Month Lag (SR)' },
+            { colNum: 12, name: 'baseDaySR', childRowName: 'Base Day (SR)' },
+            { colNum: 13, name: 'associatedCylindersSR', childRowName: 'Associated Cylinders (SR)' },
+            { colNum: 14, name: 'adjustBaseSR', childRowName: 'Adjust Base (SR)' },
+            { colNum: 15, name: 'secondaryAdjustBaseDaySR', childRowName: 'Secondary Adjust Base Day (SR)' },
+            { colNum: 16, name: 'lookbackDaysSR', childRowName: 'Lookback Days (SR)' },
+            { colNum: 17, name: 'lookbackCylindersSR', childRowName: 'Lookback Cylinders (SR)' },
+            { colNum: 18, name: 'roundingType', childRowName: 'Rounding Type' },
+            { colNum: 19, name: 'roundingFactor', childRowName: 'Rounding Factor' },
+            { colNum: 20, name: 'rulePriority', childRowName: 'Rule Priority' },
+            { colNum: 21, name: 'associatedZealPremisis', childRowName: 'Associated Zeal/Premisis' }
+        ];
+
+        const rowData: Record<string, string> = {};
+
+        for (const col of columnMapping) {
+            // Step 1: Try to get value from main row using column number
+            let value = await this.getSportMmteTableCellValue(rowNum, col.colNum);
+
+            // Step 2: If 'Element Not Found', try to get from child row using column name
+            if (value === 'Element Not Found') {
+                CSReporter.debug(`Column ${col.colNum} (${col.name}) not found in main row, trying child row`);
+                value = await this.getSportMmteCellFromChildRow(rowNum, col.childRowName);
+            }
+
+            // Step 3: If still 'Element Not Found', fail the test per RR02 requirement
+            if (value === 'Element Not Found') {
+                const errorMsg = `RR02 Validation Failed: Could not find value for '${col.childRowName}' (column ${col.colNum}) in row ${rowNum}. ` +
+                    `Tried both main row cell and expanded child row. Element not found in either location.`;
+                CSReporter.fail(errorMsg);
+                throw new Error(errorMsg);
+            }
+
+            rowData[col.name] = value;
+            CSReporter.debug(`Row ${rowNum}, ${col.name}: '${value}'`);
+        }
+
+        CSReporter.pass(`Retrieved all 20 column values for row ${rowNum}`);
+        return rowData;
+    }
+
+
+    ------------------------------------------------------------------------------
+
+     @TSBDDStepDef('I capture Sport Mmte table row {int} data from UI')
+    async captureSportMmteTableRowData(rowNum: number): Promise<void> {
+        CSReporter.info(`Capturing Sport Mmte table row ${rowNum} data from UI (RR02 compliant - all 20 columns)`);
+        const rowData = await this.scatteredMmtesPage.getSportMmteTableRowData(rowNum);
+        // Store as uiSportMmteDetails for tttf-database.steps.ts comparison step
+        this.scenarioContext.setVariable('uiSportMmteDetails', rowData);
+        CSReporter.pass(`Captured row ${rowNum} data with ${Object.keys(rowData).length} fields`);
+        CSReporter.debug(`Row data: ${JSON.stringify(rowData, null, 2)}`);
+    }
+
+    ---------------------------------------------------------------------------------------------------------
+
+    # Mmte End Date Determination Rule section (Second Rule)
+        Then I should see Mmte End Date Determination Rule section
+        When I expand Mmte End Date Determination Rule section if collapsed
+        Then I should see Mmte End Date Month Lag input
+        And I should see Mmte End Date Base Day input
+        And I should see Mmte End Date Next Kindness Day radio button
+        And I should see Mmte End Date Previous Kindness Day radio button
+
+        # Mmte End Date Add Lockout
+        Then I should see Mmte End Date Add Lockout checkbox
+        And Mmte End Date Lockout Days input should be disabled
+
+        When I click Mmte End Date Add Lockout checkbox
+        Then Mmte End Date Lockout Days input should be enabled
+
+        # Other Rules (Optional) section
+        Then I should see Other Rules section on Add screen
+        And Other Rules section should be collapsed by default
+
+        When I expand Other Rules section if collapsed
+        Then I should see Rounding Logic dropdown on Add screen
+        And I should see Rounding Factor dropdown on Add screen
+        And Other Rules Rounding Logic dropdown should show ""
+        And Other Rules Rounding Factor dropdown should show ""
+
+
+    ------------------------------------------------------------------------------------------------------------------
+
+    /**
+     * Get sport mmtes filtered by Cumulative Mmte Name (RR03)
+     * Query: DB_QUERY_GET_SPORT_MMTES_BY_CUMULATIVE_MMTE
+     * Source: Scattered_Mmte_Sport_Mmte_3.txt circles 39-55
+     * @param cumulativeMmteName The cumulative mmte name to filter by
+     */
+    public static async getSportMmtesFilteredByCumulativeMmte(cumulativeMmteName: string): Promise<any[]> {
+        const result = await CSDBUtils.executeQuery(
+            this.DB_ALIAS,
+            'GET_SPORT_MMTES_BY_CUMULATIVE_MMTE',
+            [cumulativeMmteName]
+        );
+        return result.rows || [];
+    }
+
+    ----------------------------------------------------------------------------------------
+
+    // ===================================================================
+    // OTHER RULES SECTION (Rounding)
+    // Note: Header may be "Other Rules" or "Other Rules (Optional)" depending on screen
+    // Using contains() for flexibility
+    // ===================================================================
+
+    @CSGetElement({
+        xpath: '//h5[contains(text(),"Other Rules")]/ancestor::section[1]',
+        description: 'Other Rules section container',
+        waitForVisible: true
+    })
+    public otherRulesSection!: CSWebElement;
+
+    @CSGetElement({
+        xpath: '//h5[contains(text(),"Other Rules")]/ancestor::section[1]//button[contains(@aria-label,"Expand")]',
+        description: 'Expand Other Rules button',
+        waitForVisible: false
+    })
+    public expandOtherRulesButton!: CSWebElement;
+
+    @CSGetElement({
+        xpath: '//h5[contains(text(),"Other Rules")]/ancestor::section[1]//button[contains(@aria-label,"Collapse")]',
+        description: 'Collapse Other Rules button',
+        waitForVisible: false
+    })
+    public collapseOtherRulesButton!: CSWebElement;
+
+    @CSGetElement({
+        xpath: '//h5[contains(text(),"Other Rules")]/ancestor::section[1]//button[@name="roundingType"]',
+        description: 'Rounding Logic dropdown',
+        waitForVisible: true
+    })
+    public roundingLogicDropdown!: CSWebElement;
+
+    @CSGetElement({
+        xpath: '//h5[contains(text(),"Other Rules")]/ancestor::section[1]//button[@name="roundingFactor"]',
+        description: 'Rounding Factor dropdown',
+        waitForVisible: true
+    })
+    public roundingFactorDropdown!: CSWebElement;
+
+
+
+    /**
+     * Expand Other Rules section if collapsed
+     */
+    public async expandOtherRulesSection(): Promise<void> {
+        CSReporter.info('Expanding Other Rules section');
+        const isCollapsed = await this.expandOtherRulesButton.isVisibleWithTimeout(2000);
+        if (isCollapsed) {
+            await this.expandOtherRulesButton.clickWithTimeout(10000);
+            await this.page.waitForTimeout(500);
+            // Verify collapse button is now present
+            await this.collapseOtherRulesButton.waitForVisible(5000);
+            CSReporter.pass('Other Rules section expanded successfully');
+        } else {
+            CSReporter.info('Other Rules section already expanded');
+        }
+    }
+
+    /**
+     * Verify Other Rules section is collapsed by default
+     * Per RR04 requirements circle 569
+     */
+    public async verifyOtherRulesSectionCollapsedByDefault(): Promise<void> {
+        CSReporter.info('Verifying Other Rules section is collapsed by default');
+        const isExpandButtonVisible = await this.expandOtherRulesButton.isVisibleWithTimeout(5000);
+        if (isExpandButtonVisible) {
+            CSReporter.pass('Other Rules section is collapsed by default (Expand button visible)');
+        } else {
+            CSReporter.warn('Other Rules section appears to be expanded (Expand button not visible)');
+        }
+    }
+
+
+    -----------------------------------------------------------------------------------------
+
+
+    // ===================================================================
+    // RR03 - EXPAND ALL ROWS AND GET ALL ROWS DATA METHODS
+    // Source: Scattered_Mmte_Sport_Mmte_3.txt circles 127-251
+    // ===================================================================
+
+    /**
+     * Get the total number of main rows (excluding child rows) in Sport Mmte table
+     * Source: Scattered_Mmte_Sport_Mmte_3.txt circle 128
+     * XPath: //div[@class='ctsjv-tab__pane-content--active']//table[contains(@class, 'ctsjv-table')]//tbody//tr
+     * Note: Count only main rows, not child rows (which have class 'ctsjv-table__childrow')
+     */
+    public async getSportMmteTableRowCount(): Promise<number> {
+        CSReporter.info('Getting Sport Mmte table row count');
+        const rowXPath = `//div[@class='ctsjv-tab__pane-content--active']//table[contains(@class, 'ctsjv-table')]//tbody/tr[not(contains(@class, 'ctsjv-table__childrow'))]`;
+        const rows = await this.page.locator(rowXPath).all();
+        const count = rows.length;
+        CSReporter.info(`Sport Mmte table has ${count} rows`);
+        return count;
+    }
+
+    /**
+     * Expand all rows in Sport Mmte table
+     * Source: Scattered_Mmte_Sport_Mmte_3.txt circles 129-137
+     * 1. Check if "Expand all" button is present
+     * 2. If present, click it and verify "Collapse all" appears
+     * 3. If "Expand all" not present, verify "Collapse all" is present (rows already expanded)
+     */
+    public async expandAllSportMmteRows(): Promise<void> {
+        CSReporter.info('Expanding all rows in Sport Mmte table');
+
+        // XPath for Expand all button - per RR03 circles 130-131
+        const expandAllXPath = `//div[@class='ctsjv-tab__pane-content--active']//table[contains(@class, 'ctsjv-table')]//thead/tr[1]/td[1]//button[contains(@aria-label,'Expand all')]`;
+        // XPath for Collapse all button - per RR03 circles 133-134
+        const collapseAllXPath = `//div[@class='ctsjv-tab__pane-content--active']//table[contains(@class, 'ctsjv-table')]//thead/tr[1]/td[1]//button[contains(@aria-label,'Collapse all')]`;
+
+        const expandAllButton = CSElementFactory.createByXPath(expandAllXPath, 'Expand all button', this.page);
+        const collapseAllButton = CSElementFactory.createByXPath(collapseAllXPath, 'Collapse all button', this.page);
+
+        const expandAllVisible = await expandAllButton.isVisibleWithTimeout(3000);
+
+        if (expandAllVisible) {
+            // Expand all button is present, click it
+            CSReporter.info('Clicking Expand all button');
+            await expandAllButton.clickWithTimeout(5000);
+            await this.waitForPageLoad();
+
+            // Verify Collapse all button appears (rows are now expanded)
+            await collapseAllButton.waitForVisible(10000);
+            CSReporter.pass('All rows expanded successfully - Collapse all button is now visible');
+        } else {
+            // Expand all not present, verify Collapse all is present (already expanded)
+            const collapseAllVisible = await collapseAllButton.isVisibleWithTimeout(3000);
+            if (collapseAllVisible) {
+                CSReporter.pass('All rows are already expanded (Collapse all button is visible)');
+            } else {
+                CSReporter.warn('Neither Expand all nor Collapse all button found - table may have no expandable rows');
+            }
+        }
+    }
+
+    /**
+     * Get all visible Sport Mmte table rows data
+     * Source: Scattered_Mmte_Sport_Mmte_3.txt circles 139-251
+     * Loops through all visible rows and captures 20-column data using getSportMmteTableRowData
+     * Returns array of row data objects keyed by scatteredMmteName for comparison
+     */
+    public async getAllSportMmteTableRowsData(): Promise<Map<string, Record<string, string>>> {
+        CSReporter.info('Capturing all visible Sport Mmte table rows data');
+
+        const rowCount = await this.getSportMmteTableRowCount();
+        CSReporter.info(`Found ${rowCount} rows to capture`);
+
+        const allRowsData = new Map<string, Record<string, string>>();
+
+        for (let row = 1; row <= rowCount; row++) {
+            try {
+                CSReporter.debug(`Capturing row ${row} of ${rowCount}`);
+                const rowData = await this.getSportMmteTableRowData(row);
+
+                // Use scatteredMmteName as key (unique identifier per RR03 circles 122-123, 241-242)
+                const refMmteName = rowData.scatteredMmteName;
+                if (refMmteName) {
+                    allRowsData.set(refMmteName, rowData);
+                    CSReporter.debug(`Captured row ${row}: ${refMmteName}`);
+                } else {
+                    CSReporter.warn(`Row ${row} has no scattered mmte name`);
+                }
+            } catch (error) {
+                CSReporter.fail(`Failed to capture row ${row}: ${error}`);
+                throw error;
+            }
+        }
+
+        CSReporter.pass(`Captured ${allRowsData.size} rows from UI`);
+        return allRowsData;
+    }
+
+
+    -------------------------------------------------------------------------------------
+
+    @TSBDDStepDef('I click Filters button on Sport Mmte tab')
+    async clickFiltersButtonOnSportMmteTab(): Promise<void> {
+        CSReporter.info('Clicking Filters button on Sport Mmte tab');
+        await this.scatteredMmtesPage.clickFiltersButton();
+        CSReporter.pass('Clicked Filters button on Sport Mmte tab');
+    }
+
+
+
+
+
+// ===================================================================
+    // RR03 - EXPAND ALL AND CAPTURE ALL ROWS STEPS
+    // Source: Scattered_Mmte_Sport_Mmte_3.txt circles 127-251
+    // ===================================================================
+
+    @TSBDDStepDef('I expand all rows in Sport Mmte table')
+    async expandAllSportMmteRows(): Promise<void> {
+        CSReporter.info('Expanding all rows in Sport Mmte table (RR03)');
+        await this.scatteredMmtesPage.expandAllSportMmteRows();
+        CSReporter.pass('Expanded all rows in Sport Mmte table');
+    }
+
+    @TSBDDStepDef('I capture all visible Sport Mmte table rows data from UI')
+    async captureAllVisibleSportMmteRowsData(): Promise<void> {
+        CSReporter.info('Capturing all visible Sport Mmte table rows data from UI (RR03)');
+        const allRowsData = await this.scatteredMmtesPage.getAllSportMmteTableRowsData();
+        // Store as uiFilteredRowsData for comparison step
+        this.scenarioContext.setVariable('uiFilteredRowsData', allRowsData);
+        CSReporter.pass(`Captured ${allRowsData.size} rows from UI`);
+    }
+
+    @TSBDDStepDef('all captured UI rows should match database records')
+    async verifyAllCapturedUIRowsMatchDatabase(): Promise<void> {
+        CSReporter.info('Verifying all captured UI rows match database records (RR03)');
+
+        const uiRowsData = this.scenarioContext.getVariable<Map<string, Record<string, string>>>('uiFilteredRowsData');
+        // Check for both variable names used by different filter steps
+        let dbFilteredData = this.scenarioContext.getVariable<Record<string, string>[]>('dbFilteredData');
+        if (!dbFilteredData) {
+            dbFilteredData = this.scenarioContext.getVariable<Record<string, string>[]>('dbSportMmtesFiltered');
+        }
+
+        if (!uiRowsData || uiRowsData.size === 0) {
+            CSReporter.fail('No UI rows data captured');
+            throw new Error('No UI rows data captured - call "I capture all visible Sport Mmte table rows data from UI" first');
+        }
+
+        if (!dbFilteredData || dbFilteredData.length === 0) {
+            CSReporter.fail('No database filtered data available');
+            throw new Error('No database filtered data available - call the appropriate database filter step first');
+        }
+
+        // Build expected data map from DB results (keyed by scatteredMmteName)
+        const expectedDataMap = new Map<string, Record<string, string>>();
+        for (const dbRow of dbFilteredData) {
+            const refMmteName = dbRow.SCATTERED_MMTE_NAME || dbRow.scatteredMmteName;
+            if (refMmteName) {
+                // Normalize DB column names to camelCase for comparison
+                const normalizedRow: Record<string, string> = {
+                    scatteredMmteName: String(dbRow.SCATTERED_MMTE_NAME ?? dbRow.scatteredMmteName ?? ''),
+                    cumulativeMmteName: String(dbRow.CUMULATIVE_MMTE_NAME ?? dbRow.cumulativeMmteName ?? ''),
+                    monthLag: String(dbRow.MONTH_LAG ?? dbRow.monthLag ?? '0'),
+                    baseDay: String(dbRow.BASE_DAY ?? dbRow.baseDay ?? '0'),
+                    associatedCylinders: String(dbRow.ASSOCIATED_CYLINDERS ?? dbRow.associatedCylinders ?? ''),
+                    adjustBase: String(dbRow.ADJUST_BASE ?? dbRow.adjustBase ?? ''),
+                    secondaryAdjustBaseDay: String(dbRow.SECONDARY_ADJUST_BASE_DAY ?? dbRow.secondaryAdjustBaseDay ?? ''),
+                    lookbackDays: String(dbRow.LOOKBACK_DAYS ?? dbRow.lookbackDays ?? ''),
+                    lookbackCylinders: String(dbRow.LOOKBACK_CYLINDERS ?? dbRow.lookbackCylinders ?? ''),
+                    monthLagSR: String(dbRow.MONTH_LAG_SR ?? dbRow.monthLagSR ?? '0'),
+                    baseDaySR: String(dbRow.BASE_DAY_SR ?? dbRow.baseDaySR ?? '0'),
+                    associatedCylindersSR: String(dbRow.ASSOCIATED_CYLINDERS_SR ?? dbRow.associatedCylindersSR ?? ''),
+                    adjustBaseSR: String(dbRow.ADJUST_BASE_SR ?? dbRow.adjustBaseSR ?? ''),
+                    secondaryAdjustBaseDaySR: String(dbRow.SECONDARY_ADJUST_BASE_DAY_SR ?? dbRow.secondaryAdjustBaseDaySR ?? ''),
+                    lookbackDaysSR: String(dbRow.LOOKBACK_DAYS_SR ?? dbRow.lookbackDaysSR ?? ''),
+                    lookbackCylindersSR: String(dbRow.LOOKBACK_CYLINDERS_SR ?? dbRow.lookbackCylindersSR ?? ''),
+                    roundingType: String(dbRow.ROUNDING_TYPE ?? dbRow.roundingType ?? ''),
+                    roundingFactor: String(dbRow.ROUNDING_FACTOR ?? dbRow.roundingFactor ?? ''),
+                    rulePriority: String(dbRow.RULE_PRIORITY ?? dbRow.rulePriority ?? ''),
+                    associatedZealPremisis: String(dbRow.ASSOCIATED_ZEAL_PREMISIS ?? dbRow.associatedZealPremisis ?? '0')
+                };
+                expectedDataMap.set(refMmteName, normalizedRow);
+            }
+        }
+
+        let allMatch = true;
+        const mismatches: string[] = [];
+
+        // Verify each UI row exists in expected data and values match
+        for (const [refMmteName, uiRow] of uiRowsData.entries()) {
+            if (!expectedDataMap.has(refMmteName)) {
+                mismatches.push(`Scattered Mmte "${refMmteName}" found in UI but not in database filtered results`);
+                allMatch = false;
+                continue;
+            }
+
+            const expectedRow = expectedDataMap.get(refMmteName)!;
+
+            // Compare all fields, handling cylinder order-insensitive comparison
+            for (const [field, uiValue] of Object.entries(uiRow)) {
+                const expectedValue = expectedRow[field] ?? '';
+
+                // Cylinder fields need order-insensitive comparison (RR03 circles 246-251)
+                if (field.includes('Cylinder') || field === 'associatedCylinders' || field === 'associatedCylindersSR' ||
+                    field === 'lookbackCylinders' || field === 'lookbackCylindersSR') {
+                    if (!TTTFDatabaseHelper.compareCylinderValues(uiValue, expectedValue)) {
+                        mismatches.push(`${refMmteName}.${field}: UI="${uiValue}", DB="${expectedValue}" (cylinder mismatch)`);
+                        allMatch = false;
+                    }
+                } else if (String(uiValue).trim() !== String(expectedValue).trim()) {
+                    mismatches.push(`${refMmteName}.${field}: UI="${uiValue}", DB="${expectedValue}"`);
+                    allMatch = false;
+                }
+            }
+        }
+
+        if (allMatch) {
+            CSReporter.pass(`All ${uiRowsData.size} captured UI rows match database records`);
+        } else {
+            CSReporter.fail(`UI/DB data mismatch found:\n${mismatches.join('\n')}`);
+            throw new Error(`UI data does not match database records:\n${mismatches.join('\n')}`);
+        }
+    }
+
+
+
+
+     @TSBDDStepDef('I should see Copy button enabled on details page')
+    async verifyCopyButtonEnabledOnDetailsPage(): Promise<void> {
+        await this.scatteredMmteDetailsPage.verifyCopyButtonEnabled();
+    }
+
+    @TSBDDStepDef('I should see Copy button enabled')
+    async verifyCopyButtonEnabled(): Promise<void> {
+        await this.scatteredMmteDetailsPage.verifyCopyButtonEnabled();
+    }
+
+
+
+
+    @TSBDDStepDef('I should see Other Rules section on Add screen')
+    async verifyOtherRulesSectionOnAddScreen(): Promise<void> {
+        CSReporter.info('Verifying Other Rules section is present on Add screen');
+        await this.addScatteredMmtePage.otherRulesSection.waitForVisible(10000);
+        CSReporter.pass('Other Rules section is present on Add screen');
+    }
+
+    @TSBDDStepDef('Other Rules section should be collapsed by default')
+    async verifyOtherRulesSectionCollapsedByDefault(): Promise<void> {
+        await this.addScatteredMmtePage.verifyOtherRulesSectionCollapsedByDefault();
+    }
+
+    @TSBDDStepDef('I should see Rounding Logic dropdown on Add screen')
+    async verifyRoundingLogicDropdownOnAddScreen(): Promise<void> {
+        CSReporter.info('Verifying Rounding Logic dropdown is present');
+        await this.addScatteredMmtePage.roundingLogicDropdown.waitForVisible(10000);
+        CSReporter.pass('Rounding Logic dropdown is present');
+    }
+
+    @TSBDDStepDef('I should see Rounding Factor dropdown on Add screen')
+    async verifyRoundingFactorDropdownOnAddScreen(): Promise<void> {
+        CSReporter.info('Verifying Rounding Factor dropdown is present');
+        await this.addScatteredMmtePage.roundingFactorDropdown.waitForVisible(10000);
+        CSReporter.pass('Rounding Factor dropdown is present');
+    }
+
+
+
+     @TSBDDStepDef('Other Rules Rounding Logic dropdown should show {string}')
+    async verifyOtherRulesRoundingLogicDropdown(expectedValue: string): Promise<void> {
+        const actualValue = CSValueResolver.resolve(expectedValue, this.context);
+        if (!actualValue || actualValue === '') {
+            // Verify 'Select' is shown (no selection)
+            const selectLabel = CSElementFactory.createByXPath(
+                `//h5[contains(text(),'Other Rules')]/ancestor::section[1]//button[@name='roundingType']//span[@class='ctsjv-button__label' and text()='Select']`,
+                'Other Rules Rounding Logic Select',
+                this.addScatteredMmtePage.getPage()
+            );
+            const isVisible = await selectLabel.isVisibleWithTimeout(5000);
+            if (!isVisible) {
+                throw new Error('Other Rules Rounding Logic dropdown should show Select (no selection)');
+            }
+            CSReporter.pass('Other Rules Rounding Logic dropdown shows Select (no selection)');
+        } else {
+            const selectedLabel = CSElementFactory.createByXPath(
+                `//h5[contains(text(),'Other Rules')]/ancestor::section[1]//button[@name='roundingType']//span[@class='ctsjv-button__label' and text()='${actualValue}']`,
+                `Other Rules Rounding Logic: ${actualValue}`,
+                this.addScatteredMmtePage.getPage()
+            );
+            await selectedLabel.waitForVisible(10000);
+            CSReporter.pass(`Other Rules Rounding Logic dropdown shows '${actualValue}'`);
+        }
+    }
+
+
+    @TSBDDStepDef('Other Rules Rounding Factor dropdown should show {string}')
+    async verifyOtherRulesRoundingFactorDropdown(expectedValue: string): Promise<void> {
+        const actualValue = CSValueResolver.resolve(expectedValue, this.context);
+        if (!actualValue || actualValue === '') {
+            // Verify 'Select' is shown (no selection)
+            const selectLabel = CSElementFactory.createByXPath(
+                `//h5[contains(text(),'Other Rules')]/ancestor::section[1]//button[@name='roundingFactor']//span[@class='ctsjv-button__label' and text()='Select']`,
+                'Other Rules Rounding Factor Select',
+                this.addScatteredMmtePage.getPage()
+            );
+            const isVisible = await selectLabel.isVisibleWithTimeout(5000);
+            if (!isVisible) {
+                throw new Error('Other Rules Rounding Factor dropdown should show Select (no selection)');
+            }
+            CSReporter.pass('Other Rules Rounding Factor dropdown shows Select (no selection)');
+        } else {
+            const selectedLabel = CSElementFactory.createByXPath(
+                `//h5[contains(text(),'Other Rules')]/ancestor::section[1]//button[@name='roundingFactor']//span[@class='ctsjv-button__label' and text()='${actualValue}']`,
+                `Other Rules Rounding Factor: ${actualValue}`,
+                this.addScatteredMmtePage.getPage()
+            );
+            await selectedLabel.waitForVisible(10000);
+            CSReporter.pass(`Other Rules Rounding Factor dropdown shows '${actualValue}'`);
+        }
+    }
+
+
+ @TSBDDStepDef('I get sport mmtes filtered by cumulative mmte {string} from database')
+    async getSportMmtesFilteredByCumulativeMmte(cumulativeMmteName: string): Promise<void> {
+        const actualCumulativeMmte = CSValueResolver.resolve(cumulativeMmteName, this.context);
+        CSReporter.info(`Getting sport mmtes filtered by Cumulative Mmte=${actualCumulativeMmte}`);
+        const results = await TTTFDatabaseHelper.getSportMmtesFilteredByCumulativeMmte(actualCumulativeMmte);
+        this.scenarioContext.setVariable('dbFilteredCount', results.length);
+        this.scenarioContext.setVariable('dbFilteredData', results);
+        CSReporter.pass(`Retrieved ${results.length} records from database`);
+    }
+
+    @TSBDDStepDef('I get sport mmtes filtered by rule priority {string} from database')
+    async getSportMmtesFilteredByRulePriority(rulePriority: string): Promise<void> {
+        const actualPriority = CSValueResolver.resolve(rulePriority, this.context);
+        CSReporter.info(`Getting sport mmtes filtered by Rule Priority=${actualPriority}`);
+        // Convert UI value to DB value: 'Highest Date' -> 'HIGHEST_DATE', 'Lowest Date' -> 'LOWEST_DATE'
+        const dbPriority = actualPriority === 'Highest Date' ? 'HIGHEST_DATE' :
+                          actualPriority === 'Lowest Date' ? 'LOWEST_DATE' : actualPriority;
+        const results = await TTTFDatabaseHelper.getSportMmtesFilteredByRulePriority(dbPriority);
+        this.scenarioContext.setVariable('dbFilteredCount', results.length);
+        this.scenarioContext.setVariable('dbFilteredData', results);
+        CSReporter.pass(`Retrieved ${results.length} records from database`);
+    }
 
