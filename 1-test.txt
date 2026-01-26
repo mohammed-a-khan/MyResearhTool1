@@ -1,152 +1,249 @@
-// ===================================================================
-    // CYLINDER POPUP METHODS (RR03-03, RR03-08)
-    // Requirement Lines 606-631: Cylinder Add modal popup for filter panel
-    // ===================================================================
+Scenario Outline: RR03-06 - Filter by First Rule Add to Hookwith
+        Given I resolve first rule hookwith from database if not provided "<firstRuleHookwithDays>" "<firstRuleHookwithIncludeWeekends>" "<firstRuleHookwithIncludeBorings>" "<firstRuleHookwithAssociateCylinder>"
 
-    /**
-     * Verify Cylinder Add modal popup is displayed
-     * Requirement Line 606: xpath: //div[@class='sssss-modal']//div[@class='sssss-panel__content-wrapper']
-     */
-    public async verifyCylinderPopupDisplayed(): Promise<void> {
-        Tsreporter.info('Verifying Cylinder Add modal popup is displayed');
-        const popup = CSElementFactory.createByXPath(
-            '//div[@class="sssss-modal"]//div[@class="sssss-panel__content-wrapper"]',
-            'Cylinder Add modal popup',
-            this.page
-        );
-        await popup.waitForVisible(10000);
-        Tsreporter.pass('Cylinder Add modal popup is displayed');
-    }
+        Given I login to TTTF as "<userName>"
+        Then I should see Home page header
+        When I click on Scattered Mmtes menu item
+        Then I should see Scattered Mmtes page header
 
-    /**
-     * Verify Cylinder Add popup header
-     * Requirement Line 608: xpath: //div[@class='sssss-panel__content-wrapper']//h5[text()='Add']
-     */
-    public async verifyCylinderPopupHeader(): Promise<void> {
-        Tsreporter.info('Verifying Cylinder Add popup header');
-        const header = CSElementFactory.createByXPath(
-            '//div[@class="sssss-panel__content-wrapper"]//h5[text()="Add"]',
-            'Cylinder Add popup header',
-            this.page
-        );
-        await header.waitForVisible(10000);
-        Tsreporter.pass('Cylinder Add popup header is displayed');
-    }
+        When I click Filters button on Sport Mmte tab
+        Then Filters area should be expanded
 
-    /**
-     * Verify Cylinder Name header in table
-     * Requirement Line 615: xpath: //div[@class='sssss-panel__content-wrapper']//div[@class='sssss-panel__body']//table[@class='sssss-table']/thead/tr[1]/th[@class='sssss-table__header' and text()='Cylinder Name']
-     */
-    public async verifyCylinderPopupTableHeader(): Promise<void> {
-        Tsreporter.info('Verifying Cylinder Name header in popup table');
-        const header = CSElementFactory.createByXPath(
-            '//div[@class="sssss-panel__content-wrapper"]//div[@class="sssss-panel__body"]//table[@class="sssss-table"]/thead/tr[1]/th[@class="sssss-table__header" and text()="Cylinder Name"]',
-            'Cylinder Name table header',
-            this.page
-        );
-        await header.waitForVisible(10000);
-        Tsreporter.pass('Cylinder Name header is displayed');
-    }
+        When I expand First Rule section in filter panel
 
-    /**
-     * Verify Cylinder popup options match database records
-     * Requirement Line 621: xpath: //div[@class='sssss-panel__content-wrapper']//div[@class='sssss-panel__body']//table[@class='sssss-table']/tbody/td[text()='<cylinderName>']
-     */
-    public async verifyCylinderPopupOptions(expectedCylinders: string[]): Promise<void> {
-        Tsreporter.info('Verifying Cylinder popup options match database records');
-        for (const cylinder of expectedCylinders) {
-            const optionElement = CSElementFactory.createByXPath(
-                `//div[@class="sssss-panel__content-wrapper"]//div[@class="sssss-panel__body"]//table[@class="sssss-table"]/tbody//td[text()="${cylinder}"]`,
-                `Cylinder option: ${cylinder}`,
-                this.page
-            );
-            const isVisible = await optionElement.isVisibleWithTimeout(3000);
-            if (isVisible) {
-                Tsreporter.debug(`Cylinder option '${cylinder}' is present`);
-            } else {
-                Tsreporter.warn(`Cylinder option '${cylinder}' not found in popup`);
-            }
-        }
-        Tsreporter.pass('Verified Cylinder popup options');
-    }
+        # Verify Add to Hookwith checkbox behavior
+        Then I should see First Rule Add to Hookwith checkbox in filter panel
+        And First Rule Add to Hookwith checkbox should not be checked by default
+        And First Rule Hookwith Days input should be disabled
+        And First Rule Include Weekends checkbox should be disabled
+        And First Rule Include Borings checkbox should be disabled
 
-    /**
-     * Select cylinder from popup table
-     * Requirement Line 626: xpath: //div[@class='sssss-panel__content-wrapper']//div[@class='sssss-panel__body']//table[@class='sssss-table']/tbody/td[text()='<cylinderName>']/parent::tr/td[1]//span[@role='checkbox']
-     * Requirement Line 628 (alternative after click): xpath: //div[@class='sssss-panel__content-wrapper']//div[@class='sssss-panel__body']//table[@class='sssss-table']/tbody/td/div[text()='<cylinderName>']/ancestor::tr[1]/td[1]//span[@role='checkbox']
-     */
-    public async selectCylinderInPopup(cylinderName: string): Promise<void> {
-        Tsreporter.info(`Selecting cylinder in popup: ${cylinderName}`);
-        // Try primary XPath first (text directly in td)
-        let cylinderCheckbox = CSElementFactory.createByXPath(
-            `//div[@class="sssss-panel__content-wrapper"]//div[@class="sssss-panel__body"]//table[@class="sssss-table"]/tbody//td[text()="${cylinderName}"]/parent::tr/td[1]//span[@role="checkbox"]`,
-            `Cylinder checkbox: ${cylinderName}`,
-            this.page
-        );
-        let isVisible = await cylinderCheckbox.isVisibleWithTimeout(3000);
+        When I check First Rule Add to Hookwith checkbox in filter panel
+        Then First Rule Hookwith Days input should be enabled
+        And First Rule Include Weekends checkbox should be enabled
+        And First Rule Include Borings checkbox should be enabled
 
-        if (!isVisible) {
-            // Try alternative XPath (text in div inside td)
-            Tsreporter.info('Trying alternative XPath for cylinder checkbox');
-            cylinderCheckbox = CSElementFactory.createByXPath(
-                `//div[@class="sssss-panel__content-wrapper"]//div[@class="sssss-panel__body"]//table[@class="sssss-table"]/tbody//td/div[text()="${cylinderName}"]/ancestor::tr[1]/td[1]//span[@role="checkbox"]`,
-                `Cylinder checkbox (alt): ${cylinderName}`,
-                this.page
-            );
-            isVisible = await cylinderCheckbox.isVisibleWithTimeout(3000);
-        }
+        When I enter First Rule Hookwith Days "{scenario:firstRuleHookwithDays}" in filter panel
+        And I configure First Rule Include Weekends "{scenario:firstRuleHookwithIncludeWeekends}" in filter panel
+        And I configure First Rule Include Borings "{scenario:firstRuleHookwithIncludeBorings}" in filter panel
 
-        if (!isVisible) {
-            throw new Error(`Cylinder checkbox for '${cylinderName}' not found in popup`);
-        }
+        # Hookwith Associate Cylinders selection
+        When I click First Rule Hookwith Associate Cylinders Select button in filter panel
+        Then I should see cylinder selection popup
+        When I select cylinder "{scenario:firstRuleHookwithAssociateCylinder}" from cylinder popup
+        And I click Apply button on cylinder popup
+        Then First Rule Hookwith Associate Cylinders should show Edit in filter panel
+        And I should see cylinder "{scenario:firstRuleHookwithAssociateCylinder}" selected in First Rule Hookwith
 
-        // Check if already selected
-        const ariaChecked = await cylinderCheckbox.getAttributeWithTimeout('aria-checked', 5000);
-        if (ariaChecked === 'false') {
-            await cylinderCheckbox.clickWithTimeout(10000);
-            await this.page.waitForTimeout(500);
-            Tsreporter.pass(`Selected cylinder: ${cylinderName}`);
+        When I click Apply button on filter panel
+        Then I should see Filters Applied button
+
+        Given I get sport mmtes filtered by first rule hookwith "{scenario:firstRuleHookwithDays}" "{scenario:firstRuleHookwithIncludeWeekends}" "{scenario:firstRuleHookwithIncludeBorings}" "{scenario:firstRuleHookwithAssociateCylinder}" from database
+        Then the UI total items count should match database filtered count
+
+        When I expand all rows in Sport Mmte table
+        And I capture all visible Sport Mmte table rows data from UI
+        Then all captured UI rows should match database records
+
+
+        ----------------------------------------------------------------
+
+
+@TSBDDStepDef('I resolve first rule hookwith from database if not provided {string} {string} {string} {string}')
+    async resolveFirstRuleHookwithFromDB(days: string, includeWeekends: string, includeBorings: string, cylinder: string): Promise<void> {
+        const actualDays = CSValueResolver.resolve(days, this.context);
+        const actualIncludeWeekends = CSValueResolver.resolve(includeWeekends, this.context);
+        const actualIncludeBorings = CSValueResolver.resolve(includeBorings, this.context);
+        const actualCylinder = CSValueResolver.resolve(cylinder, this.context);
+
+        // Check if any parameter is missing
+        const needsDB = !actualDays || String(actualDays).trim() === '' ||
+                       !actualIncludeWeekends || String(actualIncludeWeekends).trim() === '' ||
+                       !actualIncludeBorings || String(actualIncludeBorings).trim() === '' ||
+                       !actualCylinder || String(actualCylinder).trim() === '';
+
+        if (needsDB) {
+            Tsreporter.info('First Rule Hookwith parameters not fully provided, fetching from database');
+            const result = await TTTFDatabaseHelper.getFirstRuleHookwith();
+            this.scenarioContext.setVariable('firstRuleHookwithDays', result.hookwithDays);
+            this.scenarioContext.setVariable('firstRuleHookwithIncludeWeekends', result.includeWeekends);
+            this.scenarioContext.setVariable('firstRuleHookwithIncludeBorings', result.includeBorings);
+            this.scenarioContext.setVariable('firstRuleHookwithAssociateCylinder', result.associateCylinder);
+            Tsreporter.pass(`Resolved from DB: Days=${result.hookwithDays}, Weekends=${result.includeWeekends}, Borings=${result.includeBorings}, Cylinder=${result.associateCylinder}`);
         } else {
-            Tsreporter.info(`Cylinder '${cylinderName}' is already selected`);
+            this.scenarioContext.setVariable('firstRuleHookwithDays', String(actualDays));
+            this.scenarioContext.setVariable('firstRuleHookwithIncludeWeekends', String(actualIncludeWeekends));
+            this.scenarioContext.setVariable('firstRuleHookwithIncludeBorings', String(actualIncludeBorings));
+            this.scenarioContext.setVariable('firstRuleHookwithAssociateCylinder', String(actualCylinder));
+            Tsreporter.pass(`Using provided values: Days=${actualDays}, Weekends=${actualIncludeWeekends}, Borings=${actualIncludeBorings}, Cylinder=${actualCylinder}`);
         }
     }
 
-    /**
-     * Click Apply button on Cylinder popup
-     * Requirement Line 630: xpath: //div[@class='sssss-panel__content-wrapper']//div[@class='sssss-panel__footer']//span[@class='sssss-button__label' and contains(text(),'Apply')]/parent::button[1]
+
+
+
+
+    @TSBDDStepDef('I click First Rule Hookwith Associate Cylinders Select button in filter panel')
+    async clickFilterFirstRuleHookwithCylindersSelectButton(): Promise<void> {
+        await this.scatteredMmtesPage.clickFilterFirstRuleHookwithCylindersSelectButton();
+    }
+
+    @TSBDDStepDef('First Rule Hookwith Associate Cylinders should show Edit in filter panel')
+    async verifyFilterFirstRuleHookwithCylindersShowsEdit(): Promise<void> {
+        await this.scatteredMmtesPage.verifyFilterFirstRuleHookwithCylindersEdit();
+    }
+
+    @TSBDDStepDef('I should see cylinder {string} selected in First Rule Hookwith')
+    async verifyCylinderSelectedInFirstRuleHookwith(cylinder: string): Promise<void> {
+        const actualCylinder = String(CSValueResolver.resolve(cylinder, this.context));
+        await this.scatteredMmtesPage.verifyFilterFirstRuleHookwithCylinderSelected(actualCylinder);
+    }
+
+
+
+
+    @TSBDDStepDef('I get sport mmtes filtered by first rule hookwith {string} {string} {string} {string} from database')
+    async getSportMmtesFilteredByFirstRuleHookwith(days: string, includeWeekends: string, includeBorings: string, cylinder: string): Promise<void> {
+        const actualDays = CSValueResolver.resolve(days, this.context);
+        const actualIncludeWeekends = CSValueResolver.resolve(includeWeekends, this.context);
+        const actualIncludeBorings = CSValueResolver.resolve(includeBorings, this.context);
+        const actualCylinder = CSValueResolver.resolve(cylinder, this.context);
+        Tsreporter.info(`Getting sport mmtes filtered by First Rule Hookwith: Days=${actualDays}, Weekends=${actualIncludeWeekends}, Borings=${actualIncludeBorings}, Cylinder=${actualCylinder}`);
+        const results = await TTTFDatabaseHelper.getSportMmtesFilteredByFirstRuleHookwith(actualDays, actualIncludeWeekends, actualIncludeBorings, actualCylinder);
+        this.scenarioContext.setVariable('dbFilteredCount', results.length);
+        this.scenarioContext.setVariable('dbSportMmtesFiltered', results);
+        Tsreporter.pass(`Retrieved ${results.length} records from database`);
+    }
+
+
+
+
+-----------------------------------------------------------------------
+
+/**
+     * Get First Rule Hookwith Associate Cylinders Select button
+     * Requirement Line 1143: xpath: //div[@id='inlineFilterSportMmte']//h5[text()='First Rule']/ancestor::section[1]//button[@id='addbuttonFirstRuleHookwithCylinders']
      */
-    public async clickCylinderPopupApplyButton(): Promise<void> {
-        Tsreporter.info('Clicking Apply button on Cylinder popup');
-        const applyButton = CSElementFactory.createByXPath(
-            '//div[@class="sssss-panel__content-wrapper"]//div[@class="sssss-panel__footer"]//span[@class="sssss-button__label" and contains(text(),"Apply")]/parent::button[1]',
-            'Cylinder popup Apply button',
+    public async getFilterFirstRuleHookwithCylindersSelectButton(): Promise<CSWebElement> {
+        return CSElementFactory.createByXPath(
+            '//div[@id="inlineFilterSportMmte"]//h5[text()="First Rule"]/ancestor::section[1]//button[@id="addbuttonFirstRuleHookwithCylinders"]',
+            'First Rule Hookwith Associate Cylinders Select button',
             this.page
         );
-        await applyButton.waitForVisible(10000);
-        await applyButton.clickWithTimeout(10000);
-        // Wait for popup to close (Requirement Line 631)
+    }
+
+    /**
+     * Click First Rule Hookwith Associate Cylinders Select button
+     * Opens the cylinder selection popup
+     */
+    public async clickFilterFirstRuleHookwithCylindersSelectButton(): Promise<void> {
+        Tsreporter.info('Clicking First Rule Hookwith Associate Cylinders Select button');
+        const button = await this.getFilterFirstRuleHookwithCylindersSelectButton();
+        await button.waitForVisible(10000);
+        await button.clickWithTimeout(10000);
+        // Wait for popup to appear
         const popup = CSElementFactory.createByXPath(
             '//div[@class="sssss-modal"]//div[@class="sssss-panel__content-wrapper"]',
             'Cylinder modal popup',
             this.page
         );
-        await popup.waitForDetached(10000);
-        Tsreporter.pass('Clicked Apply button and popup closed');
+        await popup.waitForVisible(10000);
+        Tsreporter.pass('Clicked First Rule Hookwith Associate Cylinders Select button and popup appeared');
     }
 
     /**
-     * Click Cancel button on Cylinder popup
-     * Requirement Line 624: xpath: //div[@class='sssss-panel__content-wrapper']//div[@class='sssss-panel__footer']//span[@class='sssss-button__label' and text()='Cancel']/parent::button[1]
+     * Verify First Rule Hookwith Associate Cylinders button shows Edit
+     * Requirement Line 1155: xpath: //div[@id='inlineFilterSportMmte']//h5[text()='First Rule']/ancestor::section[1]//button[@id='addbuttonFirstRuleHookwithCylinders']//span[@class='sssss-button__label' and text()='Edit']
      */
-    public async clickCylinderPopupCancelButton(): Promise<void> {
-        Tsreporter.info('Clicking Cancel button on Cylinder popup');
-        const cancelButton = CSElementFactory.createByXPath(
-            '//div[@class="sssss-panel__content-wrapper"]//div[@class="sssss-panel__footer"]//span[@class="sssss-button__label" and text()="Cancel"]/parent::button[1]',
-            'Cylinder popup Cancel button',
+    public async verifyFilterFirstRuleHookwithCylindersEdit(): Promise<void> {
+        Tsreporter.info('Verifying First Rule Hookwith Associate Cylinders shows Edit');
+        const editLabel = CSElementFactory.createByXPath(
+            '//div[@id="inlineFilterSportMmte"]//h5[text()="First Rule"]/ancestor::section[1]//button[@id="addbuttonFirstRuleHookwithCylinders"]//span[@class="sssss-button__label" and text()="Edit"]',
+            'First Rule Hookwith Associate Cylinders Edit label',
             this.page
         );
-        await cancelButton.waitForVisible(10000);
-        await cancelButton.clickWithTimeout(10000);
-        await this.page.waitForTimeout(500);
-        Tsreporter.pass('Clicked Cancel button on Cylinder popup');
+        await editLabel.waitForVisible(10000);
+        Tsreporter.pass('First Rule Hookwith Associate Cylinders shows Edit');
     }
+
+    /**
+     * Verify cylinder is selected in First Rule Hookwith
+     * Requirement Line 1157: xpath: //div[@id='inlineFilterSportMmte']//h5[text()='First Rule']/ancestor::section[1]//button[@id='addbuttonFirstRuleHookwithCylinders']/ancestor::div[contains(@class, 'sssss-row')][1]/p[@id='pCylinder']/span[text()='<cylinder>']
+     */
+    public async verifyFilterFirstRuleHookwithCylinderSelected(cylinder: string): Promise<void> {
+        Tsreporter.info(`Verifying cylinder ${cylinder} is selected in First Rule Hookwith`);
+        const cylinderSpan = CSElementFactory.createByXPath(
+            `//div[@id="inlineFilterSportMmte"]//h5[text()="First Rule"]/ancestor::section[1]//button[@id="addbuttonFirstRuleHookwithCylinders"]/ancestor::div[contains(@class, "sssss-row")][1]/p[@id="pCylinder"]/span[text()="${cylinder}"]`,
+            `First Rule Hookwith cylinder ${cylinder}`,
+            this.page
+        );
+        await cylinderSpan.waitForVisible(10000);
+        Tsreporter.pass(`Cylinder ${cylinder} is selected in First Rule Hookwith`);
+    }
+
+
+    ----------------------------------------------------------------
+
+
+    public static async getFirstRuleHookwith(): Promise<{ hookwithDays: string; includeWeekends: string; includeBorings: string; associateCylinder: string }> {
+        const result = await CSDBUtils.executeQuery(
+            this.DB_ALIAS,
+            'GET_FIRST_RULE_HOOKWITH'
+        );
+
+        if (!result.rows || result.rows.length === 0) {
+            throw new Error('No First Rule Hookwith data found in database');
+        }
+
+        return {
+            hookwithDays: String(result.rows[0].hookwith_days || result.rows[0].HOOKWITH_DAYS || result.rows[0].hookwith_offset || result.rows[0].HOOKWITH_OFFSET),
+            includeWeekends: String(result.rows[0].hookwith_include_weekend_flag || result.rows[0].HOOKWITH_INCLUDE_WEEKEND_FLAG),
+            includeBorings: String(result.rows[0].hookwith_include_boring_flag || result.rows[0].HOOKWITH_INCLUDE_BORING_FLAG),
+            associateCylinder: String(result.rows[0].hookwith_associate_cylinder || result.rows[0].HOOKWITH_ASSOCIATE_CYLINDER || result.rows[0].fw_cylinder_desc || result.rows[0].FW_CYLINDER_DESC)
+        };
+    }
+
+
+
+
+
+
+    /**
+     * Get sport mmtes filtered by First Rule Hookwith (RR03-06)
+     * Query: DB_QUERY_GET_SPORT_MMTES_BY_FIRST_RULE_HOOKWITH
+     * Parameters: hookwith_days, include_weekends (Y/N), include_borings (Y/N), cylinder_name
+     * Note from Requirement Line 1165: Cylinder names can have special character like '&'
+     */
+    public static async getSportMmtesFilteredByFirstRuleHookwith(
+        days: string,
+        includeWeekends: string,
+        includeBorings: string,
+        cylinder: string
+    ): Promise<any[]> {
+        // Convert boolean-like values to Y/N format for database
+        const weekendsFlag = this.convertToYNFlag(includeWeekends);
+        const boringsFlag = this.convertToYNFlag(includeBorings);
+
+        const result = await CSDBUtils.executeQuery(
+            this.DB_ALIAS,
+            'GET_SPORT_MMTES_BY_FIRST_RULE_HOOKWITH',
+            [days, weekendsFlag, boringsFlag, cylinder]
+        );
+        return result.rows || [];
+    }
+
+    /**
+     * Convert various boolean-like values to Y/N flag
+     */
+    private static convertToYNFlag(value: string): string {
+        if (!value) return 'N';
+        const normalizedValue = String(value).toLowerCase().trim();
+        if (normalizedValue === 'y' || normalizedValue === 'yes' || normalizedValue === 'true' || normalizedValue === '1') {
+            return 'Y';
+        }
+        return 'N';
+    }
+
+
+
+
