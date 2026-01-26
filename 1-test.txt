@@ -1,1 +1,875 @@
-test code
+/**
+     * Get Second Rule Hookwith (all parameters) from database (RR03-11)
+     * Query: DB_QUERY_GET_SECOND_RULE_HOOKWITH
+     * Returns: hookwithDays, includeWeekends, includeBorings, associateCylinder
+     *
+     * SQL Pattern:
+     * SELECT DISTINCT rrr.hookwith_offset AS hookwith_days, rrr.hookwith_include_weekend_flag,
+     *        rrr.hookwith_include_boring_flag, fc.fw_cylinder_desc AS hookwith_associate_cylinder
+     * FROM tttfapp.scattered_mmte_rule rrr
+     * JOIN tttfapp.ref_rule_look_cylinder rrlc ON rrr.scattered_mmte_rule_id = rrlc.scattered_mmte_rule_id
+     * JOIN ctsgapp.fw_cylinder fc ON rrlc.fw_cylinder_id = fc.fw_cylinder_id
+     * WHERE rrr.scattered_mmte_id IN (
+     *   SELECT scattered_mmte_id FROM tttfapp.scattered_mmte WHERE methodology_type = 'SPORT_MMTE_LOOKUP'
+     * ) AND rrr.sort_order = 1 AND rrr.hookwith_offset IS NOT NULL
+     * ORDER BY DBMS_RANDOM.VALUE() FETCH FIRST 1 ROW ONLY
+     */
+    public static async getSecondRuleHookwith(): Promise<{ hookwithDays: string; includeWeekends: string; includeBorings: string; associateCylinder: string }> {
+        const result = await CSDBUtils.executeQuery(
+            this.DB_ALIAS,
+            'GET_SECOND_RULE_HOOKWITH'
+        );
+
+        if (!result.rows || result.rows.length === 0) {
+            throw new Error('No Second Rule Hookwith data found in database');
+        }
+
+        return {
+            hookwithDays: String(result.rows[0].hookwith_days || result.rows[0].HOOKWITH_DAYS || result.rows[0].hookwith_offset || result.rows[0].HOOKWITH_OFFSET),
+            includeWeekends: String(result.rows[0].hookwith_include_weekend_flag || result.rows[0].HOOKWITH_INCLUDE_WEEKEND_FLAG),
+            includeBorings: String(result.rows[0].hookwith_include_boring_flag || result.rows[0].HOOKWITH_INCLUDE_BORING_FLAG),
+            associateCylinder: String(result.rows[0].hookwith_associate_cylinder || result.rows[0].HOOKWITH_ASSOCIATE_CYLINDER || result.rows[0].fw_cylinder_desc || result.rows[0].FW_CYLINDER_DESC)
+        };
+    }
+
+
+
+
+    ------------------------------------------------------------------
+
+    /**
+     * Verify First Rule Secondary Adjust Base Days input is disabled
+     */
+    public async verifyFilterFirstRuleSecondaryAdjustBaseDaysDisabled(): Promise<void> {
+        Tsreporter.info('Verifying First Rule Secondary Adjust Base Days input is disabled');
+        const input = await this.getFilterFirstRuleSecondaryAdjustBaseDaysInput();
+        const isDisabled = await input.getAttributeWithTimeout('disabled', 5000);
+        if (isDisabled !== null) {
+            Tsreporter.pass('First Rule Secondary Adjust Base Days input is disabled');
+        } else {
+            throw new Error('First Rule Secondary Adjust Base Days input should be disabled but is enabled');
+        }
+    }
+
+    /**
+     * Verify First Rule Secondary Adjust Base checkbox is checked
+     */
+    public async verifyFilterFirstRuleSecondaryAdjustBaseChecked(): Promise<void> {
+        Tsreporter.info('Verifying First Rule Secondary Adjust Base checkbox is checked');
+        const checkbox = await this.getFilterFirstRuleSecondaryAdjustBaseCheckbox();
+        const ariaChecked = await checkbox.getAttributeWithTimeout('aria-checked', 5000);
+        if (ariaChecked === 'true') {
+            Tsreporter.pass('First Rule Secondary Adjust Base checkbox is checked');
+        } else {
+            throw new Error('First Rule Secondary Adjust Base checkbox should be checked but is not');
+        }
+    }
+
+    /**
+     * Get First Rule Secondary Adjust Base Business Days radio input element
+     * For enabled/disabled check, target the input[@value="BUSINESS_DAY"]
+     */
+    public async getFilterFirstRuleSecondaryAdjustBaseBusinessDaysInput(): Promise<CSWebElement> {
+        return CSElementFactory.createByXPath(
+            '//div[@id="inlineFilterSportMmte"]//h5[text()="First Rule"]/ancestor::section[1]//input[@name="addToSecondaryAdjBaseDaysFirstRule"]/ancestor::div[contains(@class, "sssss-row")]//span[text()="Business Days"]/ancestor::div[contains(@class, "sssss-radio-button")][1]//input[@value="BUSINESS_DAY"]',
+            'First Rule Secondary Adjust Base Business Days input',
+            this.page
+        );
+    }
+
+    /**
+     * Verify First Rule Secondary Adjust Base Business Days radio is enabled
+     */
+    public async verifyFilterFirstRuleSecondaryAdjustBaseBusinessDaysEnabled(): Promise<void> {
+        Tsreporter.info('Verifying First Rule Secondary Adjust Base Business Days radio is enabled');
+        const input = await this.getFilterFirstRuleSecondaryAdjustBaseBusinessDaysInput();
+        const isDisabled = await input.isDisabled();
+        if (!isDisabled) {
+            Tsreporter.pass('First Rule Secondary Adjust Base Business Days radio is enabled');
+        } else {
+            throw new Error('First Rule Secondary Adjust Base Business Days radio should be enabled but is disabled');
+        }
+    }
+
+    /**
+     * Verify First Rule Secondary Adjust Base Business Days radio is disabled
+     */
+    public async verifyFilterFirstRuleSecondaryAdjustBaseBusinessDaysDisabled(): Promise<void> {
+        Tsreporter.info('Verifying First Rule Secondary Adjust Base Business Days radio is disabled');
+        const input = await this.getFilterFirstRuleSecondaryAdjustBaseBusinessDaysInput();
+        const isDisabled = await input.isDisabled();
+        if (isDisabled) {
+            Tsreporter.pass('First Rule Secondary Adjust Base Business Days radio is disabled');
+        } else {
+            throw new Error('First Rule Secondary Adjust Base Business Days radio should be disabled but is enabled');
+        }
+    }
+
+    /**
+     * Get First Rule Secondary Adjust Base Cylinder Days radio input element
+     * For enabled/disabled check, target the input[@value="CYLINDER_DAY"]
+     */
+    public async getFilterFirstRuleSecondaryAdjustBaseCylinderDaysInput(): Promise<CSWebElement> {
+        return CSElementFactory.createByXPath(
+            '//div[@id="inlineFilterSportMmte"]//h5[text()="First Rule"]/ancestor::section[1]//input[@name="addToSecondaryAdjBaseDaysFirstRule"]/ancestor::div[contains(@class, "sssss-row")]//span[text()="Cylinder Days"]/ancestor::div[contains(@class, "sssss-radio-button")][1]//input[@value="CYLINDER_DAY"]',
+            'First Rule Secondary Adjust Base Cylinder Days input',
+            this.page
+        );
+    }
+
+    /**
+     * Verify First Rule Secondary Adjust Base Cylinder Days radio is enabled
+     */
+    public async verifyFilterFirstRuleSecondaryAdjustBaseCylinderDaysEnabled(): Promise<void> {
+        Tsreporter.info('Verifying First Rule Secondary Adjust Base Cylinder Days radio is enabled');
+        const input = await this.getFilterFirstRuleSecondaryAdjustBaseCylinderDaysInput();
+        const isDisabled = await input.isDisabled();
+        if (!isDisabled) {
+            Tsreporter.pass('First Rule Secondary Adjust Base Cylinder Days radio is enabled');
+        } else {
+            throw new Error('First Rule Secondary Adjust Base Cylinder Days radio should be enabled but is disabled');
+        }
+    }
+
+    /**
+     * Verify First Rule Secondary Adjust Base Cylinder Days radio is disabled
+     */
+    public async verifyFilterFirstRuleSecondaryAdjustBaseCylinderDaysDisabled(): Promise<void> {
+        Tsreporter.info('Verifying First Rule Secondary Adjust Base Cylinder Days radio is disabled');
+        const input = await this.getFilterFirstRuleSecondaryAdjustBaseCylinderDaysInput();
+        const isDisabled = await input.isDisabled();
+        if (isDisabled) {
+            Tsreporter.pass('First Rule Secondary Adjust Base Cylinder Days radio is disabled');
+        } else {
+            throw new Error('First Rule Secondary Adjust Base Cylinder Days radio should be disabled but is enabled');
+        }
+    }
+
+
+
+
+    // ===================================================================
+    // SECOND RULE ADJUST BASE VERIFICATION METHODS (RR03-09)
+    // ===================================================================
+
+    /**
+     * Verify Second Rule Adjust Base checkbox is present
+     * Requirement Line 1668: xpath: //div[@id='inlineFilterSportMmte']//h5[text()='Second Rule']/ancestor::section[1]//span[@class='sssss-checkbox__label-text' and text()='Adjust Base']/parent::span[@role='checkbox']
+     */
+    public async verifyFilterSecondRuleAdjustBaseCheckboxPresent(): Promise<void> {
+        Tsreporter.info('Verifying Second Rule Adjust Base checkbox is present');
+        const checkbox = await this.getFilterSecondRuleAdjustBaseCheckbox();
+        await checkbox.waitForVisible(10000);
+        Tsreporter.pass('Second Rule Adjust Base checkbox is present');
+    }
+
+    /**
+     * Verify Second Rule Adjust Base checkbox is not checked by default
+     */
+    public async verifyFilterSecondRuleAdjustBaseNotChecked(): Promise<void> {
+        Tsreporter.info('Verifying Second Rule Adjust Base checkbox is not checked by default');
+        const checkbox = await this.getFilterSecondRuleAdjustBaseCheckbox();
+        const ariaChecked = await checkbox.getAttributeWithTimeout('aria-checked', 5000);
+        if (ariaChecked === 'false' || ariaChecked === null) {
+            Tsreporter.pass('Second Rule Adjust Base checkbox is not checked by default');
+        } else {
+            throw new Error('Second Rule Adjust Base checkbox should NOT be checked by default');
+        }
+    }
+
+    /**
+     * Verify Second Rule Adjust Base checkbox is checked
+     */
+    public async verifyFilterSecondRuleAdjustBaseChecked(): Promise<void> {
+        Tsreporter.info('Verifying Second Rule Adjust Base checkbox is checked');
+        const checkbox = await this.getFilterSecondRuleAdjustBaseCheckbox();
+        const ariaChecked = await checkbox.getAttributeWithTimeout('aria-checked', 5000);
+        if (ariaChecked === 'true') {
+            Tsreporter.pass('Second Rule Adjust Base checkbox is checked');
+        } else {
+            throw new Error('Second Rule Adjust Base checkbox should be checked but is not');
+        }
+    }
+
+    /**
+     * Verify Second Rule Adjust Base Days input is disabled
+     * Requirement Line 1673: xpath: //div[@id='inlineFilterSportMmte']//h5[text()='Second Rule']/ancestor::section[1]//span[@class='sssss-checkbox__label-text' and text()='Adjust Base']/ancestor::div[contains(@class, 'sssss-checkbox')][1]/following::div[1]//input[contains(@id, 'sssss-text-input')]
+     */
+    public async verifyFilterSecondRuleAdjustBaseDaysDisabled(): Promise<void> {
+        Tsreporter.info('Verifying Second Rule Adjust Base Days input is disabled');
+        const input = await this.getFilterSecondRuleAdjustBaseDaysInput();
+        const isDisabled = await input.getAttributeWithTimeout('disabled', 5000);
+        if (isDisabled !== null) {
+            Tsreporter.pass('Second Rule Adjust Base Days input is disabled');
+        } else {
+            throw new Error('Second Rule Adjust Base Days input should be disabled but is enabled');
+        }
+    }
+
+    /**
+     * Verify Second Rule Adjust Base Days input is enabled
+     */
+    public async verifyFilterSecondRuleAdjustBaseDaysEnabled(): Promise<void> {
+        Tsreporter.info('Verifying Second Rule Adjust Base Days input is enabled');
+        const input = await this.getFilterSecondRuleAdjustBaseDaysInput();
+        const isDisabled = await input.getAttributeWithTimeout('disabled', 5000);
+        if (isDisabled === null) {
+            Tsreporter.pass('Second Rule Adjust Base Days input is enabled');
+        } else {
+            throw new Error('Second Rule Adjust Base Days input should be enabled but is disabled');
+        }
+    }
+
+    /**
+     * Get Second Rule Adjust Base Business Days radio input element
+     * Requirement Line 1675: xpath: //div[@id='inlineFilterSportMmte']//h5[text()='Second Rule']/ancestor::section[1]//span[@class='sssss-checkbox__label-text' and text()='Adjust Base']/ancestor::div[contains(@class, 'sssss-checkbox')][1]/following::div[1]//span[text()='Business Days']/ancestor::div[contains(@class, 'sssss-radio-button')][1]//input[@value='BUSINESS_DAY']
+     */
+    public async getFilterSecondRuleAdjustBaseBusinessDaysInput(): Promise<CSWebElement> {
+        return CSElementFactory.createByXPath(
+            '//div[@id="inlineFilterSportMmte"]//h5[text()="Second Rule"]/ancestor::section[1]//span[@class="sssss-checkbox__label-text" and text()="Adjust Base"]/ancestor::div[contains(@class, "sssss-checkbox")][1]/following::div[1]//span[text()="Business Days"]/ancestor::div[contains(@class, "sssss-radio-button")][1]//input[@value="BUSINESS_DAY"]',
+            'Second Rule Adjust Base Business Days input',
+            this.page
+        );
+    }
+
+    /**
+     * Verify Second Rule Adjust Base Business Days radio is disabled
+     */
+    public async verifyFilterSecondRuleAdjustBaseBusinessDaysDisabled(): Promise<void> {
+        Tsreporter.info('Verifying Second Rule Adjust Base Business Days radio is disabled');
+        const input = await this.getFilterSecondRuleAdjustBaseBusinessDaysInput();
+        const isDisabled = await input.isDisabled();
+        if (isDisabled) {
+            Tsreporter.pass('Second Rule Adjust Base Business Days radio is disabled');
+        } else {
+            throw new Error('Second Rule Adjust Base Business Days radio should be disabled but is enabled');
+        }
+    }
+
+    /**
+     * Verify Second Rule Adjust Base Business Days radio is enabled
+     */
+    public async verifyFilterSecondRuleAdjustBaseBusinessDaysEnabled(): Promise<void> {
+        Tsreporter.info('Verifying Second Rule Adjust Base Business Days radio is enabled');
+        const input = await this.getFilterSecondRuleAdjustBaseBusinessDaysInput();
+        const isDisabled = await input.isDisabled();
+        if (!isDisabled) {
+            Tsreporter.pass('Second Rule Adjust Base Business Days radio is enabled');
+        } else {
+            throw new Error('Second Rule Adjust Base Business Days radio should be enabled but is disabled');
+        }
+    }
+
+    /**
+     * Get Second Rule Adjust Base Cylinder Days radio input element
+     */
+    public async getFilterSecondRuleAdjustBaseCylinderDaysInput(): Promise<CSWebElement> {
+        return CSElementFactory.createByXPath(
+            '//div[@id="inlineFilterSportMmte"]//h5[text()="Second Rule"]/ancestor::section[1]//span[@class="sssss-checkbox__label-text" and text()="Adjust Base"]/ancestor::div[contains(@class, "sssss-checkbox")][1]/following::div[1]//span[text()="Cylinder Days"]/ancestor::div[contains(@class, "sssss-radio-button")][1]//input[@value="CYLINDER_DAY"]',
+            'Second Rule Adjust Base Cylinder Days input',
+            this.page
+        );
+    }
+
+    /**
+     * Verify Second Rule Adjust Base Cylinder Days radio is disabled
+     */
+    public async verifyFilterSecondRuleAdjustBaseCylinderDaysDisabled(): Promise<void> {
+        Tsreporter.info('Verifying Second Rule Adjust Base Cylinder Days radio is disabled');
+        const input = await this.getFilterSecondRuleAdjustBaseCylinderDaysInput();
+        const isDisabled = await input.isDisabled();
+        if (isDisabled) {
+            Tsreporter.pass('Second Rule Adjust Base Cylinder Days radio is disabled');
+        } else {
+            throw new Error('Second Rule Adjust Base Cylinder Days radio should be disabled but is enabled');
+        }
+    }
+
+    /**
+     * Verify Second Rule Adjust Base Cylinder Days radio is enabled
+     */
+    public async verifyFilterSecondRuleAdjustBaseCylinderDaysEnabled(): Promise<void> {
+        Tsreporter.info('Verifying Second Rule Adjust Base Cylinder Days radio is enabled');
+        const input = await this.getFilterSecondRuleAdjustBaseCylinderDaysInput();
+        const isDisabled = await input.isDisabled();
+        if (!isDisabled) {
+            Tsreporter.pass('Second Rule Adjust Base Cylinder Days radio is enabled');
+        } else {
+            throw new Error('Second Rule Adjust Base Cylinder Days radio should be enabled but is disabled');
+        }
+    }
+
+    // ===================================================================
+    // SECOND RULE SECONDARY ADJUST BASE VERIFICATION METHODS (RR03-10)
+    // ===================================================================
+
+    /**
+     * Verify Second Rule Secondary Adjust Base checkbox is present
+     * Requirement Line 1836: xpath: //div[@id='inlineFilterSportMmte']//h5[text()='Second Rule']/ancestor::section[1]//span[@class='sssss-checkbox__label-text' and text()='Secondary Adjust Base']/parent::span[@role='checkbox']
+     */
+    public async verifyFilterSecondRuleSecondaryAdjustBaseCheckboxPresent(): Promise<void> {
+        Tsreporter.info('Verifying Second Rule Secondary Adjust Base checkbox is present');
+        const checkbox = await this.getFilterSecondRuleSecondaryAdjustBaseCheckbox();
+        await checkbox.waitForVisible(10000);
+        Tsreporter.pass('Second Rule Secondary Adjust Base checkbox is present');
+    }
+
+    /**
+     * Verify Second Rule Secondary Adjust Base checkbox is not checked by default
+     */
+    public async verifyFilterSecondRuleSecondaryAdjustBaseNotChecked(): Promise<void> {
+        Tsreporter.info('Verifying Second Rule Secondary Adjust Base checkbox is not checked by default');
+        const checkbox = await this.getFilterSecondRuleSecondaryAdjustBaseCheckbox();
+        const ariaChecked = await checkbox.getAttributeWithTimeout('aria-checked', 5000);
+        if (ariaChecked === 'false' || ariaChecked === null) {
+            Tsreporter.pass('Second Rule Secondary Adjust Base checkbox is not checked by default');
+        } else {
+            throw new Error('Second Rule Secondary Adjust Base checkbox should NOT be checked by default');
+        }
+    }
+
+    /**
+     * Verify Second Rule Secondary Adjust Base checkbox is checked
+     */
+    public async verifyFilterSecondRuleSecondaryAdjustBaseChecked(): Promise<void> {
+        Tsreporter.info('Verifying Second Rule Secondary Adjust Base checkbox is checked');
+        const checkbox = await this.getFilterSecondRuleSecondaryAdjustBaseCheckbox();
+        const ariaChecked = await checkbox.getAttributeWithTimeout('aria-checked', 5000);
+        if (ariaChecked === 'true') {
+            Tsreporter.pass('Second Rule Secondary Adjust Base checkbox is checked');
+        } else {
+            throw new Error('Second Rule Secondary Adjust Base checkbox should be checked but is not');
+        }
+    }
+
+    /**
+     * Verify Second Rule Secondary Adjust Base Days input is disabled
+     * Requirement Line 1841: xpath: //div[@id='inlineFilterSportMmte']//h5[text()='Second Rule']/ancestor::section[1]//input[@name='addToSecondaryAdjBaseDaysSecondRule']
+     */
+    public async verifyFilterSecondRuleSecondaryAdjustBaseDaysDisabled(): Promise<void> {
+        Tsreporter.info('Verifying Second Rule Secondary Adjust Base Days input is disabled');
+        const input = await this.getFilterSecondRuleSecondaryAdjustBaseDaysInput();
+        const isDisabled = await input.getAttributeWithTimeout('disabled', 5000);
+        if (isDisabled !== null) {
+            Tsreporter.pass('Second Rule Secondary Adjust Base Days input is disabled');
+        } else {
+            throw new Error('Second Rule Secondary Adjust Base Days input should be disabled but is enabled');
+        }
+    }
+
+    /**
+     * Verify Second Rule Secondary Adjust Base Days input is enabled
+     */
+    public async verifyFilterSecondRuleSecondaryAdjustBaseDaysEnabled(): Promise<void> {
+        Tsreporter.info('Verifying Second Rule Secondary Adjust Base Days input is enabled');
+        const input = await this.getFilterSecondRuleSecondaryAdjustBaseDaysInput();
+        const isDisabled = await input.getAttributeWithTimeout('disabled', 5000);
+        if (isDisabled === null) {
+            Tsreporter.pass('Second Rule Secondary Adjust Base Days input is enabled');
+        } else {
+            throw new Error('Second Rule Secondary Adjust Base Days input should be enabled but is disabled');
+        }
+    }
+
+    /**
+     * Get Second Rule Secondary Adjust Base Business Days radio input element
+     * Requirement Line 1843: xpath with span[text()='Business Days']
+     */
+    public async getFilterSecondRuleSecondaryAdjustBaseBusinessDaysInput(): Promise<CSWebElement> {
+        return CSElementFactory.createByXPath(
+            '//div[@id="inlineFilterSportMmte"]//h5[text()="Second Rule"]/ancestor::section[1]//input[@name="addToSecondaryAdjBaseDaysSecondRule"]/ancestor::div[contains(@class, "sssss-row")]//span[text()="Business Days"]/ancestor::div[contains(@class, "sssss-radio-button")][1]//input[@value="BUSINESS_DAY"]',
+            'Second Rule Secondary Adjust Base Business Days input',
+            this.page
+        );
+    }
+
+    /**
+     * Verify Second Rule Secondary Adjust Base Business Days radio is disabled
+     */
+    public async verifyFilterSecondRuleSecondaryAdjustBaseBusinessDaysDisabled(): Promise<void> {
+        Tsreporter.info('Verifying Second Rule Secondary Adjust Base Business Days radio is disabled');
+        const input = await this.getFilterSecondRuleSecondaryAdjustBaseBusinessDaysInput();
+        const isDisabled = await input.isDisabled();
+        if (isDisabled) {
+            Tsreporter.pass('Second Rule Secondary Adjust Base Business Days radio is disabled');
+        } else {
+            throw new Error('Second Rule Secondary Adjust Base Business Days radio should be disabled but is enabled');
+        }
+    }
+
+    /**
+     * Verify Second Rule Secondary Adjust Base Business Days radio is enabled
+     */
+    public async verifyFilterSecondRuleSecondaryAdjustBaseBusinessDaysEnabled(): Promise<void> {
+        Tsreporter.info('Verifying Second Rule Secondary Adjust Base Business Days radio is enabled');
+        const input = await this.getFilterSecondRuleSecondaryAdjustBaseBusinessDaysInput();
+        const isDisabled = await input.isDisabled();
+        if (!isDisabled) {
+            Tsreporter.pass('Second Rule Secondary Adjust Base Business Days radio is enabled');
+        } else {
+            throw new Error('Second Rule Secondary Adjust Base Business Days radio should be enabled but is disabled');
+        }
+    }
+
+    /**
+     * Get Second Rule Secondary Adjust Base Cylinder Days radio input element
+     */
+    public async getFilterSecondRuleSecondaryAdjustBaseCylinderDaysInput(): Promise<CSWebElement> {
+        return CSElementFactory.createByXPath(
+            '//div[@id="inlineFilterSportMmte"]//h5[text()="Second Rule"]/ancestor::section[1]//input[@name="addToSecondaryAdjBaseDaysSecondRule"]/ancestor::div[contains(@class, "sssss-row")]//span[text()="Cylinder Days"]/ancestor::div[contains(@class, "sssss-radio-button")][1]//input[@value="CYLINDER_DAY"]',
+            'Second Rule Secondary Adjust Base Cylinder Days input',
+            this.page
+        );
+    }
+
+    /**
+     * Verify Second Rule Secondary Adjust Base Cylinder Days radio is disabled
+     */
+    public async verifyFilterSecondRuleSecondaryAdjustBaseCylinderDaysDisabled(): Promise<void> {
+        Tsreporter.info('Verifying Second Rule Secondary Adjust Base Cylinder Days radio is disabled');
+        const input = await this.getFilterSecondRuleSecondaryAdjustBaseCylinderDaysInput();
+        const isDisabled = await input.isDisabled();
+        if (isDisabled) {
+            Tsreporter.pass('Second Rule Secondary Adjust Base Cylinder Days radio is disabled');
+        } else {
+            throw new Error('Second Rule Secondary Adjust Base Cylinder Days radio should be disabled but is enabled');
+        }
+    }
+
+    /**
+     * Verify Second Rule Secondary Adjust Base Cylinder Days radio is enabled
+     */
+    public async verifyFilterSecondRuleSecondaryAdjustBaseCylinderDaysEnabled(): Promise<void> {
+        Tsreporter.info('Verifying Second Rule Secondary Adjust Base Cylinder Days radio is enabled');
+        const input = await this.getFilterSecondRuleSecondaryAdjustBaseCylinderDaysInput();
+        const isDisabled = await input.isDisabled();
+        if (!isDisabled) {
+            Tsreporter.pass('Second Rule Secondary Adjust Base Cylinder Days radio is enabled');
+        } else {
+            throw new Error('Second Rule Secondary Adjust Base Cylinder Days radio should be enabled but is disabled');
+        }
+    }
+
+    // ===================================================================
+    // SECOND RULE ADD TO HOOKWITH VERIFICATION METHODS (RR03-11)
+    // ===================================================================
+
+    /**
+     * Verify Second Rule Add to Hookwith checkbox is present
+     * Requirement Line 2004: xpath: //div[@id='inlineFilterSportMmte']//h5[text()='Second Rule']/ancestor::section[1]//span[@class='sssss-checkbox__label-text' and text()='Add to Hookwith']/parent::span[@role='checkbox']
+     */
+    public async verifyFilterSecondRuleAddToHookwithCheckboxPresent(): Promise<void> {
+        Tsreporter.info('Verifying Second Rule Add to Hookwith checkbox is present');
+        const checkbox = await this.getFilterSecondRuleAddToHookwithCheckbox();
+        await checkbox.waitForVisible(10000);
+        Tsreporter.pass('Second Rule Add to Hookwith checkbox is present');
+    }
+
+    /**
+     * Verify Second Rule Add to Hookwith checkbox is not checked by default
+     */
+    public async verifyFilterSecondRuleAddToHookwithNotChecked(): Promise<void> {
+        Tsreporter.info('Verifying Second Rule Add to Hookwith checkbox is not checked by default');
+        const checkbox = await this.getFilterSecondRuleAddToHookwithCheckbox();
+        const ariaChecked = await checkbox.getAttributeWithTimeout('aria-checked', 5000);
+        if (ariaChecked === 'false' || ariaChecked === null) {
+            Tsreporter.pass('Second Rule Add to Hookwith checkbox is not checked by default');
+        } else {
+            throw new Error('Second Rule Add to Hookwith checkbox should NOT be checked by default');
+        }
+    }
+
+    /**
+     * Verify Second Rule Hookwith Days input is disabled
+     * Requirement Line 2009: xpath: //div[@id='inlineFilterSportMmte']//h5[text()='Second Rule']/ancestor::section[1]//span[@class='sssss-checkbox__label-text' and text()='Add to Hookwith']/ancestor::div[contains(@class,'sssss-checkbox')][1]/following::div[1]//input[contains(@id, 'sssss-text-input')]
+     */
+    public async verifyFilterSecondRuleHookwithDaysDisabled(): Promise<void> {
+        Tsreporter.info('Verifying Second Rule Hookwith Days input is disabled');
+        const input = await this.getFilterSecondRuleHookwithDaysInput();
+        const isDisabled = await input.getAttributeWithTimeout('disabled', 5000);
+        if (isDisabled !== null) {
+            Tsreporter.pass('Second Rule Hookwith Days input is disabled');
+        } else {
+            throw new Error('Second Rule Hookwith Days input should be disabled but is enabled');
+        }
+    }
+
+    /**
+     * Verify Second Rule Hookwith Days input is enabled
+     */
+    public async verifyFilterSecondRuleHookwithDaysEnabled(): Promise<void> {
+        Tsreporter.info('Verifying Second Rule Hookwith Days input is enabled');
+        const input = await this.getFilterSecondRuleHookwithDaysInput();
+        const isDisabled = await input.getAttributeWithTimeout('disabled', 5000);
+        if (isDisabled === null) {
+            Tsreporter.pass('Second Rule Hookwith Days input is enabled');
+        } else {
+            throw new Error('Second Rule Hookwith Days input should be enabled but is disabled');
+        }
+    }
+
+    /**
+     * Verify Second Rule Include Weekends checkbox is disabled
+     * Requirement Line 2012: xpath for Include Weekends checkbox
+     */
+    public async verifyFilterSecondRuleIncludeWeekendsDisabled(): Promise<void> {
+        Tsreporter.info('Verifying Second Rule Include Weekends checkbox is disabled');
+        const checkbox = await this.getFilterSecondRuleIncludeWeekendsCheckbox();
+        const ariaDisabled = await checkbox.getAttributeWithTimeout('aria-disabled', 5000);
+        if (ariaDisabled === 'true') {
+            Tsreporter.pass('Second Rule Include Weekends checkbox is disabled');
+        } else {
+            throw new Error('Second Rule Include Weekends checkbox should be disabled but is enabled');
+        }
+    }
+
+    /**
+     * Verify Second Rule Include Weekends checkbox is enabled
+     */
+    public async verifyFilterSecondRuleIncludeWeekendsEnabled(): Promise<void> {
+        Tsreporter.info('Verifying Second Rule Include Weekends checkbox is enabled');
+        const checkbox = await this.getFilterSecondRuleIncludeWeekendsCheckbox();
+        const ariaDisabled = await checkbox.getAttributeWithTimeout('aria-disabled', 5000);
+        if (ariaDisabled !== 'true') {
+            Tsreporter.pass('Second Rule Include Weekends checkbox is enabled');
+        } else {
+            throw new Error('Second Rule Include Weekends checkbox should be enabled but is disabled');
+        }
+    }
+
+    /**
+     * Verify Second Rule Include Borings checkbox is disabled
+     * Requirement Line 2016: xpath for Include Borings checkbox
+     */
+    public async verifyFilterSecondRuleIncludeBoringsDisabled(): Promise<void> {
+        Tsreporter.info('Verifying Second Rule Include Borings checkbox is disabled');
+        const checkbox = await this.getFilterSecondRuleIncludeBoringsCheckbox();
+        const ariaDisabled = await checkbox.getAttributeWithTimeout('aria-disabled', 5000);
+        if (ariaDisabled === 'true') {
+            Tsreporter.pass('Second Rule Include Borings checkbox is disabled');
+        } else {
+            throw new Error('Second Rule Include Borings checkbox should be disabled but is enabled');
+        }
+    }
+
+    /**
+     * Verify Second Rule Include Borings checkbox is enabled
+     */
+    public async verifyFilterSecondRuleIncludeBoringsEnabled(): Promise<void> {
+        Tsreporter.info('Verifying Second Rule Include Borings checkbox is enabled');
+        const checkbox = await this.getFilterSecondRuleIncludeBoringsCheckbox();
+        const ariaDisabled = await checkbox.getAttributeWithTimeout('aria-disabled', 5000);
+        if (ariaDisabled !== 'true') {
+            Tsreporter.pass('Second Rule Include Borings checkbox is enabled');
+        } else {
+            throw new Error('Second Rule Include Borings checkbox should be enabled but is disabled');
+        }
+    }
+
+    /**
+     * Get Second Rule Hookwith Associate Cylinders Select button
+     * Requirement Line 2019: xpath: //div[@id='inlineFilterSportMmte']//h5[text()='Second Rule']/ancestor::section[1]//button[@id='addbuttonSecondRuleHookwithCylinders']
+     */
+    public async getFilterSecondRuleHookwithCylindersSelectButton(): Promise<CSWebElement> {
+        return CSElementFactory.createByXPath(
+            '//div[@id="inlineFilterSportMmte"]//h5[text()="Second Rule"]/ancestor::section[1]//button[@id="addbuttonSecondRuleHookwithCylinders"]',
+            'Second Rule Hookwith Associate Cylinders Select button',
+            this.page
+        );
+    }
+
+    /**
+     * Click Second Rule Hookwith Associate Cylinders Select button
+     * Opens the cylinder selection popup
+     */
+    public async clickFilterSecondRuleHookwithCylindersSelectButton(): Promise<void> {
+        Tsreporter.info('Clicking Second Rule Hookwith Associate Cylinders Select button');
+        const button = await this.getFilterSecondRuleHookwithCylindersSelectButton();
+        await button.waitForVisible(10000);
+        await button.clickWithTimeout(10000);
+        // Wait for popup to appear
+        const popup = CSElementFactory.createByXPath(
+            '//div[@class="sssss-modal"]//div[@class="sssss-panel__content-wrapper"]',
+            'Cylinder modal popup',
+            this.page
+        );
+        await popup.waitForVisible(10000);
+        Tsreporter.pass('Clicked Second Rule Hookwith Associate Cylinders Select button and popup appeared');
+    }
+
+    /**
+     * Verify Second Rule Hookwith Associate Cylinders button shows Edit
+     * Requirement Line 2031: xpath: //div[@id='inlineFilterSportMmte']//h5[text()='Second Rule']/ancestor::section[1]//button[@id='addbuttonSecondRuleHookwithCylinders']/span[@class='sssss-button__label' and text()='Edit']
+     */
+    public async verifyFilterSecondRuleHookwithCylindersEdit(): Promise<void> {
+        Tsreporter.info('Verifying Second Rule Hookwith Associate Cylinders shows Edit');
+        const editLabel = CSElementFactory.createByXPath(
+            '//div[@id="inlineFilterSportMmte"]//h5[text()="Second Rule"]/ancestor::section[1]//button[@id="addbuttonSecondRuleHookwithCylinders"]//span[@class="sssss-button__label" and text()="Edit"]',
+            'Second Rule Hookwith Associate Cylinders Edit label',
+            this.page
+        );
+        await editLabel.waitForVisible(10000);
+        Tsreporter.pass('Second Rule Hookwith Associate Cylinders shows Edit');
+    }
+
+    /**
+     * Verify cylinder is selected in Second Rule Hookwith
+     * Requirement Line 2033: xpath: //div[@id='inlineFilterSportMmte']//h5[text()='Second Rule']/ancestor::section[1]//button[@id='addbuttonSecondRuleHookwithCylinders']/ancestor::div[contains(@class, 'sssss-row')][1]//p[@id='pCalender']/span[text()='<cylinder>']
+     * Note: Requirement document has typo 'pCalender' instead of 'pCylinder'
+     */
+    public async verifyFilterSecondRuleHookwithCylinderSelected(cylinder: string): Promise<void> {
+        Tsreporter.info(`Verifying cylinder ${cylinder} is selected in Second Rule Hookwith`);
+        const cylinderSpan = CSElementFactory.createByXPath(
+            `//div[@id="inlineFilterSportMmte"]//h5[text()="Second Rule"]/ancestor::section[1]//button[@id="addbuttonSecondRuleHookwithCylinders"]/ancestor::div[contains(@class, "sssss-row")][1]//p[@id="pCylinder" or @id="pCalender"]/span[text()="${cylinder}"]`,
+            `Second Rule Hookwith cylinder ${cylinder}`,
+            this.page
+        );
+        await cylinderSpan.waitForVisible(10000);
+        Tsreporter.pass(`Cylinder ${cylinder} is selected in Second Rule Hookwith`);
+    }
+
+
+
+
+    -------------------------------------------------------------
+
+    @TSBDDStepDef('I resolve second rule hookwith from database if not provided {string} {string} {string} {string}')
+    async resolveSecondRuleHookwithFromDB(days: string, includeWeekends: string, includeBorings: string, cylinder: string): Promise<void> {
+        const actualDays = CSValueResolver.resolve(days, this.context);
+        const actualIncludeWeekends = CSValueResolver.resolve(includeWeekends, this.context);
+        const actualIncludeBorings = CSValueResolver.resolve(includeBorings, this.context);
+        const actualCylinder = CSValueResolver.resolve(cylinder, this.context);
+
+        // Check if any parameter is missing
+        const needsDB = !actualDays || String(actualDays).trim() === '' ||
+                       !actualIncludeWeekends || String(actualIncludeWeekends).trim() === '' ||
+                       !actualIncludeBorings || String(actualIncludeBorings).trim() === '' ||
+                       !actualCylinder || String(actualCylinder).trim() === '';
+
+        if (needsDB) {
+            Tsreporter.info('Second Rule Hookwith parameters not fully provided, fetching from database');
+            const result = await TTTFDatabaseHelper.getSecondRuleHookwith();
+            this.scenarioContext.setVariable('secondRuleHookwithDays', result.hookwithDays);
+            this.scenarioContext.setVariable('secondRuleHookwithIncludeWeekends', result.includeWeekends);
+            this.scenarioContext.setVariable('secondRuleHookwithIncludeBorings', result.includeBorings);
+            this.scenarioContext.setVariable('secondRuleHookwithAssociateCylinder', result.associateCylinder);
+            Tsreporter.pass(`Resolved from DB: Days=${result.hookwithDays}, Weekends=${result.includeWeekends}, Borings=${result.includeBorings}, Cylinder=${result.associateCylinder}`);
+        } else {
+            this.scenarioContext.setVariable('secondRuleHookwithDays', String(actualDays));
+            this.scenarioContext.setVariable('secondRuleHookwithIncludeWeekends', String(actualIncludeWeekends));
+            this.scenarioContext.setVariable('secondRuleHookwithIncludeBorings', String(actualIncludeBorings));
+            this.scenarioContext.setVariable('secondRuleHookwithAssociateCylinder', String(actualCylinder));
+            Tsreporter.pass(`Using provided values: Days=${actualDays}, Weekends=${actualIncludeWeekends}, Borings=${actualIncludeBorings}, Cylinder=${actualCylinder}`);
+        }
+    }
+
+
+
+
+    @TSBDDStepDef('First Rule Secondary Adjust Base Days input should be disabled')
+    async verifyFilterFirstRuleSecondaryAdjustBaseDaysDisabled(): Promise<void> {
+        await this.scatteredMmtesPage.verifyFilterFirstRuleSecondaryAdjustBaseDaysDisabled();
+    }
+
+    @TSBDDStepDef('First Rule Secondary Adjust Base checkbox should be checked')
+    async verifyFilterFirstRuleSecondaryAdjustBaseChecked(): Promise<void> {
+        await this.scatteredMmtesPage.verifyFilterFirstRuleSecondaryAdjustBaseChecked();
+    }
+
+    @TSBDDStepDef('First Rule Secondary Adjust Base Business Days radio should be enabled')
+    async verifyFilterFirstRuleSecondaryAdjustBaseBusinessDaysEnabled(): Promise<void> {
+        await this.scatteredMmtesPage.verifyFilterFirstRuleSecondaryAdjustBaseBusinessDaysEnabled();
+    }
+
+    @TSBDDStepDef('First Rule Secondary Adjust Base Business Days radio should be disabled')
+    async verifyFilterFirstRuleSecondaryAdjustBaseBusinessDaysDisabled(): Promise<void> {
+        await this.scatteredMmtesPage.verifyFilterFirstRuleSecondaryAdjustBaseBusinessDaysDisabled();
+    }
+
+    @TSBDDStepDef('First Rule Secondary Adjust Base Cylinder Days radio should be enabled')
+    async verifyFilterFirstRuleSecondaryAdjustBaseCylinderDaysEnabled(): Promise<void> {
+        await this.scatteredMmtesPage.verifyFilterFirstRuleSecondaryAdjustBaseCylinderDaysEnabled();
+    }
+
+    @TSBDDStepDef('First Rule Secondary Adjust Base Cylinder Days radio should be disabled')
+    async verifyFilterFirstRuleSecondaryAdjustBaseCylinderDaysDisabled(): Promise<void> {
+        await this.scatteredMmtesPage.verifyFilterFirstRuleSecondaryAdjustBaseCylinderDaysDisabled();
+    }
+
+
+
+
+    // --- SECOND RULE ADJUST BASE VERIFICATION STEPS (RR03-09) ---
+
+    @TSBDDStepDef('I should see Second Rule Adjust Base checkbox in filter panel')
+    async verifyFilterSecondRuleAdjustBaseCheckboxPresent(): Promise<void> {
+        await this.scatteredMmtesPage.verifyFilterSecondRuleAdjustBaseCheckboxPresent();
+    }
+
+    @TSBDDStepDef('Second Rule Adjust Base checkbox should not be checked by default')
+    async verifyFilterSecondRuleAdjustBaseNotChecked(): Promise<void> {
+        await this.scatteredMmtesPage.verifyFilterSecondRuleAdjustBaseNotChecked();
+    }
+
+    @TSBDDStepDef('Second Rule Adjust Base checkbox should be checked')
+    async verifyFilterSecondRuleAdjustBaseChecked(): Promise<void> {
+        await this.scatteredMmtesPage.verifyFilterSecondRuleAdjustBaseChecked();
+    }
+
+    @TSBDDStepDef('Second Rule Adjust Base Days input should be disabled')
+    async verifyFilterSecondRuleAdjustBaseDaysDisabled(): Promise<void> {
+        await this.scatteredMmtesPage.verifyFilterSecondRuleAdjustBaseDaysDisabled();
+    }
+
+    @TSBDDStepDef('Second Rule Adjust Base Days input should be enabled')
+    async verifyFilterSecondRuleAdjustBaseDaysEnabled(): Promise<void> {
+        await this.scatteredMmtesPage.verifyFilterSecondRuleAdjustBaseDaysEnabled();
+    }
+
+    @TSBDDStepDef('Second Rule Adjust Base Business Days radio should be disabled')
+    async verifyFilterSecondRuleAdjustBaseBusinessDaysDisabled(): Promise<void> {
+        await this.scatteredMmtesPage.verifyFilterSecondRuleAdjustBaseBusinessDaysDisabled();
+    }
+
+    @TSBDDStepDef('Second Rule Adjust Base Business Days radio should be enabled')
+    async verifyFilterSecondRuleAdjustBaseBusinessDaysEnabled(): Promise<void> {
+        await this.scatteredMmtesPage.verifyFilterSecondRuleAdjustBaseBusinessDaysEnabled();
+    }
+
+    @TSBDDStepDef('Second Rule Adjust Base Cylinder Days radio should be disabled')
+    async verifyFilterSecondRuleAdjustBaseCylinderDaysDisabled(): Promise<void> {
+        await this.scatteredMmtesPage.verifyFilterSecondRuleAdjustBaseCylinderDaysDisabled();
+    }
+
+    @TSBDDStepDef('Second Rule Adjust Base Cylinder Days radio should be enabled')
+    async verifyFilterSecondRuleAdjustBaseCylinderDaysEnabled(): Promise<void> {
+        await this.scatteredMmtesPage.verifyFilterSecondRuleAdjustBaseCylinderDaysEnabled();
+    }
+
+    // --- SECOND RULE SECONDARY ADJUST BASE VERIFICATION STEPS (RR03-10) ---
+
+    @TSBDDStepDef('I should see Second Rule Secondary Adjust Base checkbox in filter panel')
+    async verifyFilterSecondRuleSecondaryAdjustBaseCheckboxPresent(): Promise<void> {
+        await this.scatteredMmtesPage.verifyFilterSecondRuleSecondaryAdjustBaseCheckboxPresent();
+    }
+
+    @TSBDDStepDef('Second Rule Secondary Adjust Base checkbox should not be checked by default')
+    async verifyFilterSecondRuleSecondaryAdjustBaseNotChecked(): Promise<void> {
+        await this.scatteredMmtesPage.verifyFilterSecondRuleSecondaryAdjustBaseNotChecked();
+    }
+
+    @TSBDDStepDef('Second Rule Secondary Adjust Base checkbox should be checked')
+    async verifyFilterSecondRuleSecondaryAdjustBaseChecked(): Promise<void> {
+        await this.scatteredMmtesPage.verifyFilterSecondRuleSecondaryAdjustBaseChecked();
+    }
+
+    @TSBDDStepDef('Second Rule Secondary Adjust Base Days input should be disabled')
+    async verifyFilterSecondRuleSecondaryAdjustBaseDaysDisabled(): Promise<void> {
+        await this.scatteredMmtesPage.verifyFilterSecondRuleSecondaryAdjustBaseDaysDisabled();
+    }
+
+    @TSBDDStepDef('Second Rule Secondary Adjust Base Days input should be enabled')
+    async verifyFilterSecondRuleSecondaryAdjustBaseDaysEnabled(): Promise<void> {
+        await this.scatteredMmtesPage.verifyFilterSecondRuleSecondaryAdjustBaseDaysEnabled();
+    }
+
+    @TSBDDStepDef('Second Rule Secondary Adjust Base Business Days radio should be disabled')
+    async verifyFilterSecondRuleSecondaryAdjustBaseBusinessDaysDisabled(): Promise<void> {
+        await this.scatteredMmtesPage.verifyFilterSecondRuleSecondaryAdjustBaseBusinessDaysDisabled();
+    }
+
+    @TSBDDStepDef('Second Rule Secondary Adjust Base Business Days radio should be enabled')
+    async verifyFilterSecondRuleSecondaryAdjustBaseBusinessDaysEnabled(): Promise<void> {
+        await this.scatteredMmtesPage.verifyFilterSecondRuleSecondaryAdjustBaseBusinessDaysEnabled();
+    }
+
+    @TSBDDStepDef('Second Rule Secondary Adjust Base Cylinder Days radio should be disabled')
+    async verifyFilterSecondRuleSecondaryAdjustBaseCylinderDaysDisabled(): Promise<void> {
+        await this.scatteredMmtesPage.verifyFilterSecondRuleSecondaryAdjustBaseCylinderDaysDisabled();
+    }
+
+    @TSBDDStepDef('Second Rule Secondary Adjust Base Cylinder Days radio should be enabled')
+    async verifyFilterSecondRuleSecondaryAdjustBaseCylinderDaysEnabled(): Promise<void> {
+        await this.scatteredMmtesPage.verifyFilterSecondRuleSecondaryAdjustBaseCylinderDaysEnabled();
+    }
+
+    // --- SECOND RULE ADD TO HOOKWITH VERIFICATION STEPS (RR03-11) ---
+
+    @TSBDDStepDef('I should see Second Rule Add to Hookwith checkbox in filter panel')
+    async verifyFilterSecondRuleAddToHookwithCheckboxPresent(): Promise<void> {
+        await this.scatteredMmtesPage.verifyFilterSecondRuleAddToHookwithCheckboxPresent();
+    }
+
+    @TSBDDStepDef('Second Rule Add to Hookwith checkbox should not be checked by default')
+    async verifyFilterSecondRuleAddToHookwithNotChecked(): Promise<void> {
+        await this.scatteredMmtesPage.verifyFilterSecondRuleAddToHookwithNotChecked();
+    }
+
+    @TSBDDStepDef('Second Rule Hookwith Days input should be disabled')
+    async verifyFilterSecondRuleHookwithDaysDisabled(): Promise<void> {
+        await this.scatteredMmtesPage.verifyFilterSecondRuleHookwithDaysDisabled();
+    }
+
+    @TSBDDStepDef('Second Rule Hookwith Days input should be enabled')
+    async verifyFilterSecondRuleHookwithDaysEnabled(): Promise<void> {
+        await this.scatteredMmtesPage.verifyFilterSecondRuleHookwithDaysEnabled();
+    }
+
+    @TSBDDStepDef('Second Rule Include Weekends checkbox should be disabled')
+    async verifyFilterSecondRuleIncludeWeekendsDisabled(): Promise<void> {
+        await this.scatteredMmtesPage.verifyFilterSecondRuleIncludeWeekendsDisabled();
+    }
+
+    @TSBDDStepDef('Second Rule Include Weekends checkbox should be enabled')
+    async verifyFilterSecondRuleIncludeWeekendsEnabled(): Promise<void> {
+        await this.scatteredMmtesPage.verifyFilterSecondRuleIncludeWeekendsEnabled();
+    }
+
+    @TSBDDStepDef('Second Rule Include Borings checkbox should be disabled')
+    async verifyFilterSecondRuleIncludeBoringsDisabled(): Promise<void> {
+        await this.scatteredMmtesPage.verifyFilterSecondRuleIncludeBoringsDisabled();
+    }
+
+    @TSBDDStepDef('Second Rule Include Borings checkbox should be enabled')
+    async verifyFilterSecondRuleIncludeBoringsEnabled(): Promise<void> {
+        await this.scatteredMmtesPage.verifyFilterSecondRuleIncludeBoringsEnabled();
+    }
+
+    @TSBDDStepDef('I click Second Rule Hookwith Associate Cylinders Select button in filter panel')
+    async clickFilterSecondRuleHookwithCylindersSelectButton(): Promise<void> {
+        await this.scatteredMmtesPage.clickFilterSecondRuleHookwithCylindersSelectButton();
+    }
+
+    @TSBDDStepDef('Second Rule Hookwith Associate Cylinders should show Edit in filter panel')
+    async verifyFilterSecondRuleHookwithCylindersShowsEdit(): Promise<void> {
+        await this.scatteredMmtesPage.verifyFilterSecondRuleHookwithCylindersEdit();
+    }
+
+    @TSBDDStepDef('I should see cylinder {string} selected in Second Rule Hookwith')
+    async verifyCylinderSelectedInSecondRuleHookwith(cylinder: string): Promise<void> {
+        const actualCylinder = String(CSValueResolver.resolve(cylinder, this.context));
+        await this.scatteredMmtesPage.verifyFilterSecondRuleHookwithCylinderSelected(actualCylinder);
+    }
+
+    @TSBDDStepDef('I should see cylinder {string} selected in Second Rule')
+    async verifyCylinderSelectedInSecondRule(cylinder: string): Promise<void> {
+        const actualCylinder = String(CSValueResolver.resolve(cylinder, this.context));
+        await this.scatteredMmtesPage.verifyFilterSecondRuleAssociateCylinderSelected(actualCylinder);
+    }
+
+
+
+
+    @TSBDDStepDef('I get sport mmtes filtered by second rule hookwith {string} {string} {string} {string} from database')
+    async getSportMmtesFilteredBySecondRuleHookwith(days: string, includeWeekends: string, includeBorings: string, cylinder: string): Promise<void> {
+        const actualDays = CSValueResolver.resolve(days, this.context);
+        const actualWeekends = CSValueResolver.resolve(includeWeekends, this.context);
+        const actualBorings = CSValueResolver.resolve(includeBorings, this.context);
+        const actualCylinder = CSValueResolver.resolve(cylinder, this.context);
+        Tsreporter.info(`Getting sport mmtes filtered by Second Rule Hookwith: Days=${actualDays}, Weekends=${actualWeekends}, Borings=${actualBorings}, Cylinder=${actualCylinder}`);
+        const results = await TTTFDatabaseHelper.getSportMmtesFilteredBySecondRuleHookwith(actualDays, actualWeekends, actualBorings, actualCylinder);
+        this.scenarioContext.setVariable('dbFilteredCount', results.length);
+        this.scenarioContext.setVariable('dbSportMmtesFiltered', results);
+        Tsreporter.pass(`Retrieved ${results.length} records from database`);
+    }
+
