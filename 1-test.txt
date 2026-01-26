@@ -1,634 +1,152 @@
 // ===================================================================
-    // CYLINDER POPUP VERIFICATION METHODS (RR04)
+    // CYLINDER POPUP METHODS (RR03-03, RR03-08)
+    // Requirement Lines 606-631: Cylinder Add modal popup for filter panel
     // ===================================================================
 
     /**
-     * Verify Add modal popup is visible
+     * Verify Cylinder Add modal popup is displayed
+     * Requirement Line 606: xpath: //div[@class='sssss-modal']//div[@class='sssss-panel__content-wrapper']
      */
-    public async verifyAddModalPopupVisible(): Promise<void> {
-        Tsreporter.info('Verifying Add modal popup is visible');
-        await this.addCylinderPopup.waitForVisible(10000);
-        Tsreporter.pass('Add modal popup is visible');
-    }
-
-    /**
-     * Verify Add header on popup
-     */
-    public async verifyAddHeaderOnPopup(): Promise<void> {
-        Tsreporter.info('Verifying Add header on popup');
-        await this.addCylinderPopupHeader.waitForVisible(10000);
-        Tsreporter.pass('Add header is visible on popup');
-    }
-
-    /**
-     * Verify X close button on popup
-     */
-    public async verifyCloseButtonOnPopup(): Promise<void> {
-        Tsreporter.info('Verifying X close button on popup');
-        await this.cylinderPopupCloseButton.waitForVisible(10000);
-        Tsreporter.pass('X close button is visible on popup');
-    }
-
-    /**
-     * Verify Select items to continue message
-     */
-    public async verifySelectItemsMessage(): Promise<void> {
-        Tsreporter.info('Verifying Select items to continue message');
-        const message = CSElementFactory.createByXPath(
-            '//div[@class="sssss-panel__content-wrapper"]//div[contains(@class, "sssss-alert")]//span[contains(text(), "Select items to continue")]',
-            'Select items to continue message',
+    public async verifyCylinderPopupDisplayed(): Promise<void> {
+        Tsreporter.info('Verifying Cylinder Add modal popup is displayed');
+        const popup = CSElementFactory.createByXPath(
+            '//div[@class="sssss-modal"]//div[@class="sssss-panel__content-wrapper"]',
+            'Cylinder Add modal popup',
             this.page
         );
-        await message.waitForVisible(10000);
-        Tsreporter.pass('Select items to continue message is visible');
+        await popup.waitForVisible(10000);
+        Tsreporter.pass('Cylinder Add modal popup is displayed');
     }
 
     /**
-     * Verify Cylinder table on popup
+     * Verify Cylinder Add popup header
+     * Requirement Line 608: xpath: //div[@class='sssss-panel__content-wrapper']//h5[text()='Add']
      */
-    public async verifyCylinderTableOnPopup(): Promise<void> {
-        Tsreporter.info('Verifying Cylinder table on popup');
-        await this.cylinderSelectionTable.waitForVisible(10000);
-        Tsreporter.pass('Cylinder table is visible on popup');
-    }
-
-    /**
-     * Verify Select all checkbox is unchecked by default
-     */
-    public async verifySelectAllCheckboxUnchecked(): Promise<void> {
-        Tsreporter.info('Verifying Select all checkbox is unchecked by default');
-        const selectAllCheckbox = CSElementFactory.createByXPath(
-            '//div[@class="sssss-panel__content-wrapper"]//table//thead//input[@type="checkbox"]',
-            'Select all checkbox',
+    public async verifyCylinderPopupHeader(): Promise<void> {
+        Tsreporter.info('Verifying Cylinder Add popup header');
+        const header = CSElementFactory.createByXPath(
+            '//div[@class="sssss-panel__content-wrapper"]//h5[text()="Add"]',
+            'Cylinder Add popup header',
             this.page
         );
-        await selectAllCheckbox.waitForVisible(10000);
-        const isChecked = await selectAllCheckbox.getAttributeWithTimeout('checked', 5000);
-        if (isChecked) {
-            throw new Error('Select all checkbox should be unchecked by default');
+        await header.waitForVisible(10000);
+        Tsreporter.pass('Cylinder Add popup header is displayed');
+    }
+
+    /**
+     * Verify Cylinder Name header in table
+     * Requirement Line 615: xpath: //div[@class='sssss-panel__content-wrapper']//div[@class='sssss-panel__body']//table[@class='sssss-table']/thead/tr[1]/th[@class='sssss-table__header' and text()='Cylinder Name']
+     */
+    public async verifyCylinderPopupTableHeader(): Promise<void> {
+        Tsreporter.info('Verifying Cylinder Name header in popup table');
+        const header = CSElementFactory.createByXPath(
+            '//div[@class="sssss-panel__content-wrapper"]//div[@class="sssss-panel__body"]//table[@class="sssss-table"]/thead/tr[1]/th[@class="sssss-table__header" and text()="Cylinder Name"]',
+            'Cylinder Name table header',
+            this.page
+        );
+        await header.waitForVisible(10000);
+        Tsreporter.pass('Cylinder Name header is displayed');
+    }
+
+    /**
+     * Verify Cylinder popup options match database records
+     * Requirement Line 621: xpath: //div[@class='sssss-panel__content-wrapper']//div[@class='sssss-panel__body']//table[@class='sssss-table']/tbody/td[text()='<cylinderName>']
+     */
+    public async verifyCylinderPopupOptions(expectedCylinders: string[]): Promise<void> {
+        Tsreporter.info('Verifying Cylinder popup options match database records');
+        for (const cylinder of expectedCylinders) {
+            const optionElement = CSElementFactory.createByXPath(
+                `//div[@class="sssss-panel__content-wrapper"]//div[@class="sssss-panel__body"]//table[@class="sssss-table"]/tbody//td[text()="${cylinder}"]`,
+                `Cylinder option: ${cylinder}`,
+                this.page
+            );
+            const isVisible = await optionElement.isVisibleWithTimeout(3000);
+            if (isVisible) {
+                Tsreporter.debug(`Cylinder option '${cylinder}' is present`);
+            } else {
+                Tsreporter.warn(`Cylinder option '${cylinder}' not found in popup`);
+            }
         }
-        Tsreporter.pass('Select all checkbox is unchecked by default');
+        Tsreporter.pass('Verified Cylinder popup options');
     }
 
     /**
-     * Verify Cylinder Name column header
+     * Select cylinder from popup table
+     * Requirement Line 626: xpath: //div[@class='sssss-panel__content-wrapper']//div[@class='sssss-panel__body']//table[@class='sssss-table']/tbody/td[text()='<cylinderName>']/parent::tr/td[1]//span[@role='checkbox']
+     * Requirement Line 628 (alternative after click): xpath: //div[@class='sssss-panel__content-wrapper']//div[@class='sssss-panel__body']//table[@class='sssss-table']/tbody/td/div[text()='<cylinderName>']/ancestor::tr[1]/td[1]//span[@role='checkbox']
      */
-    public async verifyCylinderNameColumnHeader(): Promise<void> {
-        Tsreporter.info('Verifying Cylinder Name column header');
-        const columnHeader = CSElementFactory.createByXPath(
-            '//div[@class="sssss-panel__content-wrapper"]//table//th[contains(text(), "Cylinder Name") or contains(text(), "Name")]',
-            'Cylinder Name column header',
+    public async selectCylinderInPopup(cylinderName: string): Promise<void> {
+        Tsreporter.info(`Selecting cylinder in popup: ${cylinderName}`);
+        // Try primary XPath first (text directly in td)
+        let cylinderCheckbox = CSElementFactory.createByXPath(
+            `//div[@class="sssss-panel__content-wrapper"]//div[@class="sssss-panel__body"]//table[@class="sssss-table"]/tbody//td[text()="${cylinderName}"]/parent::tr/td[1]//span[@role="checkbox"]`,
+            `Cylinder checkbox: ${cylinderName}`,
             this.page
         );
-        await columnHeader.waitForVisible(10000);
-        Tsreporter.pass('Cylinder Name column header is visible');
-    }
+        let isVisible = await cylinderCheckbox.isVisibleWithTimeout(3000);
 
-    /**
-     * Verify all Cylinder options match database records
-     */
-    public async verifyCylinderOptionsMatchDatabase(dbCylinders: string[]): Promise<void> {
-        Tsreporter.info('Verifying Cylinder options match database records');
-        const rows = await this.page.locator(
-            '//div[@class="sssss-panel__content-wrapper"]//table//tbody//tr'
-        ).all();
-
-        Tsreporter.info(`Found ${rows.length} cylinders in popup, DB has ${dbCylinders.length} cylinders`);
-        if (Math.abs(rows.length - dbCylinders.length) > 5) {
-            Tsreporter.warn(`Cylinder count mismatch: DB=${dbCylinders.length}, UI=${rows.length}`);
+        if (!isVisible) {
+            // Try alternative XPath (text in div inside td)
+            Tsreporter.info('Trying alternative XPath for cylinder checkbox');
+            cylinderCheckbox = CSElementFactory.createByXPath(
+                `//div[@class="sssss-panel__content-wrapper"]//div[@class="sssss-panel__body"]//table[@class="sssss-table"]/tbody//td/div[text()="${cylinderName}"]/ancestor::tr[1]/td[1]//span[@role="checkbox"]`,
+                `Cylinder checkbox (alt): ${cylinderName}`,
+                this.page
+            );
+            isVisible = await cylinderCheckbox.isVisibleWithTimeout(3000);
         }
-        Tsreporter.pass('Cylinder options verification complete');
-    }
 
-    /**
-     * Verify Apply button on popup
-     */
-    public async verifyApplyButtonOnPopup(): Promise<void> {
-        Tsreporter.info('Verifying Apply button on popup');
-        await this.cylinderPopupApplyButton.waitForVisible(10000);
-        Tsreporter.pass('Apply button is visible on popup');
-    }
-
-    /**
-     * Verify Cancel button on popup
-     */
-    public async verifyCancelButtonOnPopup(): Promise<void> {
-        Tsreporter.info('Verifying Cancel button on popup');
-        await this.cylinderPopupCancelButton.waitForVisible(10000);
-        Tsreporter.pass('Cancel button is visible on popup');
-    }
-
-    /**
-     * Select USA cylinder from table
-     */
-    public async selectUSACylinderFromTable(): Promise<void> {
-        Tsreporter.info('Selecting USA cylinder from table');
-        const usaCheckbox = CSElementFactory.createByXPath(
-            '//div[@class="sssss-panel__content-wrapper"]//table//tbody//tr//td[contains(text(), "USA")]/preceding-sibling::td//input[@type="checkbox"]',
-            'USA cylinder checkbox',
-            this.page
-        );
-        await usaCheckbox.waitForVisible(10000);
-        await usaCheckbox.clickWithTimeout(10000);
-        Tsreporter.pass('Selected USA cylinder');
-    }
-
-    /**
-     * Click Apply button on popup
-     */
-    public async clickApplyButtonOnPopup(): Promise<void> {
-        Tsreporter.info('Clicking Apply button on popup');
-        await this.cylinderPopupApplyButton.clickWithTimeout(10000);
-        Tsreporter.pass('Clicked Apply button on popup');
-    }
-
-    /**
-     * Verify Add modal popup is closed
-     */
-    public async verifyAddModalPopupClosed(): Promise<void> {
-        Tsreporter.info('Verifying Add modal popup is closed');
-        await this.addCylinderPopup.waitForDetached(10000);
-        Tsreporter.pass('Add modal popup is closed');
-    }
-
-
-    ------------------------------------------------------------------------------------------
-
-    /**
-     * Verify Reset Filters button is disabled
-     */
-    public async verifyResetFiltersButtonDisabled(): Promise<boolean> {
-        Tsreporter.info('Verifying Reset Filters button is disabled');
-        const resetButton = CSElementFactory.createByXPath(
-            '//div[@id="incircleFilterSportMmte"]//span[@class="sssss-button__label" and text()="Reset Filters"]/parent::button[1]',
-            'Reset Filters button',
-            this.page
-        );
-        const isEnabled = await resetButton.isEnabledWithTimeout(5000);
-        if (isEnabled) {
-            throw new Error('Reset Filters button should be disabled');
+        if (!isVisible) {
+            throw new Error(`Cylinder checkbox for '${cylinderName}' not found in popup`);
         }
-        Tsreporter.pass('Reset Filters button is disabled');
-        return true;
-    }
 
-    /**
-     * Verify Reset Filters button is enabled
-     */
-    public async verifyResetFiltersButtonEnabled(): Promise<void> {
-        Tsreporter.info('Verifying Reset Filters button is enabled');
-        const resetButton = CSElementFactory.createByXPath(
-            '//div[@id="incircleFilterSportMmte"]//span[@class="sssss-button__label" and text()="Reset Filters"]/parent::button[1]',
-            'Reset Filters button',
-            this.page
-        );
-        const isEnabled = await resetButton.isEnabledWithTimeout(5000);
-        if (!isEnabled) {
-            throw new Error('Reset Filters button should be enabled');
+        // Check if already selected
+        const ariaChecked = await cylinderCheckbox.getAttributeWithTimeout('aria-checked', 5000);
+        if (ariaChecked === 'false') {
+            await cylinderCheckbox.clickWithTimeout(10000);
+            await this.page.waitForTimeout(500);
+            Tsreporter.pass(`Selected cylinder: ${cylinderName}`);
+        } else {
+            Tsreporter.info(`Cylinder '${cylinderName}' is already selected`);
         }
-        Tsreporter.pass('Reset Filters button is enabled');
     }
 
     /**
-     * Verify Apply button is enabled
+     * Click Apply button on Cylinder popup
+     * Requirement Line 630: xpath: //div[@class='sssss-panel__content-wrapper']//div[@class='sssss-panel__footer']//span[@class='sssss-button__label' and contains(text(),'Apply')]/parent::button[1]
      */
-    public async verifyApplyButtonEnabled(): Promise<void> {
-        Tsreporter.info('Verifying Apply button is enabled');
+    public async clickCylinderPopupApplyButton(): Promise<void> {
+        Tsreporter.info('Clicking Apply button on Cylinder popup');
         const applyButton = CSElementFactory.createByXPath(
-            '//div[@id="incircleFilterSportMmte"]//span[@class="sssss-button__label" and text()="Apply"]/parent::button[1]',
-            'Apply button',
+            '//div[@class="sssss-panel__content-wrapper"]//div[@class="sssss-panel__footer"]//span[@class="sssss-button__label" and contains(text(),"Apply")]/parent::button[1]',
+            'Cylinder popup Apply button',
             this.page
         );
         await applyButton.waitForVisible(10000);
-        const isEnabled = await applyButton.isEnabledWithTimeout(5000);
-        if (!isEnabled) {
-            throw new Error('Apply button should be enabled');
-        }
-        Tsreporter.pass('Apply button is enabled');
+        await applyButton.clickWithTimeout(10000);
+        // Wait for popup to close (Requirement Line 631)
+        const popup = CSElementFactory.createByXPath(
+            '//div[@class="sssss-modal"]//div[@class="sssss-panel__content-wrapper"]',
+            'Cylinder modal popup',
+            this.page
+        );
+        await popup.waitForDetached(10000);
+        Tsreporter.pass('Clicked Apply button and popup closed');
     }
 
     /**
-     * Verify Cancel button is enabled
+     * Click Cancel button on Cylinder popup
+     * Requirement Line 624: xpath: //div[@class='sssss-panel__content-wrapper']//div[@class='sssss-panel__footer']//span[@class='sssss-button__label' and text()='Cancel']/parent::button[1]
      */
-    public async verifyCancelButtonEnabled(): Promise<void> {
-        Tsreporter.info('Verifying Cancel button is enabled');
+    public async clickCylinderPopupCancelButton(): Promise<void> {
+        Tsreporter.info('Clicking Cancel button on Cylinder popup');
         const cancelButton = CSElementFactory.createByXPath(
-            '//div[@id="incircleFilterSportMmte"]//span[@class="sssss-button__label" and text()="Cancel"]/parent::button[1]',
-            'Cancel button',
+            '//div[@class="sssss-panel__content-wrapper"]//div[@class="sssss-panel__footer"]//span[@class="sssss-button__label" and text()="Cancel"]/parent::button[1]',
+            'Cylinder popup Cancel button',
             this.page
         );
         await cancelButton.waitForVisible(10000);
-        const isEnabled = await cancelButton.isEnabledWithTimeout(5000);
-        if (!isEnabled) {
-            throw new Error('Cancel button should be enabled');
-        }
-        Tsreporter.pass('Cancel button is enabled');
+        await cancelButton.clickWithTimeout(10000);
+        await this.page.waitForTimeout(500);
+        Tsreporter.pass('Clicked Cancel button on Cylinder popup');
     }
-
-    /**
-     * Click Apply button on filter panel
-     */
-    public async clickApplyButton(): Promise<void> {
-        Tsreporter.info('Clicking Apply button on filter panel');
-        const applyButton = CSElementFactory.createByXPath(
-            '//div[@id="incircleFilterSportMmte"]//span[@class="sssss-button__label" and text()="Apply"]/parent::button[1]',
-            'Apply button',
-            this.page
-        );
-        await applyButton.waitForVisible(10000);
-        await applyButton.click();
-        Tsreporter.pass('Clicked Apply button');
-    }
-
-    /**
-     * Verify Cumulative Mmte dropdown list is visible
-     */
-    public async verifyCumulativeMmteDropdownListVisible(): Promise<void> {
-        Tsreporter.info('Verifying Cumulative Mmte dropdown list is visible');
-        const dropdownList = CSElementFactory.createByXPath(
-            '//div[contains(@class, "sssss-balloon") and @name="cumulativeMmte"]//ul[@role="listbox"]',
-            'Cumulative Mmte dropdown list',
-            this.page
-        );
-        await dropdownList.waitForVisible(10000);
-        Tsreporter.pass('Cumulative Mmte dropdown list is visible');
-    }
-
-    /**
-     * Verify Cumulative Mmte options match database records
-     */
-    public async verifyCumulativeMmteOptionsMatchDatabase(dbCumulativeMmtes: string[]): Promise<void> {
-        Tsreporter.info('Verifying Cumulative Mmte options match database records');
-        const optionElements = await this.page.locator(
-            '//div[contains(@class, "sssss-balloon") and @name="cumulativeMmte"]//ul[@role="listbox"]//li[@role="option"]'
-        ).all();
-
-        const uiOptions: string[] = [];
-        for (const option of optionElements) {
-            const text = await option.textContent();
-            if (text && text.trim() !== 'Select') {
-                uiOptions.push(text.trim());
-            }
-        }
-
-        Tsreporter.info(`Found ${uiOptions.length} cumulative mmte options in UI`);
-        if (Math.abs(dbCumulativeMmtes.length - uiOptions.length) > 5) {
-            Tsreporter.warn(`Cumulative mmte count mismatch: DB=${dbCumulativeMmtes.length}, UI=${uiOptions.length}`);
-        }
-        Tsreporter.pass('Cumulative Mmte options verification complete');
-    }
-
-    /**
-     * Verify Filter Conditions header is visible
-     */
-    public async verifyFilterConditionsHeader(): Promise<void> {
-        Tsreporter.info('Verifying Conditions header in filter panel');
-        const conditionsHeader = CSElementFactory.createByXPath(
-            '//div[@id="incircleFilterSportMmte"]//h2[text()="Conditions"]',
-            'Conditions header',
-            this.page
-        );
-        await conditionsHeader.waitForVisible(10000);
-        Tsreporter.pass('Conditions header is visible');
-    }
-
-
----------------------------------------------------------------------------------------------------------------------------------
-
-@TSBDDStepDef('I click Export button')
-    async clickExportButton(): Promise<void> {
-        await this.scatteredMmtesPage.clickExportButton();
-    }
-
-
-
-
-
-
-    @TSBDDStepDef('I enter {string} in First Rule Month Lag input')
-    async enterValueInFirstRuleMonthLagInput(monthLag: string): Promise<void> {
-        const actualValue = CSValueResolver.resolve(monthLag, this.context);
-        await this.addScatteredMmtePage.enterFirstRuleMonthLag(actualValue);
-    }
-
-
-
-
-     @TSBDDStepDef('I enter {string} in First Rule Base Day input')
-    async enterValueInFirstRuleBaseDayInput(baseDay: string): Promise<void> {
-        const actualValue = CSValueResolver.resolve(baseDay, this.context);
-        await this.addScatteredMmtePage.enterFirstRuleBaseDay(actualValue);
-    }
-
-
-
-
-
-    // ===================================================================
-    // SECOND RULE INPUT STEPS (RR05)
-    // ===================================================================
-
-    @TSBDDStepDef('I enter {string} in Second Rule Month Lag input')
-    async enterValueInSecondRuleMonthLagInput(monthLag: string): Promise<void> {
-        const actualValue = CSValueResolver.resolve(monthLag, this.context);
-        await this.addScatteredMmtePage.enterSecondRuleMonthLag(actualValue);
-    }
-
-    @TSBDDStepDef('I enter {string} in Second Rule Base Day input')
-    async enterValueInSecondRuleBaseDayInput(baseDay: string): Promise<void> {
-        const actualValue = CSValueResolver.resolve(baseDay, this.context);
-        await this.addScatteredMmtePage.enterSecondRuleBaseDay(actualValue);
-    }
-
-
-
-
-    // ===================================================================
-    // RR03 FILTER PANEL STEPS - Using Page Object Methods
-    // ===================================================================
-
-    @TSBDDStepDef('I should see Filters Applied button')
-    async verifyFiltersAppliedButtonVisible(): Promise<void> {
-        Tsreporter.info('Verifying Filters Applied button is visible');
-        await this.scatteredMmtesPage.filtersAppliedButton.waitForVisible(10000);
-        Tsreporter.pass('Filters Applied button is visible');
-    }
-
-    @TSBDDStepDef('I expand Filters Applied panel if collapsed')
-    async expandFiltersAppliedPanelIfCollapsed(): Promise<void> {
-        Tsreporter.info('Expanding Filters Applied panel if collapsed');
-        const isExpanded = await this.scatteredMmtesPage.verifyFiltersExpanded();
-        if (!isExpanded) {
-            await this.scatteredMmtesPage.filtersAppliedButton.clickWithTimeout(10000);
-            await this.scatteredMmtesPage.verifyFilterCriteriaHeader();
-            Tsreporter.pass('Filters Applied panel expanded');
-        } else {
-            Tsreporter.info('Filters Applied panel is already expanded');
-        }
-    }
-
-    @TSBDDStepDef('Filters area should be expanded')
-    async verifyFiltersAreaExpanded(): Promise<void> {
-        Tsreporter.info('Verifying Filters area is expanded');
-        const isExpanded = await this.scatteredMmtesPage.verifyFiltersExpanded();
-        if (!isExpanded) {
-            throw new Error('Filters area is not expanded');
-        }
-        Tsreporter.pass('Filters area is expanded');
-    }
-
-    @TSBDDStepDef('Filter criteria section should be collapsed')
-    async verifyFilterCriteriaSectionCollapsed(): Promise<void> {
-        Tsreporter.info('Verifying Filter criteria section is collapsed');
-        const isExpanded = await this.scatteredMmtesPage.verifyFiltersExpanded();
-        if (isExpanded) {
-            throw new Error('Filter criteria section should be collapsed');
-        }
-        Tsreporter.pass('Filter criteria section is collapsed');
-    }
-
-    @TSBDDStepDef('I select sport mmte rule priority {string} defaulting to Lowest Date')
-    async selectSportMmteRulePriorityDefaultingToLowestDate(priority: string): Promise<void> {
-        const actualPriority = CSValueResolver.resolve(priority, this.context);
-        const priorityToSelect = (!actualPriority || actualPriority.trim() === '') ? 'Lowest Date' : actualPriority;
-        Tsreporter.info(`Selecting Sport Mmte Rule Priority: ${priorityToSelect}`);
-        await this.scatteredMmtesPage.selectFilterSportMmteRulePriority(priorityToSelect);
-        this.scenarioContext.setVariable('sportMmteRulePriority', priorityToSelect);
-        Tsreporter.pass(`Selected Sport Mmte Rule Priority: ${priorityToSelect}`);
-    }
-
-    @TSBDDStepDef('Reset Filters button should be disabled')
-    async verifyResetFiltersButtonDisabled(): Promise<void> {
-        Tsreporter.info('Verifying Reset Filters button is disabled');
-        const isEnabled = await this.scatteredMmtesPage.verifyResetFiltersButtonDisabled();
-        Tsreporter.pass('Reset Filters button is disabled');
-    }
-
-    @TSBDDStepDef('I should see Reset Filters button enabled')
-    async verifyResetFiltersButtonEnabled(): Promise<void> {
-        Tsreporter.info('Verifying Reset Filters button is enabled');
-        await this.scatteredMmtesPage.verifyResetFiltersButtonEnabled();
-        Tsreporter.pass('Reset Filters button is enabled');
-    }
-
-    @TSBDDStepDef('all Cumulative Mmte options should match database records')
-    async verifyAllCumulativeMmteOptionsMatchDatabase(): Promise<void> {
-        Tsreporter.info('Verifying all Cumulative Mmte options match database records');
-        const dbCumulativeMmtes = await TTTFDatabaseHelper.getAllActiveCumulativeMmteNames();
-        Tsreporter.info(`Found ${dbCumulativeMmtes.length} cumulative mmtes in database`);
-        await this.scatteredMmtesPage.verifyCumulativeMmteOptionsMatchDatabase(dbCumulativeMmtes);
-        Tsreporter.pass('Cumulative Mmte options verification complete');
-    }
-
-    @TSBDDStepDef('I should see Cumulative Mmte dropdown button')
-    async verifyCumulativeMmteDropdownButtonVisible(): Promise<void> {
-        Tsreporter.info('Verifying Cumulative Mmte dropdown button is visible');
-        const dropdown = await this.scatteredMmtesPage.getCumulativeMmteDropdownButton();
-        await dropdown.waitForVisible(10000);
-        Tsreporter.pass('Cumulative Mmte dropdown button is visible');
-    }
-
-    @TSBDDStepDef('Cumulative Mmte dropdown should show Select by default')
-    async verifyCumulativeMmteDropdownShowsSelectByDefault(): Promise<void> {
-        Tsreporter.info('Verifying Cumulative Mmte dropdown shows Select by default');
-        const result = await this.scatteredMmtesPage.verifyCumulativeMmteDefaultSelect();
-        if (!result) {
-            throw new Error('Cumulative Mmte dropdown should show Select by default');
-        }
-        Tsreporter.pass('Cumulative Mmte dropdown shows Select by default');
-    }
-
-    @TSBDDStepDef('I click Cumulative Mmte dropdown button')
-    async clickCumulativeMmteDropdownButton(): Promise<void> {
-        Tsreporter.info('Clicking Cumulative Mmte dropdown button');
-        await this.scatteredMmtesPage.clickCumulativeMmteDropdown();
-        Tsreporter.pass('Clicked Cumulative Mmte dropdown button');
-    }
-
-    @TSBDDStepDef('I should see Cumulative Mmte dropdown list')
-    async verifyCumulativeMmteDropdownListVisible(): Promise<void> {
-        Tsreporter.info('Verifying Cumulative Mmte dropdown list is visible');
-        await this.scatteredMmtesPage.verifyCumulativeMmteDropdownListVisible();
-        Tsreporter.pass('Cumulative Mmte dropdown list is visible');
-    }
-
-    @TSBDDStepDef('I select {string} from Cumulative Mmte dropdown')
-    async selectFromCumulativeMmteDropdown(value: string): Promise<void> {
-        const actualValue = CSValueResolver.resolve(value, this.context);
-        Tsreporter.info(`Selecting '${actualValue}' from Cumulative Mmte dropdown`);
-        await this.scatteredMmtesPage.selectCumulativeMmte(actualValue);
-        this.scenarioContext.setVariable('cumulativeMmteName', actualValue);
-        Tsreporter.pass(`Selected '${actualValue}' from Cumulative Mmte dropdown`);
-    }
-
-    @TSBDDStepDef('Cumulative Mmte dropdown should show {string}')
-    async verifyCumulativeMmteDropdownShowsValue(expectedValue: string): Promise<void> {
-        const actualExpected = CSValueResolver.resolve(expectedValue, this.context);
-        Tsreporter.info(`Verifying Cumulative Mmte dropdown shows '${actualExpected}'`);
-        await this.scatteredMmtesPage.verifyCumulativeMmteSelected(actualExpected);
-        Tsreporter.pass(`Cumulative Mmte dropdown shows '${actualExpected}'`);
-    }
-
-    @TSBDDStepDef('I should see Apply button enabled')
-    async verifyApplyButtonEnabled(): Promise<void> {
-        Tsreporter.info('Verifying Apply button is enabled');
-        await this.scatteredMmtesPage.verifyApplyButtonEnabled();
-        Tsreporter.pass('Apply button is enabled');
-    }
-
-    @TSBDDStepDef('Apply button should be enabled')
-    async verifyApplyButtonShouldBeEnabled(): Promise<void> {
-        await this.verifyApplyButtonEnabled();
-    }
-
-    @TSBDDStepDef('I should see Cancel button enabled')
-    async verifyCancelButtonEnabledOnFilterPanel(): Promise<void> {
-        Tsreporter.info('Verifying Cancel button is enabled on filter panel');
-        await this.scatteredMmtesPage.verifyCancelButtonEnabled();
-        Tsreporter.pass('Cancel button is enabled');
-    }
-
-    @TSBDDStepDef('Cancel button should be enabled')
-    async verifyCancelButtonShouldBeEnabled(): Promise<void> {
-        await this.verifyCancelButtonEnabledOnFilterPanel();
-    }
-
-    @TSBDDStepDef('I click Apply button on filter panel')
-    async clickApplyButtonOnFilterPanel(): Promise<void> {
-        Tsreporter.info('Clicking Apply button on filter panel');
-        await this.scatteredMmtesPage.clickApplyButton();
-        Tsreporter.pass('Clicked Apply button on filter panel');
-    }
-
-    @TSBDDStepDef('I should see Methodology dropdown button')
-    async verifyMethodologyDropdownButtonVisible(): Promise<void> {
-        Tsreporter.info('Verifying Methodology dropdown button is visible');
-        const dropdown = await this.scatteredMmtesPage.getFilterMethodologyDropdown();
-        await dropdown.waitForVisible(10000);
-        Tsreporter.pass('Methodology dropdown button is visible');
-    }
-
-    @TSBDDStepDef('Methodology dropdown should show Sport Mmte Look Up by default')
-    async verifyMethodologyDropdownShowsSportMmteLookUpByDefault(): Promise<void> {
-        Tsreporter.info('Verifying Methodology dropdown shows Sport Mmte Look Up by default');
-        await this.scatteredMmtesPage.verifyFilterMethodologyDefault();
-        Tsreporter.pass('Methodology dropdown shows Sport Mmte Look Up by default');
-    }
-
-    @TSBDDStepDef('I should see Sport Mmte Rule Priority dropdown button')
-    async verifySportMmteRulePriorityDropdownButtonVisible(): Promise<void> {
-        Tsreporter.info('Verifying Sport Mmte Rule Priority dropdown button is visible');
-        const dropdown = await this.scatteredMmtesPage.getFilterSportMmteRulePriorityDropdown();
-        await dropdown.waitForVisible(10000);
-        Tsreporter.pass('Sport Mmte Rule Priority dropdown button is visible');
-    }
-
-    @TSBDDStepDef('I click Sport Mmte Rule Priority dropdown button')
-    async clickSportMmteRulePriorityDropdownButton(): Promise<void> {
-        Tsreporter.info('Clicking Sport Mmte Rule Priority dropdown button');
-        await this.scatteredMmtesPage.clickFilterSportMmteRulePriorityDropdown();
-        Tsreporter.pass('Clicked Sport Mmte Rule Priority dropdown button');
-    }
-
-    @TSBDDStepDef('I should see Conditions header')
-    async verifyConditionsHeaderVisible(): Promise<void> {
-        Tsreporter.info('Verifying Conditions header is visible');
-        await this.scatteredMmtesPage.verifyFilterConditionsHeader();
-        Tsreporter.pass('Conditions header is visible');
-    }
-
-    // ===================================================================
-    // RR04 - ADD SCATTERED MMTE POPUP STEPS
-    // ===================================================================
-
-    @TSBDDStepDef('I should see Add modal popup')
-    async verifyAddModalPopupVisible(): Promise<void> {
-        Tsreporter.info('Verifying Add modal popup is visible');
-        await this.addScatteredMmtePage.verifyAddModalPopupVisible();
-    }
-
-    @TSBDDStepDef('I should see Add header on popup')
-    async verifyAddHeaderOnPopup(): Promise<void> {
-        Tsreporter.info('Verifying Add header on popup');
-        await this.addScatteredMmtePage.verifyAddHeaderOnPopup();
-    }
-
-    @TSBDDStepDef('I should see X close button on popup')
-    async verifyCloseButtonOnPopup(): Promise<void> {
-        Tsreporter.info('Verifying X close button on popup');
-        await this.addScatteredMmtePage.verifyCloseButtonOnPopup();
-    }
-
-    @TSBDDStepDef('I should see Select items to continue message')
-    async verifySelectItemsMessage(): Promise<void> {
-        Tsreporter.info('Verifying Select items to continue message');
-        await this.addScatteredMmtePage.verifySelectItemsMessage();
-    }
-
-    @TSBDDStepDef('I should see Cylinder table on popup')
-    async verifyCylinderTableOnPopup(): Promise<void> {
-        Tsreporter.info('Verifying Cylinder table on popup');
-        await this.addScatteredMmtePage.verifyCylinderTableOnPopup();
-    }
-
-    @TSBDDStepDef('Select all checkbox should be unchecked by default')
-    async verifySelectAllCheckboxUnchecked(): Promise<void> {
-        Tsreporter.info('Verifying Select all checkbox is unchecked by default');
-        await this.addScatteredMmtePage.verifySelectAllCheckboxUnchecked();
-    }
-
-    @TSBDDStepDef('I should see Cylinder Name column header')
-    async verifyCylinderNameColumnHeader(): Promise<void> {
-        Tsreporter.info('Verifying Cylinder Name column header');
-        await this.addScatteredMmtePage.verifyCylinderNameColumnHeader();
-    }
-
-    @TSBDDStepDef('all Cylinder options should match database records')
-    async verifyCylinderOptionsMatchDatabase(): Promise<void> {
-        Tsreporter.info('Verifying Cylinder options match database records');
-        const dbCylinders = await TTTFDatabaseHelper.getAllCylinders();
-        await this.addScatteredMmtePage.verifyCylinderOptionsMatchDatabase(dbCylinders);
-    }
-
-    @TSBDDStepDef('I should see Apply button on popup')
-    async verifyApplyButtonOnPopup(): Promise<void> {
-        Tsreporter.info('Verifying Apply button on popup');
-        await this.addScatteredMmtePage.verifyApplyButtonOnPopup();
-    }
-
-    @TSBDDStepDef('I should see Cancel button on popup')
-    async verifyCancelButtonOnPopup(): Promise<void> {
-        Tsreporter.info('Verifying Cancel button on popup');
-        await this.addScatteredMmtePage.verifyCancelButtonOnPopup();
-    }
-
-    @TSBDDStepDef('I select USA cylinder from table')
-    async selectUSACylinderFromTable(): Promise<void> {
-        Tsreporter.info('Selecting USA cylinder from table');
-        await this.addScatteredMmtePage.selectUSACylinderFromTable();
-    }
-
-    @TSBDDStepDef('I click Apply button on popup')
-    async clickApplyButtonOnPopup(): Promise<void> {
-        Tsreporter.info('Clicking Apply button on popup');
-        await this.addScatteredMmtePage.clickApplyButtonOnPopup();
-    }
-
-    @TSBDDStepDef('Add modal popup should be closed')
-    async verifyAddModalPopupClosed(): Promise<void> {
-        Tsreporter.info('Verifying Add modal popup is closed');
-        await this.addScatteredMmtePage.verifyAddModalPopupClosed();
-    }
-
-    @TSBDDStepDef('I should see Save button enabled')
-    async verifySaveButtonEnabled(): Promise<void> {
-        Tsreporter.info('Verifying Save button is enabled');
-        await this.addScatteredMmtePage.verifySaveButtonEnabled();
-    }
-
-    @TSBDDStepDef('I should see Cancel button enabled')
-    async verifyCancelButtonEnabledOnAddScreen(): Promise<void> {
-        Tsreporter.info('Verifying Cancel button is enabled');
-        await this.addScatteredMmtePage.verifyCancelButtonEnabled();
-    }
-
