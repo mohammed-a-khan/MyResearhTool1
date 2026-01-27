@@ -1,1243 +1,293 @@
-Scenario Outline: RR04 - Verify Add Scattered Mmte screen elements
-        # Test data setup
-        Given I resolve external mmte name with sport mmtes from database if not provided "<externalMmteName>"
-
-        # Login and navigate
-        Given I login to TTTF as "<userName>"
-        Then I should see Home page header
-        And I should see welcome message with username "<userName>"
-
-        When I click on Scattered Mmtes menu item
-        Then I should see Scattered Mmtes page header
-        And I wait for loader to complete
-
-        Then I should see Add Scattered Mmtes button
-        And Add Scattered Mmtes button should be enabled
-        When I click Add Scattered Mmtes button
-
-        # Add Scattered Mmte screen header verification
-        Then I should see Add Scattered Mmte header
-        And I should see Add Scattered Mmte note message
-        And I should see External Mmte and Scattered Name header
-
-        # External Scattered dropdown verification
-        When I click External Scattered dropdown button on Add screen
-        Then I should see External Scattered dropdown list
-        And all External Scattered options should match database records
-
-        When I select "{scenario:externalMmteName}" from External Scattered dropdown on Add screen
-        Then External Scattered dropdown should show "{scenario:externalMmteName}" on Add screen
-
-        # Scattered Mmte Name field verification
-        Then I should see Scattered Mmte Name field
-        And Scattered Mmte Name value should match database expected value
-
-        # Type of Scattered Mmte radio buttons
-        Then I should see Choose a Type of Scattered Mmte message
-        And I should see System Calculated radio button
-        And System Calculated radio button should be selected by default
-        And I should see Manual radio button
-        And Manual radio button should not be selected by default
-        And I should see Conditions section
-        And I should see Rules section
-
-        # Manual radio button behavior
-        When I click Manual radio button
-        Then Manual radio button should be selected
-        And Conditions section should not be present
-        And Rules section should not be present
-        And I should see Save button enabled
-        And I should see Cancel button enabled
-
-        # Switch back to System Calculated
-        When I click System Calculated radio button
-        Then System Calculated radio button should be selected
-        And I should see Conditions section
-        And I should see Rules section
-
-        # Conditions section - Method dropdown
-        Then I should see Choose a Methodology Type message
-        And I should see Method dropdown
-        And Method dropdown should show Sport Mmte Look Up by default
-
-        When I click Method dropdown on Add screen
-        Then I should see Method dropdown options Sport Mmte Look Up and Ttcalc Duration
-        When I select Sport Mmte Look Up from Method dropdown
-
-        # Sport Mmte Rule Priority dropdown
-        Then I should see Sport Mmte Rule Priority dropdown
-        And Sport Mmte Rule Priority dropdown should show Highest Date by default
-
-        When I click Sport Mmte Rule Priority dropdown on Add screen
-        Then I should see Sport Mmte Rule Priority options Highest Date and Lowest Date
-        When I press Escape key
-
-        # Ttcalc Duration method - dynamic fields
-        When I click Method dropdown on Add screen
-        And I select Ttcalc Duration from Method dropdown
-        Then I should see Primary Ttcalc dropdown
-        And Primary Ttcalc dropdown should show Compound by default
-
-        When I click Primary Ttcalc dropdown
-        Then I should see Primary Ttcalc options Compound and Simple
-        When I press Escape key
-
-        Then I should see Annual Accrual Days dropdown
-        And Annual Accrual Days dropdown should show 360 by default
-
-        When I click Annual Accrual Days dropdown
-        Then I should see Annual Accrual Days options 360 and 365
-        When I press Escape key
-
-        # ===================================================================
-        # Mmte Start Date Determination Rule section (Req Lines 118-337)
-        # ===================================================================
-        Then I should see Mmte Start Date Determination Rule section
-        When I expand Mmte Start Date Determination Rule section if collapsed
-        Then I should see Define the Primary Rule message
-        And I should see Wwwww Vvvvv input with default value 0
-        And I should see Base Day input with default value 1
-
-        # Next/Previous Kindness Day radio buttons
-        Then I should see Next Kindness Day radio button selected by default
-        And Optional Adjust to Last Kindness Day checkbox should be enabled
-        And I should see Previous Kindness Day radio button not selected
-
-        When I click Previous Kindness Day radio button
-        Then Previous Kindness Day radio button should be selected
-        And Optional Adjust to Last Kindness Day checkbox should be disabled
-
-        # Associate Cylinders popup verification (Req Lines 148-179)
-        When I click Associate Cylinders Select button for Mmte Start Date Determination Rule
-        Then I should see Add modal popup
-        And I should see Add header on popup
-        And I should see X close button on popup
-        And I should see Select items to continue message
-        And I should see Cylinder table on popup
-        And Select all checkbox should be unchecked by default
-        And I should see Cylinder Name column header
-        And all Cylinder options should match database records
-        And I should see Apply button on popup
-        And I should see Cancel button on popup
-
-        When I select USA cylinder from table
-        And I click Apply button on popup
-        Then Add modal popup should be closed
-        And Associate Cylinders button should show Edit
-        And I should see USA in Associate Cylinders field
-        And I should see borings link next to USA cylinder
-
-        # USA borings list verification (Req Lines 180-219)
-        When I click borings link next to USA cylinder for Associate Cylinders
-        Then I should see USA borings popup
-        # Pagination elements verification BEFORE setting items per page (Req Lines 186-189)
-        And I should see pagination menu trigger button on borings popup
-        And I should see Previous button on borings popup
-        And I should see Next button on borings popup
-
-        When I set items per page to 50 on borings popup
-        Then I should see Boring list table
-        And I should see Description column header
-        And I should see Date column header
-        And USA borings should match database records
-
-        When I click X close button on popup
-
-        # Adjust Base checkbox and dependent fields (Req Lines 220-232)
-        Then I should see Adjust Base checkbox enabled
-        And Adjust Base Days input should be disabled
-        And Kindness Days radio button for Adjust Base should be disabled
-        And Cylinder Days radio button for Adjust Base should be disabled
-
-        When I click Adjust Base checkbox
-        Then Adjust Base checkbox should be checked
-        And Adjust Base Days input should be enabled
-        And Kindness Days radio button for Adjust Base should be enabled
-        And Cylinder Days radio button for Adjust Base should be enabled
-
-        # Secondary Adjust Base checkbox and dependent fields (Req Lines 233-245)
-        Then I should see Secondary Adjust Base checkbox enabled
-        And Secondary Adjust Base Days input should be disabled
-        And Kindness Days radio button for Secondary Adjust Base should be disabled
-        And Cylinder Days radio button for Secondary Adjust Base should be disabled
-
-        When I click Secondary Adjust Base checkbox
-        Then Secondary Adjust Base checkbox should be checked
-        And Secondary Adjust Base Days input should be enabled
-        And Kindness Days radio button for Secondary Adjust Base should be enabled
-        And Cylinder Days radio button for Secondary Adjust Base should be enabled
-
-        # Add to Hookwith checkbox and dependent fields (Req Lines 246-262)
-        Then I should see Add to Hookwith checkbox enabled
-        And Add to Hookwith Days input should be disabled
-        And Include Weekends checkbox should be disabled
-        And Include Borings checkbox should be disabled
-
-        When I click Add to Hookwith checkbox
-        Then Add to Hookwith checkbox should be checked
-        And Add to Hookwith Days input should be enabled
-        And Include Weekends checkbox should be enabled
-        And Include Borings checkbox should be enabled
-
-        # Add to Hookwith Associate Cylinders popup (Req Lines 263-295)
-        When I click Associate Cylinders Select button for Add to Hookwith
-        Then I should see Add modal popup
-        And I should see Add header on popup
-        And I should see X close button on popup
-        And I should see Select items to continue message
-        And I should see Cylinder table on popup
-        And Select all checkbox should be unchecked by default
-        And I should see Cylinder Name column header
-        And all Cylinder options should match database records
-        And I should see Apply button on popup
-        And I should see Cancel button on popup
-
-        When I select USA cylinder from table
-        And I click Apply button on popup
-        Then Add modal popup should be closed
-        And Add to Hookwith Associate Cylinders button should show Edit
-        And I should see USA in Add to Hookwith Associate Cylinders field
-        And I should see borings link next to USA cylinder for Add to Hookwith
-
-        # Add to Hookwith borings popup verification (Req Lines 296-337)
-        When I click borings link next to USA cylinder for Add to Hookwith
-        Then I should see USA borings popup
-        And I should see pagination menu trigger button on borings popup
-        And I should see Previous button on borings popup
-        And I should see Next button on borings popup
-
-        When I set items per page to 50 on borings popup
-        Then I should see Boring list table
-        And I should see Description column header
-        And I should see Date column header
-        And USA borings should match database records
-
-        When I click X close button on popup
-
-        # ===================================================================
-        # Mmte End Date Determination Rule section (Req Lines 338-557)
-        # ===================================================================
-        Then I should see Mmte End Date Determination Rule section
-        When I expand Mmte End Date Determination Rule section if collapsed
-        Then I should see Mmte End Date Second Rule info message
-        And I should see Mmte End Date Wwwww Vvvvv input
-        And I should see Mmte End Date Base Day input
-
-        # Verify Wwwww Vvvvv and Base Day have blank default values (Req Lines 349, 351)
-        And Mmte End Date Wwwww Vvvvv input should have blank default value
-        And Mmte End Date Base Day input should have blank default value
-
-        # Mmte End Date Next/Previous Kindness Day radio buttons (Req Lines 352-367)
-        Then I should see Mmte End Date Next Kindness Day radio button
-        And Mmte End Date Next Kindness Day radio button should be selected by default
-        And Mmte End Date Optional Adjust to Last Kindness Day checkbox should be enabled
-        And I should see Mmte End Date Previous Kindness Day radio button
-        And Mmte End Date Previous Kindness Day radio button should not be selected
-
-        When I click Mmte End Date Previous Kindness Day radio button
-        Then Mmte End Date Previous Kindness Day radio button should be selected
-        And Mmte End Date Optional Adjust to Last Kindness Day checkbox should be disabled
-
-        # Mmte End Date Associate Cylinders popup (Req Lines 368-400)
-        When I click Mmte End Date Associate Cylinders Select button
-        Then I should see Add modal popup
-        And I should see Add header on popup
-        And I should see X close button on popup
-        And I should see Select items to continue message
-        And I should see Cylinder table on popup
-        And Select all checkbox should be unchecked by default
-        And I should see Cylinder Name column header
-        And all Cylinder options should match database records
-        And I should see Apply button on popup
-        And I should see Cancel button on popup
-
-        When I select USA cylinder from table
-        And I click Apply button on popup
-        Then Add modal popup should be closed
-        And Mmte End Date Associate Cylinders button should show Edit
-        And I should see USA in Mmte End Date Associate Cylinders field
-        And I should see borings link next to USA cylinder for Mmte End Date
-
-        # Mmte End Date borings popup verification (Req Lines 400-440)
-        When I click borings link next to USA cylinder for Mmte End Date Associate Cylinders
-        Then I should see USA borings popup
-        And I should see pagination menu trigger button on borings popup
-        And I should see Previous button on borings popup
-        And I should see Next button on borings popup
-
-        When I set items per page to 50 on borings popup
-        Then I should see Boring list table
-        And I should see Description column header
-        And I should see Date column header
-        And USA borings should match database records
-
-        When I click X close button on popup
-
-        # Mmte End Date Adjust Base checkbox and dependent fields (Req Lines 441-453)
-        Then Mmte End Date Adjust Base checkbox should be enabled
-        And Mmte End Date Adjust Base Days input should be disabled
-        And Mmte End Date Adjust Base Kindness Days radio should be disabled
-        And Mmte End Date Adjust Base Cylinder Days radio should be disabled
-
-        When I click Mmte End Date Adjust Base checkbox
-        Then Mmte End Date Adjust Base checkbox should be checked
-        And Mmte End Date Adjust Base Days input should be enabled
-        And Mmte End Date Adjust Base Kindness Days radio should be enabled
-        And Mmte End Date Adjust Base Cylinder Days radio should be enabled
-
-        # Mmte End Date Secondary Adjust Base checkbox and dependent fields (Req Lines 454-466)
-        Then Mmte End Date Secondary Adjust Base checkbox should be enabled
-        And Mmte End Date Secondary Adjust Base Days input should be disabled
-        And Mmte End Date Secondary Adjust Base Kindness Days radio should be disabled
-        And Mmte End Date Secondary Adjust Base Cylinder Days radio should be disabled
-
-        When I click Mmte End Date Secondary Adjust Base checkbox
-        Then Mmte End Date Secondary Adjust Base checkbox should be checked
-        And Mmte End Date Secondary Adjust Base Days input should be enabled
-        And Mmte End Date Secondary Adjust Base Kindness Days radio should be enabled
-        And Mmte End Date Secondary Adjust Base Cylinder Days radio should be enabled
-
-        # Mmte End Date Add to Hookwith checkbox and dependent fields (Req Lines 467-483)
-        Then Mmte End Date Add to Hookwith checkbox should be enabled
-        And Mmte End Date Add to Hookwith Days input should be disabled
-        And Mmte End Date Include Weekends checkbox should be disabled
-        And Mmte End Date Include Borings checkbox should be disabled
-
-        When I click Mmte End Date Add to Hookwith checkbox
-        Then Mmte End Date Add to Hookwith checkbox should be checked
-        And Mmte End Date Add to Hookwith Days input should be enabled
-        And Mmte End Date Include Weekends checkbox should be enabled
-        And Mmte End Date Include Borings checkbox should be enabled
-
-        # Mmte End Date Add to Hookwith Associate Cylinders popup (Req Lines 484-516)
-        When I click Mmte End Date Hookwith Associate Cylinders Select button
-        Then I should see Add modal popup
-        And I should see Add header on popup
-        And I should see X close button on popup
-        And I should see Select items to continue message
-        And I should see Cylinder table on popup
-        And Select all checkbox should be unchecked by default
-        And I should see Cylinder Name column header
-        And all Cylinder options should match database records
-        And I should see Apply button on popup
-        And I should see Cancel button on popup
-
-        When I select USA cylinder from table
-        And I click Apply button on popup
-        Then Add modal popup should be closed
-        And Mmte End Date Hookwith Associate Cylinders button should show Edit
-        And I should see USA in Mmte End Date Hookwith Associate Cylinders field
-        And I should see borings link next to USA cylinder for Mmte End Date Hookwith
-
-        # Mmte End Date Hookwith borings popup verification (Req Lines 517-557)
-        When I click borings link next to USA cylinder for Mmte End Date Hookwith
-        Then I should see USA borings popup
-        And I should see pagination menu trigger button on borings popup
-        And I should see Previous button on borings popup
-        And I should see Next button on borings popup
-
-        When I set items per page to 50 on borings popup
-        Then I should see Boring list table
-        And I should see Description column header
-        And I should see Date column header
-        And USA borings should match database records
-
-        When I click X close button on popup
-
-        # Mmte End Date Add Lockout checkbox and dependent field (Req Lines 558-566)
-        Then I should see Mmte End Date Add Lockout checkbox
-        And Mmte End Date Add Lockout checkbox should be enabled
-        And Mmte End Date Lockout Days input should be disabled
-
-        When I click Mmte End Date Add Lockout checkbox
-        Then Mmte End Date Add Lockout checkbox should be checked
-        And Mmte End Date Lockout Days input should be enabled
-
-        # ===================================================================
-        # Other Rules (Optional) section (Req Lines 567-599)
-        # ===================================================================
-        Then I should see Other Rules section on Add screen
-        And Other Rules section should be collapsed by default
-
-        When I expand Other Rules section if collapsed
-        Then I should see Other Rules info message
-        And I should see Rounding Logic dropdown on Add screen
-        And Rounding Logic dropdown should show Select by default
-        And I should see Rounding Factor dropdown on Add screen
-        And Rounding Factor dropdown should show Select by default
-
-        # Verify Rounding Logic options and corresponding Rounding Factor options (Req Lines 580-599)
-        When I click Rounding Logic dropdown on Add screen
-        Then I should see Rounding Logic option Round
-        And I should see Rounding Logic option Round Up
-        And I should see Rounding Logic option Round Down
-        And I should see Rounding Logic option Nearest
-        And I should see Rounding Logic option Truncate
-
-        # Verify Rounding Factor options for Round
-        When I select Rounding Logic Round on Add screen
-        And I click Rounding Factor dropdown on Add screen
-        Then I should see Rounding Factor options for Round logic
-
-        # Verify Rounding Factor options for Round Up
-        When I press Escape key
-        When I click Rounding Logic dropdown on Add screen
-        And I select Rounding Logic Round Up on Add screen
-        And I click Rounding Factor dropdown on Add screen
-        Then I should see Rounding Factor options for Round Up logic
-
-        # Verify Rounding Factor options for Round Down
-        When I press Escape key
-        When I click Rounding Logic dropdown on Add screen
-        And I select Rounding Logic Round Down on Add screen
-        And I click Rounding Factor dropdown on Add screen
-        Then I should see Rounding Factor options for Round Down logic
-
-        # Verify Rounding Factor options for Nearest
-        When I press Escape key
-        When I click Rounding Logic dropdown on Add screen
-        And I select Rounding Logic Nearest on Add screen
-        And I click Rounding Factor dropdown on Add screen
-        Then I should see Rounding Factor options for Nearest logic
-
-        # Verify Rounding Factor options for Truncate
-        When I press Escape key
-        When I click Rounding Logic dropdown on Add screen
-        And I select Rounding Logic Truncate on Add screen
-        And I click Rounding Factor dropdown on Add screen
-        Then I should see Rounding Factor options for Truncate logic
-        When I press Escape key
-
-        # ===================================================================
-        # Footer buttons verification (Req Lines 600-603)
-        # ===================================================================
-        Then I should see Save button disabled by default
-        And I should see Cancel button enabled
-
-
-
-
-        -----------------------------------------------------------------------------------------------
-
-
-        // ===================================================================
-    // RR04 - BORINGS POPUP PAGINATION ELEMENTS (Req Lines 186-189)
-    // ===================================================================
-
-    @TSBDDStepDef('I should see pagination menu trigger button on borings popup')
-    async verifyPaginationMenuTriggerOnBoringsPopup(): Promise<void> {
-        Tsreporter.info('Verifying pagination menu trigger button on borings popup');
-        const paginatorTrigger = CSElementFactory.createByXPath(
-            `//div[@id='sssss-modal-portal']//div[@class='sssss-panel__content-wrapper']//div[@class='sssss-paginator']//button[contains(@aria-describedby, 'sssss-paginator__menuTriggerDetails')]`,
-            'Borings popup paginator trigger',
-            this.addScatteredMmtePage.getPage()
-        );
-        await paginatorTrigger.waitForVisible(10000);
-        Tsreporter.pass('Pagination menu trigger button is present on borings popup');
+export interface DynamicSportMmteTestData {
+    externalMmteId: string;
+    externalMmteName: string;
+    sportMmtePriority: string;
+    // First Rule
+    firstRuleWwwwwVvvvv: string;
+    firstRuleBaseDay: string;
+    firstRuleNnnnnBaseDays: string | null;
+    firstRuleNnnnnBaseType: string;
+    firstRuleBaseDayNnnnn: string;
+    firstRuleNonBusDayNnnnn: string | null;  // For Last Kindness Day checkbox
+    firstRuleSecondaryNnnnnBaseDay: string | null;
+    firstRuleSecondaryNnnnnBaseType: string;
+    firstRuleHookwithDays: string | null;
+    firstRuleHookwithWeekend: string | null;
+    firstRuleHookwithBoring: string | null;
+    firstRuleBaseCalIds: string;
+    firstRuleBaseCals: string;
+    firstRuleHookwithCalIds: string | null;  // Hookwith cylinders
+    firstRuleHookwithCals: string | null;     // Hookwith cylinder names
+    // Second Rule
+    secondRuleWwwwwVvvvv: string | null;
+    secondRuleBaseDay: string | null;
+    secondRuleNnnnnBaseDays: string | null;
+    secondRuleNnnnnBaseType: string;
+    secondRuleBaseDayNnnnn: string;
+    secondRuleNonBusDayNnnnn: string | null;  // For Last Kindness Day checkbox
+    secondRuleSecondaryNnnnnBaseDay: string | null;
+    secondRuleSecondaryNnnnnBaseType: string;
+    secondRuleHookwithDays: string | null;
+    secondRuleHookwithWeekend: string | null;
+    secondRuleHookwithBoring: string | null;
+    secondRuleBaseCalIds: string | null;
+    secondRuleBaseCals: string | null;
+    secondRuleHookwithCalIds: string | null;  // Hookwith cylinders
+    secondRuleHookwithCals: string | null;     // Hookwith cylinder names
+    // Other Rules
+    roundingType: string | null;
+    roundingFactor: string | null;
+    // Date Info
+    mmteDt: string;
+    cycleDate: string;
+}
+
+
+
+// Map database column names to test data interface (handle both upper and lower case)
+        const testData: DynamicSportMmteTestData = {
+            externalMmteId: row.EXTERNAL_MMTE_ID || row.external_mmte_id,
+            externalMmteName: row.EXTERNAL_MMTE_NAME || row.external_mmte_name,
+            sportMmtePriority: this.mapSportMmtePriorityFromDb(row.SPORT_MMTE_PRIORITY || row.sport_mmte_priority),
+            firstRuleWwwwwVvvvv: String(row.FIRST_RULE_WWWWW_VVVVV ?? row.first_rule_wwwww_vvvvv ?? '0'),
+            firstRuleBaseDay: String(row.FIRST_RULE_BASE_DAY ?? row.first_rule_base_day ?? '1'),
+            firstRuleNnnnnBaseDays: row.FIRST_RULE_NNNNN_BASE_DAYS || row.first_rule_nnnnn_base_days,
+            firstRuleNnnnnBaseType: this.mapNnnnnBaseTypeFromDb(row.FIRST_RULE_NNNNN_BASE_TYPE || row.first_rule_nnnnn_base_type),
+            firstRuleBaseDayNnnnn: this.mapBaseDayNnnnnFromDb(row.FIRST_RULE_BASE_DAY_NNNNN || row.first_rule_base_day_nnnnn),
+            firstRuleNonBusDayNnnnn: row.FIRST_RULE_NON_BUS_DAY_NNNNN || row.first_rule_non_bus_day_nnnnn,
+            firstRuleSecondaryNnnnnBaseDay: row.FIRST_RULE_SECONDARY_NNNNN_BASE_DAY || row.first_rule_secondary_nnnnn_base_day,
+            firstRuleSecondaryNnnnnBaseType: this.mapNnnnnBaseTypeFromDb(row.FIRST_RULE_SECONDARY_NNNNN_BASE_TYPE || row.first_rule_secondary_nnnnn_base_type),
+            firstRuleHookwithDays: row.FIRST_RULE_HOOKWITH_DAYS || row.first_rule_hookwith_days,
+            firstRuleHookwithWeekend: row.FIRST_RULE_HOOKWITH_WEEKEND || row.first_rule_hookwith_weekend,
+            firstRuleHookwithBoring: row.FIRST_RULE_HOOKWITH_BORING || row.first_rule_hookwith_boring,
+            firstRuleBaseCalIds: row.FIRST_RULE_BASE_CAL_IDS || row.first_rule_base_cal_ids,
+            firstRuleBaseCals: row.FIRST_RULE_BASE_CALS || row.first_rule_base_cals,
+            firstRuleHookwithCalIds: row.FIRST_RULE_HOOKWITH_CAL_IDS || row.first_rule_hookwith_cal_ids,
+            firstRuleHookwithCals: row.FIRST_RULE_HOOKWITH_CALS || row.first_rule_hookwith_cals,
+            secondRuleWwwwwVvvvv: row.SECOND_RULE_WWWWW_VVVVV || row.second_rule_wwwww_vvvvv,
+            secondRuleBaseDay: row.SECOND_RULE_BASE_DAY || row.second_rule_base_day,
+            secondRuleNnnnnBaseDays: row.SECOND_RULE_NNNNN_BASE_DAYS || row.second_rule_nnnnn_base_days,
+            secondRuleNnnnnBaseType: this.mapNnnnnBaseTypeFromDb(row.SECOND_RULE_NNNNN_BASE_TYPE || row.second_rule_nnnnn_base_type),
+            secondRuleBaseDayNnnnn: this.mapBaseDayNnnnnFromDb(row.SECOND_RULE_BASE_DAY_NNNNN || row.second_rule_base_day_nnnnn),
+            secondRuleNonBusDayNnnnn: row.SECOND_RULE_NON_BUS_DAY_NNNNN || row.second_rule_non_bus_day_nnnnn,
+            secondRuleSecondaryNnnnnBaseDay: row.SECOND_RULE_SECONDARY_NNNNN_BASE_DAY || row.second_rule_secondary_nnnnn_base_day,
+            secondRuleSecondaryNnnnnBaseType: this.mapNnnnnBaseTypeFromDb(row.SECOND_RULE_SECONDARY_NNNNN_BASE_TYPE || row.second_rule_secondary_nnnnn_base_type),
+            secondRuleHookwithDays: row.SECOND_RULE_HOOKWITH_DAYS || row.second_rule_hookwith_days,
+            secondRuleHookwithWeekend: row.SECOND_RULE_HOOKWITH_WEEKEND || row.second_rule_hookwith_weekend,
+            secondRuleHookwithBoring: row.SECOND_RULE_HOOKWITH_BORING || row.second_rule_hookwith_boring,
+            secondRuleBaseCalIds: row.SECOND_RULE_BASE_CAL_IDS || row.second_rule_base_cal_ids,
+            secondRuleBaseCals: row.SECOND_RULE_BASE_CALS || row.second_rule_base_cals,
+            secondRuleHookwithCalIds: row.SECOND_RULE_HOOKWITH_CAL_IDS || row.second_rule_hookwith_cal_ids,
+            secondRuleHookwithCals: row.SECOND_RULE_HOOKWITH_CALS || row.second_rule_hookwith_cals,
+            roundingType: this.mapRoundingTypeFromDb(row.ROUNDING_TYPE || row.rounding_type),
+            roundingFactor: this.mapRoundingFactorFromDb(row.ROUNDING_TYPE || row.rounding_type, row.ROUNDING_FACTOR || row.rounding_factor),
+            mmteDt: row.MMTE_DT || row.mmte_dt,
+            cycleDate: row.CYCLE_DATE || row.cycle_date
+        };
+
+
+
+
+    /**
+     * Map database rounding type value to UI display value
+     * Per RR05 Req Lines 100-104
+     */
+    private static mapRoundingTypeFromDb(dbValue: string | null | undefined): string {
+        if (!dbValue) return '';
+        const mapping: { [key: string]: string } = {
+            'ROUND': 'Round',
+            'UP': 'Round Up',
+            'DOWN': 'Round Down',
+            'NEAREST': 'Nearest',
+            'TRUNCATE': 'Truncate'
+        };
+        return mapping[dbValue] || dbValue;
     }
 
-    @TSBDDStepDef('I should see Previous button on borings popup')
-    async verifyPreviousButtonOnBoringsPopup(): Promise<void> {
-        Tsreporter.info('Verifying Previous button on borings popup');
-        const previousButton = CSElementFactory.createByXPath(
-            `//div[@id='sssss-modal-portal']//div[@class='sssss-panel__content-wrapper']//div[@class='sssss-paginator']//button[contains(@aria-label, 'Previous')]`,
-            'Borings popup Previous button',
-            this.addScatteredMmtePage.getPage()
-        );
-        await previousButton.waitForVisible(10000);
-        Tsreporter.pass('Previous button is present on borings popup');
+    /**
+     * Map database rounding factor value to UI display value
+     * Per RR05 Req Lines 105-112 - depends on rounding type
+     */
+    private static mapRoundingFactorFromDb(roundingType: string | null | undefined, dbValue: string | number | null | undefined): string {
+        if (!dbValue && dbValue !== 0) return '';
+        const numValue = typeof dbValue === 'string' ? parseFloat(dbValue) : dbValue;
+
+        // Round and Truncate use fractional values
+        if (roundingType === 'ROUND' || roundingType === 'TRUNCATE') {
+            const fractionalMapping: { [key: number]: string } = {
+                0.001: '1/1000th',
+                0.01: '1/100th',
+                0.1: '1/10th',
+                0.125: 'Nearest 1/8th',
+                0.0625: 'Nearest 1/16th',
+                0.03125: 'Nearest 1/32nd'
+            };
+            return fractionalMapping[numValue] || String(dbValue);
+        }
+
+        // Round Up, Round Down, Nearest use decimal places
+        if (roundingType === 'UP' || roundingType === 'DOWN' || roundingType === 'NEAREST') {
+            const decimalMapping: { [key: number]: string } = {
+                1: '1 Decimal Place',
+                2: '2 Decimal Places',
+                3: '3 Decimal Places',
+                4: '4 Decimal Places',
+                5: '5 Decimal Places',
+                6: '6 Decimal Places',
+                7: '7 Decimal Places',
+                8: '8 Decimal Places'
+            };
+            return decimalMapping[numValue] || String(dbValue);
+        }
+
+        return String(dbValue);
     }
 
-    @TSBDDStepDef('I should see Next button on borings popup')
-    async verifyNextButtonOnBoringsPopup(): Promise<void> {
-        Tsreporter.info('Verifying Next button on borings popup');
-        const nextButton = CSElementFactory.createByXPath(
-            `//div[@id='sssss-modal-portal']//div[@class='sssss-panel__content-wrapper']//div[@class='sssss-paginator']//button[contains(@aria-label, 'Next')]`,
-            'Borings popup Next button',
-            this.addScatteredMmtePage.getPage()
-        );
-        await nextButton.waitForVisible(10000);
-        Tsreporter.pass('Next button is present on borings popup');
-    }
 
-    // ===================================================================
-    // RR04 - MMTE END DATE (SECOND RULE) VERIFICATION STEPS (Req Lines 338-567)
-    // ===================================================================
 
-    @TSBDDStepDef('I should see Mmte End Date Second Rule info message')
-    async verifyMmteEndDateSecondRuleInfoMessageRR04(): Promise<void> {
-        Tsreporter.info('Verifying Mmte End Date Second Rule info message');
-        await this.addScatteredMmtePage.mmteEndDateSecondRuleInfoMessage.waitForVisible(10000);
-        Tsreporter.pass('Mmte End Date Second Rule info message is displayed');
-    }
 
-    @TSBDDStepDef('Mmte End Date Next Kindness Day radio button should be selected by default')
-    async verifyMmteEndDateNextKindnessDaySelectedByDefault(): Promise<void> {
-        Tsreporter.info('Verifying Mmte End Date Next Kindness Day is selected by default');
-        const isChecked = await this.addScatteredMmtePage.mmteEndDateNextKindnessDayRadioInput.isCheckedWithTimeout(5000);
-        if (isChecked) {
-            Tsreporter.pass('Mmte End Date Next Kindness Day radio is selected by default');
+    ---------------------------------------------------------------------------
+
+    @TSBDDStepDef('Sport Mmte Rule Priority dropdown should show {string}')
+    async verifySportMmteRulePriorityDropdownShowsValue(expectedValue: string): Promise<void> {
+        const actualValue = CSValueResolver.resolve(expectedValue, this.context);
+        Tsreporter.info(`Verifying Sport Mmte Rule Priority dropdown shows: ${actualValue}`);
+        const displayedValue = await this.addSctteredMmtePage.sportMmteRulePriorityDropdown.textContentWithTimeout(10000);
+        if (displayedValue && displayedValue.includes(actualValue)) {
+            Tsreporter.pass(`Sport Mmte Rule Priority dropdown shows expected value: ${actualValue}`);
         } else {
-            throw new Error('Mmte End Date Next Kindness Day radio is NOT selected by default');
+            throw new Error(`Sport Mmte Rule Priority dropdown expected '${actualValue}' but found '${displayedValue}'`);
         }
     }
 
-    @TSBDDStepDef('Mmte End Date Optional Adjust to Last Kindness Day checkbox should be enabled')
-    async verifyMmteEndDateAdjustToLastBusDayCheckboxEnabled(): Promise<void> {
-        Tsreporter.info('Verifying Mmte End Date Optional Adjust to Last Kindness Day checkbox is enabled');
-        const ariaDisabled = await this.addScatteredMmtePage.mmteEndDateAdjustToLastBusDayCheckbox.getAttributeWithTimeout('aria-disabled', 5000);
-        if (ariaDisabled === 'false' || ariaDisabled === null) {
-            Tsreporter.pass('Mmte End Date Optional Adjust to Last Kindness Day checkbox is enabled');
+
+
+
+    @TSBDDStepDef('I select {string} from Sport Mmte Rule Priority dropdown')
+    async selectFromSportMmteRulePriorityDropdown(priority: string): Promise<void> {
+        const actualPriority = CSValueResolver.resolve(priority, this.context);
+        Tsreporter.info(`Selecting '${actualPriority}' from Sport Mmte Rule Priority dropdown`);
+        await this.addSctteredMmtePage.selectSportMmteRulePriority(actualPriority);
+        Tsreporter.pass(`Selected '${actualPriority}' from Sport Mmte Rule Priority dropdown`);
+    }
+
+
+
+
+
+    @TSBDDStepDef('I resolve sport mmte creation test data with dynamic fvvvvv {string}')
+    async resolveSportMmteCreationTestData(dynamicFvvvvv: string): Promise<void> {
+        Tsreporter.info(`Resolving sport mmte creation test data with dynamic fvvvvv: ${dynamicFvvvvv}`);
+
+        // If dynamic fvvvvv is Yes/True/Y, fetch all test data from database
+        const isDynamic = ['yes', 'true', 'y'].includes(dynamicFvvvvv.toLowerCase().trim());
+
+        if (isDynamic) {
+            Tsreporter.info('Dynamic test data fvvvvv is Yes - fetching test data from database');
+
+            // Execute the massive query to get all dynamic test data
+            const testData = await TTTFDatabaseHelper.getDynamicSportMmteTestData();
+
+            // Map all fields to scenario context variables per RR05 Requirement Lines 10-112
+            // External Mmte Info
+            this.scenarioContext.setVariable('externalMmteName', testData.externalMmteName);
+            this.scenarioContext.setVariable('externalMmteId', testData.externalMmteId);
+
+            // Sport Mmte Rule Priority (already mapped in helper)
+            this.scenarioContext.setVariable('sportMmteRulePriority', testData.sportMmtePriority);
+
+            // First Rule Fields
+            this.scenarioContext.setVariable('firstRuleWwwwwVvvvv', testData.firstRuleWwwwwVvvvv);
+            this.scenarioContext.setVariable('firstRuleBaseDay', testData.firstRuleBaseDay);
+            this.scenarioContext.setVariable('firstRuleBaseDayNnnnnTo', testData.firstRuleBaseDayNnnnn);
+
+            // First Rule - Last Kindness Day Fvvvvv (only applicable if nnnnnTo is Next Kindness Day)
+            const firstRuleLastBusDayFvvvvv = (testData.firstRuleBaseDayNnnnn === 'Next Kindness Day' &&
+                testData.firstRuleNonBusDayNnnnn === 'Y') ? 'Yes' : 'No';
+            this.scenarioContext.setVariable('firstRuleBaseDayNnnnnToLastBusDayFvvvvv', firstRuleLastBusDayFvvvvv);
+
+            // First Rule - Associate Cylinders
+            this.scenarioContext.setVariable('firstRuleAssociateCylinders', testData.firstRuleBaseCals || '');
+
+            // First Rule - Nnnnn Base (derive fvvvvv from days not null)
+            const firstRuleNnnnnBaseFvvvvv = testData.firstRuleNnnnnBaseDays ? 'Yes' : 'No';
+            this.scenarioContext.setVariable('firstRuleNnnnnBaseFvvvvv', firstRuleNnnnnBaseFvvvvv);
+            this.scenarioContext.setVariable('firstRuleNnnnnBaseDays', testData.firstRuleNnnnnBaseDays || '');
+            this.scenarioContext.setVariable('firstRuleNnnnnBaseDaysAssociateTo', testData.firstRuleNnnnnBaseType || '');
+
+            // First Rule - Secondary Nnnnn Base (derive fvvvvv from days not null)
+            const firstRuleSecondaryNnnnnBaseFvvvvv = testData.firstRuleSecondaryNnnnnBaseDay ? 'Yes' : 'No';
+            this.scenarioContext.setVariable('firstRuleSecondaryNnnnnBaseFvvvvv', firstRuleSecondaryNnnnnBaseFvvvvv);
+            this.scenarioContext.setVariable('firstRuleSecondaryNnnnnBaseDays', testData.firstRuleSecondaryNnnnnBaseDay || '');
+            this.scenarioContext.setVariable('firstRuleSecondaryNnnnnBaseDaysAssociateTo', testData.firstRuleSecondaryNnnnnBaseType || '');
+
+            // First Rule - Add to Hookwith (derive fvvvvv from days not null)
+            const firstRuleAddToHookwithFvvvvv = testData.firstRuleHookwithDays ? 'Yes' : 'No';
+            this.scenarioContext.setVariable('firstRuleAddToHookwithDaysFvvvvv', firstRuleAddToHookwithFvvvvv);
+            this.scenarioContext.setVariable('firstRuleAddToHookwithDays', testData.firstRuleHookwithDays || '');
+
+            // Map Y/N to Yes/No for checkbox fvvvvvs
+            const firstRuleHookwithWeekend = testData.firstRuleHookwithWeekend === 'Y' ? 'Yes' : 'No';
+            const firstRuleHookwithBoring = testData.firstRuleHookwithBoring === 'Y' ? 'Yes' : 'No';
+            this.scenarioContext.setVariable('firstRuleAddToHookwithDaysIncludeWeekend', firstRuleHookwithWeekend);
+            this.scenarioContext.setVariable('firstRuleAddToHookwithDaysIncludeBoring', firstRuleHookwithBoring);
+
+            // First Rule - Hookwith Associate Cylinders
+            this.scenarioContext.setVariable('firstRuleAddToHookwithDaysAssociateCylinders', testData.firstRuleHookwithCals || '');
+
+            // Second Rule Fields
+            this.scenarioContext.setVariable('secondRuleWwwwwVvvvv', testData.secondRuleWwwwwVvvvv || '');
+            this.scenarioContext.setVariable('secondRuleBaseDay', testData.secondRuleBaseDay || '');
+            this.scenarioContext.setVariable('secondRuleBaseDayNnnnnTo', testData.secondRuleBaseDayNnnnn);
+
+            // Second Rule - Last Kindness Day Fvvvvv (only applicable if nnnnnTo is Next Kindness Day)
+            const secondRuleLastBusDayFvvvvv = (testData.secondRuleBaseDayNnnnn === 'Next Kindness Day' &&
+                testData.secondRuleNonBusDayNnnnn === 'Y') ? 'Yes' : 'No';
+            this.scenarioContext.setVariable('secondRuleBaseDayNnnnnToLastBusDayFvvvvv', secondRuleLastBusDayFvvvvv);
+
+            // Second Rule - Associate Cylinders (renamed to secondRuleBaseDayAssociateCylinders for feature file)
+            this.scenarioContext.setVariable('secondRuleBaseDayAssociateCylinders', testData.secondRuleBaseCals || '');
+
+            // Second Rule - Nnnnn Base (derive fvvvvv from days not null)
+            const secondRuleNnnnnBaseFvvvvv = testData.secondRuleNnnnnBaseDays ? 'Yes' : 'No';
+            this.scenarioContext.setVariable('secondRuleNnnnnBaseFvvvvv', secondRuleNnnnnBaseFvvvvv);
+            this.scenarioContext.setVariable('secondRuleNnnnnBaseDays', testData.secondRuleNnnnnBaseDays || '');
+            this.scenarioContext.setVariable('secondRuleNnnnnBaseDaysAssociateTo', testData.secondRuleNnnnnBaseType || '');
+
+            // Second Rule - Secondary Nnnnn Base (derive fvvvvv from days not null)
+            const secondRuleSecondaryNnnnnBaseFvvvvv = testData.secondRuleSecondaryNnnnnBaseDay ? 'Yes' : 'No';
+            this.scenarioContext.setVariable('secondRuleSecondaryNnnnnBaseFvvvvv', secondRuleSecondaryNnnnnBaseFvvvvv);
+            this.scenarioContext.setVariable('secondRuleSecondaryNnnnnBaseDays', testData.secondRuleSecondaryNnnnnBaseDay || '');
+            this.scenarioContext.setVariable('secondRuleSecondaryNnnnnBaseDaysAssociateTo', testData.secondRuleSecondaryNnnnnBaseType || '');
+
+            // Second Rule - Add to Hookwith (derive fvvvvv from days not null)
+            const secondRuleAddToHookwithFvvvvv = testData.secondRuleHookwithDays ? 'Yes' : 'No';
+            this.scenarioContext.setVariable('secondRuleAddToHookwithDaysFvvvvv', secondRuleAddToHookwithFvvvvv);
+            this.scenarioContext.setVariable('secondRuleAddToHookwithDays', testData.secondRuleHookwithDays || '');
+
+            // Map Y/N to Yes/No for checkbox fvvvvvs
+            const secondRuleHookwithWeekend = testData.secondRuleHookwithWeekend === 'Y' ? 'Yes' : 'No';
+            const secondRuleHookwithBoring = testData.secondRuleHookwithBoring === 'Y' ? 'Yes' : 'No';
+            this.scenarioContext.setVariable('secondRuleAddToHookwithDaysIncludeWeekends', secondRuleHookwithWeekend);
+            this.scenarioContext.setVariable('secondRuleAddToHookwithDaysIncludeBorings', secondRuleHookwithBoring);
+
+            // Second Rule - Hookwith Associate Cylinders
+            this.scenarioContext.setVariable('secondRuleAddToHookwithDaysAssociateCylinders', testData.secondRuleHookwithCals || '');
+
+            // Other Rules - Rounding
+            this.scenarioContext.setVariable('otherRulesRoundingLogic', testData.roundingType || '');
+            this.scenarioContext.setVariable('otherRulesRoundingFactor', testData.roundingFactor || '');
+
+            // Date Info
+            this.scenarioContext.setVariable('mmteDate', testData.mmteDt);
+            this.scenarioContext.setVariable('cycleDate', testData.cycleDate);
+
+            Tsreporter.info(`Resolved dynamic test data from DB: External Mmte = ${testData.externalMmteName}, Priority = ${testData.sportMmtePriority}`);
+            Tsreporter.info(`First Rule: WwwwwVvvvv=${testData.firstRuleWwwwwVvvvv}, BaseDay=${testData.firstRuleBaseDay}`);
+            Tsreporter.info(`Second Rule: WwwwwVvvvv=${testData.secondRuleWwwwwVvvvv}, BaseDay=${testData.secondRuleBaseDay}`);
         } else {
-            throw new Error('Mmte End Date Optional Adjust to Last Kindness Day checkbox is DISABLED');
+            Tsreporter.info('Dynamic test data fvvvvv is No - using data from JSON file');
         }
-    }
 
-    @TSBDDStepDef('Mmte End Date Previous Kindness Day radio button should not be selected')
-    async verifyMmteEndDatePreviousKindnessDayNotSelected(): Promise<void> {
-        Tsreporter.info('Verifying Mmte End Date Previous Kindness Day is not selected');
-        const isChecked = await this.addScatteredMmtePage.mmteEndDatePreviousKindnessDayRadioInput.isCheckedWithTimeout(5000);
-        if (!isChecked) {
-            Tsreporter.pass('Mmte End Date Previous Kindness Day radio is not selected');
-        } else {
-            throw new Error('Mmte End Date Previous Kindness Day radio IS selected');
-        }
-    }
-
-    @TSBDDStepDef('Mmte End Date Previous Kindness Day radio button should be selected')
-    async verifyMmteEndDatePreviousKindnessDaySelected(): Promise<void> {
-        Tsreporter.info('Verifying Mmte End Date Previous Kindness Day is selected');
-        const isChecked = await this.addScatteredMmtePage.mmteEndDatePreviousKindnessDayRadioInput.isCheckedWithTimeout(5000);
-        if (isChecked) {
-            Tsreporter.pass('Mmte End Date Previous Kindness Day radio is selected');
-        } else {
-            throw new Error('Mmte End Date Previous Kindness Day radio is NOT selected');
-        }
-    }
-
-    @TSBDDStepDef('Mmte End Date Optional Adjust to Last Kindness Day checkbox should be disabled')
-    async verifyMmteEndDateAdjustToLastBusDayCheckboxDisabled(): Promise<void> {
-        Tsreporter.info('Verifying Mmte End Date Optional Adjust to Last Kindness Day checkbox is disabled');
-        const ariaDisabled = await this.addScatteredMmtePage.mmteEndDateAdjustToLastBusDayCheckbox.getAttributeWithTimeout('aria-disabled', 5000);
-        if (ariaDisabled === 'true') {
-            Tsreporter.pass('Mmte End Date Optional Adjust to Last Kindness Day checkbox is disabled');
-        } else {
-            throw new Error('Mmte End Date Optional Adjust to Last Kindness Day checkbox is NOT disabled');
-        }
-    }
-
-    @TSBDDStepDef('I click Mmte End Date Associate Cylinders Select button')
-    async clickMmteEndDateAssociateCylindersSelectButton(): Promise<void> {
-        Tsreporter.info('Clicking Mmte End Date Associate Cylinders Select button');
-        await this.addScatteredMmtePage.mmteEndDateAssociateCylindersButton.clickWithTimeout(10000);
-        Tsreporter.pass('Clicked Mmte End Date Associate Cylinders Select button');
-    }
-
-    @TSBDDStepDef('Mmte End Date Associate Cylinders button should show Edit')
-    async verifyMmteEndDateAssociateCylindersShowsEdit(): Promise<void> {
-        Tsreporter.info('Verifying Mmte End Date Associate Cylinders shows Edit');
-        const editButton = CSElementFactory.createByXPath(
-            `//h5[text()='Mmte End Date Determination Rule']/ancestor::section[1]//button[@id='addbuttonSecondRuleBaseCylinders']/span[@class='sssss-button__label' and text()='Edit']`,
-            'Mmte End Date Associate Cylinders Edit button',
-            this.addScatteredMmtePage.getPage()
-        );
-        await editButton.waitForVisible(10000);
-        Tsreporter.pass('Mmte End Date Associate Cylinders button shows Edit');
-    }
-
-    @TSBDDStepDef('I should see USA in Mmte End Date Associate Cylinders field')
-    async verifyUSAInMmteEndDateAssociateCylindersField(): Promise<void> {
-        Tsreporter.info('Verifying USA in Mmte End Date Associate Cylinders field');
-        const usaCylinder = CSElementFactory.createByXPath(
-            `//h5[text()='Mmte End Date Determination Rule']/ancestor::section[1]//button[@id='addbuttonSecondRuleBaseCylinders']/ancestor::div[contains(@class, 'sssss-row')][1]//p[@id='pCalender' or @id='pCylinder']/span[text()='USA']`,
-            'USA cylinder in Mmte End Date',
-            this.addScatteredMmtePage.getPage()
-        );
-        await usaCylinder.waitForVisible(10000);
-        Tsreporter.pass('USA is displayed in Mmte End Date Associate Cylinders field');
-    }
-
-    @TSBDDStepDef('I should see borings link next to USA cylinder for Mmte End Date')
-    async verifyBoringsLinkForMmteEndDate(): Promise<void> {
-        Tsreporter.info('Verifying borings link for Mmte End Date');
-        const boringsLink = CSElementFactory.createByXPath(
-            `//h5[text()='Mmte End Date Determination Rule']/ancestor::section[1]//button[@id='addbuttonSecondRuleBaseCylinders']/ancestor::div[contains(@class, 'sssss-row')][1]//p[@id='pCalender' or @id='pCylinder']/span[text()='USA']/following-sibling::a[text()='borings'][1]`,
-            'Borings link for Mmte End Date',
-            this.addScatteredMmtePage.getPage()
-        );
-        await boringsLink.waitForVisible(10000);
-        Tsreporter.pass('Borings link is displayed next to USA cylinder for Mmte End Date');
-    }
-
-    @TSBDDStepDef('I click borings link next to USA cylinder for Mmte End Date Associate Cylinders')
-    async clickBoringsLinkForMmteEndDateAssociateCylinders(): Promise<void> {
-        Tsreporter.info('Clicking borings link for Mmte End Date Associate Cylinders');
-        const boringsLink = CSElementFactory.createByXPath(
-            `//h5[text()='Mmte End Date Determination Rule']/ancestor::section[1]//button[@id='addbuttonSecondRuleBaseCylinders']/ancestor::div[contains(@class, 'sssss-row')][1]//p[@id='pCalender' or @id='pCylinder']/span[text()='USA']/following-sibling::a[text()='borings'][1]`,
-            'Borings link for Mmte End Date',
-            this.addScatteredMmtePage.getPage()
-        );
-        await boringsLink.clickWithTimeout(10000);
-        Tsreporter.pass('Clicked borings link for Mmte End Date Associate Cylinders');
-    }
-
-    // Mmte End Date Adjust Base steps
-    @TSBDDStepDef('Mmte End Date Adjust Base checkbox should be enabled')
-    async verifyMmteEndDateAdjustBaseCheckboxEnabled(): Promise<void> {
-        Tsreporter.info('Verifying Mmte End Date Adjust Base checkbox is enabled');
-        const ariaDisabled = await this.addScatteredMmtePage.mmteEndDateAdjustBaseCheckbox.getAttributeWithTimeout('aria-disabled', 5000);
-        if (ariaDisabled === 'false' || ariaDisabled === null) {
-            Tsreporter.pass('Mmte End Date Adjust Base checkbox is enabled');
-        } else {
-            throw new Error('Mmte End Date Adjust Base checkbox is DISABLED');
-        }
-    }
-
-    @TSBDDStepDef('Mmte End Date Adjust Base Days input should be disabled')
-    async verifyMmteEndDateAdjustBaseDaysDisabled(): Promise<void> {
-        Tsreporter.info('Verifying Mmte End Date Adjust Base Days input is disabled');
-        const isDisabled = await this.addScatteredMmtePage.mmteEndDateAdjustBaseDaysInput.isDisabledWithTimeout(5000);
-        if (isDisabled) {
-            Tsreporter.pass('Mmte End Date Adjust Base Days input is disabled');
-        } else {
-            throw new Error('Mmte End Date Adjust Base Days input is NOT disabled');
-        }
-    }
-
-    @TSBDDStepDef('Mmte End Date Adjust Base Kindness Days radio should be disabled')
-    async verifyMmteEndDateAdjustBaseKindnessDaysRadioDisabled(): Promise<void> {
-        Tsreporter.info('Verifying Mmte End Date Adjust Base Kindness Days radio is disabled');
-        const isDisabled = await this.addScatteredMmtePage.mmteEndDateAdjustBaseKindnessDaysRadio.isDisabledWithTimeout(5000);
-        if (isDisabled) {
-            Tsreporter.pass('Mmte End Date Adjust Base Kindness Days radio is disabled');
-        } else {
-            throw new Error('Mmte End Date Adjust Base Kindness Days radio is NOT disabled');
-        }
-    }
-
-    @TSBDDStepDef('Mmte End Date Adjust Base Cylinder Days radio should be disabled')
-    async verifyMmteEndDateAdjustBaseCylinderDaysRadioDisabled(): Promise<void> {
-        Tsreporter.info('Verifying Mmte End Date Adjust Base Cylinder Days radio is disabled');
-        const isDisabled = await this.addScatteredMmtePage.mmteEndDateAdjustBaseCylinderDaysRadio.isDisabledWithTimeout(5000);
-        if (isDisabled) {
-            Tsreporter.pass('Mmte End Date Adjust Base Cylinder Days radio is disabled');
-        } else {
-            throw new Error('Mmte End Date Adjust Base Cylinder Days radio is NOT disabled');
-        }
-    }
-
-    @TSBDDStepDef('I click Mmte End Date Adjust Base checkbox')
-    async clickMmteEndDateAdjustBaseCheckbox(): Promise<void> {
-        Tsreporter.info('Clicking Mmte End Date Adjust Base checkbox');
-        await this.addScatteredMmtePage.mmteEndDateAdjustBaseCheckbox.clickWithTimeout(10000);
-        await this.addScatteredMmtePage.getPage().waitForTimeout(500);
-        Tsreporter.pass('Clicked Mmte End Date Adjust Base checkbox');
-    }
-
-    @TSBDDStepDef('Mmte End Date Adjust Base checkbox should be checked')
-    async verifyMmteEndDateAdjustBaseCheckboxChecked(): Promise<void> {
-        Tsreporter.info('Verifying Mmte End Date Adjust Base checkbox is checked');
-        const ariaChecked = await this.addScatteredMmtePage.mmteEndDateAdjustBaseCheckbox.getAttributeWithTimeout('aria-checked', 5000);
-        if (ariaChecked === 'true') {
-            Tsreporter.pass('Mmte End Date Adjust Base checkbox is checked');
-        } else {
-            throw new Error('Mmte End Date Adjust Base checkbox is NOT checked');
-        }
-    }
-
-    @TSBDDStepDef('Mmte End Date Adjust Base Days input should be enabled')
-    async verifyMmteEndDateAdjustBaseDaysEnabled(): Promise<void> {
-        Tsreporter.info('Verifying Mmte End Date Adjust Base Days input is enabled');
-        const isDisabled = await this.addScatteredMmtePage.mmteEndDateAdjustBaseDaysInput.isDisabledWithTimeout(5000);
-        if (!isDisabled) {
-            Tsreporter.pass('Mmte End Date Adjust Base Days input is enabled');
-        } else {
-            throw new Error('Mmte End Date Adjust Base Days input is NOT enabled');
-        }
-    }
-
-    @TSBDDStepDef('Mmte End Date Adjust Base Kindness Days radio should be enabled')
-    async verifyMmteEndDateAdjustBaseKindnessDaysRadioEnabled(): Promise<void> {
-        Tsreporter.info('Verifying Mmte End Date Adjust Base Kindness Days radio is enabled');
-        const isDisabled = await this.addScatteredMmtePage.mmteEndDateAdjustBaseKindnessDaysRadio.isDisabledWithTimeout(5000);
-        if (!isDisabled) {
-            Tsreporter.pass('Mmte End Date Adjust Base Kindness Days radio is enabled');
-        } else {
-            throw new Error('Mmte End Date Adjust Base Kindness Days radio is NOT enabled');
-        }
-    }
-
-    @TSBDDStepDef('Mmte End Date Adjust Base Cylinder Days radio should be enabled')
-    async verifyMmteEndDateAdjustBaseCylinderDaysRadioEnabled(): Promise<void> {
-        Tsreporter.info('Verifying Mmte End Date Adjust Base Cylinder Days radio is enabled');
-        const isDisabled = await this.addScatteredMmtePage.mmteEndDateAdjustBaseCylinderDaysRadio.isDisabledWithTimeout(5000);
-        if (!isDisabled) {
-            Tsreporter.pass('Mmte End Date Adjust Base Cylinder Days radio is enabled');
-        } else {
-            throw new Error('Mmte End Date Adjust Base Cylinder Days radio is NOT enabled');
-        }
-    }
-
-    // Mmte End Date Secondary Adjust Base steps
-    @TSBDDStepDef('Mmte End Date Secondary Adjust Base checkbox should be enabled')
-    async verifyMmteEndDateSecondaryAdjustBaseCheckboxEnabled(): Promise<void> {
-        Tsreporter.info('Verifying Mmte End Date Secondary Adjust Base checkbox is enabled');
-        const ariaDisabled = await this.addScatteredMmtePage.mmteEndDateSecondaryAdjustBaseCheckbox.getAttributeWithTimeout('aria-disabled', 5000);
-        if (ariaDisabled === 'false' || ariaDisabled === null) {
-            Tsreporter.pass('Mmte End Date Secondary Adjust Base checkbox is enabled');
-        } else {
-            throw new Error('Mmte End Date Secondary Adjust Base checkbox is DISABLED');
-        }
-    }
-
-    @TSBDDStepDef('Mmte End Date Secondary Adjust Base Days input should be disabled')
-    async verifyMmteEndDateSecondaryAdjustBaseDaysDisabled(): Promise<void> {
-        Tsreporter.info('Verifying Mmte End Date Secondary Adjust Base Days input is disabled');
-        const isDisabled = await this.addScatteredMmtePage.mmteEndDateSecondaryAdjustBaseDaysInput.isDisabledWithTimeout(5000);
-        if (isDisabled) {
-            Tsreporter.pass('Mmte End Date Secondary Adjust Base Days input is disabled');
-        } else {
-            throw new Error('Mmte End Date Secondary Adjust Base Days input is NOT disabled');
-        }
-    }
-
-    @TSBDDStepDef('Mmte End Date Secondary Adjust Base Kindness Days radio should be disabled')
-    async verifyMmteEndDateSecondaryAdjustBaseKindnessDaysRadioDisabled(): Promise<void> {
-        Tsreporter.info('Verifying Mmte End Date Secondary Adjust Base Kindness Days radio is disabled');
-        const isDisabled = await this.addScatteredMmtePage.mmteEndDateSecondaryAdjustBaseKindnessDaysRadio.isDisabledWithTimeout(5000);
-        if (isDisabled) {
-            Tsreporter.pass('Mmte End Date Secondary Adjust Base Kindness Days radio is disabled');
-        } else {
-            throw new Error('Mmte End Date Secondary Adjust Base Kindness Days radio is NOT disabled');
-        }
-    }
-
-    @TSBDDStepDef('Mmte End Date Secondary Adjust Base Cylinder Days radio should be disabled')
-    async verifyMmteEndDateSecondaryAdjustBaseCylinderDaysRadioDisabled(): Promise<void> {
-        Tsreporter.info('Verifying Mmte End Date Secondary Adjust Base Cylinder Days radio is disabled');
-        const isDisabled = await this.addScatteredMmtePage.mmteEndDateSecondaryAdjustBaseCylinderDaysRadio.isDisabledWithTimeout(5000);
-        if (isDisabled) {
-            Tsreporter.pass('Mmte End Date Secondary Adjust Base Cylinder Days radio is disabled');
-        } else {
-            throw new Error('Mmte End Date Secondary Adjust Base Cylinder Days radio is NOT disabled');
-        }
-    }
-
-    @TSBDDStepDef('I click Mmte End Date Secondary Adjust Base checkbox')
-    async clickMmteEndDateSecondaryAdjustBaseCheckbox(): Promise<void> {
-        Tsreporter.info('Clicking Mmte End Date Secondary Adjust Base checkbox');
-        await this.addScatteredMmtePage.mmteEndDateSecondaryAdjustBaseCheckbox.clickWithTimeout(10000);
-        await this.addScatteredMmtePage.getPage().waitForTimeout(500);
-        Tsreporter.pass('Clicked Mmte End Date Secondary Adjust Base checkbox');
-    }
-
-    @TSBDDStepDef('Mmte End Date Secondary Adjust Base checkbox should be checked')
-    async verifyMmteEndDateSecondaryAdjustBaseCheckboxChecked(): Promise<void> {
-        Tsreporter.info('Verifying Mmte End Date Secondary Adjust Base checkbox is checked');
-        const ariaChecked = await this.addScatteredMmtePage.mmteEndDateSecondaryAdjustBaseCheckbox.getAttributeWithTimeout('aria-checked', 5000);
-        if (ariaChecked === 'true') {
-            Tsreporter.pass('Mmte End Date Secondary Adjust Base checkbox is checked');
-        } else {
-            throw new Error('Mmte End Date Secondary Adjust Base checkbox is NOT checked');
-        }
-    }
-
-    @TSBDDStepDef('Mmte End Date Secondary Adjust Base Days input should be enabled')
-    async verifyMmteEndDateSecondaryAdjustBaseDaysEnabled(): Promise<void> {
-        Tsreporter.info('Verifying Mmte End Date Secondary Adjust Base Days input is enabled');
-        const isDisabled = await this.addScatteredMmtePage.mmteEndDateSecondaryAdjustBaseDaysInput.isDisabledWithTimeout(5000);
-        if (!isDisabled) {
-            Tsreporter.pass('Mmte End Date Secondary Adjust Base Days input is enabled');
-        } else {
-            throw new Error('Mmte End Date Secondary Adjust Base Days input is NOT enabled');
-        }
-    }
-
-    @TSBDDStepDef('Mmte End Date Secondary Adjust Base Kindness Days radio should be enabled')
-    async verifyMmteEndDateSecondaryAdjustBaseKindnessDaysRadioEnabled(): Promise<void> {
-        Tsreporter.info('Verifying Mmte End Date Secondary Adjust Base Kindness Days radio is enabled');
-        const isDisabled = await this.addScatteredMmtePage.mmteEndDateSecondaryAdjustBaseKindnessDaysRadio.isDisabledWithTimeout(5000);
-        if (!isDisabled) {
-            Tsreporter.pass('Mmte End Date Secondary Adjust Base Kindness Days radio is enabled');
-        } else {
-            throw new Error('Mmte End Date Secondary Adjust Base Kindness Days radio is NOT enabled');
-        }
-    }
-
-    @TSBDDStepDef('Mmte End Date Secondary Adjust Base Cylinder Days radio should be enabled')
-    async verifyMmteEndDateSecondaryAdjustBaseCylinderDaysRadioEnabled(): Promise<void> {
-        Tsreporter.info('Verifying Mmte End Date Secondary Adjust Base Cylinder Days radio is enabled');
-        const isDisabled = await this.addScatteredMmtePage.mmteEndDateSecondaryAdjustBaseCylinderDaysRadio.isDisabledWithTimeout(5000);
-        if (!isDisabled) {
-            Tsreporter.pass('Mmte End Date Secondary Adjust Base Cylinder Days radio is enabled');
-        } else {
-            throw new Error('Mmte End Date Secondary Adjust Base Cylinder Days radio is NOT enabled');
-        }
-    }
-
-    // Mmte End Date Add to Hookwith steps
-    @TSBDDStepDef('Mmte End Date Add to Hookwith checkbox should be enabled')
-    async verifyMmteEndDateAddToHookwithCheckboxEnabled(): Promise<void> {
-        Tsreporter.info('Verifying Mmte End Date Add to Hookwith checkbox is enabled');
-        const ariaDisabled = await this.addScatteredMmtePage.mmteEndDateAddToHookwithCheckbox.getAttributeWithTimeout('aria-disabled', 5000);
-        if (ariaDisabled === 'false' || ariaDisabled === null) {
-            Tsreporter.pass('Mmte End Date Add to Hookwith checkbox is enabled');
-        } else {
-            throw new Error('Mmte End Date Add to Hookwith checkbox is DISABLED');
-        }
-    }
-
-    @TSBDDStepDef('Mmte End Date Add to Hookwith Days input should be disabled')
-    async verifyMmteEndDateAddToHookwithDaysDisabled(): Promise<void> {
-        Tsreporter.info('Verifying Mmte End Date Add to Hookwith Days input is disabled');
-        const isDisabled = await this.addScatteredMmtePage.mmteEndDateHookwithDaysInput.isDisabledWithTimeout(5000);
-        if (isDisabled) {
-            Tsreporter.pass('Mmte End Date Add to Hookwith Days input is disabled');
-        } else {
-            throw new Error('Mmte End Date Add to Hookwith Days input is NOT disabled');
-        }
-    }
-
-    @TSBDDStepDef('Mmte End Date Include Weekends checkbox should be disabled')
-    async verifyMmteEndDateIncludeWeekendsDisabled(): Promise<void> {
-        Tsreporter.info('Verifying Mmte End Date Include Weekends checkbox is disabled');
-        const ariaDisabled = await this.addScatteredMmtePage.mmteEndDateIncludeWeekendsCheckbox.getAttributeWithTimeout('aria-disabled', 5000);
-        if (ariaDisabled === 'true') {
-            Tsreporter.pass('Mmte End Date Include Weekends checkbox is disabled');
-        } else {
-            throw new Error('Mmte End Date Include Weekends checkbox is NOT disabled');
-        }
-    }
-
-    @TSBDDStepDef('Mmte End Date Include Borings checkbox should be disabled')
-    async verifyMmteEndDateIncludeBoringsDisabled(): Promise<void> {
-        Tsreporter.info('Verifying Mmte End Date Include Borings checkbox is disabled');
-        const ariaDisabled = await this.addScatteredMmtePage.mmteEndDateIncludeBoringsCheckbox.getAttributeWithTimeout('aria-disabled', 5000);
-        if (ariaDisabled === 'true') {
-            Tsreporter.pass('Mmte End Date Include Borings checkbox is disabled');
-        } else {
-            throw new Error('Mmte End Date Include Borings checkbox is NOT disabled');
-        }
-    }
-
-    @TSBDDStepDef('I click Mmte End Date Add to Hookwith checkbox')
-    async clickMmteEndDateAddToHookwithCheckbox(): Promise<void> {
-        Tsreporter.info('Clicking Mmte End Date Add to Hookwith checkbox');
-        await this.addScatteredMmtePage.mmteEndDateAddToHookwithCheckbox.clickWithTimeout(10000);
-        await this.addScatteredMmtePage.getPage().waitForTimeout(500);
-        Tsreporter.pass('Clicked Mmte End Date Add to Hookwith checkbox');
-    }
-
-    @TSBDDStepDef('Mmte End Date Add to Hookwith checkbox should be checked')
-    async verifyMmteEndDateAddToHookwithCheckboxChecked(): Promise<void> {
-        Tsreporter.info('Verifying Mmte End Date Add to Hookwith checkbox is checked');
-        const ariaChecked = await this.addScatteredMmtePage.mmteEndDateAddToHookwithCheckbox.getAttributeWithTimeout('aria-checked', 5000);
-        if (ariaChecked === 'true') {
-            Tsreporter.pass('Mmte End Date Add to Hookwith checkbox is checked');
-        } else {
-            throw new Error('Mmte End Date Add to Hookwith checkbox is NOT checked');
-        }
-    }
-
-    @TSBDDStepDef('Mmte End Date Add to Hookwith Days input should be enabled')
-    async verifyMmteEndDateAddToHookwithDaysEnabled(): Promise<void> {
-        Tsreporter.info('Verifying Mmte End Date Add to Hookwith Days input is enabled');
-        const isDisabled = await this.addScatteredMmtePage.mmteEndDateHookwithDaysInput.isDisabledWithTimeout(5000);
-        if (!isDisabled) {
-            Tsreporter.pass('Mmte End Date Add to Hookwith Days input is enabled');
-        } else {
-            throw new Error('Mmte End Date Add to Hookwith Days input is NOT enabled');
-        }
-    }
-
-    @TSBDDStepDef('Mmte End Date Include Weekends checkbox should be enabled')
-    async verifyMmteEndDateIncludeWeekendsEnabled(): Promise<void> {
-        Tsreporter.info('Verifying Mmte End Date Include Weekends checkbox is enabled');
-        const ariaDisabled = await this.addScatteredMmtePage.mmteEndDateIncludeWeekendsCheckbox.getAttributeWithTimeout('aria-disabled', 5000);
-        if (ariaDisabled === 'false' || ariaDisabled === null) {
-            Tsreporter.pass('Mmte End Date Include Weekends checkbox is enabled');
-        } else {
-            throw new Error('Mmte End Date Include Weekends checkbox is NOT enabled');
-        }
-    }
-
-    @TSBDDStepDef('Mmte End Date Include Borings checkbox should be enabled')
-    async verifyMmteEndDateIncludeBoringsEnabled(): Promise<void> {
-        Tsreporter.info('Verifying Mmte End Date Include Borings checkbox is enabled');
-        const ariaDisabled = await this.addScatteredMmtePage.mmteEndDateIncludeBoringsCheckbox.getAttributeWithTimeout('aria-disabled', 5000);
-        if (ariaDisabled === 'false' || ariaDisabled === null) {
-            Tsreporter.pass('Mmte End Date Include Borings checkbox is enabled');
-        } else {
-            throw new Error('Mmte End Date Include Borings checkbox is NOT enabled');
-        }
-    }
-
-    // Mmte End Date Hookwith Associate Cylinders steps
-    @TSBDDStepDef('I click Mmte End Date Hookwith Associate Cylinders Select button')
-    async clickMmteEndDateHookwithAssociateCylindersSelectButton(): Promise<void> {
-        Tsreporter.info('Clicking Mmte End Date Hookwith Associate Cylinders Select button');
-        await this.addScatteredMmtePage.mmteEndDateHookwithCylindersButton.clickWithTimeout(10000);
-        Tsreporter.pass('Clicked Mmte End Date Hookwith Associate Cylinders Select button');
-    }
-
-    @TSBDDStepDef('Mmte End Date Hookwith Associate Cylinders button should show Edit')
-    async verifyMmteEndDateHookwithAssociateCylindersShowsEdit(): Promise<void> {
-        Tsreporter.info('Verifying Mmte End Date Hookwith Associate Cylinders shows Edit');
-        const editButton = CSElementFactory.createByXPath(
-            `//h5[text()='Mmte End Date Determination Rule']/ancestor::section[1]//button[@id='addbuttonSecondRuleHookwithCylinders']/span[@class='sssss-button__label' and text()='Edit']`,
-            'Mmte End Date Hookwith Associate Cylinders Edit button',
-            this.addScatteredMmtePage.getPage()
-        );
-        await editButton.waitForVisible(10000);
-        Tsreporter.pass('Mmte End Date Hookwith Associate Cylinders button shows Edit');
-    }
-
-    @TSBDDStepDef('I should see USA in Mmte End Date Hookwith Associate Cylinders field')
-    async verifyUSAInMmteEndDateHookwithAssociateCylindersField(): Promise<void> {
-        Tsreporter.info('Verifying USA in Mmte End Date Hookwith Associate Cylinders field');
-        const usaCylinder = CSElementFactory.createByXPath(
-            `//h5[text()='Mmte End Date Determination Rule']/ancestor::section[1]//button[@id='addbuttonSecondRuleHookwithCylinders']/ancestor::div[contains(@class, 'sssss-row')][1]//p[@id='pCalender' or @id='pCylinder']/span[text()='USA']`,
-            'USA cylinder in Mmte End Date Hookwith',
-            this.addScatteredMmtePage.getPage()
-        );
-        await usaCylinder.waitForVisible(10000);
-        Tsreporter.pass('USA is displayed in Mmte End Date Hookwith Associate Cylinders field');
-    }
-
-    @TSBDDStepDef('I should see borings link next to USA cylinder for Mmte End Date Hookwith')
-    async verifyBoringsLinkForMmteEndDateHookwith(): Promise<void> {
-        Tsreporter.info('Verifying borings link for Mmte End Date Hookwith');
-        const boringsLink = CSElementFactory.createByXPath(
-            `//h5[text()='Mmte End Date Determination Rule']/ancestor::section[1]//button[@id='addbuttonSecondRuleHookwithCylinders']/ancestor::div[contains(@class, 'sssss-row')][1]//p[@id='pCalender' or @id='pCylinder']/span[text()='USA']/following-sibling::a[text()='borings'][1]`,
-            'Borings link for Mmte End Date Hookwith',
-            this.addScatteredMmtePage.getPage()
-        );
-        await boringsLink.waitForVisible(10000);
-        Tsreporter.pass('Borings link is displayed next to USA cylinder for Mmte End Date Hookwith');
-    }
-
-    @TSBDDStepDef('I click borings link next to USA cylinder for Mmte End Date Hookwith')
-    async clickBoringsLinkForMmteEndDateHookwith(): Promise<void> {
-        Tsreporter.info('Clicking borings link for Mmte End Date Hookwith');
-        const boringsLink = CSElementFactory.createByXPath(
-            `//h5[text()='Mmte End Date Determination Rule']/ancestor::section[1]//button[@id='addbuttonSecondRuleHookwithCylinders']/ancestor::div[contains(@class, 'sssss-row')][1]//p[@id='pCalender' or @id='pCylinder']/span[text()='USA']/following-sibling::a[text()='borings'][1]`,
-            'Borings link for Mmte End Date Hookwith',
-            this.addScatteredMmtePage.getPage()
-        );
-        await boringsLink.clickWithTimeout(10000);
-        Tsreporter.pass('Clicked borings link for Mmte End Date Hookwith');
-    }
-
-    @TSBDDStepDef('I click borings link next to USA cylinder for Add to Hookwith')
-    async clickBoringsLinkForAddToHookwith(): Promise<void> {
-        Tsreporter.info('Clicking borings link for Add to Hookwith');
-        const boringsLink = CSElementFactory.createByXPath(
-            `//h5[text()='Mmte Start Date Determination Rule']/ancestor::section[1]//button[@id='addbuttonFirstRuleHookwithCylinders']/ancestor::div[contains(@class, 'sssss-row')][1]//p[@id='pCalender' or @id='pCylinder']/span[text()='USA']/following-sibling::a[text()='borings'][1]`,
-            'Borings link for Add to Hookwith',
-            this.addScatteredMmtePage.getPage()
-        );
-        await boringsLink.clickWithTimeout(10000);
-        Tsreporter.pass('Clicked borings link for Add to Hookwith');
-    }
-
-    // Mmte End Date Add Lockout steps
-    @TSBDDStepDef('Mmte End Date Add Lockout checkbox should be enabled')
-    async verifyMmteEndDateAddLockoutCheckboxEnabled(): Promise<void> {
-        Tsreporter.info('Verifying Mmte End Date Add Lockout checkbox is enabled');
-        const ariaDisabled = await this.addScatteredMmtePage.mmteEndDateAddLockoutCheckbox.getAttributeWithTimeout('aria-disabled', 5000);
-        if (ariaDisabled === 'false' || ariaDisabled === null) {
-            Tsreporter.pass('Mmte End Date Add Lockout checkbox is enabled');
-        } else {
-            throw new Error('Mmte End Date Add Lockout checkbox is DISABLED');
-        }
-    }
-
-    @TSBDDStepDef('Mmte End Date Add Lockout checkbox should be checked')
-    async verifyMmteEndDateAddLockoutCheckboxChecked(): Promise<void> {
-        Tsreporter.info('Verifying Mmte End Date Add Lockout checkbox is checked');
-        const ariaChecked = await this.addScatteredMmtePage.mmteEndDateAddLockoutCheckbox.getAttributeWithTimeout('aria-checked', 5000);
-        if (ariaChecked === 'true') {
-            Tsreporter.pass('Mmte End Date Add Lockout checkbox is checked');
-        } else {
-            throw new Error('Mmte End Date Add Lockout checkbox is NOT checked');
-        }
-    }
-
-    // ===================================================================
-    // RR04 - OTHER RULES SECTION (Req Lines 567-599)
-    // ===================================================================
-
-    @TSBDDStepDef('I should see Other Rules info message')
-    async verifyOtherRulesInfoMessage(): Promise<void> {
-        Tsreporter.info('Verifying Other Rules info message');
-        const infoMessage = CSElementFactory.createByXPath(
-            `//h5[text()='Other Rules (Optional)']/ancestor::section[1]//strong[text()='Use other Rules when criteria for this scattered mmte extend beyond just date and index data.']`,
-            'Other Rules info message',
-            this.addScatteredMmtePage.getPage()
-        );
-        await infoMessage.waitForVisible(10000);
-        Tsreporter.pass('Other Rules info message is displayed');
-    }
-
-    @TSBDDStepDef('Rounding Logic dropdown should show Select by default')
-    async verifyRoundingLogicShowsSelectByDefault(): Promise<void> {
-        Tsreporter.info('Verifying Rounding Logic dropdown shows Select by default');
-        const selectOption = CSElementFactory.createByXPath(
-            `//h5[text()='Other Rules (Optional)']/ancestor::section[1]//button[@name='roundingType']//span[@class='sssss-button__label' and text()='Select']`,
-            'Rounding Logic Select option',
-            this.addScatteredMmtePage.getPage()
-        );
-        await selectOption.waitForVisible(10000);
-        Tsreporter.pass('Rounding Logic dropdown shows Select by default');
-    }
-
-    @TSBDDStepDef('Rounding Factor dropdown should show Select by default')
-    async verifyRoundingFactorShowsSelectByDefault(): Promise<void> {
-        Tsreporter.info('Verifying Rounding Factor dropdown shows Select by default');
-        const selectOption = CSElementFactory.createByXPath(
-            `//h5[text()='Other Rules (Optional)']/ancestor::section[1]//button[@name='roundingFactor']//span[@class='sssss-button__label' and text()='Select']`,
-            'Rounding Factor Select option',
-            this.addScatteredMmtePage.getPage()
-        );
-        await selectOption.waitForVisible(10000);
-        Tsreporter.pass('Rounding Factor dropdown shows Select by default');
-    }
-
-    @TSBDDStepDef('I click Rounding Logic dropdown on Add screen')
-    async clickRoundingLogicDropdownOnAddScreen(): Promise<void> {
-        Tsreporter.info('Clicking Rounding Logic dropdown on Add screen');
-        await this.addScatteredMmtePage.roundingLogicDropdown.clickWithTimeout(10000);
-        Tsreporter.pass('Clicked Rounding Logic dropdown');
-    }
-
-    @TSBDDStepDef('I should see Rounding Logic option Round')
-    async verifyRoundingLogicOptionRound(): Promise<void> {
-        Tsreporter.info('Verifying Rounding Logic option Round');
-        const roundOption = CSElementFactory.createByXPath(
-            `//div[contains(@class, 'sssss-balloon') and @name='roundingType']//li[@role='option']//span[contains(@class, 'sssss-menu-item__label')]/span[text()='Round']`,
-            'Rounding Logic option Round',
-            this.addScatteredMmtePage.getPage()
-        );
-        await roundOption.waitForVisible(10000);
-        Tsreporter.pass('Rounding Logic option Round is present');
-    }
-
-    @TSBDDStepDef('I should see Rounding Logic option Round Up')
-    async verifyRoundingLogicOptionRoundUp(): Promise<void> {
-        Tsreporter.info('Verifying Rounding Logic option Round Up');
-        const option = CSElementFactory.createByXPath(
-            `//div[contains(@class, 'sssss-balloon') and @name='roundingType']//li[@role='option']//span[contains(@class, 'sssss-menu-item__label')]/span[text()='Round Up']`,
-            'Rounding Logic option Round Up',
-            this.addScatteredMmtePage.getPage()
-        );
-        await option.waitForVisible(10000);
-        Tsreporter.pass('Rounding Logic option Round Up is present');
-    }
-
-    @TSBDDStepDef('I should see Rounding Logic option Round Down')
-    async verifyRoundingLogicOptionRoundDown(): Promise<void> {
-        Tsreporter.info('Verifying Rounding Logic option Round Down');
-        const option = CSElementFactory.createByXPath(
-            `//div[contains(@class, 'sssss-balloon') and @name='roundingType']//li[@role='option']//span[contains(@class, 'sssss-menu-item__label')]/span[text()='Round Down']`,
-            'Rounding Logic option Round Down',
-            this.addScatteredMmtePage.getPage()
-        );
-        await option.waitForVisible(10000);
-        Tsreporter.pass('Rounding Logic option Round Down is present');
-    }
-
-    @TSBDDStepDef('I should see Rounding Logic option Nearest')
-    async verifyRoundingLogicOptionNearest(): Promise<void> {
-        Tsreporter.info('Verifying Rounding Logic option Nearest');
-        const option = CSElementFactory.createByXPath(
-            `//div[contains(@class, 'sssss-balloon') and @name='roundingType']//li[@role='option']//span[contains(@class, 'sssss-menu-item__label')]/span[text()='Nearest']`,
-            'Rounding Logic option Nearest',
-            this.addScatteredMmtePage.getPage()
-        );
-        await option.waitForVisible(10000);
-        Tsreporter.pass('Rounding Logic option Nearest is present');
-    }
-
-    @TSBDDStepDef('I should see Rounding Logic option Truncate')
-    async verifyRoundingLogicOptionTruncate(): Promise<void> {
-        Tsreporter.info('Verifying Rounding Logic option Truncate');
-        const option = CSElementFactory.createByXPath(
-            `//div[contains(@class, 'sssss-balloon') and @name='roundingType']//li[@role='option']//span[contains(@class, 'sssss-menu-item__label')]/span[text()='Truncate']`,
-            'Rounding Logic option Truncate',
-            this.addScatteredMmtePage.getPage()
-        );
-        await option.waitForVisible(10000);
-        Tsreporter.pass('Rounding Logic option Truncate is present');
-    }
-
-    @TSBDDStepDef('I select Rounding Logic Round on Add screen')
-    async selectRoundingLogicRound(): Promise<void> {
-        Tsreporter.info('Selecting Rounding Logic Round');
-        const roundOption = CSElementFactory.createByXPath(
-            `//div[contains(@class, 'sssss-balloon') and @name='roundingType']//ul[@role='listbox']//li[@role='option']//span[text()='Round']/parent::span`,
-            'Rounding Logic option Round',
-            this.addScatteredMmtePage.getPage()
-        );
-        await roundOption.clickWithTimeout(10000);
-        await this.addScatteredMmtePage.getPage().waitForTimeout(500);
-        Tsreporter.pass('Selected Rounding Logic Round');
-    }
-
-    @TSBDDStepDef('I select Rounding Logic Round Up on Add screen')
-    async selectRoundingLogicRoundUp(): Promise<void> {
-        Tsreporter.info('Selecting Rounding Logic Round Up');
-        const option = CSElementFactory.createByXPath(
-            `//div[contains(@class, 'sssss-balloon') and @name='roundingType']//ul[@role='listbox']//li[@role='option']//span[text()='Round Up']/parent::span`,
-            'Rounding Logic option Round Up',
-            this.addScatteredMmtePage.getPage()
-        );
-        await option.clickWithTimeout(10000);
-        await this.addScatteredMmtePage.getPage().waitForTimeout(500);
-        Tsreporter.pass('Selected Rounding Logic Round Up');
-    }
-
-    @TSBDDStepDef('I select Rounding Logic Round Down on Add screen')
-    async selectRoundingLogicRoundDown(): Promise<void> {
-        Tsreporter.info('Selecting Rounding Logic Round Down');
-        const option = CSElementFactory.createByXPath(
-            `//div[contains(@class, 'sssss-balloon') and @name='roundingType']//ul[@role='listbox']//li[@role='option']//span[text()='Round Down']/parent::span`,
-            'Rounding Logic option Round Down',
-            this.addScatteredMmtePage.getPage()
-        );
-        await option.clickWithTimeout(10000);
-        await this.addScatteredMmtePage.getPage().waitForTimeout(500);
-        Tsreporter.pass('Selected Rounding Logic Round Down');
-    }
-
-    @TSBDDStepDef('I select Rounding Logic Nearest on Add screen')
-    async selectRoundingLogicNearest(): Promise<void> {
-        Tsreporter.info('Selecting Rounding Logic Nearest');
-        const option = CSElementFactory.createByXPath(
-            `//div[contains(@class, 'sssss-balloon') and @name='roundingType']//ul[@role='listbox']//li[@role='option']//span[text()='Nearest']/parent::span`,
-            'Rounding Logic option Nearest',
-            this.addScatteredMmtePage.getPage()
-        );
-        await option.clickWithTimeout(10000);
-        await this.addScatteredMmtePage.getPage().waitForTimeout(500);
-        Tsreporter.pass('Selected Rounding Logic Nearest');
-    }
-
-    @TSBDDStepDef('I select Rounding Logic Truncate on Add screen')
-    async selectRoundingLogicTruncate(): Promise<void> {
-        Tsreporter.info('Selecting Rounding Logic Truncate');
-        const option = CSElementFactory.createByXPath(
-            `//div[contains(@class, 'sssss-balloon') and @name='roundingType']//ul[@role='listbox']//li[@role='option']//span[text()='Truncate']/parent::span`,
-            'Rounding Logic option Truncate',
-            this.addScatteredMmtePage.getPage()
-        );
-        await option.clickWithTimeout(10000);
-        await this.addScatteredMmtePage.getPage().waitForTimeout(500);
-        Tsreporter.pass('Selected Rounding Logic Truncate');
-    }
-
-    @TSBDDStepDef('I click Rounding Factor dropdown on Add screen')
-    async clickRoundingFactorDropdownOnAddScreen(): Promise<void> {
-        Tsreporter.info('Clicking Rounding Factor dropdown on Add screen');
-        await this.addScatteredMmtePage.roundingFactorDropdown.clickWithTimeout(10000);
-        Tsreporter.pass('Clicked Rounding Factor dropdown');
-    }
-
-    @TSBDDStepDef('I should see Rounding Factor options for Round logic')
-    async verifyRoundingFactorOptionsForRound(): Promise<void> {
-        Tsreporter.info('Verifying Rounding Factor options for Round logic');
-        // Round logic options: 1/10000th, 1/1000th, 1/100th, 1/10th
-        const options = ['1/10000th', '1/1000th', '1/100th', '1/10th'];
-        for (const opt of options) {
-            const optionElement = CSElementFactory.createByXPath(
-                `//div[contains(@class, 'sssss-balloon') and @name='roundingFactor']//li[@role='option']//span[contains(@class, 'sssss-menu-item__label')]/span[text()='${opt}']`,
-                `Rounding Factor option ${opt}`,
-                this.addScatteredMmtePage.getPage()
-            );
-            await optionElement.waitForVisible(5000);
-            Tsreporter.info(`✓ Rounding Factor option '${opt}' is present`);
-        }
-        Tsreporter.pass('All Rounding Factor options for Round logic are present');
-    }
-
-    @TSBDDStepDef('I should see Rounding Factor options for Round Up logic')
-    async verifyRoundingFactorOptionsForRoundUp(): Promise<void> {
-        Tsreporter.info('Verifying Rounding Factor options for Round Up logic');
-        // Round Up/Down options: Nearest 1/8th, Nearest 1/16th, Nearest 1/32nd, Nearest 1/10th, Nearest 1/100th, Nearest 1/1000th, Nearest 1/10000th
-        const options = ['Nearest 1/8th', 'Nearest 1/16th', 'Nearest 1/32nd', 'Nearest 1/10th', 'Nearest 1/100th', 'Nearest 1/1000th', 'Nearest 1/10000th'];
-        for (const opt of options) {
-            const optionElement = CSElementFactory.createByXPath(
-                `//div[contains(@class, 'sssss-balloon') and @name='roundingFactor']//li[@role='option']//span[contains(@class, 'sssss-menu-item__label')]/span[text()='${opt}']`,
-                `Rounding Factor option ${opt}`,
-                this.addScatteredMmtePage.getPage()
-            );
-            await optionElement.waitForVisible(5000);
-            Tsreporter.info(`✓ Rounding Factor option '${opt}' is present`);
-        }
-        Tsreporter.pass('All Rounding Factor options for Round Up logic are present');
-    }
-
-    @TSBDDStepDef('I should see Rounding Factor options for Round Down logic')
-    async verifyRoundingFactorOptionsForRoundDown(): Promise<void> {
-        Tsreporter.info('Verifying Rounding Factor options for Round Down logic');
-        // Same as Round Up
-        const options = ['Nearest 1/8th', 'Nearest 1/16th', 'Nearest 1/32nd', 'Nearest 1/10th', 'Nearest 1/100th', 'Nearest 1/1000th', 'Nearest 1/10000th'];
-        for (const opt of options) {
-            const optionElement = CSElementFactory.createByXPath(
-                `//div[contains(@class, 'sssss-balloon') and @name='roundingFactor']//li[@role='option']//span[contains(@class, 'sssss-menu-item__label')]/span[text()='${opt}']`,
-                `Rounding Factor option ${opt}`,
-                this.addScatteredMmtePage.getPage()
-            );
-            await optionElement.waitForVisible(5000);
-            Tsreporter.info(`✓ Rounding Factor option '${opt}' is present`);
-        }
-        Tsreporter.pass('All Rounding Factor options for Round Down logic are present');
-    }
-
-    @TSBDDStepDef('I should see Rounding Factor options for Nearest logic')
-    async verifyRoundingFactorOptionsForNearest(): Promise<void> {
-        Tsreporter.info('Verifying Rounding Factor options for Nearest logic');
-        // Nearest options: Nearest 1/8th, Nearest 1/16th, Nearest 1/32nd
-        const options = ['Nearest 1/8th', 'Nearest 1/16th', 'Nearest 1/32nd'];
-        for (const opt of options) {
-            const optionElement = CSElementFactory.createByXPath(
-                `//div[contains(@class, 'sssss-balloon') and @name='roundingFactor']//li[@role='option']//span[contains(@class, 'sssss-menu-item__label')]/span[text()='${opt}']`,
-                `Rounding Factor option ${opt}`,
-                this.addScatteredMmtePage.getPage()
-            );
-            await optionElement.waitForVisible(5000);
-            Tsreporter.info(`✓ Rounding Factor option '${opt}' is present`);
-        }
-        Tsreporter.pass('All Rounding Factor options for Nearest logic are present');
-    }
-
-    @TSBDDStepDef('I should see Rounding Factor options for Truncate logic')
-    async verifyRoundingFactorOptionsForTruncate(): Promise<void> {
-        Tsreporter.info('Verifying Rounding Factor options for Truncate logic');
-        // Same as Round: 1/10000th, 1/1000th, 1/100th, 1/10th
-        const options = ['1/10000th', '1/1000th', '1/100th', '1/10th'];
-        for (const opt of options) {
-            const optionElement = CSElementFactory.createByXPath(
-                `//div[contains(@class, 'sssss-balloon') and @name='roundingFactor']//li[@role='option']//span[contains(@class, 'sssss-menu-item__label')]/span[text()='${opt}']`,
-                `Rounding Factor option ${opt}`,
-                this.addScatteredMmtePage.getPage()
-            );
-            await optionElement.waitForVisible(5000);
-            Tsreporter.info(`✓ Rounding Factor option '${opt}' is present`);
-        }
-        Tsreporter.pass('All Rounding Factor options for Truncate logic are present');
-    }
-
-    // ===================================================================
-    // RR04 - FOOTER BUTTONS (Req Lines 600-603)
-    // ===================================================================
-
-    @TSBDDStepDef('I should see Save button disabled by default')
-    async verifySaveButtonDisabledByDefault(): Promise<void> {
-        Tsreporter.info('Verifying Save button is disabled by default');
-        const isDisabled = await this.addScatteredMmtePage.saveButton.isDisabledWithTimeout(5000);
-        if (isDisabled) {
-            Tsreporter.pass('Save button is disabled by default');
-        } else {
-            throw new Error('Save button is NOT disabled by default');
-        }
+        Tsreporter.pass('Sport mmte creation test data resolved');
     }
