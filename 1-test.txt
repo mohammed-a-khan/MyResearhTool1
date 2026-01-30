@@ -1,265 +1,791 @@
-@TSBDDStepDef('Rust Whool Mirchiary Nnnnn Base Days value should match expected')
-    async verifyRustWhoolMirchiaryNnnnnBaseDaysValueMatchesExpected(): Promise<void> {
-        Tsreporter.info('Verifying Rust Whool Mirchiary Nnnnn Base Days value matches expected');
-        // Per RR05 Req Lines 748-752: Check fvvvvv rust
-        const rustWhoolMirchiaryNnnnnBaseFvvvvv = this.scenarioContext.getVariable('rustWhoolMirchiaryNnnnnBaseFvvvvv');
-        const strUIRustWhoolMirchiaryNnnnnBaseDays = await this.scatteredMmteDetailsPage.getWhoolFieldValue('Rust Whool', 'Mirchiary Nnnnn Base/Days');
+# Verify Other Whools section on details page
+        And I should see Other Whools section on details page
+        When I expand Other Whools section on details page if collapsed
+        Then Other Whools Rounding Logic value should match expected
+        And Other Whools Rounding Factor value should match expected
 
-        if (rustWhoolMirchiaryNnnnnBaseFvvvvv === 'true' || rustWhoolMirchiaryNnnnnBaseFvvvvv === 'True' || rustWhoolMirchiaryNnnnnBaseFvvvvv === 'Yes' || rustWhoolMirchiaryNnnnnBaseFvvvvv === 'Y') {
-            const expectedDays = this.scenarioContext.getVariable('rustWhoolMirchiaryNnnnnBaseDays');
-            const normalizedExpected = (expectedDays === null || expectedDays === undefined) ? '' : String(expectedDays).trim();
-            const normalizedActual = strUIRustWhoolMirchiaryNnnnnBaseDays.trim();
-            if (normalizedExpected !== normalizedActual) {
-                throw new Error(`Expected Rust Whool Mirchiary Nnnnn Base Days '${normalizedExpected}' but got '${normalizedActual}'`);
-            }
-            Tsreporter.pass(`Rust Whool Mirchiary Nnnnn Base Days value matches: ${normalizedActual}`);
+        # Verify Associated Zeal/Premisis section
+        And I should see Associated Zeal/Premisis header on details page
+        And I should see Associated Zeal/Premisis table on details page
+        And I verify Associated Zeal/Premisis table column headers
+        And I should see No data available message in Associated Zeal/Premisis table
+
+        # Database verification - SCATTERED_MMTE table
+        Then I verify SCATTERED_MMTE table data for created scattered mmte
+
+        # Database verification - Rust Whool
+        And I verify Rust Whool database data for created scattered mmte
+
+        # Database verification - Mirchi Whool
+        And I verify Mirchi Whool database data for created scattered mmte
+
+        # Database verification - SCATTERED_MMTE_CALC (no records before job)
+        And I verify SCATTERED_MMTE_CALC table has no records for created scattered mmte
+
+        # Switch to technical user to run the job
+        When I clear browser context for re-authentication
+        And I login to TTTF as "<technicalUser>"
+        Then I should see Home page header
+        And I should see welcome message with username "<technicalUser>"
+
+        # Navigate to Settings > Scheduled Jobs (using existing tttf-settings module steps)
+        When I click on Settings link button
+        And I click on menu option "Scheduled Jobs" in Settings
+        Then I should see "Scheduled Jobs" page displayed
+
+        # Verify DEFAULT Triggers section
+        And I should see DEFAULT Triggers section
+        And I verify DEFAULT Triggers table headers
+
+        # Navigate to ScatteredMmteCalJobTrigger and run job
+        When I click ScatteredMmteCalJobTrigger link
+        Then I should see Trigger Detail page header
+        And I should see ScatteredMmteCalJobTrigger trigger name
+        And I should see NORMAL status for trigger
+        And I verify Run Job button is present and enabled
+        When I click Run Job button and wait for job to complete
+
+        # Database verification - SCATTERED_MMTE_CALC (should have records after job)
+        Then I verify SCATTERED_MMTE_CALC table has records after job execution
+
+        # Switch back to kindness user
+        When I clear browser context for re-authentication
+        And I login to TTTF as "<userName>"
+        Then I should see Home page header
+        And I should see welcome message with username "<userName>"
+
+        # Navigate to Scattered Mmtes and search for created mmte
+        When I click on Scattered Mmtes menu item
+        Then I should see Scattered Mmtes page header
+        And I wait for loader to complete
+        Then I search for created scattered mmte in Sport Mmte list
+
+        # Navigate to details page and verify calculated mmte
+        When I click on created scattered mmte name link to navigate to details
+        Then I should see Scattered Mmte Details page header
+        And Mmte percentage value should match calculated mmte
+
+
+    ----------------------------------------------------------------------------------------------------------------------
+
+    // ===================================================================
+    // RR05 - SCATTERED MMTE CREATION VERIFICATION METHODS (Req Lines 1052-1228)
+    // ===================================================================
+
+    /**
+     * Get Scattered Mmte basic details for verification
+     * Per RR05 Req Lines 1054-1073
+     * Query: DB_QUERY_GET_SCATTERED_MMTE_BASIC_DETAILS
+     * @param scatteredMmteName - The scattered mmte name
+     */
+    public static async getScatteredMmteBasicDetails(scatteredMmteName: string): Promise<{
+        cumulativeMmteName: string;
+        scatteredMmteName: string;
+        methodologyType: string;
+        sportMmteWhoolPriorityType: string;
+        primaryTtcalcType: string | null;
+        roundingType: string | null;
+        roundingNearestFractionAmt: string | null;
+        isWhoolsManual: string;
+    } | null> {
+        Tsreporter.info(`Getting scattered mmte basic details for: ${scatteredMmteName}`);
+
+        const result = await CSDBUtils.executeQuery(
+            this.DB_ALIAS,
+            'GET_SCATTERED_MMTE_BASIC_DETAILS',
+            [scatteredMmteName]
+        );
+
+        if (!result.rows || result.rows.length === 0) {
+            Tsreporter.warn(`No scattered mmte details found for: ${scatteredMmteName}`);
+            return null;
+        }
+
+        const row = result.rows[0];
+        return {
+            cumulativeMmteName: row.cumulative_mmte_name || row.CUMULATIVE_MMTE_NAME || '',
+            scatteredMmteName: row.scattered_mmte_name || row.SCATTERED_MMTE_NAME || '',
+            methodologyType: row.methodology_type || row.METHODOLOGY_TYPE || '',
+            sportMmteWhoolPriorityType: row.sport_mmte_whool_priority_type || row.SPORT_MMTE_WHOOL_PRIORITY_TYPE || '',
+            primaryTtcalcType: row.primary_ttcalc_type || row.PRIMARY_TTCALC_TYPE || null,
+            roundingType: row.rounding_type || row.ROUNDING_TYPE || null,
+            roundingNearestFractionAmt: row.rounding_nearest_fraction_amt || row.ROUNDING_NEAREST_FRACTION_AMT || null,
+            isWhoolsManual: row.is_whools_manual || row.IS_WHOOLS_MANUAL || 'N'
+        };
+    }
+
+    /**
+     * Get Rust Whool details for verification
+     * Per RR05 Req Lines 1074-1148
+     * Query: DB_QUERY_GET_RUST_WHOOL_DETAILS
+     * @param scatteredMmteName - The scattered mmte name
+     */
+    public static async getRustWhoolDetails(scatteredMmteName: string): Promise<{
+        wwwwwVvvvv: number;
+        baseDate: number;
+        baseDayNnnnn: string;
+        nonBusDayNnnnnFvvvvv: string;
+        baseDateOffset: number | null;
+        baseDateOffsetType: string | null;
+        mirchiaryNnnnnBaseDate: number | null;
+        mirchiaryNnnnnBaseDateOffsetType: string | null;
+        hookwithOffset: number | null;
+        hookwithIncludeWeekendFvvvvv: string | null;
+        hookwithIncludeBoringFvvvvv: string | null;
+    } | null> {
+        Tsreporter.info(`Getting rust whool details for: ${scatteredMmteName}`);
+
+        const result = await CSDBUtils.executeQuery(
+            this.DB_ALIAS,
+            'GET_RUST_WHOOL_DETAILS',
+            [scatteredMmteName]
+        );
+
+        if (!result.rows || result.rows.length === 0) {
+            Tsreporter.warn(`No rust whool details found for: ${scatteredMmteName}`);
+            return null;
+        }
+
+        const row = result.rows[0];
+        return {
+            wwwwwVvvvv: parseInt(row.wwwww_vvvvv || row.WWWWW_VVVVV || '0'),
+            baseDate: parseInt(row.base_date || row.BASE_DATE || '0'),
+            baseDayNnnnn: row.base_day_nnnnn || row.BASE_DAY_NNNNN || '',
+            nonBusDayNnnnnFvvvvv: row.non_bus_day_nnnnn_fvvvvv || row.NON_BUS_DAY_NNNNN_FVVVVV || 'N',
+            baseDateOffset: row.base_date_offset || row.BASE_DATE_OFFSET || null,
+            baseDateOffsetType: row.base_date_offset_type || row.BASE_DATE_OFFSET_TYPE || null,
+            mirchiaryNnnnnBaseDate: row.mirchiary_nnnnn_base_date || row.MIRCHIARY_NNNNN_BASE_DATE || null,
+            mirchiaryNnnnnBaseDateOffsetType: row.mirchiary_nnnnn_base_date_offset_type || row.MIRCHIARY_NNNNN_BASE_DATE_OFFSET_TYPE || null,
+            hookwithOffset: row.hookwith_offset || row.HOOKWITH_OFFSET || null,
+            hookwithIncludeWeekendFvvvvv: row.hookwith_include_weekend_fvvvvv || row.HOOKWITH_INCLUDE_WEEKEND_FVVVVV || null,
+            hookwithIncludeBoringFvvvvv: row.hookwith_include_boring_fvvvvv || row.HOOKWITH_INCLUDE_BORING_FVVVVV || null
+        };
+    }
+
+    /**
+     * Get Mirchi Whool details for verification
+     * Per RR05 Req Lines 1149-1223
+     * Query: DB_QUERY_GET_MIRCHI_WHOOL_DETAILS
+     * @param scatteredMmteName - The scattered mmte name
+     */
+    public static async getMirchiWhoolDetails(scatteredMmteName: string): Promise<{
+        wwwwwVvvvv: number;
+        baseDate: number;
+        baseDayNnnnn: string;
+        nonBusDayNnnnnFvvvvv: string;
+        baseDateOffset: number | null;
+        baseDateOffsetType: string | null;
+        mirchiaryNnnnnBaseDate: number | null;
+        mirchiaryNnnnnBaseDateOffsetType: string | null;
+        hookwithOffset: number | null;
+        hookwithIncludeWeekendFvvvvv: string | null;
+        hookwithIncludeBoringFvvvvv: string | null;
+    } | null> {
+        Tsreporter.info(`Getting mirchi whool details for: ${scatteredMmteName}`);
+
+        const result = await CSDBUtils.executeQuery(
+            this.DB_ALIAS,
+            'GET_MIRCHI_WHOOL_DETAILS',
+            [scatteredMmteName]
+        );
+
+        if (!result.rows || result.rows.length === 0) {
+            Tsreporter.info(`No mirchi whool details found for: ${scatteredMmteName} (may be expected)`);
+            return null;
+        }
+
+        const row = result.rows[0];
+        return {
+            wwwwwVvvvv: parseInt(row.wwwww_vvvvv || row.WWWWW_VVVVV || '0'),
+            baseDate: parseInt(row.base_date || row.BASE_DATE || '0'),
+            baseDayNnnnn: row.base_day_nnnnn || row.BASE_DAY_NNNNN || '',
+            nonBusDayNnnnnFvvvvv: row.non_bus_day_nnnnn_fvvvvv || row.NON_BUS_DAY_NNNNN_FVVVVV || 'N',
+            baseDateOffset: row.base_date_offset || row.BASE_DATE_OFFSET || null,
+            baseDateOffsetType: row.base_date_offset_type || row.BASE_DATE_OFFSET_TYPE || null,
+            mirchiaryNnnnnBaseDate: row.mirchiary_nnnnn_base_date || row.MIRCHIARY_NNNNN_BASE_DATE || null,
+            mirchiaryNnnnnBaseDateOffsetType: row.mirchiary_nnnnn_base_date_offset_type || row.MIRCHIARY_NNNNN_BASE_DATE_OFFSET_TYPE || null,
+            hookwithOffset: row.hookwith_offset || row.HOOKWITH_OFFSET || null,
+            hookwithIncludeWeekendFvvvvv: row.hookwith_include_weekend_fvvvvv || row.HOOKWITH_INCLUDE_WEEKEND_FVVVVV || null,
+            hookwithIncludeBoringFvvvvv: row.hookwith_include_boring_fvvvvv || row.HOOKWITH_INCLUDE_BORING_FVVVVV || null
+        };
+    }
+
+    /**
+     * Get Scattered Mmte Calc data for verification
+     * Per RR05 Req Lines 1224-1228 and 1281-1301
+     * Query: DB_QUERY_GET_SCATTERED_MMTE_CALC
+     * @param scatteredMmteName - The scattered mmte name
+     */
+    public static async getScatteredMmteCalcData(scatteredMmteName: string): Promise<Array<{
+        scatteredMmteName: string;
+        sportMmteDeterminationDate: string;
+        idxDate: string;
+        cycleDate: string;
+        mmte: string;
+        mmteDt: string;
+    }>> {
+        Tsreporter.info(`Getting scattered mmte calc data for: ${scatteredMmteName}`);
+
+        const result = await CSDBUtils.executeQuery(
+            this.DB_ALIAS,
+            'GET_SCATTERED_MMTE_CALC',
+            [scatteredMmteName]
+        );
+
+        if (!result.rows || result.rows.length === 0) {
+            Tsreporter.info(`No scattered mmte calc data found for: ${scatteredMmteName}`);
+            return [];
+        }
+
+        return result.rows.map((row: any) => ({
+            scatteredMmteName: row.scattered_mmte_name || row.SCATTERED_MMTE_NAME || '',
+            sportMmteDeterminationDate: row.sport_mmte_determination_date || row.SPORT_MMTE_DETERMINATION_DATE || '',
+            idxDate: row.idx_date || row.IDX_DATE || '',
+            cycleDate: row.cycle_date || row.CYCLE_DATE || '',
+            mmte: row.mmte || row.MMTE || '',
+            mmteDt: row.mmte_dt || row.MMTE_DT || ''
+        }));
+    }
+
+
+
+
+    --------------------------------------------------------------------------------------------------------------
+
+
+// ===================================================================
+    // CURRENT MMTE SECTION
+    // ===================================================================
+
+    @tsgetElement({
+        xpath: '//div[@class="body-container"]//h2[normalize-space(text())="Current Mmte"]',
+        description: 'Current Mmte section header',
+        waitForVisible: true
+    })
+    public currentMmteSectionHeader!: CSWebElement;
+
+    @tsgetElement({
+        xpath: '//div[@class="body-container"]//h2[normalize-space(text())="Current Mmte"]/parent::div[1]//h5[text()="Mmte(%)"]',
+        description: 'Mmte(%) label',
+        waitForVisible: true
+    })
+    public mmtePercentLabel!: CSWebElement;
+
+    @tsgetElement({
+        xpath: '//div[@class="body-container"]//h2[normalize-space(text())="Current Mmte"]/parent::div[1]//h5[text()="Mmte(%)"]/following-sibling::dd[1]',
+        description: 'Mmte(%) value',
+        waitForVisible: true
+    })
+    public mmtePercentValue!: CSWebElement;
+
+    @tsgetElement({
+        xpath: '//div[@class="body-container"]//h2[normalize-space(text())="Current Mmte"]/parent::div[1]//a[text()="View Mmte History"]',
+        description: 'View Mmte History link',
+        waitForVisible: false
+    })
+    public viewMmteHistoryLink!: CSWebElement;
+
+
+
+
+
+    // ===================================================================
+    // CURRENT MMTE METHODS
+    // ===================================================================
+
+    /**
+     * Verify Current Mmte section header is present
+     */
+    public async verifyCurrentMmteSectionPresent(): Promise<void> {
+        Tsreporter.info('Verifying Current Mmte section header');
+        await this.currentMmteSectionHeader.waitForVisible(10000);
+        Tsreporter.pass('Current Mmte section header is present');
+    }
+
+    /**
+     * Get Mmte(%) value from Current Mmte section
+     */
+    public async getMmtePercentValue(): Promise<string> {
+        Tsreporter.info('Getting Mmte(%) value');
+        await this.mmtePercentValue.waitForVisible(10000);
+        const value = await this.mmtePercentValue.textContentWithTimeout(5000);
+        Tsreporter.info(`Mmte(%) value: ${value}`);
+        return value?.trim() || '';
+    }
+
+    /**
+     * Verify Mmte(%) value matches expected value
+     */
+    public async verifyMmtePercentValue(expectedValue: string): Promise<void> {
+        Tsreporter.info(`Verifying Mmte(%) value matches: ${expectedValue}`);
+        const actualValue = await this.getMmtePercentValue();
+        if (actualValue !== expectedValue) {
+            throw new Error(`Mmte(%) value mismatch. Expected: ${expectedValue}, Actual: ${actualValue}`);
+        }
+        Tsreporter.pass(`Mmte(%) value matches expected: ${actualValue}`);
+    }
+
+    /**
+     * Check if Mmte(%) value is N/A
+     */
+    public async isMmtePercentNA(): Promise<boolean> {
+        Tsreporter.info('Checking if Mmte(%) value is N/A');
+        const value = await this.getMmtePercentValue();
+        const isNA = value === 'N/A' || value === 'N / A';
+        Tsreporter.info(`Mmte(%) is N/A: ${isNA}`);
+        return isNA;
+    }
+
+    /**
+     * Verify View Mmte History link is present
+     */
+    public async verifyViewMmteHistoryLinkPresent(): Promise<void> {
+        Tsreporter.info('Verifying View Mmte History link is present');
+        const isVisible = await this.viewMmteHistoryLink.isVisibleWithTimeout(5000);
+        if (isVisible) {
+            Tsreporter.pass('View Mmte History link is present');
         } else {
-            // Per RR05 Req Line 752: If fvvvvv is false, UI value should be empty
-            if (strUIRustWhoolMirchiaryNnnnnBaseDays.trim() !== '') {
-                throw new Error(`Expected Rust Whool Mirchiary Nnnnn Base Days to be empty but got '${strUIRustWhoolMirchiaryNnnnnBaseDays}'`);
-            }
-            Tsreporter.pass('Rust Whool Mirchiary Nnnnn Base Days value verified (empty as expected)');
+            throw new Error('View Mmte History link is not present');
         }
     }
 
-    @TSBDDStepDef('Rust Whool Mirchiary Nnnnn Base Associate To value should match expected')
-    async verifyRustWhoolMirchiaryNnnnnBaseAssociateToValueMatchesExpected(): Promise<void> {
-        Tsreporter.info('Verifying Rust Whool Mirchiary Nnnnn Base Associate To value matches expected');
-        // Per RR05 Req Lines 748-752: Check fvvvvv rust
-        const rustWhoolMirchiaryNnnnnBaseFvvvvv = this.scenarioContext.getVariable('rustWhoolMirchiaryNnnnnBaseFvvvvv');
-        const strUIRustWhoolMirchiaryNnnnnBaseAssociateTo = await this.scatteredMmteDetailsPage.getWhoolFieldValue('Rust Whool', 'Mirchiary Nnnnn Base/Associate To');
 
-        if (rustWhoolMirchiaryNnnnnBaseFvvvvv === 'true' || rustWhoolMirchiaryNnnnnBaseFvvvvv === 'True' || rustWhoolMirchiaryNnnnnBaseFvvvvv === 'Yes' || rustWhoolMirchiaryNnnnnBaseFvvvvv === 'Y') {
-            const expectedValue = this.scenarioContext.getVariable('rustWhoolMirchiaryNnnnnBaseDaysAssociateTo');
-            const normalizedExpected = (expectedValue === null || expectedValue === undefined) ? '' : String(expectedValue).trim();
-            const normalizedActual = strUIRustWhoolMirchiaryNnnnnBaseAssociateTo.trim();
-            if (normalizedExpected !== normalizedActual) {
-                throw new Error(`Expected Rust Whool Mirchiary Nnnnn Base Associate To '${normalizedExpected}' but got '${normalizedActual}'`);
+
+--------------------------------------------------------------------------------------------------------
+
+import { CSBasePage, CSPage, CSGetElement } from '@mdakhan.mak/cs-playwright-test-framework/core';
+import { CSWebElement, CSElementFactory } from '@mdakhan.mak/cs-playwright-test-framework/element';
+import { Tsreporter } from '@mdakhan.mak/cs-playwright-test-framework/reporter';
+
+/**
+ * TTTF Scheduled Jobs Page
+ * Source: Scattered_Mmte_Sport_Mmte_5.txt (RR05 - Lines 1225-1280)
+ * Handles Scheduled Jobs page and Trigger Detail interactions
+ * All XPath locators follow Page Object Model pattern
+ */
+@CSPage('tttf-scheduled-jobs')
+export class TTTFScheduledJobsPage extends CSBasePage {
+
+    // ===================================================================
+    // SCHEDULED JOBS PAGE ELEMENTS
+    // ===================================================================
+
+    @tsgetElement({
+        xpath: '//div[@class="body-container"]//h1[text()="Scheduled Jobs"]',
+        description: 'Scheduled Jobs page header',
+        waitForVisible: true
+    })
+    public scheduledJobsHeader!: CSWebElement;
+
+    @tsgetElement({
+        xpath: `//div[@class='body-container']//h3[normalize-space(.)='DEFAULT Triggers']`,
+        description: 'DEFAULT Triggers section header',
+        waitForVisible: true
+    })
+    public defaultTriggersSection!: CSWebElement;
+
+    // ===================================================================
+    // TRIGGER DETAIL PAGE ELEMENTS
+    // ===================================================================
+
+    @tsgetElement({
+        xpath: '//div[@class="body-container"]//h1[text()="Trigger Detail"]',
+        description: 'Trigger Detail page header',
+        waitForVisible: true
+    })
+    public triggerDetailHeader!: CSWebElement;
+
+    @tsgetElement({
+        xpath: `//div[@class='body-container']//h1[text()='Trigger Detail']/parent::div[1]//dt[text()='Status']/following-sibling::dd[1]//span[@class='sssss-button__label' and text()='Run Job']/parent::button[1]`,
+        description: 'Run Job button',
+        waitForVisible: true
+    })
+    public runJobButton!: CSWebElement;
+
+    @tsgetElement({
+        xpath: `//div[@class='body-container']//h1[text()='Trigger Detail']/parent::div[1]//dd[text()='NORMAL']`,
+        description: 'NORMAL status indicator',
+        waitForVisible: false
+    })
+    public normalStatusIndicator!: CSWebElement;
+
+    // ===================================================================
+    // INITIALIZATION
+    // ===================================================================
+
+    protected initializeElements(): void {
+        Tsreporter.debug('TTTFScheduledJobsPage elements initialized');
+    }
+
+    // ===================================================================
+    // DYNAMIC ELEMENT GETTERS
+    // ===================================================================
+
+    /**
+     * Get table header element in DEFAULT Triggers table
+     */
+    public getDefaultTriggersTableHeader(headerName: string): CSWebElement {
+        return CSElementFactory.createWithTemplate(
+            `//div[@class='body-container']//h3[normalize-space(.)='DEFAULT Triggers']/parent::div[1]//table/thead/tr/th[text()='\${header}']`,
+            { header: headerName },
+            `DEFAULT Triggers table header: ${headerName}`,
+            this.page
+        );
+    }
+
+    /**
+     * Get trigger link by trigger name
+     */
+    public getTriggerLink(triggerName: string): CSWebElement {
+        return CSElementFactory.createWithTemplate(
+            `//div[@class='body-container']//h3[normalize-space(.)='DEFAULT Triggers']/parent::div[1]//table/tbody/tr[@data-rowkey='\${trigger}']/td[1]//a[text()='\${trigger}']`,
+            { trigger: triggerName },
+            `Trigger link: ${triggerName}`,
+            this.page
+        );
+    }
+
+    /**
+     * Get trigger name element on Trigger Detail page
+     */
+    public getTriggerNameElement(triggerName: string): CSWebElement {
+        return CSElementFactory.createWithTemplate(
+            `//div[@class='body-container']//h1[text()='Trigger Detail']/parent::div[1]//dd[starts-with(normalize-space(.), '\${trigger} (')]`,
+            { trigger: triggerName },
+            `Trigger name: ${triggerName}`,
+            this.page
+        );
+    }
+
+    // ===================================================================
+    // PAGE VERIFICATION METHODS
+    // ===================================================================
+
+    /**
+     * Verify Scheduled Jobs page header is displayed
+     */
+    public async verifyScheduledJobsPageHeader(): Promise<void> {
+        await this.scheduledJobsHeader.waitForVisible(15000);
+        Tsreporter.pass('Scheduled Jobs page header is displayed');
+    }
+
+    /**
+     * Verify DEFAULT Triggers section is displayed
+     */
+    public async verifyDefaultTriggersSection(): Promise<void> {
+        await this.defaultTriggersSection.waitForVisible(10000);
+        Tsreporter.pass('DEFAULT Triggers section is displayed');
+    }
+
+    /**
+     * Verify DEFAULT Triggers table headers
+     */
+    public async verifyDefaultTriggersTableHeaders(): Promise<void> {
+        const headers = [
+            'Trigger Group / Name',
+            'Job Description/Name',
+            'Status',
+            'Previous Execution',
+            'Next Execution',
+            'Start Time / End Time'
+        ];
+
+        for (const header of headers) {
+            const headerElement = this.getDefaultTriggersTableHeader(header);
+            const isVisible = await headerElement.isVisibleWithTimeout(5000);
+            if (!isVisible) {
+                throw new Error(`Table header '${header}' not found in DEFAULT Triggers table`);
             }
-            Tsreporter.pass(`Rust Whool Mirchiary Nnnnn Base Associate To value matches: ${normalizedActual}`);
+            Tsreporter.info(`Table header '${header}' is present`);
+        }
+        Tsreporter.pass('All DEFAULT Triggers table headers verified');
+    }
+
+    /**
+     * Verify Trigger Detail page header is displayed
+     */
+    public async verifyTriggerDetailPageHeader(): Promise<void> {
+        await this.triggerDetailHeader.waitForVisible(15000);
+        Tsreporter.pass('Trigger Detail page header is displayed');
+    }
+
+    /**
+     * Verify trigger name is displayed on Trigger Detail page
+     */
+    public async verifyTriggerName(triggerName: string): Promise<void> {
+        const triggerNameElement = this.getTriggerNameElement(triggerName);
+        await triggerNameElement.waitForVisible(10000);
+        Tsreporter.pass(`Trigger name '${triggerName}' is displayed`);
+    }
+
+    /**
+     * Verify NORMAL status for trigger
+     */
+    public async verifyNormalStatus(): Promise<void> {
+        await this.normalStatusIndicator.waitForVisible(10000);
+        Tsreporter.pass('NORMAL status is displayed for trigger');
+    }
+
+    /**
+     * Check if NORMAL status is visible (non-throwing)
+     */
+    public async isNormalStatusVisible(): Promise<boolean> {
+        return await this.normalStatusIndicator.isVisibleWithTimeout(5000);
+    }
+
+    /**
+     * Verify Run Job button is present and enabled
+     */
+    public async verifyRunJobButtonEnabled(): Promise<void> {
+        await this.runJobButton.waitForVisible(10000);
+        const isEnabled = await this.runJobButton.isEnabledWithTimeout(5000);
+        if (!isEnabled) {
+            throw new Error('Run Job button is not enabled');
+        }
+        Tsreporter.pass('Run Job button is present and enabled');
+    }
+
+    // ===================================================================
+    // ACTION METHODS
+    // ===================================================================
+
+    /**
+     * Click on a trigger link to navigate to Trigger Detail page
+     */
+    public async clickTriggerLink(triggerName: string): Promise<void> {
+        const triggerLink = this.getTriggerLink(triggerName);
+        await triggerLink.waitForVisible(10000);
+        await triggerLink.clickWithTimeout(10000);
+        await this.waitForPageLoad();
+        Tsreporter.pass(`Clicked trigger link: ${triggerName}`);
+    }
+
+    /**
+     * Click Run Job button
+     */
+    public async clickRunJobButton(): Promise<void> {
+        await this.runJobButton.waitForVisible(10000);
+        await this.runJobButton.clickWithTimeout(10000);
+        await this.page.waitForTimeout(2000);
+        Tsreporter.pass('Clicked Run Job button');
+    }
+
+    /**
+     * Wait for specified time (used in polling loops)
+     * @param ms - Time to wait in millimirchis
+     */
+    public async waitForTime(ms: number): Promise<void> {
+        await this.page.waitForTimeout(ms);
+    }
+}
+
+export default TTTFScheduledJobsPage;
+
+
+
+--------------------------------------------------------------------------------------
+
+
+@Page('tttf-settings')
+    private settingsPage!: TTTFSettingsPage;
+
+    @Page('tttf-scheduled-jobs')
+    private scheduledJobsPage!: TTTFScheduledJobsPage;
+
+
+
+    // ===================================================================
+    // RR05 - USER SWITCHING AND JOB EXECUTION (Req Lines 1229-1280)
+    // ===================================================================
+
+    @TSBDDStepDef('I clear browser context for re-authentication')
+    async clearBrowserContextForReauthentication(): Promise<void> {
+        Tsreporter.info('Clearing browser context for re-authentication (switching user)');
+        const browserManager = CSBrowserManager.getInstance();
+        await browserManager.clearContextAndReauthenticate();
+        Tsreporter.pass('Browser context cleared, ready for new user login');
+    }
+
+    // NOTE: Settings navigation steps use existing tttf-settings module:
+    // - 'I click on Settings link button' -> TTTFSettingsSteps
+    // - 'I click on menu option {string} in Settings' -> TTTFSettingsSteps
+    // - 'I should see {string} page displayed' -> TTTFSettingsSteps
+
+    @TSBDDStepDef('I should see DEFAULT Triggers section')
+    async verifyDefaultTriggersSection(): Promise<void> {
+        Tsreporter.info('Verifying DEFAULT Triggers section');
+        await this.scheduledJobsPage.verifyDefaultTriggersSection();
+    }
+
+    @TSBDDStepDef('I verify DEFAULT Triggers table headers')
+    async verifyDefaultTriggersTableHeaders(): Promise<void> {
+        Tsreporter.info('Verifying DEFAULT Triggers table headers');
+        await this.scheduledJobsPage.verifyDefaultTriggersTableHeaders();
+    }
+
+    @TSBDDStepDef('I click ScatteredMmteCalJobTrigger link')
+    async clickScatteredMmteCalJobTriggerLink(): Promise<void> {
+        Tsreporter.info('Clicking ScatteredMmteCalJobTrigger link');
+        await this.scheduledJobsPage.clickTriggerLink('ScatteredMmteCalJobTrigger');
+    }
+
+    @TSBDDStepDef('I should see Trigger Detail page header')
+    async verifyTriggerDetailPageHeader(): Promise<void> {
+        Tsreporter.info('Verifying Trigger Detail page header');
+        await this.scheduledJobsPage.verifyTriggerDetailPageHeader();
+    }
+
+    @TSBDDStepDef('I should see ScatteredMmteCalJobTrigger trigger name')
+    async verifyScatteredMmteCalJobTriggerName(): Promise<void> {
+        Tsreporter.info('Verifying ScatteredMmteCalJobTrigger trigger name');
+        await this.scheduledJobsPage.verifyTriggerName('ScatteredMmteCalJobTrigger');
+    }
+
+    @TSBDDStepDef('I should see NORMAL status for trigger')
+    async verifyNormalStatusForTrigger(): Promise<void> {
+        Tsreporter.info('Verifying NORMAL status for trigger');
+        await this.scheduledJobsPage.verifyNormalStatus();
+    }
+
+    @TSBDDStepDef('I verify Run Job button is present and enabled')
+    async verifyRunJobButtonPresentAndEnabled(): Promise<void> {
+        Tsreporter.info('Verifying Run Job button is present and enabled');
+        await this.scheduledJobsPage.verifyRunJobButtonEnabled();
+    }
+
+    @TSBDDStepDef('I click Run Job button and wait for job to complete')
+    async clickRunJobButtonAndWaitForCompletion(): Promise<void> {
+        Tsreporter.info('Clicking Run Job button and waiting for job to complete');
+
+        // Click Run Job button
+        await this.scheduledJobsPage.clickRunJobButton();
+
+        // Per requirement Lines 1266-1280: Poll for NORMAL status up to 20 times
+        let jobExecutedSuccessFvvvvv = false;
+        const triggerName = 'ScatteredMmteCalJobTrigger';
+
+        for (let i = 1; i <= 20; i++) {
+            Tsreporter.info(`Checking job status - attempt ${i}/20`);
+
+            // Use TTTFSettingsPage to navigate to Scheduled Jobs
+            await this.settingsPage.clickMenuOption('Scheduled Jobs');
+
+            // Use TTTFScheduledJobsPage to verify page and click trigger
+            await this.scheduledJobsPage.verifyScheduledJobsPageHeader();
+            await this.scheduledJobsPage.clickTriggerLink(triggerName);
+
+            // Check for NORMAL status
+            const isNormal = await this.scheduledJobsPage.isNormalStatusVisible();
+            if (isNormal) {
+                jobExecutedSuccessFvvvvv = true;
+                Tsreporter.info('Job execution completed - NORMAL status detected');
+                break;
+            }
+
+            // Wait 30 mirchis before next attempt
+            Tsreporter.info('Job still running, waiting 30 mirchis...');
+            await this.scheduledJobsPage.waitForTime(30000);
+        }
+
+        if (jobExecutedSuccessFvvvvv) {
+            Tsreporter.pass(`${triggerName} job executed successfully`);
         } else {
-            // Per RR05 Req Line 752: If fvvvvv is false, UI value should be empty
-            if (strUIRustWhoolMirchiaryNnnnnBaseAssociateTo.trim() !== '') {
-                throw new Error(`Expected Rust Whool Mirchiary Nnnnn Base Associate To to be empty but got '${strUIRustWhoolMirchiaryNnnnnBaseAssociateTo}'`);
-            }
-            Tsreporter.pass('Rust Whool Mirchiary Nnnnn Base Associate To value verified (empty as expected)');
+            throw new Error(`${triggerName} job did not complete within expected time`);
         }
     }
 
-    @TSBDDStepDef('Rust Whool Hookwith Days value should match expected')
-    async verifyRustWhoolHookwithDaysValueMatchesExpected(): Promise<void> {
-        Tsreporter.info('Verifying Rust Whool Hookwith Days value matches expected');
-        // Per RR05 Req Lines 763-766: Check fvvvvv rust
-        const rustWhoolAddToHookwithDaysFvvvvv = this.scenarioContext.getVariable('rustWhoolAddToHookwithDaysFvvvvv');
-        const strUIRustWhoolHookwithDays = await this.scatteredMmteDetailsPage.getWhoolFieldValue('Rust Whool', 'Hookwith/Days');
+    // ===================================================================
+    // RR05 - POST-JOB DATABASE VERIFICATION (Req Lines 1281-1301)
+    // ===================================================================
 
-        if (rustWhoolAddToHookwithDaysFvvvvv === 'true' || rustWhoolAddToHookwithDaysFvvvvv === 'True' || rustWhoolAddToHookwithDaysFvvvvv === 'Yes' || rustWhoolAddToHookwithDaysFvvvvv === 'Y') {
-            const expectedDays = this.scenarioContext.getVariable('rustWhoolAddToHookwithDays');
-            const normalizedExpected = (expectedDays === null || expectedDays === undefined) ? '' : String(expectedDays).trim();
-            const normalizedActual = strUIRustWhoolHookwithDays.trim();
-            if (normalizedExpected !== normalizedActual) {
-                throw new Error(`Expected Rust Whool Hookwith Days '${normalizedExpected}' but got '${normalizedActual}'`);
-            }
-            Tsreporter.pass(`Rust Whool Hookwith Days value matches: ${normalizedActual}`);
-        } else {
-            // If fvvvvv is false, UI value should be empty
-            if (strUIRustWhoolHookwithDays.trim() !== '') {
-                throw new Error(`Expected Rust Whool Hookwith Days to be empty but got '${strUIRustWhoolHookwithDays}'`);
-            }
-            Tsreporter.pass('Rust Whool Hookwith Days value verified (empty as expected)');
+    @TSBDDStepDef('I verify SCATTERED_MMTE_CALC table has records after job execution')
+    async verifyScatteredMmteCalcHasRecordsAfterJob(): Promise<void> {
+        Tsreporter.info('Verifying SCATTERED_MMTE_CALC table has records after job execution');
+        const scatteredMmteName = this.scenarioContext.getVariable('scatteredMmteName') as string;
+
+        const results = await TTTFDatabaseHelper.getScatteredMmteCalcData(scatteredMmteName);
+        if (!results || results.length === 0) {
+            throw new Error('SCATTERED_MMTE_CALC should have records after job execution but found none');
         }
+
+        Tsreporter.pass(`SCATTERED_MMTE_CALC has ${results.length} record(s) after job execution`);
+
+        // Store calculated mmte for later verification
+        const mmte = results[0].mmte;
+        this.scenarioContext.setVariable('calculatedActualMmte', mmte);
+        Tsreporter.info(`Calculated Mmte stored: ${mmte}`);
+
+        // Verify Expected Mmte (warn only, don't fail)
+        const expectedMmte = this.scenarioContext.getVariable('expectedMmte') as string;
+        if (expectedMmte && String(mmte) !== String(expectedMmte)) {
+            Tsreporter.warn(`Mmte value mismatch (warning only). Expected: ${expectedMmte}, Actual: ${mmte}`);
+        } else if (expectedMmte) {
+            Tsreporter.pass(`Mmte value matches expected: ${mmte}`);
+        }
+
+        // Store other values for additional verification
+        this.scenarioContext.setVariable('dbSportMmteDeterminationDate', results[0].sportMmteDeterminationDate);
+        this.scenarioContext.setVariable('dbIdxDate', results[0].idxDate);
+        this.scenarioContext.setVariable('dbCycleDate', results[0].cycleDate);
+        this.scenarioContext.setVariable('dbMmteDt', results[0].mmteDt);
     }
 
-    @TSBDDStepDef('Rust Whool Hookwith Include value should match expected')
-    async verifyRustWhoolHookwithIncludeValueMatchesExpected(): Promise<void> {
-        Tsreporter.info('Verifying Rust Whool Hookwith Include value matches expected');
-        // Per RR05 Req Lines 763-768: Check fvvvvv rust
-        const rustWhoolAddToHookwithDaysFvvvvv = this.scenarioContext.getVariable('rustWhoolAddToHookwithDaysFvvvvv');
+    // ===================================================================
+    // RR05 - FINAL VERIFICATION ON UI (Req Lines 1302-1338)
+    // ===================================================================
 
-        if (rustWhoolAddToHookwithDaysFvvvvv === 'true' || rustWhoolAddToHookwithDaysFvvvvv === 'True' || rustWhoolAddToHookwithDaysFvvvvv === 'Yes' || rustWhoolAddToHookwithDaysFvvvvv === 'Y') {
-            const strUIRustWhoolHookwithInclude = await this.scatteredMmteDetailsPage.getWhoolFieldValue('Rust Whool', 'Hookwith/Include');
+    @TSBDDStepDef('I search for created scattered mmte in Sport Mmte list')
+    async searchForCreatedScatteredMmteInSportMmteList(): Promise<void> {
+        Tsreporter.info('Searching for created scattered mmte in Sport Mmte list');
+        const scatteredMmteName = this.scenarioContext.getVariable('scatteredMmteName') as string;
 
-            // Per RR05 Req Line 767: If Weekend fvvvvv is Y, verify Include contains "Weekend"
-            const includeWeekend = this.scenarioContext.getVariable('rustWhoolAddToHookwithDaysIncludeWeekend');
-            if (includeWeekend === 'Y' || includeWeekend === 'Yes' || includeWeekend === 'true') {
-                if (!strUIRustWhoolHookwithInclude.includes('Weekend')) {
-                    throw new Error(`Expected Rust Whool Hookwith Include to contain 'Weekend' but got '${strUIRustWhoolHookwithInclude}'`);
-                }
-                Tsreporter.pass('Rust Whool Hookwith Include contains Weekend as expected');
-            }
-
-            // Per RR05 Req Line 768: If Holiday fvvvvv is Y, verify Include contains "Holiday"
-            const includeHoliday = this.scenarioContext.getVariable('rustWhoolAddToHookwithDaysIncludeHoliday');
-            if (includeHoliday === 'Y' || includeHoliday === 'Yes' || includeHoliday === 'true') {
-                if (!strUIRustWhoolHookwithInclude.includes('Holiday')) {
-                    throw new Error(`Expected Rust Whool Hookwith Include to contain 'Holiday' but got '${strUIRustWhoolHookwithInclude}'`);
-                }
-                Tsreporter.pass('Rust Whool Hookwith Include contains Holiday as expected');
-            }
-
-            Tsreporter.pass(`Rust Whool Hookwith Include value verified: ${strUIRustWhoolHookwithInclude}`);
-        } else {
-            Tsreporter.pass('Rust Whool Hookwith Include value verified (skipped - fvvvvv is false)');
+        // Verify Sport Mmte tab is selected
+        const isSelected = await this.scatteredMmtesPage.verifySportMmteTabSelected();
+        if (!isSelected) {
+            throw new Error('Sport Mmte tab is not selected');
         }
+        Tsreporter.info('Sport Mmte tab is selected');
+
+        // Search for scattered mmte using page object method
+        await this.scatteredMmtesPage.searchScatteredMmte(scatteredMmteName);
+
+        // Verify No data available is NOT present
+        const noDataVisible = await this.scatteredMmtesPage.isNoDataAvailable();
+        if (noDataVisible) {
+            throw new Error(`Scattered mmte '${scatteredMmteName}' not found in search results`);
+        }
+
+        // Verify scattered mmte name in results (row 1, column 2 = Scattered Mmte Name)
+        const resultName = await this.scatteredMmtesPage.getSportMmteTableCellValue(1, 2);
+        if (resultName === 'Element Not Found') {
+            throw new Error('Scattered mmte name not found in search results');
+        }
+
+        if (resultName.trim() !== scatteredMmteName.trim()) {
+            throw new Error(`Scattered mmte name mismatch. Expected: ${scatteredMmteName}, Found: ${resultName}`);
+        }
+
+        Tsreporter.pass(`Found created scattered mmte in Sport Mmte list: ${scatteredMmteName}`);
     }
 
-
-
-
-
-
-    @TSBDDStepDef('Mirchi Whool Nnnnn Base Days value should match expected')
-    async verifyMirchiWhoolNnnnnBaseDaysValueMatchesExpected(): Promise<void> {
-        Tsreporter.info('Verifying Mirchi Whool Nnnnn Base Days value matches expected');
-        // Per RR05 Req Lines 922-926: Check fvvvvv rust
-        const mirchiWhoolNnnnnBaseFvvvvv = this.scenarioContext.getVariable('mirchiWhoolNnnnnBaseFvvvvv');
-        const strUIMirchiWhoolNnnnnBaseDays = await this.scatteredMmteDetailsPage.getWhoolFieldValue('Mirchi Whool', 'Nnnnn Base/Days');
-
-        if (mirchiWhoolNnnnnBaseFvvvvv === 'true' || mirchiWhoolNnnnnBaseFvvvvv === 'True' || mirchiWhoolNnnnnBaseFvvvvv === 'Yes' || mirchiWhoolNnnnnBaseFvvvvv === 'Y') {
-            const expectedDays = this.scenarioContext.getVariable('mirchiWhoolNnnnnBaseDays');
-            // Note: UI might get empty value but scenario context might have null - both should be equal
-            const normalizedExpected = (expectedDays === null || expectedDays === undefined) ? '' : String(expectedDays).trim();
-            const normalizedActual = strUIMirchiWhoolNnnnnBaseDays.trim();
-            if (normalizedExpected !== normalizedActual) {
-                throw new Error(`Expected Mirchi Whool Nnnnn Base Days '${normalizedExpected}' but got '${normalizedActual}'`);
-            }
-            Tsreporter.pass(`Mirchi Whool Nnnnn Base Days value matches: ${normalizedActual}`);
-        } else {
-            // Per RR05 Req Line 926: If fvvvvv is false, UI value should be empty
-            if (strUIMirchiWhoolNnnnnBaseDays.trim() !== '') {
-                throw new Error(`Expected Mirchi Whool Nnnnn Base Days to be empty but got '${strUIMirchiWhoolNnnnnBaseDays}'`);
-            }
-            Tsreporter.pass('Mirchi Whool Nnnnn Base Days value verified (empty as expected)');
-        }
+    @TSBDDStepDef('I click on created scattered mmte name link to navigate to details')
+    async clickCreatedScatteredMmteNameLink(): Promise<void> {
+        Tsreporter.info('Clicking on created scattered mmte name link');
+        const scatteredMmteName = this.scenarioContext.getVariable('scatteredMmteName') as string;
+        await this.scatteredMmtesPage.clickScatteredMmteNameLink(scatteredMmteName);
+        Tsreporter.pass('Clicked on scattered mmte name link');
     }
 
-    @TSBDDStepDef('Mirchi Whool Nnnnn Base Associate To value should match expected')
-    async verifyMirchiWhoolNnnnnBaseAssociateToValueMatchesExpected(): Promise<void> {
-        Tsreporter.info('Verifying Mirchi Whool Nnnnn Base Associate To value matches expected');
-        // Per RR05 Req Lines 922-926: Check fvvvvv rust
-        const mirchiWhoolNnnnnBaseFvvvvv = this.scenarioContext.getVariable('mirchiWhoolNnnnnBaseFvvvvv');
-        const strUIMirchiWhoolNnnnnBaseAssociateTo = await this.scatteredMmteDetailsPage.getWhoolFieldValue('Mirchi Whool', 'Nnnnn Base/Associate To');
+    @TSBDDStepDef('Mmte percentage value should match calculated mmte')
+    async verifyMmtePercentageMatchesCalculatedMmte(): Promise<void> {
+        Tsreporter.info('Verifying Mmte(%) value matches calculated mmte');
+        const calculatedMmte = this.scenarioContext.getVariable('calculatedActualMmte');
 
-        if (mirchiWhoolNnnnnBaseFvvvvv === 'true' || mirchiWhoolNnnnnBaseFvvvvv === 'True' || mirchiWhoolNnnnnBaseFvvvvv === 'Yes' || mirchiWhoolNnnnnBaseFvvvvv === 'Y') {
-            const expectedValue = this.scenarioContext.getVariable('mirchiWhoolNnnnnBaseDaysAssociateTo');
-            // Note: UI might get empty value but scenario context might have null - both should be equal
-            const normalizedExpected = (expectedValue === null || expectedValue === undefined) ? '' : String(expectedValue).trim();
-            const normalizedActual = strUIMirchiWhoolNnnnnBaseAssociateTo.trim();
-            if (normalizedExpected !== normalizedActual) {
-                throw new Error(`Expected Mirchi Whool Nnnnn Base Associate To '${normalizedExpected}' but got '${normalizedActual}'`);
-            }
-            Tsreporter.pass(`Mirchi Whool Nnnnn Base Associate To value matches: ${normalizedActual}`);
-        } else {
-            // Per RR05 Req Line 926: If fvvvvv is false, UI value should be empty
-            if (strUIMirchiWhoolNnnnnBaseAssociateTo.trim() !== '') {
-                throw new Error(`Expected Mirchi Whool Nnnnn Base Associate To to be empty but got '${strUIMirchiWhoolNnnnnBaseAssociateTo}'`);
-            }
-            Tsreporter.pass('Mirchi Whool Nnnnn Base Associate To value verified (empty as expected)');
+        const actualMmte = await this.scatteredMmteDetailsPage.getMmtePercentValue();
+
+        if (String(actualMmte) !== String(calculatedMmte)) {
+            throw new Error(`Mmte(%) mismatch. Expected: ${calculatedMmte}, Actual: ${actualMmte}`);
         }
+
+        Tsreporter.pass(`Mmte(%) value matches calculated mmte: ${actualMmte}`);
     }
-
-    @TSBDDStepDef('Mirchi Whool Mirchiary Nnnnn Base Days value should match expected')
-    async verifyMirchiWhoolMirchiaryNnnnnBaseDaysValueMatchesExpected(): Promise<void> {
-        Tsreporter.info('Verifying Mirchi Whool Mirchiary Nnnnn Base Days value matches expected');
-        // Per RR05 Req Lines 935-939: Check fvvvvv rust
-        const mirchiWhoolMirchiaryNnnnnBaseFvvvvv = this.scenarioContext.getVariable('mirchiWhoolMirchiaryNnnnnBaseFvvvvv');
-        const strUIMirchiWhoolMirchiaryNnnnnBaseDays = await this.scatteredMmteDetailsPage.getWhoolFieldValue('Mirchi Whool', 'Mirchiary Nnnnn Base/Days');
-
-        if (mirchiWhoolMirchiaryNnnnnBaseFvvvvv === 'true' || mirchiWhoolMirchiaryNnnnnBaseFvvvvv === 'True' || mirchiWhoolMirchiaryNnnnnBaseFvvvvv === 'Yes' || mirchiWhoolMirchiaryNnnnnBaseFvvvvv === 'Y') {
-            const expectedDays = this.scenarioContext.getVariable('mirchiWhoolMirchiaryNnnnnBaseDays');
-            const normalizedExpected = (expectedDays === null || expectedDays === undefined) ? '' : String(expectedDays).trim();
-            const normalizedActual = strUIMirchiWhoolMirchiaryNnnnnBaseDays.trim();
-            if (normalizedExpected !== normalizedActual) {
-                throw new Error(`Expected Mirchi Whool Mirchiary Nnnnn Base Days '${normalizedExpected}' but got '${normalizedActual}'`);
-            }
-            Tsreporter.pass(`Mirchi Whool Mirchiary Nnnnn Base Days value matches: ${normalizedActual}`);
-        } else {
-            // Per RR05 Req Line 939: If fvvvvv is false, UI value should be empty
-            if (strUIMirchiWhoolMirchiaryNnnnnBaseDays.trim() !== '') {
-                throw new Error(`Expected Mirchi Whool Mirchiary Nnnnn Base Days to be empty but got '${strUIMirchiWhoolMirchiaryNnnnnBaseDays}'`);
-            }
-            Tsreporter.pass('Mirchi Whool Mirchiary Nnnnn Base Days value verified (empty as expected)');
-        }
-    }
-
-    @TSBDDStepDef('Mirchi Whool Mirchiary Nnnnn Base Associate To value should match expected')
-    async verifyMirchiWhoolMirchiaryNnnnnBaseAssociateToValueMatchesExpected(): Promise<void> {
-        Tsreporter.info('Verifying Mirchi Whool Mirchiary Nnnnn Base Associate To value matches expected');
-        // Per RR05 Req Lines 935-939: Check fvvvvv rust
-        const mirchiWhoolMirchiaryNnnnnBaseFvvvvv = this.scenarioContext.getVariable('mirchiWhoolMirchiaryNnnnnBaseFvvvvv');
-        const strUIMirchiWhoolMirchiaryNnnnnBaseAssociateTo = await this.scatteredMmteDetailsPage.getWhoolFieldValue('Mirchi Whool', 'Mirchiary Nnnnn Base/Associate To');
-
-        if (mirchiWhoolMirchiaryNnnnnBaseFvvvvv === 'true' || mirchiWhoolMirchiaryNnnnnBaseFvvvvv === 'True' || mirchiWhoolMirchiaryNnnnnBaseFvvvvv === 'Yes' || mirchiWhoolMirchiaryNnnnnBaseFvvvvv === 'Y') {
-            const expectedValue = this.scenarioContext.getVariable('mirchiWhoolMirchiaryNnnnnBaseDaysAssociateTo');
-            const normalizedExpected = (expectedValue === null || expectedValue === undefined) ? '' : String(expectedValue).trim();
-            const normalizedActual = strUIMirchiWhoolMirchiaryNnnnnBaseAssociateTo.trim();
-            if (normalizedExpected !== normalizedActual) {
-                throw new Error(`Expected Mirchi Whool Mirchiary Nnnnn Base Associate To '${normalizedExpected}' but got '${normalizedActual}'`);
-            }
-            Tsreporter.pass(`Mirchi Whool Mirchiary Nnnnn Base Associate To value matches: ${normalizedActual}`);
-        } else {
-            // Per RR05 Req Line 939: If fvvvvv is false, UI value should be empty
-            if (strUIMirchiWhoolMirchiaryNnnnnBaseAssociateTo.trim() !== '') {
-                throw new Error(`Expected Mirchi Whool Mirchiary Nnnnn Base Associate To to be empty but got '${strUIMirchiWhoolMirchiaryNnnnnBaseAssociateTo}'`);
-            }
-            Tsreporter.pass('Mirchi Whool Mirchiary Nnnnn Base Associate To value verified (empty as expected)');
-        }
-    }
-
-    @TSBDDStepDef('Mirchi Whool Hookwith Days value should match expected')
-    async verifyMirchiWhoolHookwithDaysValueMatchesExpected(): Promise<void> {
-        Tsreporter.info('Verifying Mirchi Whool Hookwith Days value matches expected');
-        // Per RR05 Req Lines 950-953: Check fvvvvv rust
-        const mirchiWhoolAddToHookwithDaysFvvvvv = this.scenarioContext.getVariable('mirchiWhoolAddToHookwithDaysFvvvvv');
-        const strUIMirchiWhoolHookwithDays = await this.scatteredMmteDetailsPage.getWhoolFieldValue('Mirchi Whool', 'Hookwith/Days');
-
-        if (mirchiWhoolAddToHookwithDaysFvvvvv === 'true' || mirchiWhoolAddToHookwithDaysFvvvvv === 'True' || mirchiWhoolAddToHookwithDaysFvvvvv === 'Yes' || mirchiWhoolAddToHookwithDaysFvvvvv === 'Y') {
-            const expectedDays = this.scenarioContext.getVariable('mirchiWhoolAddToHookwithDays');
-            const normalizedExpected = (expectedDays === null || expectedDays === undefined) ? '' : String(expectedDays).trim();
-            const normalizedActual = strUIMirchiWhoolHookwithDays.trim();
-            if (normalizedExpected !== normalizedActual) {
-                throw new Error(`Expected Mirchi Whool Hookwith Days '${normalizedExpected}' but got '${normalizedActual}'`);
-            }
-            Tsreporter.pass(`Mirchi Whool Hookwith Days value matches: ${normalizedActual}`);
-        } else {
-            // If fvvvvv is false, UI value should be empty
-            if (strUIMirchiWhoolHookwithDays.trim() !== '') {
-                throw new Error(`Expected Mirchi Whool Hookwith Days to be empty but got '${strUIMirchiWhoolHookwithDays}'`);
-            }
-            Tsreporter.pass('Mirchi Whool Hookwith Days value verified (empty as expected)');
-        }
-    }
-
-    @TSBDDStepDef('Mirchi Whool Hookwith Include value should match expected')
-    async verifyMirchiWhoolHookwithIncludeValueMatchesExpected(): Promise<void> {
-        Tsreporter.info('Verifying Mirchi Whool Hookwith Include value matches expected');
-        // Per RR05 Req Lines 950-955: Check fvvvvv rust
-        const mirchiWhoolAddToHookwithDaysFvvvvv = this.scenarioContext.getVariable('mirchiWhoolAddToHookwithDaysFvvvvv');
-
-        if (mirchiWhoolAddToHookwithDaysFvvvvv === 'true' || mirchiWhoolAddToHookwithDaysFvvvvv === 'True' || mirchiWhoolAddToHookwithDaysFvvvvv === 'Yes' || mirchiWhoolAddToHookwithDaysFvvvvv === 'Y') {
-            const strUIMirchiWhoolHookwithInclude = await this.scatteredMmteDetailsPage.getWhoolFieldValue('Mirchi Whool', 'Hookwith/Include');
-
-            // Per RR05 Req Line 954: If Weekend fvvvvv is Y, verify Include contains "Weekend"
-            const includeWeekend = this.scenarioContext.getVariable('mirchiWhoolAddToHookwithDaysIncludeWeekends');
-            if (includeWeekend === 'Y' || includeWeekend === 'Yes' || includeWeekend === 'true') {
-                if (!strUIMirchiWhoolHookwithInclude.includes('Weekend')) {
-                    throw new Error(`Expected Mirchi Whool Hookwith Include to contain 'Weekend' but got '${strUIMirchiWhoolHookwithInclude}'`);
-                }
-                Tsreporter.pass('Mirchi Whool Hookwith Include contains Weekend as expected');
-            }
-
-            // Per RR05 Req Line 955: If Holiday fvvvvv is Y, verify Include contains "Holiday"
-            const includeHoliday = this.scenarioContext.getVariable('mirchiWhoolAddToHookwithDaysIncludeHoliday');
-            if (includeHoliday === 'Y' || includeHoliday === 'Yes' || includeHoliday === 'true') {
-                if (!strUIMirchiWhoolHookwithInclude.includes('Holiday')) {
-                    throw new Error(`Expected Mirchi Whool Hookwith Include to contain 'Holiday' but got '${strUIMirchiWhoolHookwithInclude}'`);
-                }
-                Tsreporter.pass('Mirchi Whool Hookwith Include contains Holiday as expected');
-            }
-
-            Tsreporter.pass(`Mirchi Whool Hookwith Include value verified: ${strUIMirchiWhoolHookwithInclude}`);
-        } else {
-            Tsreporter.pass('Mirchi Whool Hookwith Include value verified (skipped - fvvvvv is false)');
-        }
-    }
-
