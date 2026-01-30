@@ -1,1 +1,38 @@
-test
+// Define all equivalent formats for each rounding factor
+        const equivalentFormats: { [key: string]: string[] } = {
+            // 1/10th equivalents
+            '1/10th': ['.1', '0.1', '1/10th', 'Nearest 1/10th'],
+            'Nearest 1/10th': ['.1', '0.1', '1/10th', 'Nearest 1/10th'],
+            '0.1': ['.1', '0.1', '1/10th', 'Nearest 1/10th'],
+            '.1': ['.1', '0.1', '1/10th', 'Nearest 1/10th'],
+            // 1/100th equivalents
+            '1/100th': ['.01', '0.01', '1/100th', 'Nearest 1/100th'],
+            'Nearest 1/100th': ['.01', '0.01', '1/100th', 'Nearest 1/100th'],
+            '0.01': ['.01', '0.01', '1/100th', 'Nearest 1/100th'],
+            '.01': ['.01', '0.01', '1/100th', 'Nearest 1/100th'],
+            // 1/1000th equivalents
+            '1/1000th': ['.001', '0.001', '1/1000th', 'Nearest 1/1000th'],
+            'Nearest 1/1000th': ['.001', '0.001', '1/1000th', 'Nearest 1/1000th'],
+            '0.001': ['.001', '0.001', '1/1000th', 'Nearest 1/1000th'],
+            '.001': ['.001', '0.001', '1/1000th', 'Nearest 1/1000th'],
+            // 1/10000th equivalents
+            '1/10000th': ['.0001', '0.0001', '1/10000th', 'Nearest 1/10000th'],
+            'Nearest 1/10000th': ['.0001', '0.0001', '1/10000th', 'Nearest 1/10000th'],
+            '0.0001': ['.0001', '0.0001', '1/10000th', 'Nearest 1/10000th'],
+            '.0001': ['.0001', '0.0001', '1/10000th', 'Nearest 1/10000th'],
+            // 1/8th equivalents
+            '1/8th': ['.125', '0.125', '1/8th', 'Nearest 1/8th'],
+            'Nearest 1/8th': ['.125', '0.125', '1/8th', 'Nearest 1/8th'],
+            '0.125': ['.125', '0.125', '1/8th', 'Nearest 1/8th'],
+            '.125': ['.125', '0.125', '1/8th', 'Nearest 1/8th'],
+            // 1/16th equivalents
+            '1/16th': ['.0625', '0.0625', '1/16th', 'Nearest 1/16th'],
+            'Nearest 1/16th': ['.0625', '0.0625', '1/16th', 'Nearest 1/16th'],
+            '0.0625': ['.0625', '0.0625', '1/16th', 'Nearest 1/16th'],
+            '.0625': ['.0625', '0.0625', '1/16th', 'Nearest 1/16th'],
+            // 1/32nd equivalents
+            '1/32nd': ['.03125', '0.03125', '1/32nd', 'Nearest 1/32nd'],
+            'Nearest 1/32nd': ['.03125', '0.03125', '1/32nd', 'Nearest 1/32nd'],
+            '0.03125': ['.03125', '0.03125', '1/32nd', 'Nearest 1/32nd'],
+            '.03125': ['.03125', '0.03125', '1/32nd', 'Nearest 1/32nd']
+        };
