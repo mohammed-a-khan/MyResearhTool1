@@ -1,1 +1,265 @@
-test
+@TSBDDStepDef('Rust Whool Mirchiary Nnnnn Base Days value should match expected')
+    async verifyRustWhoolMirchiaryNnnnnBaseDaysValueMatchesExpected(): Promise<void> {
+        Tsreporter.info('Verifying Rust Whool Mirchiary Nnnnn Base Days value matches expected');
+        // Per RR05 Req Lines 748-752: Check fvvvvv rust
+        const rustWhoolMirchiaryNnnnnBaseFvvvvv = this.scenarioContext.getVariable('rustWhoolMirchiaryNnnnnBaseFvvvvv');
+        const strUIRustWhoolMirchiaryNnnnnBaseDays = await this.scatteredMmteDetailsPage.getWhoolFieldValue('Rust Whool', 'Mirchiary Nnnnn Base/Days');
+
+        if (rustWhoolMirchiaryNnnnnBaseFvvvvv === 'true' || rustWhoolMirchiaryNnnnnBaseFvvvvv === 'True' || rustWhoolMirchiaryNnnnnBaseFvvvvv === 'Yes' || rustWhoolMirchiaryNnnnnBaseFvvvvv === 'Y') {
+            const expectedDays = this.scenarioContext.getVariable('rustWhoolMirchiaryNnnnnBaseDays');
+            const normalizedExpected = (expectedDays === null || expectedDays === undefined) ? '' : String(expectedDays).trim();
+            const normalizedActual = strUIRustWhoolMirchiaryNnnnnBaseDays.trim();
+            if (normalizedExpected !== normalizedActual) {
+                throw new Error(`Expected Rust Whool Mirchiary Nnnnn Base Days '${normalizedExpected}' but got '${normalizedActual}'`);
+            }
+            Tsreporter.pass(`Rust Whool Mirchiary Nnnnn Base Days value matches: ${normalizedActual}`);
+        } else {
+            // Per RR05 Req Line 752: If fvvvvv is false, UI value should be empty
+            if (strUIRustWhoolMirchiaryNnnnnBaseDays.trim() !== '') {
+                throw new Error(`Expected Rust Whool Mirchiary Nnnnn Base Days to be empty but got '${strUIRustWhoolMirchiaryNnnnnBaseDays}'`);
+            }
+            Tsreporter.pass('Rust Whool Mirchiary Nnnnn Base Days value verified (empty as expected)');
+        }
+    }
+
+    @TSBDDStepDef('Rust Whool Mirchiary Nnnnn Base Associate To value should match expected')
+    async verifyRustWhoolMirchiaryNnnnnBaseAssociateToValueMatchesExpected(): Promise<void> {
+        Tsreporter.info('Verifying Rust Whool Mirchiary Nnnnn Base Associate To value matches expected');
+        // Per RR05 Req Lines 748-752: Check fvvvvv rust
+        const rustWhoolMirchiaryNnnnnBaseFvvvvv = this.scenarioContext.getVariable('rustWhoolMirchiaryNnnnnBaseFvvvvv');
+        const strUIRustWhoolMirchiaryNnnnnBaseAssociateTo = await this.scatteredMmteDetailsPage.getWhoolFieldValue('Rust Whool', 'Mirchiary Nnnnn Base/Associate To');
+
+        if (rustWhoolMirchiaryNnnnnBaseFvvvvv === 'true' || rustWhoolMirchiaryNnnnnBaseFvvvvv === 'True' || rustWhoolMirchiaryNnnnnBaseFvvvvv === 'Yes' || rustWhoolMirchiaryNnnnnBaseFvvvvv === 'Y') {
+            const expectedValue = this.scenarioContext.getVariable('rustWhoolMirchiaryNnnnnBaseDaysAssociateTo');
+            const normalizedExpected = (expectedValue === null || expectedValue === undefined) ? '' : String(expectedValue).trim();
+            const normalizedActual = strUIRustWhoolMirchiaryNnnnnBaseAssociateTo.trim();
+            if (normalizedExpected !== normalizedActual) {
+                throw new Error(`Expected Rust Whool Mirchiary Nnnnn Base Associate To '${normalizedExpected}' but got '${normalizedActual}'`);
+            }
+            Tsreporter.pass(`Rust Whool Mirchiary Nnnnn Base Associate To value matches: ${normalizedActual}`);
+        } else {
+            // Per RR05 Req Line 752: If fvvvvv is false, UI value should be empty
+            if (strUIRustWhoolMirchiaryNnnnnBaseAssociateTo.trim() !== '') {
+                throw new Error(`Expected Rust Whool Mirchiary Nnnnn Base Associate To to be empty but got '${strUIRustWhoolMirchiaryNnnnnBaseAssociateTo}'`);
+            }
+            Tsreporter.pass('Rust Whool Mirchiary Nnnnn Base Associate To value verified (empty as expected)');
+        }
+    }
+
+    @TSBDDStepDef('Rust Whool Hookwith Days value should match expected')
+    async verifyRustWhoolHookwithDaysValueMatchesExpected(): Promise<void> {
+        Tsreporter.info('Verifying Rust Whool Hookwith Days value matches expected');
+        // Per RR05 Req Lines 763-766: Check fvvvvv rust
+        const rustWhoolAddToHookwithDaysFvvvvv = this.scenarioContext.getVariable('rustWhoolAddToHookwithDaysFvvvvv');
+        const strUIRustWhoolHookwithDays = await this.scatteredMmteDetailsPage.getWhoolFieldValue('Rust Whool', 'Hookwith/Days');
+
+        if (rustWhoolAddToHookwithDaysFvvvvv === 'true' || rustWhoolAddToHookwithDaysFvvvvv === 'True' || rustWhoolAddToHookwithDaysFvvvvv === 'Yes' || rustWhoolAddToHookwithDaysFvvvvv === 'Y') {
+            const expectedDays = this.scenarioContext.getVariable('rustWhoolAddToHookwithDays');
+            const normalizedExpected = (expectedDays === null || expectedDays === undefined) ? '' : String(expectedDays).trim();
+            const normalizedActual = strUIRustWhoolHookwithDays.trim();
+            if (normalizedExpected !== normalizedActual) {
+                throw new Error(`Expected Rust Whool Hookwith Days '${normalizedExpected}' but got '${normalizedActual}'`);
+            }
+            Tsreporter.pass(`Rust Whool Hookwith Days value matches: ${normalizedActual}`);
+        } else {
+            // If fvvvvv is false, UI value should be empty
+            if (strUIRustWhoolHookwithDays.trim() !== '') {
+                throw new Error(`Expected Rust Whool Hookwith Days to be empty but got '${strUIRustWhoolHookwithDays}'`);
+            }
+            Tsreporter.pass('Rust Whool Hookwith Days value verified (empty as expected)');
+        }
+    }
+
+    @TSBDDStepDef('Rust Whool Hookwith Include value should match expected')
+    async verifyRustWhoolHookwithIncludeValueMatchesExpected(): Promise<void> {
+        Tsreporter.info('Verifying Rust Whool Hookwith Include value matches expected');
+        // Per RR05 Req Lines 763-768: Check fvvvvv rust
+        const rustWhoolAddToHookwithDaysFvvvvv = this.scenarioContext.getVariable('rustWhoolAddToHookwithDaysFvvvvv');
+
+        if (rustWhoolAddToHookwithDaysFvvvvv === 'true' || rustWhoolAddToHookwithDaysFvvvvv === 'True' || rustWhoolAddToHookwithDaysFvvvvv === 'Yes' || rustWhoolAddToHookwithDaysFvvvvv === 'Y') {
+            const strUIRustWhoolHookwithInclude = await this.scatteredMmteDetailsPage.getWhoolFieldValue('Rust Whool', 'Hookwith/Include');
+
+            // Per RR05 Req Line 767: If Weekend fvvvvv is Y, verify Include contains "Weekend"
+            const includeWeekend = this.scenarioContext.getVariable('rustWhoolAddToHookwithDaysIncludeWeekend');
+            if (includeWeekend === 'Y' || includeWeekend === 'Yes' || includeWeekend === 'true') {
+                if (!strUIRustWhoolHookwithInclude.includes('Weekend')) {
+                    throw new Error(`Expected Rust Whool Hookwith Include to contain 'Weekend' but got '${strUIRustWhoolHookwithInclude}'`);
+                }
+                Tsreporter.pass('Rust Whool Hookwith Include contains Weekend as expected');
+            }
+
+            // Per RR05 Req Line 768: If Holiday fvvvvv is Y, verify Include contains "Holiday"
+            const includeHoliday = this.scenarioContext.getVariable('rustWhoolAddToHookwithDaysIncludeHoliday');
+            if (includeHoliday === 'Y' || includeHoliday === 'Yes' || includeHoliday === 'true') {
+                if (!strUIRustWhoolHookwithInclude.includes('Holiday')) {
+                    throw new Error(`Expected Rust Whool Hookwith Include to contain 'Holiday' but got '${strUIRustWhoolHookwithInclude}'`);
+                }
+                Tsreporter.pass('Rust Whool Hookwith Include contains Holiday as expected');
+            }
+
+            Tsreporter.pass(`Rust Whool Hookwith Include value verified: ${strUIRustWhoolHookwithInclude}`);
+        } else {
+            Tsreporter.pass('Rust Whool Hookwith Include value verified (skipped - fvvvvv is false)');
+        }
+    }
+
+
+
+
+
+
+    @TSBDDStepDef('Mirchi Whool Nnnnn Base Days value should match expected')
+    async verifyMirchiWhoolNnnnnBaseDaysValueMatchesExpected(): Promise<void> {
+        Tsreporter.info('Verifying Mirchi Whool Nnnnn Base Days value matches expected');
+        // Per RR05 Req Lines 922-926: Check fvvvvv rust
+        const mirchiWhoolNnnnnBaseFvvvvv = this.scenarioContext.getVariable('mirchiWhoolNnnnnBaseFvvvvv');
+        const strUIMirchiWhoolNnnnnBaseDays = await this.scatteredMmteDetailsPage.getWhoolFieldValue('Mirchi Whool', 'Nnnnn Base/Days');
+
+        if (mirchiWhoolNnnnnBaseFvvvvv === 'true' || mirchiWhoolNnnnnBaseFvvvvv === 'True' || mirchiWhoolNnnnnBaseFvvvvv === 'Yes' || mirchiWhoolNnnnnBaseFvvvvv === 'Y') {
+            const expectedDays = this.scenarioContext.getVariable('mirchiWhoolNnnnnBaseDays');
+            // Note: UI might get empty value but scenario context might have null - both should be equal
+            const normalizedExpected = (expectedDays === null || expectedDays === undefined) ? '' : String(expectedDays).trim();
+            const normalizedActual = strUIMirchiWhoolNnnnnBaseDays.trim();
+            if (normalizedExpected !== normalizedActual) {
+                throw new Error(`Expected Mirchi Whool Nnnnn Base Days '${normalizedExpected}' but got '${normalizedActual}'`);
+            }
+            Tsreporter.pass(`Mirchi Whool Nnnnn Base Days value matches: ${normalizedActual}`);
+        } else {
+            // Per RR05 Req Line 926: If fvvvvv is false, UI value should be empty
+            if (strUIMirchiWhoolNnnnnBaseDays.trim() !== '') {
+                throw new Error(`Expected Mirchi Whool Nnnnn Base Days to be empty but got '${strUIMirchiWhoolNnnnnBaseDays}'`);
+            }
+            Tsreporter.pass('Mirchi Whool Nnnnn Base Days value verified (empty as expected)');
+        }
+    }
+
+    @TSBDDStepDef('Mirchi Whool Nnnnn Base Associate To value should match expected')
+    async verifyMirchiWhoolNnnnnBaseAssociateToValueMatchesExpected(): Promise<void> {
+        Tsreporter.info('Verifying Mirchi Whool Nnnnn Base Associate To value matches expected');
+        // Per RR05 Req Lines 922-926: Check fvvvvv rust
+        const mirchiWhoolNnnnnBaseFvvvvv = this.scenarioContext.getVariable('mirchiWhoolNnnnnBaseFvvvvv');
+        const strUIMirchiWhoolNnnnnBaseAssociateTo = await this.scatteredMmteDetailsPage.getWhoolFieldValue('Mirchi Whool', 'Nnnnn Base/Associate To');
+
+        if (mirchiWhoolNnnnnBaseFvvvvv === 'true' || mirchiWhoolNnnnnBaseFvvvvv === 'True' || mirchiWhoolNnnnnBaseFvvvvv === 'Yes' || mirchiWhoolNnnnnBaseFvvvvv === 'Y') {
+            const expectedValue = this.scenarioContext.getVariable('mirchiWhoolNnnnnBaseDaysAssociateTo');
+            // Note: UI might get empty value but scenario context might have null - both should be equal
+            const normalizedExpected = (expectedValue === null || expectedValue === undefined) ? '' : String(expectedValue).trim();
+            const normalizedActual = strUIMirchiWhoolNnnnnBaseAssociateTo.trim();
+            if (normalizedExpected !== normalizedActual) {
+                throw new Error(`Expected Mirchi Whool Nnnnn Base Associate To '${normalizedExpected}' but got '${normalizedActual}'`);
+            }
+            Tsreporter.pass(`Mirchi Whool Nnnnn Base Associate To value matches: ${normalizedActual}`);
+        } else {
+            // Per RR05 Req Line 926: If fvvvvv is false, UI value should be empty
+            if (strUIMirchiWhoolNnnnnBaseAssociateTo.trim() !== '') {
+                throw new Error(`Expected Mirchi Whool Nnnnn Base Associate To to be empty but got '${strUIMirchiWhoolNnnnnBaseAssociateTo}'`);
+            }
+            Tsreporter.pass('Mirchi Whool Nnnnn Base Associate To value verified (empty as expected)');
+        }
+    }
+
+    @TSBDDStepDef('Mirchi Whool Mirchiary Nnnnn Base Days value should match expected')
+    async verifyMirchiWhoolMirchiaryNnnnnBaseDaysValueMatchesExpected(): Promise<void> {
+        Tsreporter.info('Verifying Mirchi Whool Mirchiary Nnnnn Base Days value matches expected');
+        // Per RR05 Req Lines 935-939: Check fvvvvv rust
+        const mirchiWhoolMirchiaryNnnnnBaseFvvvvv = this.scenarioContext.getVariable('mirchiWhoolMirchiaryNnnnnBaseFvvvvv');
+        const strUIMirchiWhoolMirchiaryNnnnnBaseDays = await this.scatteredMmteDetailsPage.getWhoolFieldValue('Mirchi Whool', 'Mirchiary Nnnnn Base/Days');
+
+        if (mirchiWhoolMirchiaryNnnnnBaseFvvvvv === 'true' || mirchiWhoolMirchiaryNnnnnBaseFvvvvv === 'True' || mirchiWhoolMirchiaryNnnnnBaseFvvvvv === 'Yes' || mirchiWhoolMirchiaryNnnnnBaseFvvvvv === 'Y') {
+            const expectedDays = this.scenarioContext.getVariable('mirchiWhoolMirchiaryNnnnnBaseDays');
+            const normalizedExpected = (expectedDays === null || expectedDays === undefined) ? '' : String(expectedDays).trim();
+            const normalizedActual = strUIMirchiWhoolMirchiaryNnnnnBaseDays.trim();
+            if (normalizedExpected !== normalizedActual) {
+                throw new Error(`Expected Mirchi Whool Mirchiary Nnnnn Base Days '${normalizedExpected}' but got '${normalizedActual}'`);
+            }
+            Tsreporter.pass(`Mirchi Whool Mirchiary Nnnnn Base Days value matches: ${normalizedActual}`);
+        } else {
+            // Per RR05 Req Line 939: If fvvvvv is false, UI value should be empty
+            if (strUIMirchiWhoolMirchiaryNnnnnBaseDays.trim() !== '') {
+                throw new Error(`Expected Mirchi Whool Mirchiary Nnnnn Base Days to be empty but got '${strUIMirchiWhoolMirchiaryNnnnnBaseDays}'`);
+            }
+            Tsreporter.pass('Mirchi Whool Mirchiary Nnnnn Base Days value verified (empty as expected)');
+        }
+    }
+
+    @TSBDDStepDef('Mirchi Whool Mirchiary Nnnnn Base Associate To value should match expected')
+    async verifyMirchiWhoolMirchiaryNnnnnBaseAssociateToValueMatchesExpected(): Promise<void> {
+        Tsreporter.info('Verifying Mirchi Whool Mirchiary Nnnnn Base Associate To value matches expected');
+        // Per RR05 Req Lines 935-939: Check fvvvvv rust
+        const mirchiWhoolMirchiaryNnnnnBaseFvvvvv = this.scenarioContext.getVariable('mirchiWhoolMirchiaryNnnnnBaseFvvvvv');
+        const strUIMirchiWhoolMirchiaryNnnnnBaseAssociateTo = await this.scatteredMmteDetailsPage.getWhoolFieldValue('Mirchi Whool', 'Mirchiary Nnnnn Base/Associate To');
+
+        if (mirchiWhoolMirchiaryNnnnnBaseFvvvvv === 'true' || mirchiWhoolMirchiaryNnnnnBaseFvvvvv === 'True' || mirchiWhoolMirchiaryNnnnnBaseFvvvvv === 'Yes' || mirchiWhoolMirchiaryNnnnnBaseFvvvvv === 'Y') {
+            const expectedValue = this.scenarioContext.getVariable('mirchiWhoolMirchiaryNnnnnBaseDaysAssociateTo');
+            const normalizedExpected = (expectedValue === null || expectedValue === undefined) ? '' : String(expectedValue).trim();
+            const normalizedActual = strUIMirchiWhoolMirchiaryNnnnnBaseAssociateTo.trim();
+            if (normalizedExpected !== normalizedActual) {
+                throw new Error(`Expected Mirchi Whool Mirchiary Nnnnn Base Associate To '${normalizedExpected}' but got '${normalizedActual}'`);
+            }
+            Tsreporter.pass(`Mirchi Whool Mirchiary Nnnnn Base Associate To value matches: ${normalizedActual}`);
+        } else {
+            // Per RR05 Req Line 939: If fvvvvv is false, UI value should be empty
+            if (strUIMirchiWhoolMirchiaryNnnnnBaseAssociateTo.trim() !== '') {
+                throw new Error(`Expected Mirchi Whool Mirchiary Nnnnn Base Associate To to be empty but got '${strUIMirchiWhoolMirchiaryNnnnnBaseAssociateTo}'`);
+            }
+            Tsreporter.pass('Mirchi Whool Mirchiary Nnnnn Base Associate To value verified (empty as expected)');
+        }
+    }
+
+    @TSBDDStepDef('Mirchi Whool Hookwith Days value should match expected')
+    async verifyMirchiWhoolHookwithDaysValueMatchesExpected(): Promise<void> {
+        Tsreporter.info('Verifying Mirchi Whool Hookwith Days value matches expected');
+        // Per RR05 Req Lines 950-953: Check fvvvvv rust
+        const mirchiWhoolAddToHookwithDaysFvvvvv = this.scenarioContext.getVariable('mirchiWhoolAddToHookwithDaysFvvvvv');
+        const strUIMirchiWhoolHookwithDays = await this.scatteredMmteDetailsPage.getWhoolFieldValue('Mirchi Whool', 'Hookwith/Days');
+
+        if (mirchiWhoolAddToHookwithDaysFvvvvv === 'true' || mirchiWhoolAddToHookwithDaysFvvvvv === 'True' || mirchiWhoolAddToHookwithDaysFvvvvv === 'Yes' || mirchiWhoolAddToHookwithDaysFvvvvv === 'Y') {
+            const expectedDays = this.scenarioContext.getVariable('mirchiWhoolAddToHookwithDays');
+            const normalizedExpected = (expectedDays === null || expectedDays === undefined) ? '' : String(expectedDays).trim();
+            const normalizedActual = strUIMirchiWhoolHookwithDays.trim();
+            if (normalizedExpected !== normalizedActual) {
+                throw new Error(`Expected Mirchi Whool Hookwith Days '${normalizedExpected}' but got '${normalizedActual}'`);
+            }
+            Tsreporter.pass(`Mirchi Whool Hookwith Days value matches: ${normalizedActual}`);
+        } else {
+            // If fvvvvv is false, UI value should be empty
+            if (strUIMirchiWhoolHookwithDays.trim() !== '') {
+                throw new Error(`Expected Mirchi Whool Hookwith Days to be empty but got '${strUIMirchiWhoolHookwithDays}'`);
+            }
+            Tsreporter.pass('Mirchi Whool Hookwith Days value verified (empty as expected)');
+        }
+    }
+
+    @TSBDDStepDef('Mirchi Whool Hookwith Include value should match expected')
+    async verifyMirchiWhoolHookwithIncludeValueMatchesExpected(): Promise<void> {
+        Tsreporter.info('Verifying Mirchi Whool Hookwith Include value matches expected');
+        // Per RR05 Req Lines 950-955: Check fvvvvv rust
+        const mirchiWhoolAddToHookwithDaysFvvvvv = this.scenarioContext.getVariable('mirchiWhoolAddToHookwithDaysFvvvvv');
+
+        if (mirchiWhoolAddToHookwithDaysFvvvvv === 'true' || mirchiWhoolAddToHookwithDaysFvvvvv === 'True' || mirchiWhoolAddToHookwithDaysFvvvvv === 'Yes' || mirchiWhoolAddToHookwithDaysFvvvvv === 'Y') {
+            const strUIMirchiWhoolHookwithInclude = await this.scatteredMmteDetailsPage.getWhoolFieldValue('Mirchi Whool', 'Hookwith/Include');
+
+            // Per RR05 Req Line 954: If Weekend fvvvvv is Y, verify Include contains "Weekend"
+            const includeWeekend = this.scenarioContext.getVariable('mirchiWhoolAddToHookwithDaysIncludeWeekends');
+            if (includeWeekend === 'Y' || includeWeekend === 'Yes' || includeWeekend === 'true') {
+                if (!strUIMirchiWhoolHookwithInclude.includes('Weekend')) {
+                    throw new Error(`Expected Mirchi Whool Hookwith Include to contain 'Weekend' but got '${strUIMirchiWhoolHookwithInclude}'`);
+                }
+                Tsreporter.pass('Mirchi Whool Hookwith Include contains Weekend as expected');
+            }
+
+            // Per RR05 Req Line 955: If Holiday fvvvvv is Y, verify Include contains "Holiday"
+            const includeHoliday = this.scenarioContext.getVariable('mirchiWhoolAddToHookwithDaysIncludeHoliday');
+            if (includeHoliday === 'Y' || includeHoliday === 'Yes' || includeHoliday === 'true') {
+                if (!strUIMirchiWhoolHookwithInclude.includes('Holiday')) {
+                    throw new Error(`Expected Mirchi Whool Hookwith Include to contain 'Holiday' but got '${strUIMirchiWhoolHookwithInclude}'`);
+                }
+                Tsreporter.pass('Mirchi Whool Hookwith Include contains Holiday as expected');
+            }
+
+            Tsreporter.pass(`Mirchi Whool Hookwith Include value verified: ${strUIMirchiWhoolHookwithInclude}`);
+        } else {
+            Tsreporter.pass('Mirchi Whool Hookwith Include value verified (skipped - fvvvvv is false)');
+        }
+    }
+
