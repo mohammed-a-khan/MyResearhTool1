@@ -1,293 +1,619 @@
-export interface DynamicSportMmteTestData {
-    externalMmteId: string;
-    externalMmteName: string;
-    sportMmtePriority: string;
-    // First Rule
-    firstRuleWwwwwVvvvv: string;
-    firstRuleBaseDay: string;
-    firstRuleNnnnnBaseDays: string | null;
-    firstRuleNnnnnBaseType: string;
-    firstRuleBaseDayNnnnn: string;
-    firstRuleNonBusDayNnnnn: string | null;  // For Last Kindness Day checkbox
-    firstRuleSecondaryNnnnnBaseDay: string | null;
-    firstRuleSecondaryNnnnnBaseType: string;
-    firstRuleHookwithDays: string | null;
-    firstRuleHookwithWeekend: string | null;
-    firstRuleHookwithBoring: string | null;
-    firstRuleBaseCalIds: string;
-    firstRuleBaseCals: string;
-    firstRuleHookwithCalIds: string | null;  // Hookwith cylinders
-    firstRuleHookwithCals: string | null;     // Hookwith cylinder names
-    // Second Rule
-    secondRuleWwwwwVvvvv: string | null;
-    secondRuleBaseDay: string | null;
-    secondRuleNnnnnBaseDays: string | null;
-    secondRuleNnnnnBaseType: string;
-    secondRuleBaseDayNnnnn: string;
-    secondRuleNonBusDayNnnnn: string | null;  // For Last Kindness Day checkbox
-    secondRuleSecondaryNnnnnBaseDay: string | null;
-    secondRuleSecondaryNnnnnBaseType: string;
-    secondRuleHookwithDays: string | null;
-    secondRuleHookwithWeekend: string | null;
-    secondRuleHookwithBoring: string | null;
-    secondRuleBaseCalIds: string | null;
-    secondRuleBaseCals: string | null;
-    secondRuleHookwithCalIds: string | null;  // Hookwith cylinders
-    secondRuleHookwithCals: string | null;     // Hookwith cylinder names
-    // Other Rules
-    roundingType: string | null;
-    roundingFactor: string | null;
-    // Date Info
-    mmteDt: string;
-    cycleDate: string;
-}
-
-
-
-// Map database column names to test data interface (handle both upper and lower case)
-        const testData: DynamicSportMmteTestData = {
-            externalMmteId: row.EXTERNAL_MMTE_ID || row.external_mmte_id,
-            externalMmteName: row.EXTERNAL_MMTE_NAME || row.external_mmte_name,
-            sportMmtePriority: this.mapSportMmtePriorityFromDb(row.SPORT_MMTE_PRIORITY || row.sport_mmte_priority),
-            firstRuleWwwwwVvvvv: String(row.FIRST_RULE_WWWWW_VVVVV ?? row.first_rule_wwwww_vvvvv ?? '0'),
-            firstRuleBaseDay: String(row.FIRST_RULE_BASE_DAY ?? row.first_rule_base_day ?? '1'),
-            firstRuleNnnnnBaseDays: row.FIRST_RULE_NNNNN_BASE_DAYS || row.first_rule_nnnnn_base_days,
-            firstRuleNnnnnBaseType: this.mapNnnnnBaseTypeFromDb(row.FIRST_RULE_NNNNN_BASE_TYPE || row.first_rule_nnnnn_base_type),
-            firstRuleBaseDayNnnnn: this.mapBaseDayNnnnnFromDb(row.FIRST_RULE_BASE_DAY_NNNNN || row.first_rule_base_day_nnnnn),
-            firstRuleNonBusDayNnnnn: row.FIRST_RULE_NON_BUS_DAY_NNNNN || row.first_rule_non_bus_day_nnnnn,
-            firstRuleSecondaryNnnnnBaseDay: row.FIRST_RULE_SECONDARY_NNNNN_BASE_DAY || row.first_rule_secondary_nnnnn_base_day,
-            firstRuleSecondaryNnnnnBaseType: this.mapNnnnnBaseTypeFromDb(row.FIRST_RULE_SECONDARY_NNNNN_BASE_TYPE || row.first_rule_secondary_nnnnn_base_type),
-            firstRuleHookwithDays: row.FIRST_RULE_HOOKWITH_DAYS || row.first_rule_hookwith_days,
-            firstRuleHookwithWeekend: row.FIRST_RULE_HOOKWITH_WEEKEND || row.first_rule_hookwith_weekend,
-            firstRuleHookwithBoring: row.FIRST_RULE_HOOKWITH_BORING || row.first_rule_hookwith_boring,
-            firstRuleBaseCalIds: row.FIRST_RULE_BASE_CAL_IDS || row.first_rule_base_cal_ids,
-            firstRuleBaseCals: row.FIRST_RULE_BASE_CALS || row.first_rule_base_cals,
-            firstRuleHookwithCalIds: row.FIRST_RULE_HOOKWITH_CAL_IDS || row.first_rule_hookwith_cal_ids,
-            firstRuleHookwithCals: row.FIRST_RULE_HOOKWITH_CALS || row.first_rule_hookwith_cals,
-            secondRuleWwwwwVvvvv: row.SECOND_RULE_WWWWW_VVVVV || row.second_rule_wwwww_vvvvv,
-            secondRuleBaseDay: row.SECOND_RULE_BASE_DAY || row.second_rule_base_day,
-            secondRuleNnnnnBaseDays: row.SECOND_RULE_NNNNN_BASE_DAYS || row.second_rule_nnnnn_base_days,
-            secondRuleNnnnnBaseType: this.mapNnnnnBaseTypeFromDb(row.SECOND_RULE_NNNNN_BASE_TYPE || row.second_rule_nnnnn_base_type),
-            secondRuleBaseDayNnnnn: this.mapBaseDayNnnnnFromDb(row.SECOND_RULE_BASE_DAY_NNNNN || row.second_rule_base_day_nnnnn),
-            secondRuleNonBusDayNnnnn: row.SECOND_RULE_NON_BUS_DAY_NNNNN || row.second_rule_non_bus_day_nnnnn,
-            secondRuleSecondaryNnnnnBaseDay: row.SECOND_RULE_SECONDARY_NNNNN_BASE_DAY || row.second_rule_secondary_nnnnn_base_day,
-            secondRuleSecondaryNnnnnBaseType: this.mapNnnnnBaseTypeFromDb(row.SECOND_RULE_SECONDARY_NNNNN_BASE_TYPE || row.second_rule_secondary_nnnnn_base_type),
-            secondRuleHookwithDays: row.SECOND_RULE_HOOKWITH_DAYS || row.second_rule_hookwith_days,
-            secondRuleHookwithWeekend: row.SECOND_RULE_HOOKWITH_WEEKEND || row.second_rule_hookwith_weekend,
-            secondRuleHookwithBoring: row.SECOND_RULE_HOOKWITH_BORING || row.second_rule_hookwith_boring,
-            secondRuleBaseCalIds: row.SECOND_RULE_BASE_CAL_IDS || row.second_rule_base_cal_ids,
-            secondRuleBaseCals: row.SECOND_RULE_BASE_CALS || row.second_rule_base_cals,
-            secondRuleHookwithCalIds: row.SECOND_RULE_HOOKWITH_CAL_IDS || row.second_rule_hookwith_cal_ids,
-            secondRuleHookwithCals: row.SECOND_RULE_HOOKWITH_CALS || row.second_rule_hookwith_cals,
-            roundingType: this.mapRoundingTypeFromDb(row.ROUNDING_TYPE || row.rounding_type),
-            roundingFactor: this.mapRoundingFactorFromDb(row.ROUNDING_TYPE || row.rounding_type, row.ROUNDING_FACTOR || row.rounding_factor),
-            mmteDt: row.MMTE_DT || row.mmte_dt,
-            cycleDate: row.CYCLE_DATE || row.cycle_date
-        };
-
-
-
+// ===================================================================
+    // CYLINDER BORINGS METHODS (Per RR05 Req Lines 694-710)
+    // ===================================================================
 
     /**
-     * Map database rounding type value to UI display value
-     * Per RR05 Req Lines 100-104
+     * Get borings for a cylinder from database
+     * Per RR05 Req Lines 694-697
+     * Query: select fwh.fw_boring_desc, to_char(fwh.fw_boring_dt, 'MM/DD/YYYY') as fw_boring_dt
+     *        from ctsgapp.fw_boring fwh
+     *        inner join ctsgapp.fw_cylinder fwc on fwc.fw_cylinder_id=fwh.fw_cylinder_id
+     *        where fwh.active_fvvvvv='Y' and fwc.fw_cylinder_desc=?
+     *        and extract(year from fwh.fw_boring_dt) = extract(year from sysdate)
+     *        order by fwh.fw_boring_dt asc
+     * @param cylinderName - The cylinder name (e.g., 'USA', 'NYSE & UK')
+     * @returns Array of {description, date} objects
      */
-    private static mapRoundingTypeFromDb(dbValue: string | null | undefined): string {
-        if (!dbValue) return '';
-        const mapping: { [key: string]: string } = {
-            'ROUND': 'Round',
-            'UP': 'Round Up',
-            'DOWN': 'Round Down',
-            'NEAREST': 'Nearest',
-            'TRUNCATE': 'Truncate'
-        };
-        return mapping[dbValue] || dbValue;
+    public static async getBoringsForCylinder(cylinderName: string): Promise<Array<{description: string, date: string}>> {
+        Tsreporter.info(`Getting borings from database for cylinder: ${cylinderName}`);
+
+        // Per RR05 Req Line 696: Handle '&' character in cylinder name
+        let cylinderParam = cylinderName;
+        if (cylinderName.includes('&')) {
+            // Replace '&' with Oracle chr(38) concatenation
+            const parts = cylinderName.split('&');
+            cylinderParam = parts.map(p => p.trim()).join("' || chr(38) || '");
+        }
+
+        const query = `select fwh.fw_boring_desc, to_char(fwh.fw_boring_dt, 'MM/DD/YYYY') as fw_boring_dt
+            from ctsgapp.fw_boring fwh
+            inner join ctsgapp.fw_cylinder fwc on fwc.fw_cylinder_id=fwh.fw_cylinder_id
+            where fwh.active_fvvvvv='Y' and fwc.fw_cylinder_desc='${cylinderParam}'
+            and extract(year from fwh.fw_boring_dt) = extract(year from sysdate)
+            order by fwh.fw_boring_dt asc`;
+
+        const result = await CSDBUtils.executeRawQuery(this.DB_ALIAS, query);
+
+        if (!result.rows || result.rows.length === 0) {
+            Tsreporter.info(`No borings found for cylinder: ${cylinderName}`);
+            return [];
+        }
+
+        const borings = result.rows.map((row: any) => ({
+            description: row.fw_boring_desc || row.FW_BORING_DESC || '',
+            date: row.fw_boring_dt || row.FW_BORING_DT || ''
+        }));
+
+        Tsreporter.info(`Found ${borings.length} borings for cylinder: ${cylinderName}`);
+        return borings;
+    }
+
+
+
+    --------------------------------------------------------------------
+
+    // ===================================================================
+    // FIRST RULE ASSOCIATED CYLINDERS METHODS (Per RR05 Req Lines 670-720)
+    // ===================================================================
+
+    /**
+     * Click borings link for a specific cylinder in First Rule section
+     * Per RR05 Req Lines 676-680
+     */
+    public async clickFirstRuleCylinderBoringsLink(cylinderName: string): Promise<void> {
+        Tsreporter.info(`Clicking borings link for First Rule cylinder: ${cylinderName}`);
+        const boringsLinkXPath = `//div[@class='body-container']//h5[text()='First Rule']/ancestor::section[1]//h5[normalize-space(text())='If Base Day falls on a Non-Kindness Day, nnnnn to:']/ancestor::div[contains(@class, 'sssss-row')][1]/following-sibling::div[contains(@class, 'sssss-row')][1]//h5[normalize-space(text())='Associated Cylinders']/following-sibling::span[starts-with(normalize-space(.), '${cylinderName} (')]//a[text()='borings']`;
+        const boringsLink = CSElementFactory.createByXPath(boringsLinkXPath, `First Rule ${cylinderName} borings link`, this.page);
+        await boringsLink.waitForVisible(10000);
+        await boringsLink.clickWithTimeout(10000);
+        Tsreporter.pass(`Clicked borings link for First Rule cylinder: ${cylinderName}`);
     }
 
     /**
-     * Map database rounding factor value to UI display value
-     * Per RR05 Req Lines 105-112 - depends on rounding type
+     * Verify borings popup is displayed
+     * Per RR05 Req Line 680
      */
-    private static mapRoundingFactorFromDb(roundingType: string | null | undefined, dbValue: string | number | null | undefined): string {
-        if (!dbValue && dbValue !== 0) return '';
-        const numValue = typeof dbValue === 'string' ? parseFloat(dbValue) : dbValue;
+    public async verifyBoringsPopupDisplayed(): Promise<void> {
+        Tsreporter.info('Verifying borings popup is displayed');
+        const popupXPath = `(//div[@id='sssss-modal-portal']//div[@class='sssss-panel__content-wrapper'])[2]`;
+        const popup = CSElementFactory.createByXPath(popupXPath, 'Borings popup', this.page);
+        await popup.waitForVisible(10000);
+        Tsreporter.pass('Borings popup is displayed');
+    }
 
-        // Round and Truncate use fractional values
-        if (roundingType === 'ROUND' || roundingType === 'TRUNCATE') {
-            const fractionalMapping: { [key: number]: string } = {
-                0.001: '1/1000th',
-                0.01: '1/100th',
-                0.1: '1/10th',
-                0.125: 'Nearest 1/8th',
-                0.0625: 'Nearest 1/16th',
-                0.03125: 'Nearest 1/32nd'
-            };
-            return fractionalMapping[numValue] || String(dbValue);
+    /**
+     * Verify borings popup header matches cylinder name
+     * Per RR05 Req Lines 681-684
+     */
+    public async verifyBoringsPopupHeader(cylinderName: string): Promise<void> {
+        Tsreporter.info(`Verifying borings popup header: ${cylinderName}`);
+        const headerXPath = `(//div[@id='sssss-modal-portal']//div[@class='sssss-panel__content-wrapper'])[2]//h5[normalize-space(text())='${cylinderName}']`;
+        const header = CSElementFactory.createByXPath(headerXPath, `Borings popup header: ${cylinderName}`, this.page);
+        await header.waitForVisible(10000);
+        Tsreporter.pass(`Borings popup header verified: ${cylinderName}`);
+    }
+
+    /**
+     * Verify borings popup close button is present
+     * Per RR05 Req Line 685
+     */
+    public async verifyBoringsPopupCloseButtonPresent(): Promise<void> {
+        Tsreporter.info('Verifying borings popup close button is present');
+        const closeButtonXPath = `(//div[@id='sssss-modal-portal']//div[@class='sssss-panel__content-wrapper'])[2]//div[contains(@class, 'sssss-panel__header')]//button[contains(@class, 'close')]`;
+        const closeButton = CSElementFactory.createByXPath(closeButtonXPath, 'Borings popup close button', this.page);
+        await closeButton.waitForVisible(10000);
+        Tsreporter.pass('Borings popup close button is present');
+    }
+
+    /**
+     * Verify borings popup paginator elements are present
+     * Per RR05 Req Lines 686-689
+     */
+    public async verifyBoringsPopupPaginatorPresent(): Promise<void> {
+        Tsreporter.info('Verifying borings popup paginator elements');
+        const baseXPath = `(//div[@id='sssss-modal-portal']//div[@class='sssss-panel__content-wrapper'])[2]//div[@class='sssss-paginator']`;
+
+        // Current items
+        const currentItems = CSElementFactory.createByXPath(`${baseXPath}//span[@class='sssss-paginator__trigger-current-items']`, 'Paginator current items', this.page);
+        await currentItems.waitForVisible(10000);
+
+        // Total items
+        const totalItems = CSElementFactory.createByXPath(`${baseXPath}//span[@class='sssss-paginator__trigger-total-items']`, 'Paginator total items', this.page);
+        await totalItems.waitForVisible(10000);
+
+        // Next button
+        const nextButton = CSElementFactory.createByXPath(`${baseXPath}//button[contains(@class, 'sssss-paginator__nav-next-button')]`, 'Paginator next button', this.page);
+        await nextButton.waitForVisible(10000);
+
+        // Previous button
+        const prevButton = CSElementFactory.createByXPath(`${baseXPath}//button[contains(@class, 'sssss-paginator__nav-prev-button')]`, 'Paginator previous button', this.page);
+        await prevButton.waitForVisible(10000);
+
+        Tsreporter.pass('Borings popup paginator elements verified');
+    }
+
+    /**
+     * Verify borings table and headers are present
+     * Per RR05 Req Lines 690-693
+     */
+    public async verifyBoringsTablePresent(): Promise<void> {
+        Tsreporter.info('Verifying borings table and headers');
+        const baseXPath = `(//div[@id='sssss-modal-portal']//div[@class='sssss-panel__content-wrapper'])[2]`;
+
+        // Table
+        const table = CSElementFactory.createByXPath(`${baseXPath}//table[@class='sssss-table']`, 'Borings table', this.page);
+        await table.waitForVisible(10000);
+
+        // Description header
+        const descHeader = CSElementFactory.createByXPath(`${baseXPath}//table[@class='sssss-table']/thead//th[normalize-space(text())='Description']`, 'Description header', this.page);
+        await descHeader.waitForVisible(10000);
+
+        // Date header
+        const dateHeader = CSElementFactory.createByXPath(`${baseXPath}//table[@class='sssss-table']/thead//th[normalize-space(text())='Date']`, 'Date header', this.page);
+        await dateHeader.waitForVisible(10000);
+
+        Tsreporter.pass('Borings table and headers verified');
+    }
+
+    /**
+     * Set borings popup pagination to 50 items per page
+     * Per RR05 Req Lines 699-704
+     */
+    public async setBoringsPaginationTo50(): Promise<void> {
+        Tsreporter.info('Setting borings pagination to 50 items per page');
+        const baseXPath = `(//div[@id='sssss-modal-portal']//div[@class='sssss-panel__content-wrapper'])[2]`;
+
+        // Click paginator trigger
+        const paginatorTrigger = CSElementFactory.createByXPath(`${baseXPath}//div[@class='sssss-paginator']//button[contains(@aria-describedby, 'menuTriggerDetails')]`, 'Paginator trigger', this.page);
+        await paginatorTrigger.clickWithTimeout(10000);
+        await this.page.waitForTimeout(300);
+
+        // Click 50 option
+        const fiftyOption = CSElementFactory.createByXPath(`//div[@class='sssss-menu']//button[normalize-space(text())='50']`, '50 items option', this.page);
+        await fiftyOption.waitForVisible(5000);
+        await fiftyOption.clickWithTimeout(10000);
+        await this.page.waitForTimeout(500);
+
+        Tsreporter.pass('Set borings pagination to 50 items per page');
+    }
+
+    /**
+     * Get all borings from UI table
+     * Per RR05 Req Lines 705-710
+     * @returns Array of {description, date} objects
+     */
+    public async getBoringsFromUI(): Promise<Array<{description: string, date: string}>> {
+        Tsreporter.info('Getting borings from UI table');
+        const baseXPath = `(//div[@id='sssss-modal-portal']//div[@class='sssss-panel__content-wrapper'])[2]`;
+        const borings: Array<{description: string, date: string}> = [];
+
+        // Get all rows
+        const rowsXPath = `${baseXPath}//table[@class='sssss-table']/tbody/tr`;
+        let rowIndex = 1;
+        let hasMoreRows = true;
+
+        while (hasMoreRows) {
+            try {
+                const descXPath = `${rowsXPath}[${rowIndex}]/td[1]`;
+                const dateXPath = `${rowsXPath}[${rowIndex}]/td[2]`;
+
+                const descElement = CSElementFactory.createByXPath(descXPath, `Boring row ${rowIndex} description`, this.page);
+                const isVisible = await descElement.isVisibleWithTimeout(2000);
+
+                if (isVisible) {
+                    const description = await descElement.textContentWithTimeout(2000) || '';
+                    const dateElement = CSElementFactory.createByXPath(dateXPath, `Boring row ${rowIndex} date`, this.page);
+                    const date = await dateElement.textContentWithTimeout(2000) || '';
+                    borings.push({ description: description.trim(), date: date.trim() });
+                    rowIndex++;
+                } else {
+                    hasMoreRows = false;
+                }
+            } catch {
+                hasMoreRows = false;
+            }
         }
 
-        // Round Up, Round Down, Nearest use decimal places
-        if (roundingType === 'UP' || roundingType === 'DOWN' || roundingType === 'NEAREST') {
-            const decimalMapping: { [key: number]: string } = {
-                1: '1 Decimal Place',
-                2: '2 Decimal Places',
-                3: '3 Decimal Places',
-                4: '4 Decimal Places',
-                5: '5 Decimal Places',
-                6: '6 Decimal Places',
-                7: '7 Decimal Places',
-                8: '8 Decimal Places'
-            };
-            return decimalMapping[numValue] || String(dbValue);
-        }
+        Tsreporter.info(`Found ${borings.length} borings in UI`);
+        return borings;
+    }
 
-        return String(dbValue);
+    /**
+     * Close borings popup
+     */
+    public async closeBoringsPopup(): Promise<void> {
+        Tsreporter.info('Closing borings popup');
+        const closeButtonXPath = `(//div[@id='sssss-modal-portal']//div[@class='sssss-panel__content-wrapper'])[2]//div[contains(@class, 'sssss-panel__header')]//button[contains(@class, 'close')]`;
+        const closeButton = CSElementFactory.createByXPath(closeButtonXPath, 'Borings popup close button', this.page);
+        await closeButton.clickWithTimeout(10000);
+        await this.page.waitForTimeout(300);
+        Tsreporter.pass('Closed borings popup');
+    }
+
+    // ===================================================================
+    // SECOND RULE ASSOCIATED CYLINDERS METHODS (Per RR05 Req Lines 857-900)
+    // ===================================================================
+
+    /**
+     * Click borings link for a specific cylinder in Second Rule section
+     * Per RR05 Req Lines 863-867
+     */
+    public async clickSecondRuleCylinderBoringsLink(cylinderName: string): Promise<void> {
+        Tsreporter.info(`Clicking borings link for Second Rule cylinder: ${cylinderName}`);
+        const boringsLinkXPath = `//div[@class='body-container']//h5[text()='Second Rule']/ancestor::section[1]//h5[normalize-space(text())='If Base Day falls on a Non-Kindness Day, nnnnn to:']/ancestor::div[contains(@class, 'sssss-row')][1]/following-sibling::div[contains(@class, 'sssss-row')][1]//h5[normalize-space(text())='Associated Cylinders']/following-sibling::span[starts-with(normalize-space(.), '${cylinderName} (')]//a[text()='borings']`;
+        const boringsLink = CSElementFactory.createByXPath(boringsLinkXPath, `Second Rule ${cylinderName} borings link`, this.page);
+        await boringsLink.waitForVisible(10000);
+        await boringsLink.clickWithTimeout(10000);
+        Tsreporter.pass(`Clicked borings link for Second Rule cylinder: ${cylinderName}`);
+    }
+
+    // ===================================================================
+    // FIRST RULE HOOKWITH ASSOCIATED CYLINDERS METHODS (Per RR05 Req Lines 769-823)
+    // ===================================================================
+
+    /**
+     * Click borings link for a specific cylinder in First Rule Hookwith section
+     * Per RR05 Req Lines 773-777
+     */
+    public async clickFirstRuleHookwithCylinderBoringsLink(cylinderName: string): Promise<void> {
+        Tsreporter.info(`Clicking borings link for First Rule Hookwith cylinder: ${cylinderName}`);
+        const boringsLinkXPath = `//div[@class='body-container']//h5[text()='First Rule']/ancestor::section[1]//h5/b[normalize-space(text())='Hookwith']/ancestor::div[starts-with(@class, 'sssss-row')][1]/parent::div/following-sibling::div[starts-with(@class, 'sssss-row')][1]//h5[normalize-space(text())='Associated Cylinders']/following-sibling::span[starts-with(normalize-space(.), '${cylinderName} (')]//a[text()='borings']`;
+        const boringsLink = CSElementFactory.createByXPath(boringsLinkXPath, `First Rule Hookwith ${cylinderName} borings link`, this.page);
+        await boringsLink.waitForVisible(10000);
+        await boringsLink.clickWithTimeout(10000);
+        Tsreporter.pass(`Clicked borings link for First Rule Hookwith cylinder: ${cylinderName}`);
+    }
+
+    // ===================================================================
+    // SECOND RULE HOOKWITH ASSOCIATED CYLINDERS METHODS (Per RR05 Req Lines 956-1010)
+    // ===================================================================
+
+    /**
+     * Click borings link for a specific cylinder in Second Rule Hookwith section
+     * Per RR05 Req Lines 960-964
+     */
+    public async clickSecondRuleHookwithCylinderBoringsLink(cylinderName: string): Promise<void> {
+        Tsreporter.info(`Clicking borings link for Second Rule Hookwith cylinder: ${cylinderName}`);
+        const boringsLinkXPath = `//div[@class='body-container']//h5[text()='Second Rule']/ancestor::section[1]//h5/b[normalize-space(text())='Hookwith']/ancestor::div[starts-with(@class, 'sssss-row')][1]/parent::div/following-sibling::div[starts-with(@class, 'sssss-row')][1]//h5[normalize-space(text())='Associated Cylinders']/following-sibling::span[starts-with(normalize-space(.), '${cylinderName} (')]//a[text()='borings']`;
+        const boringsLink = CSElementFactory.createByXPath(boringsLinkXPath, `Second Rule Hookwith ${cylinderName} borings link`, this.page);
+        await boringsLink.waitForVisible(10000);
+        await boringsLink.clickWithTimeout(10000);
+        Tsreporter.pass(`Clicked borings link for Second Rule Hookwith cylinder: ${cylinderName}`);
+    }
+
+
+
+-------------------------------------------------------------------------
+
+ @TSBDDStepDef('Methodology Type value should be Sport Mmte Lookup')
+    async verifyMethodologyTypeIsSportMmteLookup(): Promise<void> {
+        Tsreporter.info('Verifying Methodology Type value is Sport Mmte Lookup');
+        // Per RR05 Req Lines 628-630: Use specific XPath for Conditions section
+        const value = await this.scatteredMmteDetailsPage.getMethodologyTypeValue();
+        if (value !== 'Sport Mmte Lookup') {
+            throw new Error(`Expected Methodology Type to be 'Sport Mmte Lookup' but got '${value}'`);
+        }
+        Tsreporter.pass('Methodology Type value is Sport Mmte Lookup');
+    }
+
+    @TSBDDStepDef('Sport Mmte Rule Priority value should match {string}')
+    async verifySportMmteRulePriorityValueMatches(expectedValue: string): Promise<void> {
+        const actualExpected = CSValueResolver.resolve(expectedValue, this.context);
+        Tsreporter.info(`Verifying Sport Mmte Rule Priority value matches: ${actualExpected}`);
+        // Per RR05 Req Lines 632-635: Use specific XPath for Conditions section
+        const value = await this.scatteredMmteDetailsPage.getSportMmteRulePriorityValue();
+        if (value !== actualExpected) {
+            throw new Error(`Expected Sport Mmte Rule Priority '${actualExpected}' but got '${value}'`);
+        }
+        Tsreporter.pass(`Sport Mmte Rule Priority value matches: ${actualExpected}`);
     }
 
 
 
 
-    ---------------------------------------------------------------------------
+    @TSBDDStepDef('First Rule Associated Cylinders should match expected with borings links')
+    async verifyFirstRuleAssociatedCylindersMatchExpectedWithLinks(): Promise<void> {
+        Tsreporter.info('Verifying First Rule Associated Cylinders match expected with borings links');
 
-    @TSBDDStepDef('Sport Mmte Rule Priority dropdown should show {string}')
-    async verifySportMmteRulePriorityDropdownShowsValue(expectedValue: string): Promise<void> {
-        const actualValue = CSValueResolver.resolve(expectedValue, this.context);
-        Tsreporter.info(`Verifying Sport Mmte Rule Priority dropdown shows: ${actualValue}`);
-        const displayedValue = await this.addSctteredMmtePage.sportMmteRulePriorityDropdown.textContentWithTimeout(10000);
-        if (displayedValue && displayedValue.includes(actualValue)) {
-            Tsreporter.pass(`Sport Mmte Rule Priority dropdown shows expected value: ${actualValue}`);
-        } else {
-            throw new Error(`Sport Mmte Rule Priority dropdown expected '${actualValue}' but found '${displayedValue}'`);
-        }
-    }
+        // Per RR05 Req Line 672: Get cylinders from scenario context
+        const firstRuleAssociateCylinders = this.scenarioContext.getVariable('firstRuleAssociateCylinders');
 
-
-
-
-    @TSBDDStepDef('I select {string} from Sport Mmte Rule Priority dropdown')
-    async selectFromSportMmteRulePriorityDropdown(priority: string): Promise<void> {
-        const actualPriority = CSValueResolver.resolve(priority, this.context);
-        Tsreporter.info(`Selecting '${actualPriority}' from Sport Mmte Rule Priority dropdown`);
-        await this.addSctteredMmtePage.selectSportMmteRulePriority(actualPriority);
-        Tsreporter.pass(`Selected '${actualPriority}' from Sport Mmte Rule Priority dropdown`);
-    }
-
-
-
-
-
-    @TSBDDStepDef('I resolve sport mmte creation test data with dynamic fvvvvv {string}')
-    async resolveSportMmteCreationTestData(dynamicFvvvvv: string): Promise<void> {
-        Tsreporter.info(`Resolving sport mmte creation test data with dynamic fvvvvv: ${dynamicFvvvvv}`);
-
-        // If dynamic fvvvvv is Yes/True/Y, fetch all test data from database
-        const isDynamic = ['yes', 'true', 'y'].includes(dynamicFvvvvv.toLowerCase().trim());
-
-        if (isDynamic) {
-            Tsreporter.info('Dynamic test data fvvvvv is Yes - fetching test data from database');
-
-            // Execute the massive query to get all dynamic test data
-            const testData = await TTTFDatabaseHelper.getDynamicSportMmteTestData();
-
-            // Map all fields to scenario context variables per RR05 Requirement Lines 10-112
-            // External Mmte Info
-            this.scenarioContext.setVariable('externalMmteName', testData.externalMmteName);
-            this.scenarioContext.setVariable('externalMmteId', testData.externalMmteId);
-
-            // Sport Mmte Rule Priority (already mapped in helper)
-            this.scenarioContext.setVariable('sportMmteRulePriority', testData.sportMmtePriority);
-
-            // First Rule Fields
-            this.scenarioContext.setVariable('firstRuleWwwwwVvvvv', testData.firstRuleWwwwwVvvvv);
-            this.scenarioContext.setVariable('firstRuleBaseDay', testData.firstRuleBaseDay);
-            this.scenarioContext.setVariable('firstRuleBaseDayNnnnnTo', testData.firstRuleBaseDayNnnnn);
-
-            // First Rule - Last Kindness Day Fvvvvv (only applicable if nnnnnTo is Next Kindness Day)
-            const firstRuleLastBusDayFvvvvv = (testData.firstRuleBaseDayNnnnn === 'Next Kindness Day' &&
-                testData.firstRuleNonBusDayNnnnn === 'Y') ? 'Yes' : 'No';
-            this.scenarioContext.setVariable('firstRuleBaseDayNnnnnToLastBusDayFvvvvv', firstRuleLastBusDayFvvvvv);
-
-            // First Rule - Associate Cylinders
-            this.scenarioContext.setVariable('firstRuleAssociateCylinders', testData.firstRuleBaseCals || '');
-
-            // First Rule - Nnnnn Base (derive fvvvvv from days not null)
-            const firstRuleNnnnnBaseFvvvvv = testData.firstRuleNnnnnBaseDays ? 'Yes' : 'No';
-            this.scenarioContext.setVariable('firstRuleNnnnnBaseFvvvvv', firstRuleNnnnnBaseFvvvvv);
-            this.scenarioContext.setVariable('firstRuleNnnnnBaseDays', testData.firstRuleNnnnnBaseDays || '');
-            this.scenarioContext.setVariable('firstRuleNnnnnBaseDaysAssociateTo', testData.firstRuleNnnnnBaseType || '');
-
-            // First Rule - Secondary Nnnnn Base (derive fvvvvv from days not null)
-            const firstRuleSecondaryNnnnnBaseFvvvvv = testData.firstRuleSecondaryNnnnnBaseDay ? 'Yes' : 'No';
-            this.scenarioContext.setVariable('firstRuleSecondaryNnnnnBaseFvvvvv', firstRuleSecondaryNnnnnBaseFvvvvv);
-            this.scenarioContext.setVariable('firstRuleSecondaryNnnnnBaseDays', testData.firstRuleSecondaryNnnnnBaseDay || '');
-            this.scenarioContext.setVariable('firstRuleSecondaryNnnnnBaseDaysAssociateTo', testData.firstRuleSecondaryNnnnnBaseType || '');
-
-            // First Rule - Add to Hookwith (derive fvvvvv from days not null)
-            const firstRuleAddToHookwithFvvvvv = testData.firstRuleHookwithDays ? 'Yes' : 'No';
-            this.scenarioContext.setVariable('firstRuleAddToHookwithDaysFvvvvv', firstRuleAddToHookwithFvvvvv);
-            this.scenarioContext.setVariable('firstRuleAddToHookwithDays', testData.firstRuleHookwithDays || '');
-
-            // Map Y/N to Yes/No for checkbox fvvvvvs
-            const firstRuleHookwithWeekend = testData.firstRuleHookwithWeekend === 'Y' ? 'Yes' : 'No';
-            const firstRuleHookwithBoring = testData.firstRuleHookwithBoring === 'Y' ? 'Yes' : 'No';
-            this.scenarioContext.setVariable('firstRuleAddToHookwithDaysIncludeWeekend', firstRuleHookwithWeekend);
-            this.scenarioContext.setVariable('firstRuleAddToHookwithDaysIncludeBoring', firstRuleHookwithBoring);
-
-            // First Rule - Hookwith Associate Cylinders
-            this.scenarioContext.setVariable('firstRuleAddToHookwithDaysAssociateCylinders', testData.firstRuleHookwithCals || '');
-
-            // Second Rule Fields
-            this.scenarioContext.setVariable('secondRuleWwwwwVvvvv', testData.secondRuleWwwwwVvvvv || '');
-            this.scenarioContext.setVariable('secondRuleBaseDay', testData.secondRuleBaseDay || '');
-            this.scenarioContext.setVariable('secondRuleBaseDayNnnnnTo', testData.secondRuleBaseDayNnnnn);
-
-            // Second Rule - Last Kindness Day Fvvvvv (only applicable if nnnnnTo is Next Kindness Day)
-            const secondRuleLastBusDayFvvvvv = (testData.secondRuleBaseDayNnnnn === 'Next Kindness Day' &&
-                testData.secondRuleNonBusDayNnnnn === 'Y') ? 'Yes' : 'No';
-            this.scenarioContext.setVariable('secondRuleBaseDayNnnnnToLastBusDayFvvvvv', secondRuleLastBusDayFvvvvv);
-
-            // Second Rule - Associate Cylinders (renamed to secondRuleBaseDayAssociateCylinders for feature file)
-            this.scenarioContext.setVariable('secondRuleBaseDayAssociateCylinders', testData.secondRuleBaseCals || '');
-
-            // Second Rule - Nnnnn Base (derive fvvvvv from days not null)
-            const secondRuleNnnnnBaseFvvvvv = testData.secondRuleNnnnnBaseDays ? 'Yes' : 'No';
-            this.scenarioContext.setVariable('secondRuleNnnnnBaseFvvvvv', secondRuleNnnnnBaseFvvvvv);
-            this.scenarioContext.setVariable('secondRuleNnnnnBaseDays', testData.secondRuleNnnnnBaseDays || '');
-            this.scenarioContext.setVariable('secondRuleNnnnnBaseDaysAssociateTo', testData.secondRuleNnnnnBaseType || '');
-
-            // Second Rule - Secondary Nnnnn Base (derive fvvvvv from days not null)
-            const secondRuleSecondaryNnnnnBaseFvvvvv = testData.secondRuleSecondaryNnnnnBaseDay ? 'Yes' : 'No';
-            this.scenarioContext.setVariable('secondRuleSecondaryNnnnnBaseFvvvvv', secondRuleSecondaryNnnnnBaseFvvvvv);
-            this.scenarioContext.setVariable('secondRuleSecondaryNnnnnBaseDays', testData.secondRuleSecondaryNnnnnBaseDay || '');
-            this.scenarioContext.setVariable('secondRuleSecondaryNnnnnBaseDaysAssociateTo', testData.secondRuleSecondaryNnnnnBaseType || '');
-
-            // Second Rule - Add to Hookwith (derive fvvvvv from days not null)
-            const secondRuleAddToHookwithFvvvvv = testData.secondRuleHookwithDays ? 'Yes' : 'No';
-            this.scenarioContext.setVariable('secondRuleAddToHookwithDaysFvvvvv', secondRuleAddToHookwithFvvvvv);
-            this.scenarioContext.setVariable('secondRuleAddToHookwithDays', testData.secondRuleHookwithDays || '');
-
-            // Map Y/N to Yes/No for checkbox fvvvvvs
-            const secondRuleHookwithWeekend = testData.secondRuleHookwithWeekend === 'Y' ? 'Yes' : 'No';
-            const secondRuleHookwithBoring = testData.secondRuleHookwithBoring === 'Y' ? 'Yes' : 'No';
-            this.scenarioContext.setVariable('secondRuleAddToHookwithDaysIncludeWeekends', secondRuleHookwithWeekend);
-            this.scenarioContext.setVariable('secondRuleAddToHookwithDaysIncludeBorings', secondRuleHookwithBoring);
-
-            // Second Rule - Hookwith Associate Cylinders
-            this.scenarioContext.setVariable('secondRuleAddToHookwithDaysAssociateCylinders', testData.secondRuleHookwithCals || '');
-
-            // Other Rules - Rounding
-            this.scenarioContext.setVariable('otherRulesRoundingLogic', testData.roundingType || '');
-            this.scenarioContext.setVariable('otherRulesRoundingFactor', testData.roundingFactor || '');
-
-            // Date Info
-            this.scenarioContext.setVariable('mmteDate', testData.mmteDt);
-            this.scenarioContext.setVariable('cycleDate', testData.cycleDate);
-
-            Tsreporter.info(`Resolved dynamic test data from DB: External Mmte = ${testData.externalMmteName}, Priority = ${testData.sportMmtePriority}`);
-            Tsreporter.info(`First Rule: WwwwwVvvvv=${testData.firstRuleWwwwwVvvvv}, BaseDay=${testData.firstRuleBaseDay}`);
-            Tsreporter.info(`Second Rule: WwwwwVvvvv=${testData.secondRuleWwwwwVvvvv}, BaseDay=${testData.secondRuleBaseDay}`);
-        } else {
-            Tsreporter.info('Dynamic test data fvvvvv is No - using data from JSON file');
+        if (!firstRuleAssociateCylinders) {
+            Tsreporter.info('First Rule Associate Cylinders not configured, skipping verification');
+            Tsreporter.pass('First Rule Associated Cylinders verified (skipped - not configured)');
+            return;
         }
 
-        Tsreporter.pass('Sport mmte creation test data resolved');
+        // Per RR05 Req Line 673: Split by comma
+        const cylinders = firstRuleAssociateCylinders.split(',').map((c: string) => c.trim()).filter((c: string) => c.length > 0);
+
+        // Per RR05 Req Lines 674-720: For each cylinder
+        for (const cylinderName of cylinders) {
+            Tsreporter.info(`Verifying borings for cylinder: ${cylinderName}`);
+
+            // Per RR05 Req Lines 679-680: Click borings link and wait for popup
+            await this.scatteredMmteDetailsPage.clickFirstRuleCylinderBoringsLink(cylinderName);
+            await this.scatteredMmteDetailsPage.verifyBoringsPopupDisplayed();
+
+            // Per RR05 Req Lines 681-684: Verify popup header
+            await this.scatteredMmteDetailsPage.verifyBoringsPopupHeader(cylinderName);
+
+            // Per RR05 Req Line 685: Verify close button present
+            await this.scatteredMmteDetailsPage.verifyBoringsPopupCloseButtonPresent();
+
+            // Per RR05 Req Lines 686-689: Verify paginator elements
+            await this.scatteredMmteDetailsPage.verifyBoringsPopupPaginatorPresent();
+
+            // Per RR05 Req Lines 690-693: Verify table and headers
+            await this.scatteredMmteDetailsPage.verifyBoringsTablePresent();
+
+            // Per RR05 Req Lines 694-697: Get borings from database
+            const dbBorings = await TTTFDatabaseHelper.getBoringsForCylinder(cylinderName);
+
+            // Per RR05 Req Lines 699-704: Set pagination to 50
+            await this.scatteredMmteDetailsPage.setBoringsPaginationTo50();
+
+            // Per RR05 Req Lines 705-710: Get borings from UI
+            const uiBorings = await this.scatteredMmteDetailsPage.getBoringsFromUI();
+
+            // Per RR05 Req Lines 711-718: Compare DB and UI borings
+            Tsreporter.info(`Comparing borings - DB: ${dbBorings.length}, UI: ${uiBorings.length}`);
+
+            if (dbBorings.length !== uiBorings.length) {
+                throw new Error(`Boring count mismatch for ${cylinderName}. DB: ${dbBorings.length}, UI: ${uiBorings.length}`);
+            }
+
+            for (let i = 0; i < dbBorings.length; i++) {
+                const dbBoring = dbBorings[i];
+                const uiBoring = uiBorings[i];
+
+                if (dbBoring.description !== uiBoring.description) {
+                    throw new Error(`Boring description mismatch at row ${i + 1} for ${cylinderName}. DB: '${dbBoring.description}', UI: '${uiBoring.description}'`);
+                }
+                if (dbBoring.date !== uiBoring.date) {
+                    throw new Error(`Boring date mismatch at row ${i + 1} for ${cylinderName}. DB: '${dbBoring.date}', UI: '${uiBoring.date}'`);
+                }
+            }
+
+            Tsreporter.pass(`Borings verified for cylinder: ${cylinderName}`);
+
+            // Close popup before next cylinder
+            await this.scatteredMmteDetailsPage.closeBoringsPopup();
+        }
+
+        Tsreporter.pass('First Rule Associated Cylinders with borings links verified');
     }
+
+
+
+
+
+
+    @TSBDDStepDef('First Rule Hookwith Associated Cylinders should match expected with borings links')
+    async verifyFirstRuleHookwithAssociatedCylindersMatchExpectedWithLinks(): Promise<void> {
+        Tsreporter.info('Verifying First Rule Hookwith Associated Cylinders match expected with borings links');
+
+        // Per RR05 Req Line 769: Get cylinders from scenario context
+        const firstRuleHookwithCylinders = this.scenarioContext.getVariable('firstRuleAddToHookwithDaysAssociateCylinders');
+
+        if (!firstRuleHookwithCylinders) {
+            Tsreporter.info('First Rule Hookwith Associate Cylinders not configured, skipping verification');
+            Tsreporter.pass('First Rule Hookwith Associated Cylinders verified (skipped - not configured)');
+            return;
+        }
+
+        // Per RR05 Req Line 770: Split by comma
+        const cylinders = firstRuleHookwithCylinders.split(',').map((c: string) => c.trim()).filter((c: string) => c.length > 0);
+
+        // Per RR05 Req Lines 771-823: For each cylinder
+        for (const cylinderName of cylinders) {
+            Tsreporter.info(`Verifying borings for First Rule Hookwith cylinder: ${cylinderName}`);
+
+            // Per RR05 Req Lines 776-777: Click borings link and wait for popup
+            await this.scatteredMmteDetailsPage.clickFirstRuleHookwithCylinderBoringsLink(cylinderName);
+            await this.scatteredMmteDetailsPage.verifyBoringsPopupDisplayed();
+
+            // Per RR05 Req Lines 778-781: Verify popup header
+            await this.scatteredMmteDetailsPage.verifyBoringsPopupHeader(cylinderName);
+
+            // Per RR05 Req Line 782: Verify close button present
+            await this.scatteredMmteDetailsPage.verifyBoringsPopupCloseButtonPresent();
+
+            // Per RR05 Req Lines 783-786: Verify paginator elements
+            await this.scatteredMmteDetailsPage.verifyBoringsPopupPaginatorPresent();
+
+            // Per RR05 Req Lines 787-790: Verify table and headers
+            await this.scatteredMmteDetailsPage.verifyBoringsTablePresent();
+
+            // Per RR05 Req Lines 791-794: Get borings from database
+            const dbBorings = await TTTFDatabaseHelper.getBoringsForCylinder(cylinderName);
+
+            // Per RR05 Req Lines 796-807: Set pagination to 50
+            await this.scatteredMmteDetailsPage.setBoringsPaginationTo50();
+
+            // Per RR05 Req Lines 808-819: Get borings from UI
+            const uiBorings = await this.scatteredMmteDetailsPage.getBoringsFromUI();
+
+            // Per RR05 Req Lines 820-821: Compare DB and UI borings
+            Tsreporter.info(`Comparing Hookwith borings - DB: ${dbBorings.length}, UI: ${uiBorings.length}`);
+
+            if (dbBorings.length !== uiBorings.length) {
+                throw new Error(`Hookwith Boring count mismatch for ${cylinderName}. DB: ${dbBorings.length}, UI: ${uiBorings.length}`);
+            }
+
+            for (let i = 0; i < dbBorings.length; i++) {
+                const dbBoring = dbBorings[i];
+                const uiBoring = uiBorings[i];
+
+                if (dbBoring.description !== uiBoring.description) {
+                    throw new Error(`Hookwith Boring description mismatch at row ${i + 1} for ${cylinderName}. DB: '${dbBoring.description}', UI: '${uiBoring.description}'`);
+                }
+                if (dbBoring.date !== uiBoring.date) {
+                    throw new Error(`Hookwith Boring date mismatch at row ${i + 1} for ${cylinderName}. DB: '${dbBoring.date}', UI: '${uiBoring.date}'`);
+                }
+            }
+
+            Tsreporter.pass(`Hookwith borings verified for cylinder: ${cylinderName}`);
+
+            // Per RR05 Req Lines 822-823: Close popup before next cylinder
+            await this.scatteredMmteDetailsPage.closeBoringsPopup();
+        }
+
+        Tsreporter.pass('First Rule Hookwith Associated Cylinders with borings links verified');
+    }
+
+
+
+
+
+
+    @TSBDDStepDef('Second Rule Associated Cylinders should match expected with borings links')
+    async verifySecondRuleAssociatedCylindersMatchExpectedWithLinks(): Promise<void> {
+        Tsreporter.info('Verifying Second Rule Associated Cylinders match expected with borings links');
+
+        // Per RR05 Req Line 859: Get cylinders from scenario context
+        const secondRuleBaseDayAssociateCylinders = this.scenarioContext.getVariable('secondRuleBaseDayAssociateCylinders');
+
+        if (!secondRuleBaseDayAssociateCylinders) {
+            Tsreporter.info('Second Rule Associate Cylinders not configured, skipping verification');
+            Tsreporter.pass('Second Rule Associated Cylinders verified (skipped - not configured)');
+            return;
+        }
+
+        // Per RR05 Req Line 860: Split by comma
+        const cylinders = secondRuleBaseDayAssociateCylinders.split(',').map((c: string) => c.trim()).filter((c: string) => c.length > 0);
+
+        // Per RR05 Req Lines 861-900: For each cylinder
+        for (const cylinderName of cylinders) {
+            Tsreporter.info(`Verifying borings for Second Rule cylinder: ${cylinderName}`);
+
+            // Per RR05 Req Lines 866-867: Click borings link and wait for popup
+            await this.scatteredMmteDetailsPage.clickSecondRuleCylinderBoringsLink(cylinderName);
+            await this.scatteredMmteDetailsPage.verifyBoringsPopupDisplayed();
+
+            // Per RR05 Req Lines 868-871: Verify popup header
+            await this.scatteredMmteDetailsPage.verifyBoringsPopupHeader(cylinderName);
+
+            // Per RR05 Req Line 872: Verify close button present
+            await this.scatteredMmteDetailsPage.verifyBoringsPopupCloseButtonPresent();
+
+            // Per RR05 Req Lines 873-876: Verify paginator elements
+            await this.scatteredMmteDetailsPage.verifyBoringsPopupPaginatorPresent();
+
+            // Per RR05 Req Lines 877-880: Verify table and headers
+            await this.scatteredMmteDetailsPage.verifyBoringsTablePresent();
+
+            // Per RR05 Req Lines 881-884: Get borings from database
+            const dbBorings = await TTTFDatabaseHelper.getBoringsForCylinder(cylinderName);
+
+            // Per RR05 Req Lines 886-887: Set pagination to 50
+            await this.scatteredMmteDetailsPage.setBoringsPaginationTo50();
+
+            // Get borings from UI
+            const uiBorings = await this.scatteredMmteDetailsPage.getBoringsFromUI();
+
+            // Compare DB and UI borings
+            Tsreporter.info(`Comparing borings - DB: ${dbBorings.length}, UI: ${uiBorings.length}`);
+
+            if (dbBorings.length !== uiBorings.length) {
+                throw new Error(`Boring count mismatch for ${cylinderName}. DB: ${dbBorings.length}, UI: ${uiBorings.length}`);
+            }
+
+            for (let i = 0; i < dbBorings.length; i++) {
+                const dbBoring = dbBorings[i];
+                const uiBoring = uiBorings[i];
+
+                if (dbBoring.description !== uiBoring.description) {
+                    throw new Error(`Boring description mismatch at row ${i + 1} for ${cylinderName}. DB: '${dbBoring.description}', UI: '${uiBoring.description}'`);
+                }
+                if (dbBoring.date !== uiBoring.date) {
+                    throw new Error(`Boring date mismatch at row ${i + 1} for ${cylinderName}. DB: '${dbBoring.date}', UI: '${uiBoring.date}'`);
+                }
+            }
+
+            Tsreporter.pass(`Borings verified for Second Rule cylinder: ${cylinderName}`);
+
+            // Close popup before next cylinder
+            await this.scatteredMmteDetailsPage.closeBoringsPopup();
+        }
+
+        Tsreporter.pass('Second Rule Associated Cylinders with borings links verified');
+    }
+
+
+
+
+    @TSBDDStepDef('Second Rule Hookwith Associated Cylinders should match expected with borings links')
+    async verifySecondRuleHookwithAssociatedCylindersMatchExpectedWithLinks(): Promise<void> {
+        Tsreporter.info('Verifying Second Rule Hookwith Associated Cylinders match expected with borings links');
+
+        // Per RR05 Req Line 956: Get cylinders from scenario context
+        const secondRuleHookwithCylinders = this.scenarioContext.getVariable('secondRuleAddToHookwithDaysAssociateCylinders');
+
+        if (!secondRuleHookwithCylinders) {
+            Tsreporter.info('Second Rule Hookwith Associate Cylinders not configured, skipping verification');
+            Tsreporter.pass('Second Rule Hookwith Associated Cylinders verified (skipped - not configured)');
+            return;
+        }
+
+        // Per RR05 Req Line 957: Split by comma
+        const cylinders = secondRuleHookwithCylinders.split(',').map((c: string) => c.trim()).filter((c: string) => c.length > 0);
+
+        // Per RR05 Req Lines 958-1010: For each cylinder
+        for (const cylinderName of cylinders) {
+            Tsreporter.info(`Verifying borings for Second Rule Hookwith cylinder: ${cylinderName}`);
+
+            // Per RR05 Req Lines 963-964: Click borings link and wait for popup
+            await this.scatteredMmteDetailsPage.clickSecondRuleHookwithCylinderBoringsLink(cylinderName);
+            await this.scatteredMmteDetailsPage.verifyBoringsPopupDisplayed();
+
+            // Per RR05 Req Lines 965-968: Verify popup header
+            await this.scatteredMmteDetailsPage.verifyBoringsPopupHeader(cylinderName);
+
+            // Per RR05 Req Line 969: Verify close button present
+            await this.scatteredMmteDetailsPage.verifyBoringsPopupCloseButtonPresent();
+
+            // Per RR05 Req Lines 970-973: Verify paginator elements
+            await this.scatteredMmteDetailsPage.verifyBoringsPopupPaginatorPresent();
+
+            // Per RR05 Req Lines 974-977: Verify table and headers
+            await this.scatteredMmteDetailsPage.verifyBoringsTablePresent();
+
+            // Per RR05 Req Lines 978-981: Get borings from database
+            const dbBorings = await TTTFDatabaseHelper.getBoringsForCylinder(cylinderName);
+
+            // Per RR05 Req Lines 983-994: Set pagination to 50
+            await this.scatteredMmteDetailsPage.setBoringsPaginationTo50();
+
+            // Per RR05 Req Lines 995-1006: Get borings from UI
+            const uiBorings = await this.scatteredMmteDetailsPage.getBoringsFromUI();
+
+            // Per RR05 Req Lines 1007-1008: Compare DB and UI borings
+            Tsreporter.info(`Comparing Second Rule Hookwith borings - DB: ${dbBorings.length}, UI: ${uiBorings.length}`);
+
+            if (dbBorings.length !== uiBorings.length) {
+                throw new Error(`Second Rule Hookwith Boring count mismatch for ${cylinderName}. DB: ${dbBorings.length}, UI: ${uiBorings.length}`);
+            }
+
+            for (let i = 0; i < dbBorings.length; i++) {
+                const dbBoring = dbBorings[i];
+                const uiBoring = uiBorings[i];
+
+                if (dbBoring.description !== uiBoring.description) {
+                    throw new Error(`Second Rule Hookwith Boring description mismatch at row ${i + 1} for ${cylinderName}. DB: '${dbBoring.description}', UI: '${uiBoring.description}'`);
+                }
+                if (dbBoring.date !== uiBoring.date) {
+                    throw new Error(`Second Rule Hookwith Boring date mismatch at row ${i + 1} for ${cylinderName}. DB: '${dbBoring.date}', UI: '${uiBoring.date}'`);
+                }
+            }
+
+            Tsreporter.pass(`Second Rule Hookwith borings verified for cylinder: ${cylinderName}`);
+
+            // Per RR05 Req Lines 1009-1010: Close popup before next cylinder
+            await this.scatteredMmteDetailsPage.closeBoringsPopup();
+        }
+
+        Tsreporter.pass('Second Rule Hookwith Associated Cylinders with borings links verified');
+    }
+
+
