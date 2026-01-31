@@ -12,3 +12,23 @@
         for (const [placeholder, value] of Object.entries(placeholders)) {
             result = result.replace(new RegExp(placeholder, 'g'), value);
         }
+
+
+let result = format;
+        // Sort tokens by length descending to avoid partial replacements (e.g., 'MMMM' before 'MMM' before 'MM')
+        const sortedTokens = Object.keys(tokens).sort((a, b) => b.length - a.length);
+
+        // Two-phase replacement to avoid token collision (e.g., 'A' in 'JAN' matching AM/PM token)
+        // Phase 1: Replace tokens with unique placeholders
+        const placeholders: Record<string, string> = {};
+        for (let i = 0; i < sortedTokens.length; i++) {
+            const token = sortedTokens[i];
+            const placeholder = `\x00${i}\x00`; // Use null char as delimiter (won't appear in normal text)
+            placeholders[placeholder] = tokens[token];
+            result = result.replace(new RegExp(token, 'g'), placeholder);
+        }
+
+        // Phase 2: Replace placeholders with actual values
+        for (const [placeholder, value] of Object.entries(placeholders)) {
+            result = result.replace(new RegExp(placeholder, 'g'), value);
+        }
