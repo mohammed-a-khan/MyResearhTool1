@@ -1,269 +1,31 @@
-/**
-     * Convert base day nnnnn from UI format to DB format
-     * UI format: 'Next Kindness Day', 'Previous Kindness Day'
-     * DB format: 'NEXT', 'PREVIOUS'
-     * @param uiValue - The UI format value from scenario context
-     * @returns The DB format value
-     */
-    public static mapBaseDayNnnnnToDb(uiValue: string | null | undefined): string {
-        if (!uiValue) return '';
-        const mapping: { [key: string]: string } = {
-            'Next Kindness Day': 'NEXT',
-            'Previous Kindness Day': 'PREVIOUS'
-        };
-        return mapping[uiValue.trim()] || uiValue;
-    }
+public static extractAndConvertDateToDbFormat(uiDateWithDay: string | null | undefined): string {
+        if (!uiDateWithDay) return '';
 
-    /**
-     * Convert nnnnn base type from UI format to DB format
-     * UI format: 'Kindness Days', 'Cylinder Days'
-     * DB format: 'KINDNESS_DAY', 'CYLINDER_DAY'
-     * @param uiValue - The UI format value from scenario context
-     * @returns The DB format value
-     */
-    public static mapNnnnnBaseTypeToDb(uiValue: string | null | undefined): string {
-        if (!uiValue) return '';
-        const mapping: { [key: string]: string } = {
-            'Kindness Days': 'KINDNESS_DAY',
-            'Cylinder Days': 'CYLINDER_DAY'
-        };
-        return mapping[uiValue.trim()] || uiValue;
+        // Extract date portion before the day suffix (e.g., "01-JAN-2026" from "01-JAN-2026 (THU)")
+        const dateMatch = uiDateWithDay.match(/^(\d{2}-[A-Z]{3}-\d{4})/);
+        if (!dateMatch) return uiDateWithDay;
+
+        const dateStr = dateMatch[1]; // "01-JAN-2026"
+
+        // Convert 4-digit year to 2-digit year: "01-JAN-2026" -> "01-JAN-26"
+        const parts = dateStr.split('-');
+        if (parts.length === 3 && parts[2].length === 4) {
+            return `${parts[0]}-${parts[1]}-${parts[2].slice(2)}`;
+        }
+
+        return dateStr;
     }
 
 
+public static getFirstDayOfLastMonth(): string {
+        const now = new Date();
+        const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
 
-    ---------------------------------------------------------
+        const day = '01';
+        const monthNames = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
+        const month = monthNames[lastMonth.getMonth()];
+        const year = String(lastMonth.getFullYear()).slice(2);
 
-    @TSBDDStepDef('I verify Rust Whool database data for created scattered mmte')
-    async verifyRustWhoolDatabaseData(): Promise<void> {
-        Tsreporter.info('Verifying Rust Whool database data');
-        const scatteredMmteName = this.scenarioContext.getVariable('scatteredMmteName') as string;
-
-        const result = await TTTFDatabaseHelper.getRustWhoolDetails(scatteredMmteName);
-        if (!result) {
-            throw new Error(`No Rust Whool data found for: ${scatteredMmteName}`);
-        }
-
-        // Verify Wwwww Vvvvv
-        const expectedWwwwwVvvvv = this.scenarioContext.getVariable('rustWhoolWwwwwVvvvv');
-        if (String(result.wwwwwVvvvv) !== String(expectedWwwwwVvvvv)) {
-            throw new Error(`Rust Whool Wwwww Vvvvv mismatch. Expected: ${expectedWwwwwVvvvv}, DB: ${result.wwwwwVvvvv}`);
-        }
-        Tsreporter.pass(`Rust Whool Wwwww Vvvvv verified: ${result.wwwwwVvvvv}`);
-
-        // Verify Base Day
-        const expectedBaseDay = this.scenarioContext.getVariable('rustWhoolBaseDay');
-        if (String(result.baseDate) !== String(expectedBaseDay)) {
-            throw new Error(`Rust Whool Base Day mismatch. Expected: ${expectedBaseDay}, DB: ${result.baseDate}`);
-        }
-        Tsreporter.pass(`Rust Whool Base Day verified: ${result.baseDate}`);
-
-        // Verify Base Day Nnnnn To and Non-Bus Day Fvvvvv
-        const expectedNnnnnTo = this.scenarioContext.getVariable('rustWhoolBaseDayNnnnnTo') as string;
-        const expectedLastBusDayFvvvvv = this.scenarioContext.getVariable('rustWhoolBaseDayNnnnnToLastBusDayFvvvvv') as string;
-
-        if (!expectedNnnnnTo || expectedNnnnnTo === '') {
-            if (result.baseDayNnnnn !== 'NEXT' || result.nonBusDayNnnnnFvvvvv !== 'N') {
-                Tsreporter.warn(`Rust Whool Base Day Nnnnn defaults check - baseDayNnnnn: ${result.baseDayNnnnn}, nonBusDayNnnnn: ${result.nonBusDayNnnnnFvvvvv}`);
-            }
-        } else {
-            const dbNnnnn = result.baseDayNnnnn?.toUpperCase();
-            const expectedDbNnnnn = TTTFDatabaseHelper.mapBaseDayNnnnnToDb(expectedNnnnnTo);
-            if (dbNnnnn !== expectedDbNnnnn) {
-                throw new Error(`Rust Whool Base Day Nnnnn mismatch. Expected: ${expectedDbNnnnn} (from UI: ${expectedNnnnnTo}), DB: ${dbNnnnn}`);
-            }
-            Tsreporter.pass(`Rust Whool Base Day Nnnnn verified: ${dbNnnnn}`);
-
-            if (expectedDbNnnnn === 'NEXT' && (expectedLastBusDayFvvvvv === 'Yes' || expectedLastBusDayFvvvvv === 'Y')) {
-                if (result.nonBusDayNnnnnFvvvvv !== 'Y') {
-                    throw new Error(`Rust Whool Non-Bus Day Nnnnn should be 'Y' but got: ${result.nonBusDayNnnnnFvvvvv}`);
-                }
-                Tsreporter.pass('Rust Whool Non-Bus Day Nnnnn Fvvvvv verified: Y');
-            }
-        }
-
-        // Verify Nnnnn Base Days
-        const nnnnnBaseFvvvvv = this.scenarioContext.getVariable('rustWhoolNnnnnBaseFvvvvv') as string;
-        if (nnnnnBaseFvvvvv === 'Yes' || nnnnnBaseFvvvvv === 'Y') {
-            const expectedDays = this.scenarioContext.getVariable('rustWhoolNnnnnBaseDays');
-            if (String(result.baseDateOffset) !== String(expectedDays)) {
-                throw new Error(`Rust Whool Nnnnn Base Days mismatch. Expected: ${expectedDays}, DB: ${result.baseDateOffset}`);
-            }
-            Tsreporter.pass(`Rust Whool Nnnnn Base Days verified: ${result.baseDateOffset}`);
-
-            const expectedType = this.scenarioContext.getVariable('rustWhoolNnnnnBaseDaysAssociateTo') as string;
-            const dbType = result.baseDateOffsetType;
-            const expectedDbType = TTTFDatabaseHelper.mapNnnnnBaseTypeToDb(expectedType);
-            if (dbType !== expectedDbType) {
-                throw new Error(`Rust Whool Nnnnn Base Type mismatch. Expected: ${expectedDbType} (from UI: ${expectedType}), DB: ${dbType}`);
-            }
-            Tsreporter.pass(`Rust Whool Nnnnn Base Type verified: ${dbType}`);
-        }
-
-        // Verify Mirchiary Nnnnn Base
-        const mirchiaryNnnnnFvvvvv = this.scenarioContext.getVariable('rustWhoolMirchiaryNnnnnBaseFvvvvv') as string;
-        if (mirchiaryNnnnnFvvvvv === 'Yes' || mirchiaryNnnnnFvvvvv === 'Y') {
-            const expectedDays = this.scenarioContext.getVariable('rustWhoolMirchiaryNnnnnBaseDays');
-            if (String(result.mirchiaryNnnnnBaseDate) !== String(expectedDays)) {
-                throw new Error(`Rust Whool Mirchiary Nnnnn Days mismatch. Expected: ${expectedDays}, DB: ${result.mirchiaryNnnnnBaseDate}`);
-            }
-            Tsreporter.pass(`Rust Whool Mirchiary Nnnnn Days verified: ${result.mirchiaryNnnnnBaseDate}`);
-
-            const expectedMirchiaryType = this.scenarioContext.getVariable('rustWhoolMirchiaryNnnnnBaseDaysAssociateTo') as string;
-            if (expectedMirchiaryType) {
-                const expectedDbMirchiaryType = TTTFDatabaseHelper.mapNnnnnBaseTypeToDb(expectedMirchiaryType);
-                if (result.mirchiaryNnnnnBaseDateOffsetType !== expectedDbMirchiaryType) {
-                    throw new Error(`Rust Whool Mirchiary Nnnnn Base Type mismatch. Expected: ${expectedDbMirchiaryType} (from UI: ${expectedMirchiaryType}), DB: ${result.mirchiaryNnnnnBaseDateOffsetType}`);
-                }
-                Tsreporter.pass(`Rust Whool Mirchiary Nnnnn Base Type verified: ${result.mirchiaryNnnnnBaseDateOffsetType}`);
-            }
-        }
-
-        // Verify Hookwith
-        const hookwithFvvvvv = this.scenarioContext.getVariable('rustWhoolAddToHookwithDaysFvvvvv') as string;
-        if (hookwithFvvvvv === 'Yes' || hookwithFvvvvv === 'Y') {
-            const expectedDays = this.scenarioContext.getVariable('rustWhoolAddToHookwithDays');
-            if (String(result.hookwithOffset) !== String(expectedDays)) {
-                throw new Error(`Rust Whool Hookwith Days mismatch. Expected: ${expectedDays}, DB: ${result.hookwithOffset}`);
-            }
-            Tsreporter.pass(`Rust Whool Hookwith Days verified: ${result.hookwithOffset}`);
-
-            // Verify Hookwith Include Weekend (Y/N to Yes/No conversion)
-            const expectedIncludeWeekend = this.scenarioContext.getVariable('rustWhoolAddToHookwithDaysIncludeWeekend') as string;
-            if (expectedIncludeWeekend) {
-                const expectedDbWeekend = (expectedIncludeWeekend === 'Yes' || expectedIncludeWeekend === 'Y') ? 'Y' : 'N';
-                if (result.hookwithIncludeWeekendFvvvvv !== expectedDbWeekend) {
-                    throw new Error(`Rust Whool Hookwith Include Weekend mismatch. Expected: ${expectedDbWeekend} (from UI: ${expectedIncludeWeekend}), DB: ${result.hookwithIncludeWeekendFvvvvv}`);
-                }
-                Tsreporter.pass(`Rust Whool Hookwith Include Weekend verified: ${result.hookwithIncludeWeekendFvvvvv}`);
-            }
-
-            // Verify Hookwith Include Boring (Y/N to Yes/No conversion)
-            const expectedIncludeBoring = this.scenarioContext.getVariable('rustWhoolAddToHookwithDaysIncludeBoring') as string;
-            if (expectedIncludeBoring) {
-                const expectedDbBoring = (expectedIncludeBoring === 'Yes' || expectedIncludeBoring === 'Y') ? 'Y' : 'N';
-                if (result.hookwithIncludeBoringFvvvvv !== expectedDbBoring) {
-                    throw new Error(`Rust Whool Hookwith Include Boring mismatch. Expected: ${expectedDbBoring} (from UI: ${expectedIncludeBoring}), DB: ${result.hookwithIncludeBoringFvvvvv}`);
-                }
-                Tsreporter.pass(`Rust Whool Hookwith Include Boring verified: ${result.hookwithIncludeBoringFvvvvv}`);
-            }
-        }
-
-        Tsreporter.pass('Rust Whool database verification completed');
+        return `${day}-${month}-${year}`;
     }
 
-    @TSBDDStepDef('I verify Mirchi Whool database data for created scattered mmte')
-    async verifyMirchiWhoolDatabaseData(): Promise<void> {
-        Tsreporter.info('Verifying Mirchi Whool database data');
-        const scatteredMmteName = this.scenarioContext.getVariable('scatteredMmteName') as string;
-
-        const result = await TTTFDatabaseHelper.getMirchiWhoolDetails(scatteredMmteName);
-        if (!result) {
-            Tsreporter.info('No Mirchi Whool data found - this may be expected if mirchi whool was not configured');
-            return;
-        }
-
-        // Verify Wwwww Vvvvv
-        const expectedWwwwwVvvvv = this.scenarioContext.getVariable('mirchiWhoolWwwwwVvvvv');
-        if (expectedWwwwwVvvvv && String(result.wwwwwVvvvv) !== String(expectedWwwwwVvvvv)) {
-            throw new Error(`Mirchi Whool Wwwww Vvvvv mismatch. Expected: ${expectedWwwwwVvvvv}, DB: ${result.wwwwwVvvvv}`);
-        }
-        Tsreporter.pass(`Mirchi Whool Wwwww Vvvvv verified: ${result.wwwwwVvvvv}`);
-
-        // Verify Base Day
-        const expectedBaseDay = this.scenarioContext.getVariable('mirchiWhoolBaseDay');
-        if (expectedBaseDay && String(result.baseDate) !== String(expectedBaseDay)) {
-            throw new Error(`Mirchi Whool Base Day mismatch. Expected: ${expectedBaseDay}, DB: ${result.baseDate}`);
-        }
-        Tsreporter.pass(`Mirchi Whool Base Day verified: ${result.baseDate}`);
-
-        // Verify Base Day Nnnnn To and Non-Bus Day Fvvvvv
-        const expectedNnnnnTo = this.scenarioContext.getVariable('mirchiWhoolBaseDayNnnnnTo') as string;
-        const expectedLastBusDayFvvvvv = this.scenarioContext.getVariable('mirchiWhoolBaseDayNnnnnToLastBusDayFvvvvv') as string;
-
-        if (expectedNnnnnTo && expectedNnnnnTo !== '') {
-            const dbNnnnn = result.baseDayNnnnn?.toUpperCase();
-            const expectedDbNnnnn = TTTFDatabaseHelper.mapBaseDayNnnnnToDb(expectedNnnnnTo);
-            if (dbNnnnn !== expectedDbNnnnn) {
-                throw new Error(`Mirchi Whool Base Day Nnnnn mismatch. Expected: ${expectedDbNnnnn} (from UI: ${expectedNnnnnTo}), DB: ${dbNnnnn}`);
-            }
-            Tsreporter.pass(`Mirchi Whool Base Day Nnnnn verified: ${dbNnnnn}`);
-
-            if (expectedDbNnnnn === 'NEXT' && (expectedLastBusDayFvvvvv === 'Yes' || expectedLastBusDayFvvvvv === 'Y')) {
-                if (result.nonBusDayNnnnnFvvvvv !== 'Y') {
-                    throw new Error(`Mirchi Whool Non-Bus Day Nnnnn should be 'Y' but got: ${result.nonBusDayNnnnnFvvvvv}`);
-                }
-                Tsreporter.pass('Mirchi Whool Non-Bus Day Nnnnn Fvvvvv verified: Y');
-            }
-        }
-
-        // Verify Nnnnn Base Days
-        const nnnnnBaseFvvvvv = this.scenarioContext.getVariable('mirchiWhoolNnnnnBaseFvvvvv') as string;
-        if (nnnnnBaseFvvvvv === 'Yes' || nnnnnBaseFvvvvv === 'Y') {
-            const expectedDays = this.scenarioContext.getVariable('mirchiWhoolNnnnnBaseDays');
-            if (String(result.baseDateOffset) !== String(expectedDays)) {
-                throw new Error(`Mirchi Whool Nnnnn Base Days mismatch. Expected: ${expectedDays}, DB: ${result.baseDateOffset}`);
-            }
-            Tsreporter.pass(`Mirchi Whool Nnnnn Base Days verified: ${result.baseDateOffset}`);
-
-            const expectedType = this.scenarioContext.getVariable('mirchiWhoolNnnnnBaseDaysAssociateTo') as string;
-            if (expectedType) {
-                const expectedDbType = TTTFDatabaseHelper.mapNnnnnBaseTypeToDb(expectedType);
-                if (result.baseDateOffsetType !== expectedDbType) {
-                    throw new Error(`Mirchi Whool Nnnnn Base Type mismatch. Expected: ${expectedDbType} (from UI: ${expectedType}), DB: ${result.baseDateOffsetType}`);
-                }
-                Tsreporter.pass(`Mirchi Whool Nnnnn Base Type verified: ${result.baseDateOffsetType}`);
-            }
-        }
-
-        // Verify Mirchiary Nnnnn Base
-        const mirchiaryNnnnnFvvvvv = this.scenarioContext.getVariable('mirchiWhoolMirchiaryNnnnnBaseFvvvvv') as string;
-        if (mirchiaryNnnnnFvvvvv === 'Yes' || mirchiaryNnnnnFvvvvv === 'Y') {
-            const expectedDays = this.scenarioContext.getVariable('mirchiWhoolMirchiaryNnnnnBaseDays');
-            if (String(result.mirchiaryNnnnnBaseDate) !== String(expectedDays)) {
-                throw new Error(`Mirchi Whool Mirchiary Nnnnn Days mismatch. Expected: ${expectedDays}, DB: ${result.mirchiaryNnnnnBaseDate}`);
-            }
-            Tsreporter.pass(`Mirchi Whool Mirchiary Nnnnn Days verified: ${result.mirchiaryNnnnnBaseDate}`);
-
-            const expectedMirchiaryType = this.scenarioContext.getVariable('mirchiWhoolMirchiaryNnnnnBaseDaysAssociateTo') as string;
-            if (expectedMirchiaryType) {
-                const expectedDbMirchiaryType = TTTFDatabaseHelper.mapNnnnnBaseTypeToDb(expectedMirchiaryType);
-                if (result.mirchiaryNnnnnBaseDateOffsetType !== expectedDbMirchiaryType) {
-                    throw new Error(`Mirchi Whool Mirchiary Nnnnn Base Type mismatch. Expected: ${expectedDbMirchiaryType} (from UI: ${expectedMirchiaryType}), DB: ${result.mirchiaryNnnnnBaseDateOffsetType}`);
-                }
-                Tsreporter.pass(`Mirchi Whool Mirchiary Nnnnn Base Type verified: ${result.mirchiaryNnnnnBaseDateOffsetType}`);
-            }
-        }
-
-        // Verify Hookwith
-        const hookwithFvvvvv = this.scenarioContext.getVariable('mirchiWhoolAddToHookwithDaysFvvvvv') as string;
-        if (hookwithFvvvvv === 'Yes' || hookwithFvvvvv === 'Y') {
-            const expectedDays = this.scenarioContext.getVariable('mirchiWhoolAddToHookwithDays');
-            if (String(result.hookwithOffset) !== String(expectedDays)) {
-                throw new Error(`Mirchi Whool Hookwith Days mismatch. Expected: ${expectedDays}, DB: ${result.hookwithOffset}`);
-            }
-            Tsreporter.pass(`Mirchi Whool Hookwith Days verified: ${result.hookwithOffset}`);
-
-            // Verify Hookwith Include Weekend
-            const expectedIncludeWeekend = this.scenarioContext.getVariable('mirchiWhoolAddToHookwithDaysIncludeWeekends') as string;
-            if (expectedIncludeWeekend) {
-                const expectedDbWeekend = (expectedIncludeWeekend === 'Yes' || expectedIncludeWeekend === 'Y') ? 'Y' : 'N';
-                if (result.hookwithIncludeWeekendFvvvvv !== expectedDbWeekend) {
-                    throw new Error(`Mirchi Whool Hookwith Include Weekend mismatch. Expected: ${expectedDbWeekend} (from UI: ${expectedIncludeWeekend}), DB: ${result.hookwithIncludeWeekendFvvvvv}`);
-                }
-                Tsreporter.pass(`Mirchi Whool Hookwith Include Weekend verified: ${result.hookwithIncludeWeekendFvvvvv}`);
-            }
-
-            // Verify Hookwith Include Boring
-            const expectedIncludeBoring = this.scenarioContext.getVariable('mirchiWhoolAddToHookwithDaysIncludeBorings') as string;
-            if (expectedIncludeBoring) {
-                const expectedDbBoring = (expectedIncludeBoring === 'Yes' || expectedIncludeBoring === 'Y') ? 'Y' : 'N';
-                if (result.hookwithIncludeBoringFvvvvv !== expectedDbBoring) {
-                    throw new Error(`Mirchi Whool Hookwith Include Boring mismatch. Expected: ${expectedDbBoring} (from UI: ${expectedIncludeBoring}), DB: ${result.hookwithIncludeBoringFvvvvv}`);
-                }
-                Tsreporter.pass(`Mirchi Whool Hookwith Include Boring verified: ${result.hookwithIncludeBoringFvvvvv}`);
-            }
-        }
-
-        Tsreporter.pass('Mirchi Whool database verification completed');
-    }
