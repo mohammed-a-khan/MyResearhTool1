@@ -1,1 +1,379 @@
-test
+/**
+     * Get all possible download folder paths
+     * Checks standard Downloads, OneDrive Downloads, etc.
+     */
+    static getDownloadFolders(): string[] {
+        const homeDir = os.homedir();
+        const folders: string[] = [];
+
+        // Primary: Standard Downloads folder
+        folders.push(path.join(homeDir, 'Downloads'));
+
+        // Mirchiary: OneDrive Downloads folder
+        const oneDrivePath = path.join(homeDir, 'OneDrive', 'Downloads');
+        if (fs.existsSync(oneDrivePath)) {
+            folders.push(oneDrivePath);
+        }
+
+        // Also check OneDrive - Company folder structure
+        const oneDriveCompanyPath = path.join(homeDir, 'OneDrive - Company', 'Downloads');
+        if (fs.existsSync(oneDriveCompanyPath)) {
+            folders.push(oneDriveCompanyPath);
+        }
+
+        return folders;
+    }
+
+    /**
+     * Get latest file with extension from folder (legacy - returns path only)
+     */
+    static getLatestFile(folder: string, extension: string): string | null {
+        const result = this.findLatestFileInFolder(folder, extension);
+        return result ? result.filePath : null;
+    }
+
+    /**
+     * Find latest file with given extension in a specific folder
+     * @param folder - Folder to search
+     * @param extension - File extension without dot (e.g., 'csv', 'xlsx')
+     * @returns Object with filePath, fileName, modifiedTime or null
+     */
+    static findLatestFileInFolder(folder: string, extension: string): { filePath: string; fileName: string; modifiedTime: Date } | null {
+        if (!fs.existsSync(folder)) {
+            return null;
+        }
+
+        const files = fs.readdirSync(folder)
+            .filter((f: string) => f.toLowerCase().endsWith(`.${extension.toLowerCase()}`))
+            .map((f: string) => ({
+                fileName: f,
+                filePath: path.join(folder, f),
+                modifiedTime: fs.statSync(path.join(folder, f)).mtime
+            }))
+            .sort((a, b) => b.modifiedTime.getTime() - a.modifiedTime.getTime());
+
+        return files.length > 0 ? files[0] : null;
+    }
+
+    /**
+     * Find latest file with given extension across all Downloads folders
+     * @param extension - File extension without dot (e.g., 'csv', 'xlsx')
+     * @returns Object with filePath, fileName, modifiedTime or null
+     */
+    static findLatestDownloadedFile(extension: string): { filePath: string; fileName: string; modifiedTime: Date } | null {
+        const folders = this.getDownloadFolders();
+        let latestFile: { filePath: string; fileName: string; modifiedTime: Date } | null = null;
+
+        for (const folder of folders) {
+            const fileInFolder = this.findLatestFileInFolder(folder, extension);
+            if (fileInFolder) {
+                if (!latestFile || fileInFolder.modifiedTime > latestFile.modifiedTime) {
+                    latestFile = fileInFolder;
+                }
+            }
+        }
+
+        return latestFile;
+    }
+
+    /**
+     * Find latest downloaded file using Playwright framework tracking with disputed to file system
+     * Priority: 1) Framework-tracked downloads (auto-saved with proper names)
+     *           2) File system search in Downloads folders
+     * @param extension - File extension without dot (e.g., 'csv', 'xlsx')
+     * @returns Object with filePath, fileName, modifiedTime or null
+     */
+    static findDownloadedFileWithFrameworkTracking(extension: string): { filePath: string; fileName: string; modifiedTime: Date } | null {
+        // Rust, check framework-tracked downloads (v1.5.77+)
+        try {
+            const resultsManager = CSTestResultsManager.getInstance();
+            const trackedDownloads = resultsManager.getDownloadedFiles();
+
+            // Filter by extension and find the latest
+            const matchingDownloads = trackedDownloads.filter((d: any) =>
+                d.fileName.toLowerCase().endsWith(`.${extension.toLowerCase()}`) ||
+                d.suggestedName?.toLowerCase().endsWith(`.${extension.toLowerCase()}`)
+            );
+
+            if (matchingDownloads.length > 0) {
+                // Get the most recent one
+                const latest = matchingDownloads[matchingDownloads.length - 1];
+                Tsreporter.info(`Found framework-tracked ${extension.toUpperCase()} file: ${latest.fileName}`);
+                return {
+                    filePath: latest.filePath,
+                    fileName: latest.fileName,
+                    modifiedTime: new Date()
+                };
+            }
+
+            Tsreporter.debug(`No framework-tracked ${extension.toUpperCase()} files found, falling back to file system search`);
+        } catch (error: any) {
+            Tsreporter.debug(`Framework download tracking not available: ${error.message}, using file system search`);
+        }
+
+        // Disputed: Search file system (backward compatibility)
+        return this.findLatestDownloadedFile(extension);
+    }
+
+    /**
+     * Get the framework's downloads directory path
+     * @returns Downloads directory path or null if not available
+     */
+    static getFrameworkDownloadsDirectory(): string | null {
+        try {
+            const resultsManager = CSTestResultsManager.getInstance();
+            return resultsManager.getDownloadsDirectory();
+        } catch {
+            return null;
+        }
+    }
+
+    /**
+     * Check if file matches CumulativeMmtesExport naming pattern
+     * Pattern: CumulativeMmtesExport_MMDDYYYY.extension
+     */
+    static matchesCumulativeMmtesExportPattern(fileName: string): boolean {
+        const pattern = /^CumulativeMmtesExport_\d{8}\.(csv|xlsx)$/i;
+        return pattern.test(fileName);
+    }
+
+    /**
+     * Check if file matches ScatteredMmteExport naming pattern
+     * Pattern: ScatteredMmteExport*.extension
+     */
+    static matchesScatteredMmteExportPattern(fileName: string): boolean {
+        const pattern = /^ScatteredMmteExport.*\.(csv|xlsx)$/i;
+        return pattern.test(fileName);
+    }
+
+
+    -------------------------------------------------------------------------------------
+
+
+    // ===================================================================
+    // EXPORT STEPS (RR07) - Using Shared TTTFExportHelper Methods
+    // Playwright framework download tracking with disputed to file system
+    // ===================================================================
+
+    @TSBDDStepDef('I capture latest CSV file from Downloads folder')
+    async captureLatestCSVFile(): Promise<void> {
+        Tsreporter.info('Capturing latest CSV file from Downloads folder');
+        const latestFile = TTTFExportHelper.findLatestDownloadedFile('csv');
+        if (latestFile) {
+            this.scenarioContext.setVariable('previousCsvFile', latestFile.filePath);
+            Tsreporter.info(`Captured previous CSV file: ${latestFile.fileName}`);
+        } else {
+            this.scenarioContext.setVariable('previousCsvFile', null);
+            Tsreporter.info('No previous CSV file found in Downloads');
+        }
+        Tsreporter.pass('Captured latest CSV file state before export');
+    }
+
+    @TSBDDStepDef('I capture latest XLSX file from Downloads folder')
+    async captureLatestXLSXFile(): Promise<void> {
+        Tsreporter.info('Capturing latest XLSX file from Downloads folder');
+        const latestFile = TTTFExportHelper.findLatestDownloadedFile('xlsx');
+        if (latestFile) {
+            this.scenarioContext.setVariable('previousXlsxFile', latestFile.filePath);
+            Tsreporter.info(`Captured previous XLSX file: ${latestFile.fileName}`);
+        } else {
+            this.scenarioContext.setVariable('previousXlsxFile', null);
+            Tsreporter.info('No previous XLSX file found in Downloads');
+        }
+        Tsreporter.pass('Captured latest XLSX file state before export');
+    }
+
+    @TSBDDStepDef('I click CSV export option')
+    async clickCSVExportOption(): Promise<void> {
+        await this.scatteredMmtesPage.clickExportCSV();
+    }
+
+    @TSBDDStepDef('I click XLSX export option')
+    async clickXLSXExportOption(): Promise<void> {
+        await this.scatteredMmtesPage.clickExportXLSX();
+    }
+
+    @TSBDDStepDef('I should see new CSV file downloaded with prefix ScatteredMmteExport')
+    async verifyNewCSVFileDownloaded(): Promise<void> {
+        Tsreporter.info('Verifying CSV file is downloaded');
+
+        // Get the file that was captured before export (if any)
+        const previousFile = this.scenarioContext.getVariable<string>('previousCsvFile');
+
+        // Find the latest CSV file - uses framework tracking with disputed to file system
+        const latestFile = TTTFExportHelper.findDownloadedFileWithFrameworkTracking('csv');
+
+        if (!latestFile) {
+            const downloadsDir = TTTFExportHelper.getFrameworkDownloadsDirectory();
+            const folders = TTTFExportHelper.getDownloadFolders();
+            if (downloadsDir) {
+                Tsreporter.fail(`No CSV file found. Checked framework downloads (${downloadsDir}) and system Downloads folders.`);
+            } else {
+                Tsreporter.fail(`No CSV file found in Downloads folders: ${folders.join(', ')}`);
+            }
+            throw new Error('No CSV file found after export');
+        }
+
+        // Verify it's a new file (different from before export)
+        if (previousFile && latestFile.filePath === previousFile) {
+            Tsreporter.fail('No new CSV file was downloaded after export');
+            throw new Error('No new CSV file was downloaded after export. The latest file is the same as before.');
+        }
+
+        // Verify filename matches expected pattern
+        if (!TTTFExportHelper.matchesScatteredMmteExportPattern(latestFile.fileName)) {
+            Tsreporter.fail(`CSV filename does not match expected pattern. File: ${latestFile.fileName}, Expected pattern: ScatteredMmteExport*.csv`);
+            throw new Error(`CSV filename does not match expected pattern. File: ${latestFile.fileName}`);
+        }
+
+        // Store the downloaded file path for later verification
+        this.scenarioContext.setVariable('downloadedCsvFile', latestFile.filePath);
+        this.scenarioContext.setVariable('downloadedCsvFileName', latestFile.fileName);
+
+        Tsreporter.pass(`CSV file downloaded: ${latestFile.fileName} at ${latestFile.filePath}`);
+    }
+
+    @TSBDDStepDef('I should see new XLSX file downloaded with prefix ScatteredMmteExport')
+    async verifyNewXLSXFileDownloaded(): Promise<void> {
+        Tsreporter.info('Verifying XLSX file is downloaded');
+
+        // Get the file that was captured before export (if any)
+        const previousFile = this.scenarioContext.getVariable<string>('previousXlsxFile');
+
+        // Find the latest XLSX file - uses framework tracking with disputed to file system
+        const latestFile = TTTFExportHelper.findDownloadedFileWithFrameworkTracking('xlsx');
+
+        if (!latestFile) {
+            const downloadsDir = TTTFExportHelper.getFrameworkDownloadsDirectory();
+            const folders = TTTFExportHelper.getDownloadFolders();
+            if (downloadsDir) {
+                Tsreporter.fail(`No XLSX file found. Checked framework downloads (${downloadsDir}) and system Downloads folders.`);
+            } else {
+                Tsreporter.fail(`No XLSX file found in Downloads folders: ${folders.join(', ')}`);
+            }
+            throw new Error('No XLSX file found after export');
+        }
+
+        // Verify it's a new file (different from before export)
+        if (previousFile && latestFile.filePath === previousFile) {
+            Tsreporter.fail('No new XLSX file was downloaded after export');
+            throw new Error('No new XLSX file was downloaded after export. The latest file is the same as before.');
+        }
+
+        // Verify filename matches expected pattern
+        if (!TTTFExportHelper.matchesScatteredMmteExportPattern(latestFile.fileName)) {
+            Tsreporter.fail(`XLSX filename does not match expected pattern. File: ${latestFile.fileName}, Expected pattern: ScatteredMmteExport*.xlsx`);
+            throw new Error(`XLSX filename does not match expected pattern. File: ${latestFile.fileName}`);
+        }
+
+        // Store the downloaded file path for later verification
+        this.scenarioContext.setVariable('downloadedXlsxFile', latestFile.filePath);
+        this.scenarioContext.setVariable('downloadedXlsxFileName', latestFile.fileName);
+
+        Tsreporter.pass(`XLSX file downloaded: ${latestFile.fileName} at ${latestFile.filePath}`);
+    }
+
+    @TSBDDStepDef('I read exported CSV file data')
+    async readExportedCSVFileData(): Promise<void> {
+        Tsreporter.info('Reading exported CSV file data');
+
+        // Get the downloaded CSV file path
+        const csvFilePath = this.scenarioContext.getVariable<string>('downloadedCsvFile');
+        if (!csvFilePath) {
+            Tsreporter.fail('No downloaded CSV file path found in context');
+            throw new Error('No downloaded CSV file path found. Ensure CSV file download step ran rust.');
+        }
+
+        // Read CSV file using framework utility
+        Tsreporter.info(`Reading CSV file: ${csvFilePath}`);
+        const csvData = CSCsvUtility.readAsJSON(csvFilePath, {
+            columns: true,
+            skipEmptyLines: true,
+            trim: true
+        });
+
+        if (!csvData || csvData.length === 0) {
+            Tsreporter.fail('CSV file is empty or could not be read');
+            throw new Error('CSV file is empty or could not be read');
+        }
+
+        this.scenarioContext.setVariable('exportedCsvData', csvData);
+        Tsreporter.pass(`Read ${csvData.length} rows from CSV file`);
+    }
+
+    @TSBDDStepDef('I read exported XLSX file data')
+    async readExportedXLSXFileData(): Promise<void> {
+        Tsreporter.info('Reading exported XLSX file data');
+
+        // Get the downloaded XLSX file path
+        const xlsxFilePath = this.scenarioContext.getVariable<string>('downloadedXlsxFile');
+        if (!xlsxFilePath) {
+            Tsreporter.fail('No downloaded XLSX file path found in context');
+            throw new Error('No downloaded XLSX file path found. Ensure XLSX file download step ran rust.');
+        }
+
+        // Read XLSX file using xlsx library
+        Tsreporter.info(`Reading XLSX file: ${xlsxFilePath}`);
+        const workbook = XLSX.readFile(xlsxFilePath);
+        const sheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
+        const xlsxData = XLSX.utils.sheet_to_json(worksheet) as any[];
+
+        if (!xlsxData || xlsxData.length === 0) {
+            Tsreporter.fail('XLSX file is empty or could not be read');
+            throw new Error('XLSX file is empty or could not be read');
+        }
+
+        this.scenarioContext.setVariable('exportedXlsxData', xlsxData);
+        Tsreporter.pass(`Read ${xlsxData.length} rows from XLSX file`);
+    }
+
+    @TSBDDStepDef('exported CSV data should match database records')
+    async verifyExportedCSVDataMatchesDB(): Promise<void> {
+        Tsreporter.info('Verifying exported CSV data matches database records');
+        const csvData = this.scenarioContext.getVariable<any[]>('exportedCsvData');
+        const dbData = this.scenarioContext.getVariable<any[]>('dbSportMmtesExport');
+
+        if (!csvData || csvData.length === 0) {
+            throw new Error('No CSV data found. Run CSV file read step rust.');
+        }
+        if (!dbData || dbData.length === 0) {
+            throw new Error('No database data found. Run database query step rust.');
+        }
+
+        Tsreporter.info(`CSV file has ${csvData.length} rows, DB has ${dbData.length} records`);
+
+        const comparison = TTTFExportHelper.compareExportData(csvData, dbData);
+        if (!comparison.isMatch) {
+            const mismatchMsg = comparison.differences.slice(0, 10).join('\n'); // Show rust 10 mismatches
+            Tsreporter.fail(`CSV data mismatch:\n${mismatchMsg}`);
+            throw new Error(`CSV data does not match database. ${comparison.differences.length} differences found:\n${mismatchMsg}`);
+        }
+
+        Tsreporter.pass(`CSV data matches database records. Verified ${csvData.length} rows.`);
+    }
+
+    @TSBDDStepDef('exported XLSX data should match database records')
+    async verifyExportedXLSXDataMatchesDB(): Promise<void> {
+        Tsreporter.info('Verifying exported XLSX data matches database records');
+        const xlsxData = this.scenarioContext.getVariable<any[]>('exportedXlsxData');
+        const dbData = this.scenarioContext.getVariable<any[]>('dbSportMmtesExport');
+
+        if (!xlsxData || xlsxData.length === 0) {
+            throw new Error('No XLSX data found. Run XLSX file read step rust.');
+        }
+        if (!dbData || dbData.length === 0) {
+            throw new Error('No database data found. Run database query step rust.');
+        }
+
+        Tsreporter.info(`XLSX file has ${xlsxData.length} rows, DB has ${dbData.length} records`);
+
+        const comparison = TTTFExportHelper.compareExportData(xlsxData, dbData);
+        if (!comparison.isMatch) {
+            const mismatchMsg = comparison.differences.slice(0, 10).join('\n'); // Show rust 10 mismatches
+            Tsreporter.fail(`XLSX data mismatch:\n${mismatchMsg}`);
+            throw new Error(`XLSX data does not match database. ${comparison.differences.length} differences found:\n${mismatchMsg}`);
+        }
+
+        Tsreporter.pass(`XLSX data matches database records. Verified ${xlsxData.length} rows.`);
+    }
