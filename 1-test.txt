@@ -1,1 +1,528 @@
-test
+# CS Playwright TypeScript Framework — Copilot Instructions
+
+> Convert Selenium/Java/QAF scripts OR create new test scripts. Code must be execution-ready on first attempt.
+
+---
+
+## 1. MANDATORY RULES (Never Skip)
+
+**RULE 1: Use CORRECT module-specific imports** — NEVER use single barrel import. See Section 18.
+
+**RULE 2: CSReporter uses STATIC methods** — `CSReporter.info()`, `CSReporter.debug()`. NEVER `getInstance()`.
+
+**RULE 3: Page classes MUST implement `initializeElements()`** — Required abstract method from CSBasePage.
+
+**RULE 4: NEVER create index.ts or barrel export files** — Each file is standalone.
+
+**RULE 5: All element locators MUST be in page classes** — Never in step definitions or spec files.
+
+**RULE 6: All DB queries MUST be in .env files** — Never hardcoded in TypeScript.
+
+**RULE 7: Never use raw Playwright APIs** — No `page.locator()`, `page.click()`, `page.goto()`.
+
+**RULE 8: Config uses `environments/` subfolder** — Not `dev/`, `qa/` directly.
+
+**RULE 9: Check existing framework code FIRST** — Search `node_modules/@mdakhan.mak/cs-playwright-test-framework/dist/`.
+
+**RULE 10: No over-engineering** — Minimal changes for the task.
+
+---
+
+## 2. Project Structure
+
+```
+test/<project>/
+├── pages/           # Page objects - NO index.ts
+├── steps/           # BDD step definitions (.steps.ts)
+├── features/        # BDD Gherkin files (.feature)
+├── specs/           # Spec style tests (.spec.ts)
+├── data/            # JSON test data files
+└── helpers/         # Project-specific helpers
+
+config/<project>/
+├── common/          # common.env, <project>-db-queries.env
+├── environments/    # dev.env, sit.env, uat.env, prod.env
+└── global.env       # Global settings (optional)
+```
+
+**CRITICAL**:
+- Environment files: `config/<project>/environments/` NOT `config/<project>/dev/`
+- NEVER create `index.ts` barrel files
+
+---
+
+## 3. Page Object Pattern — CORRECT EXAMPLE
+
+```typescript
+// CORRECT IMPORTS - Module-specific, NOT single barrel import
+import { CSBasePage, CSPage, CSGetElement } from '@mdakhan.mak/cs-playwright-test-framework/core';
+import { CSWebElement, CSElementFactory } from '@mdakhan.mak/cs-playwright-test-framework/element';
+import { CSReporter } from '@mdakhan.mak/cs-playwright-test-framework/reporter';
+
+@CSPage('app-login')
+export class AppLoginPage extends CSBasePage {
+
+    @CSGetElement({
+        xpath: '//input[@name="username" or @id="username"]',
+        description: 'Username input field',
+        waitForVisible: true,
+        alternativeLocators: ['css:input[name="username"]', 'css:input#username']
+    })
+    public usernameField!: CSWebElement;
+
+    @CSGetElement({
+        xpath: '//input[@name="password" or @id="password"]',
+        description: 'Password input field',
+        waitForVisible: true
+    })
+    public passwordField!: CSWebElement;
+
+    @CSGetElement({
+        xpath: '//button[text()="Log In"]',
+        description: 'Log In button',
+        waitForVisible: true,
+        waitForEnabled: true
+    })
+    public loginButton!: CSWebElement;
+
+    // REQUIRED - Must implement this abstract method
+    protected initializeElements(): void {
+        CSReporter.debug('AppLoginPage elements initialized');
+    }
+
+    // Action methods
+    public async enterUsername(username: string): Promise<void> {
+        await this.usernameField.waitForVisible(10000);
+        await this.usernameField.clear();
+        await this.usernameField.fill(username);
+        CSReporter.info(`Username entered: ${username}`);
+    }
+
+    public async enterPassword(password: string): Promise<void> {
+        await this.passwordField.fill(password);
+        CSReporter.info('Password entered');
+    }
+
+    public async clickLogin(): Promise<void> {
+        await this.loginButton.click();
+        CSReporter.info('Login button clicked');
+    }
+
+    // Dynamic element example
+    public getMenuItemByName(name: string): CSWebElement {
+        return CSElementFactory.createByXPath(`//a[text()='${name}']`, `Menu item: ${name}`);
+    }
+}
+```
+
+### @CSGetElement Options
+
+| Option | Type | Description |
+|--------|------|-------------|
+| `xpath` | string | XPath locator |
+| `css` | string | CSS selector |
+| `description` | string | Element description for reporting |
+| `waitForVisible` | boolean | Wait for element visibility |
+| `waitForEnabled` | boolean | Wait for element to be enabled |
+| `alternativeLocators` | string[] | Fallback locators (prefix with `css:` or `xpath:`) |
+| `selfHeal` | boolean | Enable AI self-healing |
+| `timeout` | number | Custom timeout (ms) |
+
+---
+
+## 4. CSWebElement Methods
+
+### Actions
+`click()`, `dblclick()`, `fill(value)`, `clear()`, `selectOption(value)`, `check()`, `uncheck()`, `hover()`, `focus()`, `press(key)`, `type(text)`, `setInputFiles(files)`, `dragTo(target)`, `scrollIntoViewIfNeeded()`
+
+### With Timeout Variants
+`clickWithTimeout(timeout)`, `fillWithTimeout(value, timeout)`, `clearWithTimeout(timeout)`
+
+### State Queries
+`isVisible()`, `isEnabled()`, `isChecked()`, `isDisabled()`, `isHidden()`, `isEditable()`
+
+### Data Retrieval
+`textContent()`, `innerText()`, `inputValue()`, `getAttribute(name)`, `innerHTML()`, `count()`, `allTextContents()`, `allInnerTexts()`
+
+### Waits
+`waitForVisible(timeout?)`, `waitForHidden(timeout?)`, `waitForEnabled(timeout?)`, `waitForDisabled(timeout?)`, `waitForStable(timeout?)`
+
+---
+
+## 5. BDD Style — Step Definitions
+
+```typescript
+import { StepDefinitions, CSBDDStepDef, Page } from '@mdakhan.mak/cs-playwright-test-framework/bdd';
+import { CSScenarioContext } from '@mdakhan.mak/cs-playwright-test-framework/context';
+import { CSReporter } from '@mdakhan.mak/cs-playwright-test-framework/reporter';
+import { CSBrowserManager } from '@mdakhan.mak/cs-playwright-test-framework/browser';
+import { CSAssert } from '@mdakhan.mak/cs-playwright-test-framework/assert';
+import { AppLoginPage } from '../pages/AppLoginPage';
+
+@StepDefinitions
+export class LoginSteps {
+
+    @Page('app-login')
+    private loginPage!: AppLoginPage;
+
+    private scenarioCtx = CSScenarioContext.getInstance();
+    private browserManager = CSBrowserManager.getInstance();
+
+    @CSBDDStepDef('I navigate to the application')
+    async navigateToApp(): Promise<void> {
+        const baseUrl = process.env.BASE_URL || '';
+        await this.browserManager.navigateAndWaitReady(baseUrl);
+        CSReporter.info(`Navigated to: ${baseUrl}`);
+    }
+
+    @CSBDDStepDef('I login with username {string} and password {string}')
+    async login(username: string, password: string): Promise<void> {
+        await this.loginPage.enterUsername(username);
+        await this.loginPage.enterPassword(password);
+        await this.loginPage.clickLogin();
+        this.scenarioCtx.setVariable('currentUser', username);
+        CSReporter.pass(`Logged in as: ${username}`);
+    }
+
+    @CSBDDStepDef('I should see the home page')
+    async verifyHomePage(): Promise<void> {
+        // Verification logic
+        CSReporter.pass('Home page displayed');
+    }
+
+    @CSBDDStepDef('I verify {int} records are displayed')
+    async verifyRecordCount(count: number): Promise<void> {
+        // Use {int} for numbers, {string} for text
+        CSAssert.assertTrue(true, `Expected ${count} records`);
+    }
+}
+```
+
+### Parameter Types
+- `{string}` — Quoted text: `"value"` or `'value'`
+- `{int}` — Integer: `42`
+- `{float}` — Decimal: `3.14`
+
+---
+
+## 6. BDD Style — Feature Files
+
+```gherkin
+@regression @myfeature
+Feature: User Login
+
+  Background:
+    Given I navigate to the application
+
+  @smoke
+  Scenario: Successful login
+    When I login with username "testuser" and password "Test@123"
+    Then I should see the home page
+
+  @data-driven
+  Scenario Outline: Login with different users
+    When I login with username "<username>" and password "<password>"
+    Then I should see the home page
+
+    Examples: {"type": "json", "source": "test/<project>/data/login-data.json", "path": "$", "filter": "runFlag=Yes"}
+```
+
+### External Data (JSON file)
+```json
+[
+  { "username": "user1", "password": "pass1", "runFlag": "Yes" },
+  { "username": "user2", "password": "pass2", "runFlag": "Yes" }
+]
+```
+
+---
+
+## 7. CSReporter — STATIC METHODS (No getInstance)
+
+```typescript
+import { CSReporter } from '@mdakhan.mak/cs-playwright-test-framework/reporter';
+
+// CORRECT - Static method calls
+CSReporter.info('Information message');
+CSReporter.debug('Debug message');
+CSReporter.pass('Test passed');
+CSReporter.fail('Test failed');
+CSReporter.warn('Warning message');
+CSReporter.error('Error message');
+
+// WRONG - Never do this
+// CSReporter.getInstance().info('message');  // ERROR: getInstance doesn't exist
+```
+
+---
+
+## 8. Browser Management
+
+```typescript
+import { CSBrowserManager } from '@mdakhan.mak/cs-playwright-test-framework/browser';
+
+const browser = CSBrowserManager.getInstance();
+
+// Navigation - ALWAYS use this, never page.goto()
+await browser.navigateAndWaitReady('https://example.com', {
+    waitForSpinner: true,
+    spinnerSelector: '.loading',
+    timeout: 30000
+});
+
+// Multi-tab
+await browser.openNewTab();
+await browser.switchToTab(1);
+await browser.closeTab(1);
+
+// Get current page
+const page = browser.getCurrentPage();
+```
+
+---
+
+## 9. Assertions
+
+```typescript
+import { CSAssert } from '@mdakhan.mak/cs-playwright-test-framework/assert';
+
+// Static method calls
+CSAssert.assertTrue(condition, 'message');
+CSAssert.assertFalse(condition, 'message');
+CSAssert.assertEqual(actual, expected, 'message');
+CSAssert.assertNotEqual(actual, expected, 'message');
+CSAssert.assertContains(text, substring, 'message');
+CSAssert.assertNull(value, 'message');
+CSAssert.assertNotNull(value, 'message');
+```
+
+---
+
+## 10. Database Operations
+
+### Named Queries (config/<project>/common/<project>-db-queries.env)
+```env
+DB_QUERY_GET_USER_BY_ID=SELECT * FROM users WHERE user_id = ?
+DB_QUERY_COUNT_RECORDS=SELECT COUNT(*) as cnt FROM records WHERE status = ?
+```
+
+### CSDBUtils Usage
+```typescript
+import { CSDBUtils } from '@mdakhan.mak/cs-playwright-test-framework/database';
+
+const result = await CSDBUtils.executeNamedQuery('MYDB', 'GET_USER_BY_ID', ['U123']);
+const count = await CSDBUtils.executeSingleValue<number>('MYDB', 'DB_QUERY_COUNT_RECORDS', ['active']);
+const exists = await CSDBUtils.exists('MYDB', 'SELECT 1 FROM users WHERE id = ?', [123]);
+```
+
+---
+
+## 11. Configuration Files
+
+### config/<project>/common/common.env
+```env
+BROWSER=chromium
+HEADLESS=true
+TIMEOUT=30000
+SCREENSHOT_ON_FAILURE=true
+VIDEO_ON_FAILURE=true
+```
+
+### config/<project>/environments/dev.env
+```env
+BASE_URL=https://myapp-dev.example.com
+DB_MYDB_HOST=db-dev.example.com
+DB_MYDB_TYPE=mssql
+DB_MYDB_DATABASE=MYAPP_DEV
+```
+
+### config/<project>/environments/sit.env
+```env
+BASE_URL=https://myapp-sit.example.com
+DB_MYDB_HOST=db-sit.example.com
+```
+
+---
+
+## 12. Utility Classes (310+ Methods)
+
+### CSStringUtility
+`isEmpty`, `isBlank`, `isNotEmpty`, `toCamelCase`, `toPascalCase`, `toSnakeCase`, `toKebabCase`, `capitalize`, `trim`, `pad`, `repeat`, `reverse`, `truncate`, `replace`, `split`, `join`, `equals`, `contains`, `startsWith`, `endsWith`, `base64Encode`, `base64Decode`
+
+### CSDateTimeUtility
+`parse`, `format`, `formatISO`, `addDays`, `addMonths`, `addYears`, `subtractDays`, `diffInDays`, `diffInMonths`, `isBefore`, `isAfter`, `isEqual`, `startOfDay`, `endOfDay`, `addBusinessDays`, `isBusinessDay`, `isWeekend`
+
+### CSArrayUtility
+`unique`, `chunk`, `flatten`, `groupBy`, `partition`, `intersection`, `union`, `difference`, `shuffle`, `sample`, `sortBy`, `sum`, `average`, `min`, `max`
+
+### CSMapUtility
+`fromObject`, `toObject`, `filter`, `merge`, `deepMerge`, `pick`, `omit`, `invert`, `keys`, `values`
+
+### CSCsvUtility
+`read`, `write`, `parse`, `filter`, `sort`, `merge`, `toJSON`, `toExcel`
+
+### CSExcelUtility
+`read`, `write`, `readSheet`, `writeSheet`, `getSheetNames`, `toCSV`, `toJSON`
+
+---
+
+## 13. Selenium → CS Playwright Mapping
+
+| Selenium/Java | CS Playwright TypeScript |
+|---------------|--------------------------|
+| `@FindBy(xpath="...")` | `@CSGetElement({ xpath: "..." })` |
+| `WebElement` | `CSWebElement` |
+| `element.click()` | `await element.click()` |
+| `element.sendKeys(text)` | `await element.fill(text)` |
+| `element.clear()` | `await element.clear()` |
+| `element.getText()` | `await element.textContent()` |
+| `element.isDisplayed()` | `await element.isVisible()` |
+| `Select(el).selectByVisibleText(t)` | `await element.selectOption({ label: t })` |
+| `driver.get(url)` | `await browserManager.navigateAndWaitReady(url)` |
+| `@QAFTestStep("...")` | `@CSBDDStepDef('...')` |
+| `Reporter.log(msg)` | `CSReporter.info(msg)` |
+| `Assert.assertTrue(c, m)` | `CSAssert.assertTrue(c, m)` |
+
+---
+
+## 14. Common Mistakes to AVOID
+
+| WRONG | CORRECT |
+|-------|---------|
+| `import { CSBasePage, CSWebElement } from '@mdakhan.mak/cs-playwright-test-framework'` | Use module-specific imports (Section 18) |
+| `CSReporter.getInstance().info()` | `CSReporter.info()` — static method |
+| Missing `initializeElements()` | MUST implement: `protected initializeElements(): void {}` |
+| Creating `index.ts` barrel files | NEVER create index.ts |
+| `config/<project>/dev/dev.env` | `config/<project>/environments/dev.env` |
+| `page.goto(url)` | `browserManager.navigateAndWaitReady(url)` |
+
+---
+
+## 15. Spec Style — describe/test Pattern
+
+```typescript
+import { describe, test, beforeEach, afterEach } from '@mdakhan.mak/cs-playwright-test-framework/spec';
+import { AppLoginPage } from '../pages/AppLoginPage';
+
+describe('User Login', { tags: ['@regression'] }, () => {
+
+    beforeEach(async ({ navigate, config }) => {
+        await navigate(config.get('BASE_URL'));
+    });
+
+    test('should login successfully', { tags: ['@smoke'] }, async ({
+        AppLoginPage, reporter, assert
+    }) => {
+        await test.step('Enter credentials', async () => {
+            await AppLoginPage.enterUsername('testuser');
+            await AppLoginPage.enterPassword('Test@123');
+        });
+
+        await test.step('Submit login', async () => {
+            await AppLoginPage.clickLogin();
+        });
+
+        await test.step('Verify success', async () => {
+            assert.assertTrue(true, 'Login successful');
+        });
+    });
+});
+```
+
+---
+
+## 16. CSElementFactory Methods
+
+```typescript
+import { CSElementFactory } from '@mdakhan.mak/cs-playwright-test-framework/element';
+
+CSElementFactory.createByXPath(xpath, description)
+CSElementFactory.createByCSS(css, description)
+CSElementFactory.createById(id, description)
+CSElementFactory.createByName(name, description)
+CSElementFactory.createByText(text, description)
+CSElementFactory.createByRole(role, options, description)
+CSElementFactory.createByTestId(testId, description)
+CSElementFactory.createByLabel(label, description)
+```
+
+---
+
+## 17. Hooks (BDD)
+
+```typescript
+import { CSBefore, CSAfter, CSBeforeStep, CSAfterStep } from '@mdakhan.mak/cs-playwright-test-framework/bdd';
+
+@CSBefore({ tags: '@login' })
+async beforeLogin(): Promise<void> {
+    CSReporter.info('Setting up test');
+}
+
+@CSAfter({ tags: '@cleanup' })
+async afterCleanup(): Promise<void> {
+    CSReporter.info('Cleaning up');
+}
+```
+
+---
+
+## 18. CORRECT IMPORTS — Use These Exactly
+
+```typescript
+// Core - Page base, decorators
+import { CSBasePage, CSPage, CSGetElement } from '@mdakhan.mak/cs-playwright-test-framework/core';
+
+// Element - WebElement, Factory
+import { CSWebElement, CSElementFactory } from '@mdakhan.mak/cs-playwright-test-framework/element';
+
+// Reporter - STATIC methods
+import { CSReporter } from '@mdakhan.mak/cs-playwright-test-framework/reporter';
+
+// Browser
+import { CSBrowserManager } from '@mdakhan.mak/cs-playwright-test-framework/browser';
+
+// BDD
+import { StepDefinitions, CSBDDStepDef, Page, CSBefore, CSAfter } from '@mdakhan.mak/cs-playwright-test-framework/bdd';
+
+// Context
+import { CSScenarioContext, CSBDDContext } from '@mdakhan.mak/cs-playwright-test-framework/context';
+
+// Assert
+import { CSAssert } from '@mdakhan.mak/cs-playwright-test-framework/assert';
+
+// Database
+import { CSDBUtils } from '@mdakhan.mak/cs-playwright-test-framework/database';
+
+// API
+import { CSAPIClient } from '@mdakhan.mak/cs-playwright-test-framework/api';
+
+// Config
+import { CSConfigurationManager } from '@mdakhan.mak/cs-playwright-test-framework/core';
+
+// Utilities
+import { CSStringUtility } from '@mdakhan.mak/cs-playwright-test-framework/utils';
+import { CSDateTimeUtility } from '@mdakhan.mak/cs-playwright-test-framework/utils';
+import { CSArrayUtility } from '@mdakhan.mak/cs-playwright-test-framework/utils';
+
+// Spec style
+import { describe, test, beforeEach, afterEach, beforeAll, afterAll } from '@mdakhan.mak/cs-playwright-test-framework/spec';
+```
+
+**NEVER use single barrel import like:**
+```typescript
+// WRONG - Will cause errors
+import { CSBasePage, CSWebElement, CSReporter } from '@mdakhan.mak/cs-playwright-test-framework';
+```
+
+---
+
+## 19. CLI Commands
+
+```bash
+# BDD
+npx cs-playwright-test --project=<project> --tags="@smoke"
+npx cs-playwright-test --project=<project> --env=sit --tags="@regression"
+
+# Spec
+npx cs-playwright-test --project=<project> --specs="test/<project>/specs/**/*.spec.ts"
+```
