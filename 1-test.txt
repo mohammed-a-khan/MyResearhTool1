@@ -12,21 +12,23 @@
 
 **RULE 3: Page classes MUST implement `initializeElements()`** — Required abstract method from CSBasePage.
 
-**RULE 4: NEVER create index.ts or barrel export files** — Each file is standalone, no re-exports.
+**RULE 4: NEVER redeclare inherited properties** — `config`, `browserManager`, `url`, `elements`, `page` are inherited from CSBasePage as `protected`. DO NOT redeclare them in child classes. Just use `this.config`, `this.browserManager`, etc.
 
-**RULE 5: All element locators MUST be in page classes** — Never in step definitions or spec files.
+**RULE 5: NEVER create index.ts or barrel export files** — Each file is standalone, no re-exports.
 
-**RULE 6: All DB queries MUST be in .env files** — Never hardcoded in TypeScript.
+**RULE 6: All element locators MUST be in page classes** — Never in step definitions or spec files.
 
-**RULE 7: Never use raw Playwright APIs** — No `page.locator()`, `page.click()`, `page.goto()`.
+**RULE 7: All DB queries MUST be in .env files** — Never hardcoded in TypeScript.
 
-**RULE 8: Config uses `environments/` subfolder** — `config/<project>/environments/dev.env` NOT `config/<project>/dev/dev.env`.
+**RULE 8: Never use raw Playwright APIs** — No `page.locator()`, `page.click()`, `page.goto()`.
 
-**RULE 9: Check existing framework code FIRST** — Search `node_modules/@mdakhan.mak/cs-playwright-test-framework/dist/`.
+**RULE 9: Config uses `environments/` subfolder** — `config/<project>/environments/dev.env` NOT `config/<project>/dev/dev.env`.
 
-**RULE 10: Check framework utilities before writing helpers** — 310+ utility methods across 8 classes.
+**RULE 10: Check existing framework code FIRST** — Search `node_modules/@mdakhan.mak/cs-playwright-test-framework/dist/`.
 
-**RULE 11: Use JSON for external test data** — Not Excel.
+**RULE 11: Check framework utilities before writing helpers** — 310+ utility methods across 8 classes.
+
+**RULE 12: Use JSON for external test data** — Not Excel.
 
 **RULE 12: No over-engineering** — Minimal changes for the task.
 
@@ -74,6 +76,12 @@ import { CSReporter } from '@mdakhan.mak/cs-playwright-test-framework/reporter';
 
 @CSPage('app-login')
 export class AppLoginPage extends CSBasePage {
+    // INHERITED from CSBasePage (DO NOT redeclare):
+    // protected config: CSConfigurationManager
+    // protected browserManager: CSBrowserManager
+    // protected page: Page
+    // protected url: string
+    // protected elements: Map<string, CSWebElement>
 
     @CSGetElement({
         xpath: '//input[@name="username" or @id="username"]',
@@ -1308,6 +1316,8 @@ const scenarioVar = resolver.resolve('{scenario:userId}');
 | Excel for test data | JSON with external Examples source |
 | `import { expect } from '@playwright/test'` | Use from `@.../assertions` |
 | `api.setSOAPSecurity()` | Use `CSSoapClient` for SOAP |
+| `private config: ...` in page class | NEVER redeclare - inherited as `protected` from CSBasePage |
+| `private browserManager: ...` | NEVER redeclare - inherited as `protected` from CSBasePage |
 
 ---
 
