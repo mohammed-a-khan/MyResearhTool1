@@ -1,17 +1,24 @@
-### Post-Generation Audit (MANDATORY)
-
-After generating EACH file, audit against this checklist:
-
-| Check | Verify |
-|-------|--------|
-| Imports correct | Module-specific paths, no barrel imports, CSDBUtils from /database-utils |
-| CSReporter usage | Static methods only — `CSReporter.info()` NOT `getInstance()` |
-| CSAssert usage | getInstance required — `CSAssert.getInstance().assertTrue()` |
-| Page class | Extends CSBasePage, has @CSPage, implements initializeElements(), no redeclared properties |
-| Step file | Has @StepDefinitions, uses @CSBDDStepDef, kebab-case filename |
-| Feature file | Double quotes for parameters, Scenario Outline with Examples |
-| No raw Playwright | No page.goto(), page.locator(), page.click() — use framework methods |
-| No hardcoded SQL | All queries in .env files |
-| Locators | ALL locators in page classes only, none in steps |
-
-**If any check fails, fix the violation before proceeding. Code must be error-free.**
+// Cucumber (Gherkin) Full Support extension configuration
+  "cucumberautocomplete.steps": [
+    "test/**/*.ts",
+    "dist/test/**/*.js"
+  ],
+  "cucumberautocomplete.syncfeatures": "**/*.feature",
+  "cucumberautocomplete.strictGherkinCompletion": false,
+  "cucumberautocomplete.strictGherkinValidation": false,
+  "cucumberautocomplete.smartSnippets": true,
+  "cucumberautocomplete.stepsInvariants": true,
+  "cucumberautocomplete.customParameters": [
+    {
+      "parameter": "{string}",
+      "value": "\"([^\"]*)\""
+    },
+    {
+      "parameter": "{int}",
+      "value": "(\\d+)"
+    },
+    {
+      "parameter": "{float}",
+      "value": "(\\d*\\.?\\d+)"
+    }
+  ],
