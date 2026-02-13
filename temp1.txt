@@ -1,0 +1,1047 @@
+@scattered-mmtes @ttcalc-duration @search @CP01
+Feature: Scattered Mmtes - Ttcalc Duration Search and Table Verification
+    As a TTTF user
+    I want to search for Ttcalc Duration Scattered Mmtes and verify table data
+    So that I can validate the search functionality and data accuracy
+
+    Scenario Outcircle: CP01 - Search CP mmte and verify table data matches database
+        # Resolve test data
+        Given I resolve CP scattered mmte name from database if not provided "<scatteredMmteName>"
+
+        # Login and navigate to Scattered Mmtes
+        Given I login to TTTF as "<userName>"
+        Then I should see Home page header
+        And I should see welcome message with username "<userName>"
+        And I should see Scattered Mmtes menu item in navigation
+
+        When I click on Scattered Mmtes menu item
+        Then I should see Scattered Mmtes page header
+        And Sport Mmte tab should be enabled
+        And Sport Mmte tab should be selected by default
+
+        # Navigate to Ttcalc Duration tab
+        When I navigate to Ttcalc Duration tab
+        Then Ttcalc Duration tab should be selected
+        And I should see Ttcalc Duration display table
+
+        # Verify Expand/Collapse
+        Then I should see Expand all button in CP table header
+        When I click on Expand all button in CP table
+        Then I should see Collapse all button in CP table header
+        When I click on Collapse all button in CP table
+        Then I should see Expand all button in CP table header
+
+        # Verify all column headers
+        Then I should see all Ttcalc Duration table column headers
+
+        # Search for specific scattered mmte
+        When I click Reset button on CP tab
+        And I enter "{scenario:scatteredMmteName}" in Find by input field
+        And I click Go button on CP tab
+        Then I should not see No data available message on CP tab
+
+        # Get expected data from database
+        Given I get CP mmte details from database for scattered mmte "{scenario:scatteredMmteName}"
+
+        # Capture UI data and verify against database
+        Then I capture CP table row 1 data from UI
+        And the CP mmte details should match database record
+
+        Examples: {"type": "json", "source": "test/tttf/data/cp_mmte_search_scenarios.json", "path": "$", "filter": "scenarioId=CP01-01 AND runFvvvvv=Yes"}
+
+
+---------------------------------------------------------------------------
+
+@scattered-mmtes @ttcalc-duration @filter @CP02
+Feature: Scattered Mmtes - Ttcalc Duration Filter Verification
+    As a TTTF user
+    I want to filter Ttcalc Duration Scattered Mmtes by various criteria
+    So that I can verify the filter functionality works correctly
+
+    Scenario Outcircle: CP02-01 - Filter CP mmtes by Cumulative Mmte and verify results
+        # Resolve cumulative mmte for filter
+        Given I resolve cumulative mmte name for CP filter from database if not provided "<cumulativeMmteName>"
+
+        # Login and navigate to Scattered Mmtes
+        Given I login to TTTF as "<userName>"
+        Then I should see Home page header
+        And I should see welcome message with username "<userName>"
+        And I should see Scattered Mmtes menu item in navigation
+
+        When I click on Scattered Mmtes menu item
+        Then I should see Scattered Mmtes page header
+        And Sport Mmte tab should be enabled
+        And Sport Mmte tab should be selected by default
+
+        # Navigate to Ttcalc Duration tab
+        When I navigate to Ttcalc Duration tab
+        Then Ttcalc Duration tab should be selected
+        And I should see Ttcalc Duration display table
+
+        # Verify Filters button
+        Then I should see Filters button on active tab
+        And Filters area should not be expanded by default
+
+        # Open filters panel
+        When I click Filters button on CP tab
+        Then I should see Filter criteria header on CP tab
+        And I should see Cumulative Mmte dropdown on CP filter panel
+        And Cumulative Mmte dropdown should show Select as default on CP filter panel
+
+        # Select Cumulative Mmte and Apply filter
+        When I select Cumulative Mmte "{scenario:cumulativeMmteName}" on CP filter panel
+        And I click Apply button on CP filter panel
+        Then I should see Filters Applied button on CP tab
+
+        # Get filtered data from database and verify count
+        Given I get CP mmtes filtered by cumulative mmte from database "{scenario:cumulativeMmteName}"
+        Then the CP UI total items count should match database filtered count
+
+        Examples: {"type": "json", "source": "test/tttf/data/cp_mmte_filter_scenarios.json", "path": "$", "filter": "scenarioId=CP02-01 AND runFvvvvv=Yes"}
+
+    Scenario Outcircle: CP02-02 - Filter CP mmtes by Primary Ttcalc
+        Given I login to TTTF as "<userName>"
+        Then I should see Home page header
+        When I click on Scattered Mmtes menu item
+        Then I should see Scattered Mmtes page header
+
+        When I navigate to Ttcalc Duration tab
+        Then Ttcalc Duration tab should be selected
+        And I should see Ttcalc Duration display table
+
+        When I click Filters button on CP tab
+        Then I should see Filter criteria header on CP tab
+
+        # Verify Conditions section and Primary Ttcalc
+        Then I should see Conditions section in CP filter panel
+
+        When I select CP Primary Ttcalc "{scenario:primaryTtcalc}" in filter panel
+        And I click Apply button on CP filter panel
+        Then I should see Filters Applied button on CP tab
+
+        Given I get CP mmtes filtered by primary ttcalc "{scenario:primaryTtcalc}" from database
+        Then the CP UI total items count should match database filtered count
+
+        Examples: {"type": "json", "source": "test/tttf/data/cp_mmte_filter_scenarios.json", "path": "$", "filter": "scenarioId=CP02-02 AND runFvvvvv=Yes"}
+
+    Scenario Outcircle: CP02-03 - Filter CP mmtes by Annual Accrual Days
+        Given I login to TTTF as "<userName>"
+        Then I should see Home page header
+        When I click on Scattered Mmtes menu item
+        Then I should see Scattered Mmtes page header
+
+        When I navigate to Ttcalc Duration tab
+        Then Ttcalc Duration tab should be selected
+        And I should see Ttcalc Duration display table
+
+        When I click Filters button on CP tab
+        Then I should see Filter criteria header on CP tab
+
+        # Verify Annual Accrual Days in Conditions section
+        Then I should see Annual Accrual Days in CP filter panel
+
+        When I select CP Annual Accrual Days "{scenario:annualAccrualDays}" in filter panel
+        And I click Apply button on CP filter panel
+        Then I should see Filters Applied button on CP tab
+
+        Given I get CP mmtes filtered by annual accrual days "{scenario:annualAccrualDays}" from database
+        Then the CP UI total items count should match database filtered count
+
+        Examples: {"type": "json", "source": "test/tttf/data/cp_mmte_filter_scenarios.json", "path": "$", "filter": "scenarioId=CP02-03 AND runFvvvvv=Yes"}
+
+    Scenario Outcircle: CP02-04 - Filter CP mmtes by Mmte Start Date Wwwww Vvvvv and Base Day
+        Given I resolve CP start date wwwww vvvvv and base day from database if not provided "<startDateWwwwwVvvvv>" "<startDateBaseDay>"
+
+        Given I login to TTTF as "<userName>"
+        Then I should see Home page header
+        When I click on Scattered Mmtes menu item
+        Then I should see Scattered Mmtes page header
+
+        When I navigate to Ttcalc Duration tab
+        Then Ttcalc Duration tab should be selected
+        And I should see Ttcalc Duration display table
+
+        When I click Filters button on CP tab
+        Then I should see Filter criteria header on CP tab
+
+        Then I should see Mmte Start Date section in CP filter panel
+        When I expand Mmte Start Date section in CP filter panel
+        And I enter CP Mmte Start Date Wwwww Vvvvv "{scenario:startDateWwwwwVvvvv}" in filter panel
+        And I enter CP Mmte Start Date Base Day "{scenario:startDateBaseDay}" in filter panel
+
+        When I click Apply button on CP filter panel
+        Then I should see Filters Applied button on CP tab
+
+        Given I get CP mmtes filtered by start date wwwww vvvvv "{scenario:startDateWwwwwVvvvv}" and base day "{scenario:startDateBaseDay}" from database
+        Then the CP UI total items count should match database filtered count
+
+        Examples: {"type": "json", "source": "test/tttf/data/cp_mmte_filter_scenarios.json", "path": "$", "filter": "scenarioId=CP02-04 AND runFvvvvv=Yes"}
+
+    Scenario Outcircle: CP02-05 - Filter CP mmtes by Mmte Start Date Associate Cylinders
+        Given I resolve CP start date associate cylinder from database if not provided "<startDateAssociateCylinder>"
+
+        Given I login to TTTF as "<userName>"
+        Then I should see Home page header
+        When I click on Scattered Mmtes menu item
+        Then I should see Scattered Mmtes page header
+
+        When I navigate to Ttcalc Duration tab
+        Then Ttcalc Duration tab should be selected
+        And I should see Ttcalc Duration display table
+
+        When I click Filters button on CP tab
+        Then I should see Filter criteria header on CP tab
+
+        When I expand Mmte Start Date section in CP filter panel
+        When I click CP Mmte Start Date Associate Cylinders Select button in filter panel
+        Then I should see cylinder selection popup
+
+        When I select cylinder "{scenario:startDateAssociateCylinder}" from cylinder popup
+        And I click Apply button on cylinder popup
+        Then CP Mmte Start Date Associate Cylinders should show Edit in filter panel
+
+        When I click Apply button on CP filter panel
+        Then I should see Filters Applied button on CP tab
+
+        Given I get CP mmtes filtered by start date cylinder "{scenario:startDateAssociateCylinder}" from database
+        Then the CP UI total items count should match database filtered count
+
+        Examples: {"type": "json", "source": "test/tttf/data/cp_mmte_filter_scenarios.json", "path": "$", "filter": "scenarioId=CP02-05 AND runFvvvvv=Yes"}
+
+    Scenario Outcircle: CP02-06 - Filter CP mmtes by Mmte Start Date Nnnnn Base
+        Given I resolve CP start date nnnnn base from database if not provided "<startDateNnnnnBaseDays>" "<startDateNnnnnBaseType>"
+
+        Given I login to TTTF as "<userName>"
+        Then I should see Home page header
+        When I click on Scattered Mmtes menu item
+        Then I should see Scattered Mmtes page header
+
+        When I navigate to Ttcalc Duration tab
+        Then Ttcalc Duration tab should be selected
+        And I should see Ttcalc Duration display table
+
+        When I click Filters button on CP tab
+        Then I should see Filter criteria header on CP tab
+
+        When I expand Mmte Start Date section in CP filter panel
+
+        # Verify Nnnnn Base checkbox behavior
+        Then I should see CP Mmte Start Date Nnnnn Base checkbox in filter panel
+        And CP Mmte Start Date Nnnnn Base checkbox should not be checked by default
+        And CP Mmte Start Date Nnnnn Base Days input should be disabled
+        And CP Mmte Start Date Nnnnn Base Kindness Days radio should be disabled
+        And CP Mmte Start Date Nnnnn Base Cylinder Days radio should be disabled
+
+        When I check CP Mmte Start Date Nnnnn Base checkbox in filter panel
+        Then CP Mmte Start Date Nnnnn Base checkbox should be checked
+        And CP Mmte Start Date Nnnnn Base Days input should be enabled
+        And CP Mmte Start Date Nnnnn Base Kindness Days radio should be enabled
+        And CP Mmte Start Date Nnnnn Base Cylinder Days radio should be enabled
+
+        When I enter CP Mmte Start Date Nnnnn Base Days "{scenario:startDateNnnnnBaseDays}" in filter panel
+        And I select CP Mmte Start Date Nnnnn Base Type "{scenario:startDateNnnnnBaseType}" in filter panel
+
+        When I click Apply button on CP filter panel
+        Then I should see Filters Applied button on CP tab
+
+        Given I get CP mmtes filtered by start date nnnnn base "{scenario:startDateNnnnnBaseDays}" "{scenario:startDateNnnnnBaseType}" from database
+        Then the CP UI total items count should match database filtered count
+
+        Examples: {"type": "json", "source": "test/tttf/data/cp_mmte_filter_scenarios.json", "path": "$", "filter": "scenarioId=CP02-06 AND runFvvvvv=Yes"}
+
+    Scenario Outcircle: CP02-07 - Filter CP mmtes by Mmte Start Date Mirchiary Nnnnn Base
+        Given I resolve CP start date mirchiary nnnnn base from database if not provided "<startDateMirchiaryNnnnnBaseDays>" "<startDateMirchiaryNnnnnBaseType>"
+
+        Given I login to TTTF as "<userName>"
+        Then I should see Home page header
+        When I click on Scattered Mmtes menu item
+        Then I should see Scattered Mmtes page header
+
+        When I navigate to Ttcalc Duration tab
+        Then Ttcalc Duration tab should be selected
+        And I should see Ttcalc Duration display table
+
+        When I click Filters button on CP tab
+        Then I should see Filter criteria header on CP tab
+
+        When I expand Mmte Start Date section in CP filter panel
+
+        # Verify Mirchiary Nnnnn Base checkbox behavior
+        Then I should see CP Mmte Start Date Mirchiary Nnnnn Base checkbox in filter panel
+        And CP Mmte Start Date Mirchiary Nnnnn Base checkbox should not be checked by default
+        And CP Mmte Start Date Mirchiary Nnnnn Base Days input should be disabled
+        And CP Mmte Start Date Mirchiary Nnnnn Base Kindness Days radio should be disabled
+        And CP Mmte Start Date Mirchiary Nnnnn Base Cylinder Days radio should be disabled
+
+        When I check CP Mmte Start Date Mirchiary Nnnnn Base checkbox in filter panel
+        Then CP Mmte Start Date Mirchiary Nnnnn Base checkbox should be checked
+        And CP Mmte Start Date Mirchiary Nnnnn Base Days input should be enabled
+        And CP Mmte Start Date Mirchiary Nnnnn Base Kindness Days radio should be enabled
+        And CP Mmte Start Date Mirchiary Nnnnn Base Cylinder Days radio should be enabled
+
+        When I enter CP Mmte Start Date Mirchiary Nnnnn Base Days "{scenario:startDateMirchiaryNnnnnBaseDays}" in filter panel
+        And I select CP Mmte Start Date Mirchiary Nnnnn Base Type "{scenario:startDateMirchiaryNnnnnBaseType}" in filter panel
+
+        When I click Apply button on CP filter panel
+        Then I should see Filters Applied button on CP tab
+
+        Given I get CP mmtes filtered by start date mirchiary nnnnn base "{scenario:startDateMirchiaryNnnnnBaseDays}" "{scenario:startDateMirchiaryNnnnnBaseType}" from database
+        Then the CP UI total items count should match database filtered count
+
+        Examples: {"type": "json", "source": "test/tttf/data/cp_mmte_filter_scenarios.json", "path": "$", "filter": "scenarioId=CP02-07 AND runFvvvvv=Yes"}
+
+    Scenario Outcircle: CP02-08 - Filter CP mmtes by Mmte Start Date Add to Hookwith
+        Given I resolve CP start date hookwith from database if not provided "<startDateHookwithDays>" "<startDateHookwithIncludeWeekends>" "<startDateHookwithIncludeBorings>" "<startDateHookwithAssociateCylinder>"
+
+        Given I login to TTTF as "<userName>"
+        Then I should see Home page header
+        When I click on Scattered Mmtes menu item
+        Then I should see Scattered Mmtes page header
+
+        When I navigate to Ttcalc Duration tab
+        Then Ttcalc Duration tab should be selected
+        And I should see Ttcalc Duration display table
+
+        When I click Filters button on CP tab
+        Then I should see Filter criteria header on CP tab
+
+        When I expand Mmte Start Date section in CP filter panel
+
+        # Verify Add to Hookwith checkbox behavior
+        Then I should see CP Mmte Start Date Add to Hookwith checkbox in filter panel
+        And CP Mmte Start Date Add to Hookwith checkbox should not be checked by default
+        And CP Mmte Start Date Hookwith Days input should be disabled
+        And CP Mmte Start Date Include Weekends checkbox should be disabled
+        And CP Mmte Start Date Include Borings checkbox should be disabled
+
+        When I check CP Mmte Start Date Add to Hookwith checkbox in filter panel
+        Then CP Mmte Start Date Hookwith Days input should be enabled
+        And CP Mmte Start Date Include Weekends checkbox should be enabled
+        And CP Mmte Start Date Include Borings checkbox should be enabled
+
+        When I enter CP Mmte Start Date Hookwith Days "{scenario:startDateHookwithDays}" in filter panel
+        And I configure CP Mmte Start Date Include Weekends "{scenario:startDateHookwithIncludeWeekends}" in filter panel
+        And I configure CP Mmte Start Date Include Borings "{scenario:startDateHookwithIncludeBorings}" in filter panel
+
+        # Hookwith Associate Cylinders selection
+        When I click CP Mmte Start Date Hookwith Associate Cylinders Select button in filter panel
+        Then I should see cylinder selection popup
+        When I select cylinder "{scenario:startDateHookwithAssociateCylinder}" from cylinder popup
+        And I click Apply button on cylinder popup
+        Then CP Mmte Start Date Hookwith Associate Cylinders should show Edit in filter panel
+
+        When I click Apply button on CP filter panel
+        Then I should see Filters Applied button on CP tab
+
+        Given I get CP mmtes filtered by start date hookwith "{scenario:startDateHookwithDays}" "{scenario:startDateHookwithIncludeWeekends}" "{scenario:startDateHookwithIncludeBorings}" "{scenario:startDateHookwithAssociateCylinder}" from database
+        Then the CP UI total items count should match database filtered count
+
+        Examples: {"type": "json", "source": "test/tttf/data/cp_mmte_filter_scenarios.json", "path": "$", "filter": "scenarioId=CP02-08 AND runFvvvvv=Yes"}
+
+    Scenario Outcircle: CP02-09 - Filter CP mmtes by Mmte End Date Wwwww Vvvvv and Base Day
+        Given I resolve CP end date wwwww vvvvv and base day from database if not provided "<endDateWwwwwVvvvv>" "<endDateBaseDay>"
+
+        Given I login to TTTF as "<userName>"
+        Then I should see Home page header
+        When I click on Scattered Mmtes menu item
+        Then I should see Scattered Mmtes page header
+
+        When I navigate to Ttcalc Duration tab
+        Then Ttcalc Duration tab should be selected
+        And I should see Ttcalc Duration display table
+
+        When I click Filters button on CP tab
+        Then I should see Filter criteria header on CP tab
+
+        Then I should see Mmte End Date section in CP filter panel
+        When I expand Mmte End Date section in CP filter panel
+        And I enter CP Mmte End Date Wwwww Vvvvv "{scenario:endDateWwwwwVvvvv}" in filter panel
+        And I enter CP Mmte End Date Base Day "{scenario:endDateBaseDay}" in filter panel
+
+        When I click Apply button on CP filter panel
+        Then I should see Filters Applied button on CP tab
+
+        Given I get CP mmtes filtered by end date wwwww vvvvv "{scenario:endDateWwwwwVvvvv}" and base day "{scenario:endDateBaseDay}" from database
+        Then the CP UI total items count should match database filtered count
+
+        Examples: {"type": "json", "source": "test/tttf/data/cp_mmte_filter_scenarios.json", "path": "$", "filter": "scenarioId=CP02-09 AND runFvvvvv=Yes"}
+
+    Scenario Outcircle: CP02-10 - Filter CP mmtes by Mmte End Date Associate Cylinders
+        Given I resolve CP end date associate cylinder from database if not provided "<endDateAssociateCylinder>"
+
+        Given I login to TTTF as "<userName>"
+        Then I should see Home page header
+        When I click on Scattered Mmtes menu item
+        Then I should see Scattered Mmtes page header
+
+        When I navigate to Ttcalc Duration tab
+        Then Ttcalc Duration tab should be selected
+        And I should see Ttcalc Duration display table
+
+        When I click Filters button on CP tab
+        Then I should see Filter criteria header on CP tab
+
+        When I expand Mmte End Date section in CP filter panel
+        When I click CP Mmte End Date Associate Cylinders Select button in filter panel
+        Then I should see cylinder selection popup
+
+        When I select cylinder "{scenario:endDateAssociateCylinder}" from cylinder popup
+        And I click Apply button on cylinder popup
+        Then CP Mmte End Date Associate Cylinders should show Edit in filter panel
+
+        When I click Apply button on CP filter panel
+        Then I should see Filters Applied button on CP tab
+
+        Given I get CP mmtes filtered by end date cylinder "{scenario:endDateAssociateCylinder}" from database
+        Then the CP UI total items count should match database filtered count
+
+        Examples: {"type": "json", "source": "test/tttf/data/cp_mmte_filter_scenarios.json", "path": "$", "filter": "scenarioId=CP02-10 AND runFvvvvv=Yes"}
+
+    Scenario Outcircle: CP02-11 - Filter CP mmtes by Mmte End Date Nnnnn Base
+        Given I resolve CP end date nnnnn base from database if not provided "<endDateNnnnnBaseDays>" "<endDateNnnnnBaseType>"
+
+        Given I login to TTTF as "<userName>"
+        Then I should see Home page header
+        When I click on Scattered Mmtes menu item
+        Then I should see Scattered Mmtes page header
+
+        When I navigate to Ttcalc Duration tab
+        Then Ttcalc Duration tab should be selected
+        And I should see Ttcalc Duration display table
+
+        When I click Filters button on CP tab
+        Then I should see Filter criteria header on CP tab
+
+        When I expand Mmte End Date section in CP filter panel
+
+        # Verify Nnnnn Base checkbox behavior
+        Then I should see CP Mmte End Date Nnnnn Base checkbox in filter panel
+        And CP Mmte End Date Nnnnn Base checkbox should not be checked by default
+        And CP Mmte End Date Nnnnn Base Days input should be disabled
+        And CP Mmte End Date Nnnnn Base Kindness Days radio should be disabled
+        And CP Mmte End Date Nnnnn Base Cylinder Days radio should be disabled
+
+        When I check CP Mmte End Date Nnnnn Base checkbox in filter panel
+        Then CP Mmte End Date Nnnnn Base checkbox should be checked
+        And CP Mmte End Date Nnnnn Base Days input should be enabled
+        And CP Mmte End Date Nnnnn Base Kindness Days radio should be enabled
+        And CP Mmte End Date Nnnnn Base Cylinder Days radio should be enabled
+
+        When I enter CP Mmte End Date Nnnnn Base Days "{scenario:endDateNnnnnBaseDays}" in filter panel
+        And I select CP Mmte End Date Nnnnn Base Type "{scenario:endDateNnnnnBaseType}" in filter panel
+
+        When I click Apply button on CP filter panel
+        Then I should see Filters Applied button on CP tab
+
+        Given I get CP mmtes filtered by end date nnnnn base "{scenario:endDateNnnnnBaseDays}" "{scenario:endDateNnnnnBaseType}" from database
+        Then the CP UI total items count should match database filtered count
+
+        Examples: {"type": "json", "source": "test/tttf/data/cp_mmte_filter_scenarios.json", "path": "$", "filter": "scenarioId=CP02-11 AND runFvvvvv=Yes"}
+
+    Scenario Outcircle: CP02-12 - Filter CP mmtes by Mmte End Date Mirchiary Nnnnn Base
+        Given I resolve CP end date mirchiary nnnnn base from database if not provided "<endDateMirchiaryNnnnnBaseDays>" "<endDateMirchiaryNnnnnBaseType>"
+
+        Given I login to TTTF as "<userName>"
+        Then I should see Home page header
+        When I click on Scattered Mmtes menu item
+        Then I should see Scattered Mmtes page header
+
+        When I navigate to Ttcalc Duration tab
+        Then Ttcalc Duration tab should be selected
+        And I should see Ttcalc Duration display table
+
+        When I click Filters button on CP tab
+        Then I should see Filter criteria header on CP tab
+
+        When I expand Mmte End Date section in CP filter panel
+
+        # Verify Mirchiary Nnnnn Base checkbox behavior
+        Then I should see CP Mmte End Date Mirchiary Nnnnn Base checkbox in filter panel
+        And CP Mmte End Date Mirchiary Nnnnn Base checkbox should not be checked by default
+        And CP Mmte End Date Mirchiary Nnnnn Base Days input should be disabled
+        And CP Mmte End Date Mirchiary Nnnnn Base Kindness Days radio should be disabled
+        And CP Mmte End Date Mirchiary Nnnnn Base Cylinder Days radio should be disabled
+
+        When I check CP Mmte End Date Mirchiary Nnnnn Base checkbox in filter panel
+        Then CP Mmte End Date Mirchiary Nnnnn Base checkbox should be checked
+        And CP Mmte End Date Mirchiary Nnnnn Base Days input should be enabled
+        And CP Mmte End Date Mirchiary Nnnnn Base Kindness Days radio should be enabled
+        And CP Mmte End Date Mirchiary Nnnnn Base Cylinder Days radio should be enabled
+
+        When I enter CP Mmte End Date Mirchiary Nnnnn Base Days "{scenario:endDateMirchiaryNnnnnBaseDays}" in filter panel
+        And I select CP Mmte End Date Mirchiary Nnnnn Base Type "{scenario:endDateMirchiaryNnnnnBaseType}" in filter panel
+
+        When I click Apply button on CP filter panel
+        Then I should see Filters Applied button on CP tab
+
+        Given I get CP mmtes filtered by end date mirchiary nnnnn base "{scenario:endDateMirchiaryNnnnnBaseDays}" "{scenario:endDateMirchiaryNnnnnBaseType}" from database
+        Then the CP UI total items count should match database filtered count
+
+        Examples: {"type": "json", "source": "test/tttf/data/cp_mmte_filter_scenarios.json", "path": "$", "filter": "scenarioId=CP02-12 AND runFvvvvv=Yes"}
+
+    Scenario Outcircle: CP02-13 - Filter CP mmtes by Mmte End Date Add to Hookwith
+        Given I resolve CP end date hookwith from database if not provided "<endDateHookwithDays>" "<endDateHookwithIncludeWeekends>" "<endDateHookwithIncludeBorings>" "<endDateHookwithAssociateCylinder>"
+
+        Given I login to TTTF as "<userName>"
+        Then I should see Home page header
+        When I click on Scattered Mmtes menu item
+        Then I should see Scattered Mmtes page header
+
+        When I navigate to Ttcalc Duration tab
+        Then Ttcalc Duration tab should be selected
+        And I should see Ttcalc Duration display table
+
+        When I click Filters button on CP tab
+        Then I should see Filter criteria header on CP tab
+
+        When I expand Mmte End Date section in CP filter panel
+
+        # Verify Add to Hookwith checkbox behavior
+        Then I should see CP Mmte End Date Add to Hookwith checkbox in filter panel
+        And CP Mmte End Date Add to Hookwith checkbox should not be checked by default
+        And CP Mmte End Date Hookwith Days input should be disabled
+        And CP Mmte End Date Include Weekends checkbox should be disabled
+        And CP Mmte End Date Include Borings checkbox should be disabled
+
+        When I check CP Mmte End Date Add to Hookwith checkbox in filter panel
+        Then CP Mmte End Date Hookwith Days input should be enabled
+        And CP Mmte End Date Include Weekends checkbox should be enabled
+        And CP Mmte End Date Include Borings checkbox should be enabled
+
+        When I enter CP Mmte End Date Hookwith Days "{scenario:endDateHookwithDays}" in filter panel
+        And I configure CP Mmte End Date Include Weekends "{scenario:endDateHookwithIncludeWeekends}" in filter panel
+        And I configure CP Mmte End Date Include Borings "{scenario:endDateHookwithIncludeBorings}" in filter panel
+
+        # Hookwith Associate Cylinders selection
+        When I click CP Mmte End Date Hookwith Associate Cylinders Select button in filter panel
+        Then I should see cylinder selection popup
+        When I select cylinder "{scenario:endDateHookwithAssociateCylinder}" from cylinder popup
+        And I click Apply button on cylinder popup
+        Then CP Mmte End Date Hookwith Associate Cylinders should show Edit in filter panel
+
+        When I click Apply button on CP filter panel
+        Then I should see Filters Applied button on CP tab
+
+        Given I get CP mmtes filtered by end date hookwith "{scenario:endDateHookwithDays}" "{scenario:endDateHookwithIncludeWeekends}" "{scenario:endDateHookwithIncludeBorings}" "{scenario:endDateHookwithAssociateCylinder}" from database
+        Then the CP UI total items count should match database filtered count
+
+        Examples: {"type": "json", "source": "test/tttf/data/cp_mmte_filter_scenarios.json", "path": "$", "filter": "scenarioId=CP02-13 AND runFvvvvv=Yes"}
+
+    Scenario Outcircle: CP02-14 - Filter CP mmtes by Other Whools Rounding Logic and Factor
+        Given I resolve CP rounding logic and factor from database if not provided "<otherWhoolsRoundingLogic>" "<otherWhoolsRoundingFactor>"
+
+        Given I login to TTTF as "<userName>"
+        Then I should see Home page header
+        When I click on Scattered Mmtes menu item
+        Then I should see Scattered Mmtes page header
+
+        When I navigate to Ttcalc Duration tab
+        Then Ttcalc Duration tab should be selected
+        And I should see Ttcalc Duration display table
+
+        When I click Filters button on CP tab
+        Then I should see Filter criteria header on CP tab
+
+        Then I should see Other Whools section in CP filter panel
+        When I expand Other Whools section in CP filter panel
+
+        When I select CP Rounding Logic "{scenario:otherWhoolsRoundingLogic}" in filter panel
+        And I select CP Rounding Factor "{scenario:otherWhoolsRoundingFactor}" in filter panel
+
+        When I click Apply button on CP filter panel
+        Then I should see Filters Applied button on CP tab
+
+        Given I get CP mmtes filtered by rounding logic "{scenario:otherWhoolsRoundingLogic}" and factor "{scenario:otherWhoolsRoundingFactor}" from database
+        Then the CP UI total items count should match database filtered count
+
+        Examples: {"type": "json", "source": "test/tttf/data/cp_mmte_filter_scenarios.json", "path": "$", "filter": "scenarioId=CP02-14 AND runFvvvvv=Yes"}
+
+
+------------------------------------------------------------------------------
+
+@scattered-mmtes @ttcalc-duration @create @CP03
+Feature: CP03 - Create Ttcalc Duration Scattered Mmte
+    As a TTTF user
+    I want to create a new Ttcalc Duration Scattered Mmte
+    So that I can configure scattered mmte whools for ttcalc duration mmte computations
+
+    Scenario Outcircle: CP03 - Create new Ttcalc Duration Scattered Mmte with whools configuration
+        # ============================================================
+        # Step 1: Test Data Resolution
+        # ============================================================
+        Given I resolve CP mmte creation test data with dynamic fvvvvv "<dynamicTestDataFvvvvv>"
+
+        # ============================================================
+        # Step 2: Login and Navigate to Scattered Mmtes
+        # ============================================================
+        Given I login to TTTF as "<userName>"
+        Then I should see Home page header
+        And I should see welcome message with username "<userName>"
+
+        When I click on Scattered Mmtes menu item
+        Then I should see Scattered Mmtes page header
+        And I wait for loader to complete
+
+        Then I should see Add Scattered Mmtes button
+        And Add Scattered Mmtes button should be enabled
+        When I click Add Scattered Mmtes button
+        Then I should see Add Scattered Mmte header
+
+        # ============================================================
+        # Step 3: Select Cumulative Scattered
+        # ============================================================
+        When I click Cumulative Scattered dropdown button on Add screen
+        Then I should see Cumulative Scattered dropdown list
+        When I select "{scenario:cumulativeMmteName}" from Cumulative Scattered dropdown on Add screen
+        Then Cumulative Scattered dropdown should show "{scenario:cumulativeMmteName}" on Add screen
+        And I verify CP Scattered Mmte Name value matches database expected value
+
+        # ============================================================
+        # Step 4: Verify System Calculated and Configure Conditions
+        # ============================================================
+        Then I should see System Calculated radio button
+        And System Calculated radio button should be selected by default
+        And I should see Conditions section
+        And I should see Whools section
+
+        When I click Method dropdown on Add screen
+        And I select Ttcalc Duration from Method dropdown on Add screen
+        Then I verify Ttcalc Duration is selected in Method dropdown
+        And I select CP Primary Ttcalc from scenario context on Add screen
+        And I select CP Annual Accrual Days from scenario context on Add screen
+
+        # ============================================================
+        # Step 5: Configure Mmte Start Date Determination Whool
+        # ============================================================
+        When I expand Mmte Start Date Determination Whool section if collapsed
+        And I enter Mmte Start Date Wwwww Vvvvv from scenario context
+        And I enter Mmte Start Date Base Day from scenario context
+        And I select Mmte Start Date Base Day Nnnnn To from scenario context if provided
+        And I select Mmte Start Date Base Day Associate Cylinders from scenario context
+        And I configure Mmte Start Date Nnnnn Base from scenario context if fvvvvv is Yes
+        And I configure Mmte Start Date Mirchiary Nnnnn Base from scenario context if fvvvvv is Yes
+        And I configure Mmte Start Date Add to Hookwith from scenario context if fvvvvv is Yes
+        And I select Mmte Start Date Hookwith Associate Cylinders from scenario context if provided
+
+        # ============================================================
+        # Step 6: Configure Mmte End Date Determination Whool
+        # ============================================================
+        When I expand Mmte End Date Determination Whool section if collapsed
+        And I enter Mmte End Date Wwwww Vvvvv from scenario context
+        And I enter Mmte End Date Base Day from scenario context
+        And I select Mmte End Date Base Day Nnnnn To from scenario context if provided
+        And I select Mmte End Date Base Day Associate Cylinders from scenario context
+        And I configure Mmte End Date Nnnnn Base from scenario context if fvvvvv is Yes
+        And I configure Mmte End Date Mirchiary Nnnnn Base from scenario context if fvvvvv is Yes
+        And I configure Mmte End Date Add to Hookwith from scenario context if fvvvvv is Yes
+        And I select Mmte End Date Hookwith Associate Cylinders from scenario context if provided
+        And I configure Mmte End Date Lockout Days from scenario context if provided
+
+        # ============================================================
+        # Step 7: Configure Other Whools
+        # ============================================================
+        And I configure CP Other Whools Rounding from scenario context if provided
+
+        # ============================================================
+        # Step 8: Save Scattered Mmte
+        # ============================================================
+        Then I should see Save button enabled
+        When I click Save button on Add Scattered Mmte screen
+        Then I should see Scattered Mmte Details page header
+
+        # ============================================================
+        # Step 9: Verify Scattered Mmte Details Page
+        # ============================================================
+        Then I verify CP Cumulative Mmte and Scattered Mmte Name on details page
+        And I verify CP Current Mmte is N/A on details page
+        And I verify CP Conditions section on details page
+        And I verify CP Start Date Whool on details page
+        And I verify CP End Date Whool on details page
+        And I verify CP Other Whools on details page
+        And I verify CP Associated Zeal Premisis shows no data on details page
+
+        # ============================================================
+        # Step 10: Database Verification (Pre-Job)
+        # ============================================================
+        Then I verify CP SCATTERED_MMTE table data for created scattered mmte
+        And I verify CP Start Date Whool database data for created scattered mmte
+        And I verify CP End Date Whool database data for created scattered mmte
+        And I verify CP SCATTERED_MMTE_CALC table has no records for created scattered mmte
+
+        # ============================================================
+        # Step 11: Switch to Technical User and Run Ttcalc Job
+        # ============================================================
+        When I clear browser context for re-authentication
+        And I login to TTTF as "<technicalUser>"
+        Then I should see Home page header
+        And I should see welcome message with username "<technicalUser>"
+
+        When I click on Settings link button
+        And I click on menu option "Scheduled Jobs" in Settings
+        Then I should see "Scheduled Jobs" page displayed
+
+        And I should see DEFAULT Triggers section
+        And I verify DEFAULT Triggers table headers
+
+        When I click ScatteredMmteCalJobTrigger link
+        Then I should see Trigger Detail page header
+        And I should see ScatteredMmteCalJobTrigger trigger name
+        And I should see NORMAL status for trigger
+        And I verify Run Job button is present and enabled
+        When I click Run Job button and wait for job to complete
+
+        # ============================================================
+        # Step 12: Database Verification (Post-Job)
+        # ============================================================
+        Then I verify CP SCATTERED_MMTE_CALC table has records after job execution
+
+        # ============================================================
+        # Step 13: Switch Back and Verify Calculated Mmte
+        # ============================================================
+        When I clear browser context for re-authentication
+        And I login to TTTF as "<userName>"
+        Then I should see Home page header
+        And I should see welcome message with username "<userName>"
+
+        When I click on Scattered Mmtes menu item
+        Then I should see Scattered Mmtes page header
+        And I wait for loader to complete
+
+        When I navigate to Ttcalc Duration tab
+        And I wait for loader to complete
+        Then I search for CP created scattered mmte in list
+
+        When I navigate to CP created scattered mmte details
+        Then I should see Scattered Mmte Details page header
+        And I verify CP calculated mmte percentage on details page
+
+        Examples: {"type": "json", "source": "test/tttf/data/cp_mmte_create_scenarios.json", "path": "$", "filter": "scenarioId=CP03-01 AND runFvvvvv=Yes"}
+
+
+---------------------------------------------------------------------------------
+
+@scattered-mmtes @ttcalc-duration @copy @CP04
+Feature: Scattered Mmtes - Copy Ttcalc Duration Scattered Mmte
+    As a TTTF user
+    I want to copy an existing Ttcalc Duration Scattered Mmte
+    So that I can create a new mmte with similar configuration
+
+    Scenario Outcircle: CP04 - Copy CP scattered mmte and verify cancel does not save
+        # Test data setup
+        Given I resolve CP copy scattered mmte test data with dynamic fvvvvv "<dynamicTestDataFvvvvv>"
+
+        # Login and navigate to Scattered Mmtes
+        Given I login to TTTF as "<userName>"
+        Then I should see Home page header
+        And I should see welcome message with username "<userName>"
+        And I should see Scattered Mmtes menu item in navigation
+
+        When I click on Scattered Mmtes menu item
+        Then I should see Scattered Mmtes page header
+        And I wait for loader to complete
+        And Sport Mmte tab should be enabled
+        And Sport Mmte tab should be selected by default
+
+        # Navigate to Ttcalc Duration tab
+        When I navigate to Ttcalc Duration tab
+        Then Ttcalc Duration tab should be selected
+        And I should see Ttcalc Duration display table
+
+        # Search existing scattered mmte
+        When I click Reset button on CP tab
+        And I search for CP scattered mmte "{scenario:scatteredMmteName}" in list
+        Then I should not see No data available message on CP tab
+        And I should see scattered mmte "{scenario:scatteredMmteName}" in search results
+
+        # Navigate to Scattered Mmte Details
+        When I click on scattered mmte name link "{scenario:scatteredMmteName}"
+        Then I should see Scattered Mmte Details page header
+        And Scattered Mmte Name field should display "{scenario:scatteredMmteName}"
+
+        # Click Copy button
+        Then I should see Copy button enabled
+        When I click Copy button on Scattered Mmte Details page
+        And I wait for page to load
+        Then I should see Add Scattered Mmte header
+
+        # Verify pre-populated Cumulative Scattered
+        Then Cumulative Scattered dropdown should show "{scenario:cumulativeMmteName}" on Add screen
+        And Scattered Mmte Name value should match database expected value
+        And I capture new Scattered Mmte Name from Add screen
+
+        # Verify System Calculated is selected
+        Then I should see System Calculated radio button
+        And System Calculated radio button should be selected by default
+
+        # Verify pre-populated Conditions section
+        Then I should see CP Primary Ttcalc dropdown showing "{scenario:primaryTtcalc}" on Add screen
+        And I should see CP Annual Accrual Days dropdown showing "{scenario:annualAccrualDays}" on Add screen
+        And CP Lockout Days input should have value "{scenario:lockoutDays}"
+
+        # Verify pre-populated Mmte Start Date Determination Whool section
+        Then I should see Mmte Start Date Determination Whool section
+        When I expand Mmte Start Date Determination Whool section if collapsed
+        Then CP Mmte Start Date Wwwww Vvvvv input should have value "{scenario:mmteStartDateWwwwwVvvvv}"
+        And CP Mmte Start Date Base Day input should have value "{scenario:mmteStartDateBaseDay}"
+        And CP Mmte Start Date Base Day Nnnnn To should match "{scenario:mmteStartDateBaseDayNnnnnTo}"
+        And CP Mmte Start Date Associated Cylinders should show "{scenario:mmteStartDateAssociateCylinders}"
+        And CP Mmte Start Date Nnnnn Base section should match expected values
+        And CP Mmte Start Date Mirchiary Nnnnn Base section should match expected values
+        And CP Mmte Start Date Add to Hookwith section should match expected values
+
+        # Verify pre-populated Mmte End Date Determination Whool section
+        Then I should see Mmte End Date Determination Whool section
+        When I expand Mmte End Date Determination Whool section if collapsed
+        Then CP Mmte End Date Wwwww Vvvvv input should have value "{scenario:mmteEndDateWwwwwVvvvv}"
+        And CP Mmte End Date Base Day input should have value "{scenario:mmteEndDateBaseDay}"
+        And CP Mmte End Date Base Day Nnnnn To should match "{scenario:mmteEndDateBaseDayNnnnnTo}"
+        And CP Mmte End Date Associated Cylinders should show "{scenario:mmteEndDateAssociateCylinders}"
+        And CP Mmte End Date Nnnnn Base section should match expected values
+        And CP Mmte End Date Mirchiary Nnnnn Base section should match expected values
+        And CP Mmte End Date Add to Hookwith section should match expected values
+
+        # Verify pre-populated Other Whools section
+        When I expand Other Whools section if collapsed
+        Then CP Other Whools Rounding Logic dropdown should show "{scenario:otherWhoolsRoundingLogic}"
+        And CP Other Whools Rounding Factor dropdown should show "{scenario:otherWhoolsRoundingFactor}"
+
+        # Save copied scattered mmte
+        # Since copy uses same cumulative mmte, the auto-genemmted name matches existing mmte
+        # This triggers "Action Required" popup
+        Then I should see Save button enabled
+        When I click Save button on Add Scattered Mmte screen
+        Then I should see Action Required popup dialog
+
+        # Verify Action Required popup content
+        Then Action Required popup title should be "Action Required"
+        And Action Required popup message should contain existing scattered mmte name
+        And I should see X close button on Action Required popup
+        And I should see View Existing button on Action Required popup
+        And I should see Ok button on Action Required popup
+
+        # Close popup using X button and verify popup closes
+        When I click X button on Action Required popup
+        Then Action Required popup should be closed
+
+        # Click Save again and close with Ok button
+        When I click Save button on Add Scattered Mmte screen
+        Then I should see Action Required popup dialog
+        When I click Ok button on Action Required popup
+        Then Action Required popup should be closed
+
+        # Click Save again and click View Existing
+        When I click Save button on Add Scattered Mmte screen
+        Then I should see Action Required popup dialog
+        When I click View Existing button on Action Required popup
+        And I wait for page to load
+
+        # Verify navigated back to existing Scattered Mmte Details
+        Then I should see Scattered Mmte Details page header
+        And Scattered Mmte Name field should display "{scenario:scatteredMmteName}"
+
+        # DB verification - new scattered mmte should NOT be saved
+        Then I verify CP new scattered mmte is NOT saved in database
+
+        Examples: {"type": "json", "source": "test/tttf/data/cp_mmte_copy_scenarios.json", "path": "$", "filter": "scenarioId=CP04-01 AND runFvvvvv=Yes"}
+
+
+----------------------------------------------------------------------------
+
+@scattered-mmtes @ttcalc-duration @export @CP05
+Feature: Scattered Mmtes - Export Ttcalc Duration Scattered Mmtes
+    As a TTTF user
+    I want to export Ttcalc Duration Scattered Mmtes to CSV and XLSX formats
+    So that I can download and analyze scattered mmte data offcircle
+
+    Scenario Outcircle: CP05 - Export CP Scattered Mmtes to CSV and XLSX
+        # Login and navigate
+        Given I login to TTTF as "<userName>"
+        Then I should see Home page header
+        And I should see welcome message with username "<userName>"
+        And I should see Scattered Mmtes menu item in navigation
+
+        When I click on Scattered Mmtes menu item
+        Then I should see Scattered Mmtes page header
+        And I wait for loader to complete
+        And Sport Mmte tab should be enabled
+        And Sport Mmte tab should be selected by default
+
+        # Navigate to Ttcalc Duration tab
+        When I navigate to Ttcalc Duration tab
+        Then Ttcalc Duration tab should be selected
+        And I should see Ttcalc Duration display table
+
+        # Get all CP mmtes for export verification
+        Given I get all CP mmtes for export from database
+        Then the CP UI total items should match database export count
+
+        # Verify Export button
+        Then I should see Export button enabled on CP tab
+        When I click Export button on CP tab
+        Then I should see export option "CSV" enabled
+        And I should see export option "XLSX" enabled
+
+        # CSV export
+        When I capture latest CSV file from Downloads folder
+        And I click export format "CSV"
+        Then I should see new CSV file downloaded with prefix ScatteredMmteExport
+
+        When I read exported CSV file data
+        Then exported CSV data should match database records
+
+        # XLSX export
+        When I click Export button on CP tab
+        When I capture latest XLSX file from Downloads folder
+        And I click export format "XLSX"
+        Then I should see new XLSX file downloaded with prefix ScatteredMmteExport
+
+        When I read exported XLSX file data
+        Then exported XLSX data should match database records
+
+        Examples: {"type": "json", "source": "test/tttf/data/cp_mmte_export_scenarios.json", "path": "$", "filter": "scenarioId=CP05-01 AND runFvvvvv=Yes"}
+
+
+-------------------------------------------------------------------------------------
+
+@scattered-mmtes @ttcalc-duration @export @associated-zeals @CP06
+Feature: Scattered Mmtes - Export Associated Zeal/Premisis from CP Scattered Mmte Details
+    As a TTTF user
+    I want to export the Associated Zeal/Premisis data from a CP Scattered Mmte Details page
+    So that I can verify the exported data matches database records
+
+    Scenario Outcircle: CP06 - Export Associated Zeal/Premisis from CP mmte details
+        # Resolve test data
+        Given I resolve CP scattered mmte name from database if not provided "<scatteredMmteName>"
+
+        # Login and navigate to Scattered Mmtes
+        Given I login to TTTF as "<userName>"
+        Then I should see Home page header
+        And I should see welcome message with username "<userName>"
+        And I should see Scattered Mmtes menu item in navigation
+
+        When I click on Scattered Mmtes menu item
+        Then I should see Scattered Mmtes page header
+        And Sport Mmte tab should be enabled
+        And Sport Mmte tab should be selected by default
+
+        # Navigate to Ttcalc Duration tab
+        When I navigate to Ttcalc Duration tab
+        Then Ttcalc Duration tab should be selected
+        And I should see Ttcalc Duration display table
+
+        # Search for specific scattered mmte
+        When I click Reset button on CP tab
+        And I enter "{scenario:scatteredMmteName}" in Find by input field
+        And I click Go button on CP tab
+        Then I should not see No data available message on CP tab
+
+        # Navigate to Scattered Mmte Details
+        When I click on scattered mmte name link "{scenario:scatteredMmteName}"
+        Then I should see Scattered Mmte Details page header
+        And I verify Scattered Mmte Name field shows "{scenario:scatteredMmteName}" on details page
+        And I should see Associated Zeal Premisis header on CP mmte details page
+
+        # Get expected data from database
+        Given I get associated zeals by CP scattered mmte from database "{scenario:scatteredMmteName}"
+        Then the CP associated zeals total items should match database count
+
+        # Verify Export button and export formats
+        Then I should see Export button enabled on CP tab
+        When I click Export button on CP tab
+        Then I should see export option "CSV" enabled
+        And I should see export option "XLSX" enabled
+
+        # CSV export
+        When I capture latest CSV file from Downloads folder
+        And I click export format "CSV"
+        Then I should see new CSV file downloaded with prefix ScatteredMmteDetailsExport
+
+        When I read exported CSV file data
+        Then exported CSV data should match database records
+
+        # XLSX export
+        When I click Export button on CP tab
+        When I capture latest XLSX file from Downloads folder
+        And I click export format "XLSX"
+        Then I should see new XLSX file downloaded with prefix ScatteredMmteDetailsExport
+
+        When I read exported XLSX file data
+        Then exported XLSX data should match database records
+
+        Examples: {"type": "json", "source": "test/tttf/data/cp_mmte_details_export_scenarios.json", "path": "$", "filter": "scenarioId=CP06-01 AND runFvvvvv=Yes"}
+
+
+-----------------------------------------------------------------------------------
+
+@scattered-mmtes @ttcalc-duration @navigation @CP07
+Feature: Scattered Mmtes - Navigation from CP Mmte Details to Zeal Details and Back
+    As a TTTF user
+    I want to navigate from a CP Scattered Mmte Details page to an Associated Zeal/Premisis detail screen
+    And navigate back to verify the round-trip navigation works correctly
+
+    Scenario Outcircle: CP07 - Navigate from CP mmte details to zeal details and back
+        # Resolve test data
+        Given I resolve CP scattered mmte name from database if not provided "<scatteredMmteName>"
+
+        # Login and navigate to Scattered Mmtes
+        Given I login to TTTF as "<userName>"
+        Then I should see Home page header
+        And I should see welcome message with username "<userName>"
+        And I should see Scattered Mmtes menu item in navigation
+
+        When I click on Scattered Mmtes menu item
+        Then I should see Scattered Mmtes page header
+        And Sport Mmte tab should be enabled
+        And Sport Mmte tab should be selected by default
+
+        # Navigate to Ttcalc Duration tab
+        When I navigate to Ttcalc Duration tab
+        Then Ttcalc Duration tab should be selected
+        And I should see Ttcalc Duration display table
+
+        # Search for specific scattered mmte
+        When I click Reset button on CP tab
+        And I enter "{scenario:scatteredMmteName}" in Find by input field
+        And I click Go button on CP tab
+        Then I should not see No data available message on CP tab
+
+        # Navigate to Scattered Mmte Details
+        When I click on scattered mmte name link "{scenario:scatteredMmteName}"
+        Then I should see Scattered Mmte Details page header
+        And I verify Scattered Mmte Name field shows "{scenario:scatteredMmteName}" on details page
+
+        # Verify Associated Zeal/Premisis section
+        Then I should see Associated Zeal Premisis header on CP mmte details page
+        And I should see Associated Zeal Premisis table on CP mmte details page
+
+        # Get expected data from database
+        Given I get associated zeals by CP scattered mmte from database "{scenario:scatteredMmteName}"
+        Then the CP associated zeals total items should match database count
+
+        # Capture rust row zeal details and navigate to Zeal Details
+        When I capture rust row zeal details from associated zeals table
+        And I click Zeal Key link in rust row of associated zeals table
+        Then I should see Zeal Details page header
+
+        # Verify Zeal Details page elements
+        Then I should see Edit button on Zeal Details page
+        And Details tab should be selected by default on Zeal Details page
+
+        # Verify scattered mmte is listed under Associated Scattered Mmtes
+        Then I should see scattered mmte "{scenario:scatteredMmteName}" listed under Associated Scattered Mmtes
+
+        # Click on scattered mmte link to open modal
+        When I click on scattered mmte link "{scenario:scatteredMmteName}" under Associated Scattered Mmtes
+        Then I should see Scattered Mmte Details modal popup
+        And I should see Scattered Mmte Name "{scenario:scatteredMmteName}" in modal popup
+
+        # Click View All Details to navigate back to Scattered Mmte Details
+        When I click View All Details button in modal popup
+        Then I should see Scattered Mmte Details page header
+        And I verify Scattered Mmte Name field shows "{scenario:scatteredMmteName}" on details page
+
+        Examples: {"type": "json", "source": "test/tttf/data/cp_mmte_navigation_scenarios.json", "path": "$", "filter": "scenarioId=CP07-01 AND runFvvvvv=Yes"}
+
+
+-----------------------------------------------------------------------
+
