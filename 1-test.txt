@@ -1,93 +1,37 @@
-// ========================================================================
-    // SELECT ACTIONS (Priority 30-39)
-    // ========================================================================
-    {
-        id: 'action-select-option-from',
-        pattern: /^(?:select|pick|choose)\s+(?:the\s+)?(?:option\s+)?__QUOTED_(\d+)__\s+(?:option\s+)?(?:from|in)\s+(?:the\s+)?(.+?)$/i,
-        category: 'action',
-        intent: 'select',
-        priority: 30,
-        extract: (match, quotedStrings) => {
-            const value = quotedStrings[parseInt(match[1])] || '';
-            const raw = resolveQuoted(match[2], quotedStrings).trim();
-            return {
-                targetText: stripElementType(raw),
-                elementType: inferElementType(raw) || 'dropdown',
-                value
-            };
-        },
-        examples: [
-            "Select 'Admin' from the Role dropdown",
-            "Choose 'USD' from the Currency select",
-            "Pick 'Option 1' from the dropdown",
-            "Select 'Q1-2025' option from the Period dropdown"
-        ]
-    },
-    {
-        id: 'action-select-option-in',
-        pattern: /^(?:select|pick|choose)\s+(?:the\s+)?(?:option\s+)?__QUOTED_(\d+)__\s+(?:option\s+)?(?:in|on)\s+(?:the\s+)?(.+?)$/i,
-        category: 'action',
-        intent: 'select',
-        priority: 31,
-        extract: (match, quotedStrings) => {
-            const value = quotedStrings[parseInt(match[1])] || '';
-            const raw = resolveQuoted(match[2], quotedStrings).trim();
-            return {
-                targetText: stripElementType(raw),
-                elementType: inferElementType(raw) || 'dropdown',
-                value
-            };
-        },
-        examples: ["Select the option 'Yes' in the Confirmation dropdown"]
-    },
-
-
--------------------------------------------------------------
-
 // Resolve the actual <select> element:
                 // - If matched element is an <option>, navigate UP to parent <select>
-                // - If matched element is a container (tr, div, td), drill DOWN to find <select>
+                // - If matched element is a container, drill DOWN or check SIBLINGS for <select>
+                // Legacy table layout: <tr><td>Label:</td><td><select>...</select></td></tr>
                 let selectLocator = element!.locator;
                 try {
                     const tagName = await selectLocator.evaluate((el: Element) => el.tagName.toLowerCase()).catch(() => '');
                     if (tagName === 'option' || tagName === 'optgroup') {
-                        // Navigate up to the parent <select>
                         const parentSelect = selectLocator.locator('xpath=ancestor::select');
                         if (await parentSelect.count() > 0) {
                             CSReporter.debug('CSAIActionExecutor: Matched <option> — navigating up to parent <select>');
                             selectLocator = parentSelect.first();
                         }
-                    } else if (tagName !== 'select') {
-                        const childSelect = selectLocator.locator('select:visible').first();
+                    } else if (tagName === 'select') {
+                        // Already a <select> — use as-is
+                    } else {
+                        // Try inside the matched element first
+                        const childSelect = selectLocator.locator('select').first();
                         if (await childSelect.count() > 0) {
                             CSReporter.debug('CSAIActionExecutor: Matched container — drilling down to child <select>');
                             selectLocator = childSelect;
+                        } else {
+                            // Table layout: label is in one <td>, <select> is in a sibling <td>
+                            // Check next sibling, then parent <tr> descendants
+                            const siblingSelect = selectLocator.locator('xpath=following-sibling::td[1]//select').first();
+                            if (await siblingSelect.count() > 0) {
+                                CSReporter.debug('CSAIActionExecutor: Table layout — found <select> in next sibling cell');
+                                selectLocator = siblingSelect;
+                            } else {
+                                const rowSelect = selectLocator.locator('xpath=ancestor::tr[1]//select').first();
+                                if (await rowSelect.count() > 0) {
+                                    CSReporter.debug('CSAIActionExecutor: Table layout — found <select> in parent row');
+                                    selectLocator = rowSelect;
+                                }
+                            }
                         }
                     }
-
-
-
-
-// Recovery 3: For select on <option>/<optgroup>, navigate up to parent <select>
-            if (element && step.intent === 'select') {
-                try {
-                    const tagName = await element.locator.evaluate((el: Element) => el.tagName.toLowerCase()).catch(() => '');
-                    if (tagName === 'option' || tagName === 'optgroup') {
-                        CSReporter.debug('CSAIActionExecutor: Recovery — navigating from <option> up to parent <select>');
-                        const parentSelect = element.locator.locator('xpath=ancestor::select');
-                        if (await parentSelect.count() > 0) {
-                            const selectElement: MatchedElement = {
-                                locator: parentSelect.first(),
-                                confidence: element.confidence,
-                                description: `${element.description} > parent select`,
-                                method: element.method,
-                                alternatives: []
-                            };
-                            return await this.execute(page, step, selectElement);
-                        }
-                    }
-                } catch {
-                    // Recovery 3 failed — continue to next
-                }
-            }
-
