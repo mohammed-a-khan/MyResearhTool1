@@ -1,1 +1,75 @@
-test
+ // ========================================================================
+    // PAGE LOAD STATE WAITS (Priority 87-89)
+    // ========================================================================
+    {
+        id: 'action-wait-domcontentloaded',
+        pattern: /^wait\s+(?:for\s+)?(?:the\s+)?(?:dom\s+content\s+loaded|domcontentloaded|dom\s+(?:to\s+)?(?:be\s+)?(?:loaded|ready))$/i,
+        category: 'action',
+        intent: 'wait-page-load',
+        priority: 87,
+        extract: () => ({
+            targetText: '',
+            params: { loadState: 'domcontentloaded' }
+        }),
+        examples: [
+            'Wait for DOM content loaded',
+            'Wait for domcontentloaded',
+            'Wait for DOM to be loaded',
+            'Wait for DOM ready'
+        ]
+    },
+    {
+        id: 'action-wait-page-load',
+        pattern: /^wait\s+(?:for\s+)?(?:the\s+)?(?:page\s+(?:to\s+)?(?:be\s+)?(?:loaded|load|complete|ready)|full\s+page\s+load|page\s+load\s+complete)$/i,
+        category: 'action',
+        intent: 'wait-page-load',
+        priority: 88,
+        extract: () => ({
+            targetText: '',
+            params: { loadState: 'load' }
+        }),
+        examples: [
+            'Wait for page to load',
+            'Wait for the page to be loaded',
+            'Wait for page load complete',
+            'Wait for page to be ready'
+        ]
+    },
+    {
+        id: 'action-wait-network-idle',
+        pattern: /^wait\s+(?:for\s+)?(?:the\s+)?(?:network\s+(?:to\s+)?(?:be\s+)?idle|network\s*idle|no\s+(?:more\s+)?network\s+(?:activity|requests))$/i,
+        category: 'action',
+        intent: 'wait-page-load',
+        priority: 89,
+        extract: () => ({
+            targetText: '',
+            params: { loadState: 'networkidle' }
+        }),
+        examples: [
+            'Wait for network idle',
+            'Wait for network to be idle',
+            'Wait for no more network activity',
+            'Wait for no network requests'
+        ]
+    },
+
+------------------------------------------------------------------------------------------------------
+
+case 'wait-page-load': {
+                const loadState = (parameters.loadState as 'domcontentloaded' | 'load' | 'networkidle') || 'load';
+                CSReporter.debug(`AI Step: Waiting for page load state: ${loadState}`);
+                await page.waitForLoadState(loadState, { timeout });
+                return this.success('wait-page-load');
+            }
+
+
+--------------------------------------------------------------
+
+| 'wait-page-load'
+
+
+'wait-page-load': [],
+
+
+/** Page load state for wait-page-load (domcontentloaded, load, networkidle) */
+    loadState?: string;
