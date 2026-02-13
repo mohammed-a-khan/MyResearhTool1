@@ -1,6 +1,20 @@
-// Negative lookahead prevents matching assertion patterns:
-        //   "Check if/that/whether..." (explicit assertion keywords)
-        //   "Check 'X' is displayed/shown/visible..." (value-in-field assertions)
-        // Priority 125 ensures assertion rules (100-124) are tried first
-        pattern: /^(?:check|mark|tick)\s+(?:the\s+)?(?!(?:if|that|whether)\b)(?!__QUOTED_\d+__\s+(?:is\s+)?(?:displayed|shown|visible|present|available)\b)(.+?)(?:\s+checkbox)?$/i,
-        category: 'action',
+// Build descriptors: split remaining text into meaningful parts
+        // Filter out articles, filler words, AND element type words that don't help identification
+        // Element type words (field, button, etc.) are already captured by elementType inference
+        const stopWords = new Set([
+            'the', 'a', 'an', 'of', 'for', 'on', 'in', 'to', 'is', 'are', 'and', 'or', 'with',
+            'field', 'button', 'btn', 'link', 'input', 'textbox', 'checkbox', 'radio',
+            'dropdown', 'tab', 'heading', 'header', 'icon', 'image', 'switch', 'toggle',
+            'element', 'message', 'label', 'section', 'area', 'box', 'item', 'column', 'row'
+        ]);
+        const descriptors = text.split(/\s+/).filter(w => w.length > 0 && !stopWords.has(w.toLowerCase()));
+
+        return {
+            elementType,
+            descriptors,
+            ordinal,
+            position,
+            relativeTo,
+            relation,
+            rawText: text  // Use resolved text (not raw with __QUOTED_N__ placeholders)
+        };
