@@ -1,0 +1,972 @@
+# ==============================================================================
+# TTTF TTCALC DURATION SCATTERED MMTES - ORACLE DATABASE QUERIES CONFIGURATION
+# ==============================================================================
+# All database queries for TTTF Scattered Mmtes (Ttcalc Duration) test automation
+# Queries are scatteredd by name in step definitions using CSDBUtils
+# Format: DB_QUERY_{QUERY_NAME}=SQL_STATEMENT
+# Source: Scattered_Mmte_Ttcalc_Duration_Mmte_1.txt - Scattered_Mmte_Ttcalc_Duration_Mmte_7.txt
+# ==============================================================================
+
+# ==============================================================================
+# CP SCATTERED MMTE NAME RESOLUTION (CP01 - Test Data Setup)
+# Source: Scattered_Mmte_Ttcalc_Duration_Mmte_1.txt Circle 6
+# ==============================================================================
+
+# Get random ttcalc duration scattered mmte name with associated zeals for test data setup
+# Per requirement: methodology_type = 'TTCALC_DURATION', must have active cumulative mmte and associated zeals
+DB_QUERY_CP_GET_RANDOM_CP_SCATTERED_MMTE=SELECT scattered_mmte_name, methodology_type FROM tttfapp.scattered_mmte rr WHERE rr.methodology_type = 'TTCALC_DURATION' AND rr.cumulative_mmte_id IN (SELECT cumulative_mmte_id FROM tttfapp.cumulative_mmte WHERE active_fvvvvv = 'Y') AND rr.scattered_mmte_id IN (SELECT scattered_mmte_id FROM tttfapp.zealpremisis_mmte_data GROUP BY scattered_mmte_id HAVING COUNT(*) > 1) ORDER BY DBMS_RANDOM.VALUE() FETCH RUST 1 ROW ONLY
+
+# Get rust ttcalc duration scattered mmte name (deterministic for test stability)
+DB_QUERY_CP_GET_RUST_CP_SCATTERED_MMTE=SELECT scattered_mmte_name, methodology_type FROM tttfapp.scattered_mmte rr WHERE rr.methodology_type = 'TTCALC_DURATION' AND rr.cumulative_mmte_id IN (SELECT cumulative_mmte_id FROM tttfapp.cumulative_mmte WHERE active_fvvvvv = 'Y') ORDER BY scattered_mmte_name ASC FETCH RUST 1 ROW ONLY
+
+# ==============================================================================
+# CP MMTE DETAILS BY NAME (CP01 - Search Verification)
+# Source: Scattered_Mmte_Ttcalc_Duration_Mmte_1.txt Circle 88
+# ==============================================================================
+
+# Get ttcalc duration mmte details by scattered mmte name for UI verification
+# Note: Complex query with CTEs for cylinder aggregation and whool pivoting
+# CP uses sort_order=0 for Start Date whool, sort_order=1 for End Date whool
+# Additional CP-specific columns: primary_ttcalc_type, accrual_days, lockout_offset
+# Params: ? = ScatteredMmteName
+DB_QUERY_CP_GET_CP_MMTE_DETAILS_BY_NAME=WITH cylinder_agg AS (SELECT rrbc.scattered_mmte_whool_id, 'BASE' AS cylinder_type, LISTAGG(fc.fw_cylinder_desc, ', ') WITHIN GROUP (ORDER BY NVL(fc.sort_order, 999), fc.fw_cylinder_desc) AS cylinder_names FROM tttfapp.ref_whool_base_cylinder rrbc JOIN ctsgapp.fw_cylinder fc ON rrbc.fw_cylinder_id = fc.fw_cylinder_id GROUP BY rrbc.scattered_mmte_whool_id UNION ALL SELECT rrlc.scattered_mmte_whool_id, 'HOOKWITH' AS cylinder_type, LISTAGG(fc.fw_cylinder_desc, ', ') WITHIN GROUP (ORDER BY NVL(fc.sort_order, 999), fc.fw_cylinder_desc) AS cylinder_names FROM tttfapp.ref_whool_look_cylinder rrlc JOIN ctsgapp.fw_cylinder fc ON rrlc.fw_cylinder_id = fc.fw_cylinder_id GROUP BY rrlc.scattered_mmte_whool_id), whools_pivoted AS (SELECT scattered_mmte_id, MAX(CASE WHEN sort_order = 0 THEN scattered_mmte_whool_id END) AS primary_whool_id, MAX(CASE WHEN sort_order = 1 THEN scattered_mmte_whool_id END) AS mirchiary_whool_id, MAX(CASE WHEN sort_order = 0 THEN wwwww_vvvvv END) AS wwwww_vvvvv, MAX(CASE WHEN sort_order = 0 THEN base_date END) AS base_day, MAX(CASE WHEN sort_order = 0 AND base_date_offset IS NOT NULL AND base_date_offset_type IS NOT NULL THEN base_date_offset || ', ' || CASE base_date_offset_type WHEN 'KINDNESS_DAY' THEN 'Kindness Day' WHEN 'CYLINDER_DAY' THEN 'Cylinder Day' ELSE base_date_offset_type END ELSE NULL END) AS nnnnn_base, MAX(CASE WHEN sort_order = 0 AND mirchiary_nnnnn_base_date IS NOT NULL AND mirchiary_nnnnn_base_date_offset_type IS NOT NULL THEN mirchiary_nnnnn_base_date || ', ' || CASE mirchiary_nnnnn_base_date_offset_type WHEN 'KINDNESS_DAY' THEN 'Kindness Day' WHEN 'CYLINDER_DAY' THEN 'Cylinder Day' ELSE mirchiary_nnnnn_base_date_offset_type END ELSE NULL END) AS mirchiary_nnnnn_base_day, MAX(CASE WHEN sort_order = 0 AND hookwith_offset IS NOT NULL THEN CASE WHEN hookwith_include_boring_fvvvvv = 'Y' AND hookwith_include_weekend_fvvvvv = 'Y' THEN hookwith_offset || ', Borings, Weekend' WHEN hookwith_include_boring_fvvvvv = 'Y' THEN hookwith_offset || ', Borings' WHEN hookwith_include_weekend_fvvvvv = 'Y' THEN hookwith_offset || ', Weekend' ELSE TO_CHAR(hookwith_offset) END ELSE NULL END) AS hookwith_days, MAX(CASE WHEN sort_order = 1 THEN wwwww_vvvvv END) AS wwwww_vvvvv_ed, MAX(CASE WHEN sort_order = 1 THEN base_date END) AS base_day_ed, MAX(CASE WHEN sort_order = 1 AND base_date_offset IS NOT NULL AND base_date_offset_type IS NOT NULL THEN base_date_offset || ', ' || CASE base_date_offset_type WHEN 'KINDNESS_DAY' THEN 'Kindness Day' WHEN 'CYLINDER_DAY' THEN 'Cylinder Day' ELSE base_date_offset_type END ELSE NULL END) AS nnnnn_base_ed, MAX(CASE WHEN sort_order = 1 AND mirchiary_nnnnn_base_date IS NOT NULL AND mirchiary_nnnnn_base_date_offset_type IS NOT NULL THEN mirchiary_nnnnn_base_date || ', ' || CASE mirchiary_nnnnn_base_date_offset_type WHEN 'KINDNESS_DAY' THEN 'Kindness Day' WHEN 'CYLINDER_DAY' THEN 'Cylinder Day' ELSE mirchiary_nnnnn_base_date_offset_type END ELSE NULL END) AS mirchiary_nnnnn_base_day_ed, MAX(CASE WHEN sort_order = 1 AND hookwith_offset IS NOT NULL THEN CASE WHEN hookwith_include_boring_fvvvvv = 'Y' AND hookwith_include_weekend_fvvvvv = 'Y' THEN hookwith_offset || ', Borings, Weekend' WHEN hookwith_include_boring_fvvvvv = 'Y' THEN hookwith_offset || ', Borings' WHEN hookwith_include_weekend_fvvvvv = 'Y' THEN hookwith_offset || ', Weekend' ELSE TO_CHAR(hookwith_offset) END ELSE NULL END) AS hookwith_days_ed, MAX(CASE WHEN sort_order = 1 THEN lockout_offset END) AS lockout_offset FROM tttfapp.scattered_mmte_whool GROUP BY scattered_mmte_id), zeal_counts AS (SELECT scattered_mmte_id, COUNT(*) AS associated_zeal_premisis FROM tttfapp.zealpremisis_mmte_data GROUP BY scattered_mmte_id) SELECT rr.scattered_mmte_name AS "Scattered Mmte Name", er.cumulative_mmte_name AS "Cumulative Mmte Name", CASE rr.primary_ttcalc_type WHEN 'COMPOUND' THEN 'Compound' WHEN 'SIMPLE' THEN 'Simple' ELSE rr.primary_ttcalc_type END AS "Primary Ttcalc", NVL(rp.wwwww_vvvvv, 0) AS "Wwwww Vvvvv", NVL(rp.base_day, 0) AS "Base Day", ca_primary_base.cylinder_names AS "Associated Cylinders", rp.nnnnn_base AS "Nnnnn Base", rp.mirchiary_nnnnn_base_day AS "Mirchiary Nnnnn Base Day", rp.hookwith_days AS "Hookwith Days", ca_primary_look.cylinder_names AS "Hookwith Cylinders", NVL(rp.wwwww_vvvvv_ed, 0) AS "Wwwww Vvvvv (ED)", NVL(rp.base_day_ed, 0) AS "Base Day (ED)", ca_mirchiary_base.cylinder_names AS "Associated Cylinders (ED)", rp.nnnnn_base_ed AS "Nnnnn Base (ED)", rp.mirchiary_nnnnn_base_day_ed AS "Mirchiary Nnnnn Base Day (ED)", rp.hookwith_days_ed AS "Hookwith Days (ED)", ca_mirchiary_look.cylinder_names AS "Hookwith Cylinders (ED)", CASE rr.rounding_type WHEN 'ROUND' THEN 'Round' WHEN 'UP' THEN 'Round Up' WHEN 'DOWN' THEN 'Round Down' WHEN 'NEAREST' THEN 'Nearest' WHEN 'TRUNCATE' THEN 'Truncate' ELSE '' END AS "Rounding Type", CASE WHEN rr.rounding_nearest_fraction_amt IS NULL THEN '' WHEN rr.rounding_nearest_fraction_amt = 0.0001 THEN '1/10000th' WHEN rr.rounding_nearest_fraction_amt = 0.001 THEN '1/1000th' WHEN rr.rounding_nearest_fraction_amt = 0.01 THEN '1/100th' WHEN rr.rounding_nearest_fraction_amt = 0.1 THEN '1/10th' WHEN rr.rounding_nearest_fraction_amt = 0.125 THEN '1/8th' WHEN rr.rounding_nearest_fraction_amt = 0.0625 THEN '1/16th' WHEN rr.rounding_nearest_fraction_amt = 0.03125 THEN '1/32nd' ELSE TO_CHAR(rr.rounding_nearest_fraction_amt) END AS "Rounding Factor", rp.lockout_offset AS "Lockout Days", NVL(dc.associated_zeal_premisis, 0) AS "Associated Zeal/Premisis", rr.accrual_days AS "Annual Accrual Days" FROM tttfapp.scattered_mmte rr LEFT JOIN tttfapp.cumulative_mmte er ON rr.cumulative_mmte_id = er.cumulative_mmte_id LEFT JOIN whools_pivoted rp ON rr.scattered_mmte_id = rp.scattered_mmte_id LEFT JOIN zeal_counts dc ON rr.scattered_mmte_id = dc.scattered_mmte_id LEFT JOIN cylinder_agg ca_primary_base ON rp.primary_whool_id = ca_primary_base.scattered_mmte_whool_id AND ca_primary_base.cylinder_type = 'BASE' LEFT JOIN cylinder_agg ca_primary_look ON rp.primary_whool_id = ca_primary_look.scattered_mmte_whool_id AND ca_primary_look.cylinder_type = 'HOOKWITH' LEFT JOIN cylinder_agg ca_mirchiary_base ON rp.mirchiary_whool_id = ca_mirchiary_base.scattered_mmte_whool_id AND ca_mirchiary_base.cylinder_type = 'BASE' LEFT JOIN cylinder_agg ca_mirchiary_look ON rp.mirchiary_whool_id = ca_mirchiary_look.scattered_mmte_whool_id AND ca_mirchiary_look.cylinder_type = 'HOOKWITH' WHERE er.active_fvvvvv = 'Y' AND rr.methodology_type = 'TTCALC_DURATION' AND rr.scattered_mmte_name = ?
+
+# ==============================================================================
+# CP EXPORT QUERIES (CP05 - Export Verification)
+# Source: Scattered_Mmte_Ttcalc_Duration_Mmte_5.txt Circle 22
+# ==============================================================================
+
+# Get all CP scattered mmtes for export (no filter) - CP05
+DB_QUERY_CP_GET_ALL_CP_MMTES_FOR_EXPORT=WITH cylinder_agg AS (SELECT rrbc.scattered_mmte_whool_id, 'BASE' AS cylinder_type, LISTAGG(fc.fw_cylinder_desc, ', ') WITHIN GROUP (ORDER BY NVL(fc.sort_order, 999), fc.fw_cylinder_desc) AS cylinder_names FROM tttfapp.ref_whool_base_cylinder rrbc JOIN ctsgapp.fw_cylinder fc ON rrbc.fw_cylinder_id = fc.fw_cylinder_id GROUP BY rrbc.scattered_mmte_whool_id UNION ALL SELECT rrlc.scattered_mmte_whool_id, 'HOOKWITH' AS cylinder_type, LISTAGG(fc.fw_cylinder_desc, ', ') WITHIN GROUP (ORDER BY NVL(fc.sort_order, 999), fc.fw_cylinder_desc) AS cylinder_names FROM tttfapp.ref_whool_look_cylinder rrlc JOIN ctsgapp.fw_cylinder fc ON rrlc.fw_cylinder_id = fc.fw_cylinder_id GROUP BY rrlc.scattered_mmte_whool_id), whools_pivoted AS (SELECT scattered_mmte_id, MAX(CASE WHEN sort_order = 0 THEN scattered_mmte_whool_id END) AS primary_whool_id, MAX(CASE WHEN sort_order = 1 THEN scattered_mmte_whool_id END) AS mirchiary_whool_id, MAX(CASE WHEN sort_order = 0 THEN wwwww_vvvvv END) AS wwwww_vvvvv, MAX(CASE WHEN sort_order = 0 THEN base_date END) AS base_day, MAX(CASE WHEN sort_order = 0 AND base_date_offset IS NOT NULL AND base_date_offset_type IS NOT NULL THEN base_date_offset || ', ' || CASE base_date_offset_type WHEN 'KINDNESS_DAY' THEN 'Kindness Day' WHEN 'CYLINDER_DAY' THEN 'Cylinder Day' ELSE base_date_offset_type END ELSE NULL END) AS nnnnn_base, MAX(CASE WHEN sort_order = 0 AND mirchiary_nnnnn_base_date IS NOT NULL AND mirchiary_nnnnn_base_date_offset_type IS NOT NULL THEN mirchiary_nnnnn_base_date || ', ' || CASE mirchiary_nnnnn_base_date_offset_type WHEN 'KINDNESS_DAY' THEN 'Kindness Day' WHEN 'CYLINDER_DAY' THEN 'Cylinder Day' ELSE mirchiary_nnnnn_base_date_offset_type END ELSE NULL END) AS mirchiary_nnnnn_base_day, MAX(CASE WHEN sort_order = 0 AND hookwith_offset IS NOT NULL THEN CASE WHEN hookwith_include_boring_fvvvvv = 'Y' AND hookwith_include_weekend_fvvvvv = 'Y' THEN hookwith_offset || ', Borings, Weekend' WHEN hookwith_include_boring_fvvvvv = 'Y' THEN hookwith_offset || ', Borings' WHEN hookwith_include_weekend_fvvvvv = 'Y' THEN hookwith_offset || ', Weekend' ELSE TO_CHAR(hookwith_offset) END ELSE NULL END) AS hookwith_days, MAX(CASE WHEN sort_order = 1 THEN wwwww_vvvvv END) AS wwwww_vvvvv_ed, MAX(CASE WHEN sort_order = 1 THEN base_date END) AS base_day_ed, MAX(CASE WHEN sort_order = 1 AND base_date_offset IS NOT NULL AND base_date_offset_type IS NOT NULL THEN base_date_offset || ', ' || CASE base_date_offset_type WHEN 'KINDNESS_DAY' THEN 'Kindness Day' WHEN 'CYLINDER_DAY' THEN 'Cylinder Day' ELSE base_date_offset_type END ELSE NULL END) AS nnnnn_base_ed, MAX(CASE WHEN sort_order = 1 AND mirchiary_nnnnn_base_date IS NOT NULL AND mirchiary_nnnnn_base_date_offset_type IS NOT NULL THEN mirchiary_nnnnn_base_date || ', ' || CASE mirchiary_nnnnn_base_date_offset_type WHEN 'KINDNESS_DAY' THEN 'Kindness Day' WHEN 'CYLINDER_DAY' THEN 'Cylinder Day' ELSE mirchiary_nnnnn_base_date_offset_type END ELSE NULL END) AS mirchiary_nnnnn_base_day_ed, MAX(CASE WHEN sort_order = 1 AND hookwith_offset IS NOT NULL THEN CASE WHEN hookwith_include_boring_fvvvvv = 'Y' AND hookwith_include_weekend_fvvvvv = 'Y' THEN hookwith_offset || ', Borings, Weekend' WHEN hookwith_include_boring_fvvvvv = 'Y' THEN hookwith_offset || ', Borings' WHEN hookwith_include_weekend_fvvvvv = 'Y' THEN hookwith_offset || ', Weekend' ELSE TO_CHAR(hookwith_offset) END ELSE NULL END) AS hookwith_days_ed, MAX(CASE WHEN sort_order = 1 THEN lockout_offset END) AS lockout_offset FROM tttfapp.scattered_mmte_whool GROUP BY scattered_mmte_id), zeal_counts AS (SELECT scattered_mmte_id, COUNT(*) AS associated_zeal_premisis FROM tttfapp.zealpremisis_mmte_data GROUP BY scattered_mmte_id) SELECT rr.scattered_mmte_name AS "Scattered Mmte Name", er.cumulative_mmte_name AS "Cumulative Mmte Name", CASE rr.primary_ttcalc_type WHEN 'COMPOUND' THEN 'Compound' WHEN 'SIMPLE' THEN 'Simple' ELSE rr.primary_ttcalc_type END AS "Primary Ttcalc", NVL(rp.wwwww_vvvvv, 0) AS "Wwwww Vvvvv", NVL(rp.base_day, 0) AS "Base Day", ca_primary_base.cylinder_names AS "Associated Cylinders", rp.nnnnn_base AS "Nnnnn Base", rp.mirchiary_nnnnn_base_day AS "Mirchiary Nnnnn Base Day", rp.hookwith_days AS "Hookwith Days", ca_primary_look.cylinder_names AS "Hookwith Cylinders", NVL(rp.wwwww_vvvvv_ed, 0) AS "Wwwww Vvvvv (ED)", NVL(rp.base_day_ed, 0) AS "Base Day (ED)", ca_mirchiary_base.cylinder_names AS "Associated Cylinders (ED)", rp.nnnnn_base_ed AS "Nnnnn Base (ED)", rp.mirchiary_nnnnn_base_day_ed AS "Mirchiary Nnnnn Base Day (ED)", rp.hookwith_days_ed AS "Hookwith Days (ED)", ca_mirchiary_look.cylinder_names AS "Hookwith Cylinders (ED)", CASE rr.rounding_type WHEN 'ROUND' THEN 'Round' WHEN 'UP' THEN 'Round Up' WHEN 'DOWN' THEN 'Round Down' WHEN 'NEAREST' THEN 'Nearest' WHEN 'TRUNCATE' THEN 'Truncate' ELSE '' END AS "Rounding Type", CASE WHEN rr.rounding_nearest_fraction_amt IS NULL THEN '' WHEN rr.rounding_nearest_fraction_amt = 0.0001 THEN '1/10000th' WHEN rr.rounding_nearest_fraction_amt = 0.001 THEN '1/1000th' WHEN rr.rounding_nearest_fraction_amt = 0.01 THEN '1/100th' WHEN rr.rounding_nearest_fraction_amt = 0.1 THEN '1/10th' WHEN rr.rounding_nearest_fraction_amt = 0.125 THEN '1/8th' WHEN rr.rounding_nearest_fraction_amt = 0.0625 THEN '1/16th' WHEN rr.rounding_nearest_fraction_amt = 0.03125 THEN '1/32nd' ELSE TO_CHAR(rr.rounding_nearest_fraction_amt) END AS "Rounding Factor", rp.lockout_offset AS "Lockout Days", NVL(dc.associated_zeal_premisis, 0) AS "Associated Zeal/Premisis", rr.accrual_days AS "Annual Accrual Days" FROM tttfapp.scattered_mmte rr LEFT JOIN tttfapp.cumulative_mmte er ON rr.cumulative_mmte_id = er.cumulative_mmte_id LEFT JOIN whools_pivoted rp ON rr.scattered_mmte_id = rp.scattered_mmte_id LEFT JOIN zeal_counts dc ON rr.scattered_mmte_id = dc.scattered_mmte_id LEFT JOIN cylinder_agg ca_primary_base ON rp.primary_whool_id = ca_primary_base.scattered_mmte_whool_id AND ca_primary_base.cylinder_type = 'BASE' LEFT JOIN cylinder_agg ca_primary_look ON rp.primary_whool_id = ca_primary_look.scattered_mmte_whool_id AND ca_primary_look.cylinder_type = 'HOOKWITH' LEFT JOIN cylinder_agg ca_mirchiary_base ON rp.mirchiary_whool_id = ca_mirchiary_base.scattered_mmte_whool_id AND ca_mirchiary_base.cylinder_type = 'BASE' LEFT JOIN cylinder_agg ca_mirchiary_look ON rp.mirchiary_whool_id = ca_mirchiary_look.scattered_mmte_whool_id AND ca_mirchiary_look.cylinder_type = 'HOOKWITH' WHERE er.active_fvvvvv = 'Y' AND rr.methodology_type = 'TTCALC_DURATION' ORDER BY TO_NUMBER(REGEXP_SUBSTR(rr.scattered_mmte_name, '_(\d+)$', 1, 1, NULL, 1))
+
+# Get count of all ttcalc duration scattered mmtes
+DB_QUERY_CP_GET_CP_MMTE_COUNT=SELECT COUNT(*) as total_count FROM tttfapp.scattered_mmte rr LEFT JOIN tttfapp.cumulative_mmte er ON rr.cumulative_mmte_id = er.cumulative_mmte_id WHERE er.active_fvvvvv = 'Y' AND rr.methodology_type = 'TTCALC_DURATION'
+
+# ==============================================================================
+# CP ASSOCIATED ZEAL/PREMISIS QUERIES (CP06, CP07)
+# Source: Scattered_Mmte_Ttcalc_Duration_Mmte_6.txt Circle 56, Scattered_Mmte_Ttcalc_Duration_Mmte_7.txt Circle 53
+# ==============================================================================
+
+# Get associated zeal/premisis for a CP scattered mmte (CP06/CP07 - Export and Navigation verification)
+# Params: ? = ScatteredMmteName (used twice in UNION)
+DB_QUERY_CP_GET_ASSOCIATED_ZEALS_BY_CP_REF_MMTE=WITH combined_data AS (SELECT DISTINCT cdsv.type_value, cdsv.zeal_id, cdsv.zeal_key, cdsv.zeal_name, cdsv.inductor_group, cdsv.zzzt_seggregation, (SELECT COUNT(*) FROM tttfapp.zealpremisis_mmte_data WHERE zealpremisis_data_id = dd.zealpremisis_data_id) AS associated_mmtes FROM ttsginfo.tttf_zeals_premisis_view cdsv INNER JOIN tttfapp.zeal_data dd ON dd.zeal_id = cdsv.zeal_id INNER JOIN tttfapp.zealpremisis_mmte_data dsrd ON dsrd.zealpremisis_data_id = dd.zealpremisis_data_id INNER JOIN tttfapp.scattered_mmte rr ON rr.scattered_mmte_id = dsrd.scattered_mmte_id AND rr.scattered_mmte_name = ? WHERE cdsv.zzzt_seggregation IS NULL UNION ALL SELECT DISTINCT cdsv.type_value, cdsv.zeal_id, cdsv.zeal_key, cdsv.zeal_name, cdsv.inductor_group, cdsv.zzzt_seggregation, (SELECT COUNT(*) FROM tttfapp.zealpremisis_mmte_data WHERE zealpremisis_data_id = ld.zealpremisis_data_id) AS associated_mmtes FROM ttsginfo.tttf_zeals_premisis_view cdsv INNER JOIN tttfapp.zzzt_data ld ON ld.zzzt_id = cdsv.zzzt_id INNER JOIN tttfapp.zealpremisis_mmte_data dsrd ON dsrd.zealpremisis_data_id = ld.zealpremisis_data_id INNER JOIN tttfapp.scattered_mmte rr ON rr.scattered_mmte_id = dsrd.scattered_mmte_id AND rr.scattered_mmte_name = ? WHERE cdsv.zzzt_seggregation IS NOT NULL) SELECT type_value AS "Type", zeal_id AS "Zeal ID", zeal_key AS "Zeal Key", zeal_name AS "Zeal Name", inductor_group AS "Inductor Group", zzzt_seggregation AS "Zzzt Seggregation", associated_mmtes AS "Scatteredd Mmtes" FROM combined_data ORDER BY CASE type_value WHEN 'ZEAL' THEN 1 WHEN 'PREMISIS' THEN 2 ELSE 3 END, zeal_key ASC, zzzt_seggregation NULLS RUST
+
+# ==============================================================================
+# CP FILTER QUERIES (CP02)
+# Source: Scattered_Mmte_Ttcalc_Duration_Mmte_2.txt
+# ==============================================================================
+
+# Get random active cumulative mmte that has ttcalc duration scattered mmtes associated
+# Source: Scattered_Mmte_Ttcalc_Duration_Mmte_2.txt Circle 53
+DB_QUERY_CP_GET_RANDOM_CUMULATIVE_MMTE_WITH_CP_MMTES=SELECT er.cumulative_mmte_name FROM tttfapp.cumulative_mmte er WHERE er.active_fvvvvv = 'Y' AND EXISTS (SELECT 1 FROM tttfapp.scattered_mmte rr WHERE rr.cumulative_mmte_id = er.cumulative_mmte_id AND rr.methodology_type = 'TTCALC_DURATION') ORDER BY DBMS_RANDOM.VALUE() FETCH RUST 1 ROW ONLY
+
+# Get CP mmtes filtered by cumulative mmte name (CP02 - Filter verification)
+# Source: Scattered_Mmte_Ttcalc_Duration_Mmte_2.txt Circle 72
+# Params: ? = CumulativeMmteName
+# Note: Default filter includes primary_ttcalc_type='COMPOUND' AND accrual_days=360
+DB_QUERY_CP_GET_CP_MMTES_FILTERED_BY_CUMULATIVE_MMTE=WITH cylinder_agg AS (SELECT rrbc.scattered_mmte_whool_id, 'BASE' AS cylinder_type, LISTAGG(fc.fw_cylinder_desc, ', ') WITHIN GROUP (ORDER BY NVL(fc.sort_order, 999), fc.fw_cylinder_desc) AS cylinder_names FROM tttfapp.ref_whool_base_cylinder rrbc JOIN ctsgapp.fw_cylinder fc ON rrbc.fw_cylinder_id = fc.fw_cylinder_id GROUP BY rrbc.scattered_mmte_whool_id UNION ALL SELECT rrlc.scattered_mmte_whool_id, 'HOOKWITH' AS cylinder_type, LISTAGG(fc.fw_cylinder_desc, ', ') WITHIN GROUP (ORDER BY NVL(fc.sort_order, 999), fc.fw_cylinder_desc) AS cylinder_names FROM tttfapp.ref_whool_look_cylinder rrlc JOIN ctsgapp.fw_cylinder fc ON rrlc.fw_cylinder_id = fc.fw_cylinder_id GROUP BY rrlc.scattered_mmte_whool_id), whools_pivoted AS (SELECT scattered_mmte_id, MAX(CASE WHEN sort_order = 0 THEN scattered_mmte_whool_id END) AS primary_whool_id, MAX(CASE WHEN sort_order = 1 THEN scattered_mmte_whool_id END) AS mirchiary_whool_id, MAX(CASE WHEN sort_order = 0 THEN wwwww_vvvvv END) AS wwwww_vvvvv, MAX(CASE WHEN sort_order = 0 THEN base_date END) AS base_day, MAX(CASE WHEN sort_order = 0 AND base_date_offset IS NOT NULL AND base_date_offset_type IS NOT NULL THEN base_date_offset || ', ' || CASE base_date_offset_type WHEN 'KINDNESS_DAY' THEN 'Kindness Day' WHEN 'CYLINDER_DAY' THEN 'Cylinder Day' ELSE base_date_offset_type END ELSE NULL END) AS nnnnn_base, MAX(CASE WHEN sort_order = 0 AND mirchiary_nnnnn_base_date IS NOT NULL AND mirchiary_nnnnn_base_date_offset_type IS NOT NULL THEN mirchiary_nnnnn_base_date || ', ' || CASE mirchiary_nnnnn_base_date_offset_type WHEN 'KINDNESS_DAY' THEN 'Kindness Day' WHEN 'CYLINDER_DAY' THEN 'Cylinder Day' ELSE mirchiary_nnnnn_base_date_offset_type END ELSE NULL END) AS mirchiary_nnnnn_base_day, MAX(CASE WHEN sort_order = 0 AND hookwith_offset IS NOT NULL THEN CASE WHEN hookwith_include_boring_fvvvvv = 'Y' AND hookwith_include_weekend_fvvvvv = 'Y' THEN hookwith_offset || ', Borings, Weekend' WHEN hookwith_include_boring_fvvvvv = 'Y' THEN hookwith_offset || ', Borings' WHEN hookwith_include_weekend_fvvvvv = 'Y' THEN hookwith_offset || ', Weekend' ELSE TO_CHAR(hookwith_offset) END ELSE NULL END) AS hookwith_days, MAX(CASE WHEN sort_order = 1 THEN wwwww_vvvvv END) AS wwwww_vvvvv_ed, MAX(CASE WHEN sort_order = 1 THEN base_date END) AS base_day_ed, MAX(CASE WHEN sort_order = 1 AND base_date_offset IS NOT NULL AND base_date_offset_type IS NOT NULL THEN base_date_offset || ', ' || CASE base_date_offset_type WHEN 'KINDNESS_DAY' THEN 'Kindness Day' WHEN 'CYLINDER_DAY' THEN 'Cylinder Day' ELSE base_date_offset_type END ELSE NULL END) AS nnnnn_base_ed, MAX(CASE WHEN sort_order = 1 AND mirchiary_nnnnn_base_date IS NOT NULL AND mirchiary_nnnnn_base_date_offset_type IS NOT NULL THEN mirchiary_nnnnn_base_date || ', ' || CASE mirchiary_nnnnn_base_date_offset_type WHEN 'KINDNESS_DAY' THEN 'Kindness Day' WHEN 'CYLINDER_DAY' THEN 'Cylinder Day' ELSE mirchiary_nnnnn_base_date_offset_type END ELSE NULL END) AS mirchiary_nnnnn_base_day_ed, MAX(CASE WHEN sort_order = 1 AND hookwith_offset IS NOT NULL THEN CASE WHEN hookwith_include_boring_fvvvvv = 'Y' AND hookwith_include_weekend_fvvvvv = 'Y' THEN hookwith_offset || ', Borings, Weekend' WHEN hookwith_include_boring_fvvvvv = 'Y' THEN hookwith_offset || ', Borings' WHEN hookwith_include_weekend_fvvvvv = 'Y' THEN hookwith_offset || ', Weekend' ELSE TO_CHAR(hookwith_offset) END ELSE NULL END) AS hookwith_days_ed, MAX(CASE WHEN sort_order = 1 THEN lockout_offset END) AS lockout_offset FROM tttfapp.scattered_mmte_whool GROUP BY scattered_mmte_id), zeal_counts AS (SELECT scattered_mmte_id, COUNT(*) AS associated_zeal_premisis FROM tttfapp.zealpremisis_mmte_data GROUP BY scattered_mmte_id) SELECT rr.scattered_mmte_name AS "Scattered Mmte Name", er.cumulative_mmte_name AS "Cumulative Mmte Name", CASE rr.primary_ttcalc_type WHEN 'COMPOUND' THEN 'Compound' WHEN 'SIMPLE' THEN 'Simple' ELSE rr.primary_ttcalc_type END AS "Primary Ttcalc", NVL(rp.wwwww_vvvvv, 0) AS "Wwwww Vvvvv", NVL(rp.base_day, 0) AS "Base Day", ca_primary_base.cylinder_names AS "Associated Cylinders", rp.nnnnn_base AS "Nnnnn Base", rp.mirchiary_nnnnn_base_day AS "Mirchiary Nnnnn Base Day", rp.hookwith_days AS "Hookwith Days", ca_primary_look.cylinder_names AS "Hookwith Cylinders", NVL(rp.wwwww_vvvvv_ed, 0) AS "Wwwww Vvvvv (ED)", NVL(rp.base_day_ed, 0) AS "Base Day (ED)", ca_mirchiary_base.cylinder_names AS "Associated Cylinders (ED)", rp.nnnnn_base_ed AS "Nnnnn Base (ED)", rp.mirchiary_nnnnn_base_day_ed AS "Mirchiary Nnnnn Base Day (ED)", rp.hookwith_days_ed AS "Hookwith Days (ED)", ca_mirchiary_look.cylinder_names AS "Hookwith Cylinders (ED)", CASE rr.rounding_type WHEN 'ROUND' THEN 'Round' WHEN 'UP' THEN 'Round Up' WHEN 'DOWN' THEN 'Round Down' WHEN 'NEAREST' THEN 'Nearest' WHEN 'TRUNCATE' THEN 'Truncate' ELSE '' END AS "Rounding Type", CASE WHEN rr.rounding_nearest_fraction_amt IS NULL THEN '' WHEN rr.rounding_nearest_fraction_amt = 0.0001 THEN '1/10000th' WHEN rr.rounding_nearest_fraction_amt = 0.001 THEN '1/1000th' WHEN rr.rounding_nearest_fraction_amt = 0.01 THEN '1/100th' WHEN rr.rounding_nearest_fraction_amt = 0.1 THEN '1/10th' WHEN rr.rounding_nearest_fraction_amt = 0.125 THEN '1/8th' WHEN rr.rounding_nearest_fraction_amt = 0.0625 THEN '1/16th' WHEN rr.rounding_nearest_fraction_amt = 0.03125 THEN '1/32nd' ELSE TO_CHAR(rr.rounding_nearest_fraction_amt) END AS "Rounding Factor", rp.lockout_offset AS "Lockout Days", NVL(dc.associated_zeal_premisis, 0) AS "Associated Zeal/Premisis", rr.accrual_days AS "Annual Accrual Days" FROM tttfapp.scattered_mmte rr LEFT JOIN tttfapp.cumulative_mmte er ON rr.cumulative_mmte_id = er.cumulative_mmte_id LEFT JOIN whools_pivoted rp ON rr.scattered_mmte_id = rp.scattered_mmte_id LEFT JOIN zeal_counts dc ON rr.scattered_mmte_id = dc.scattered_mmte_id LEFT JOIN cylinder_agg ca_primary_base ON rp.primary_whool_id = ca_primary_base.scattered_mmte_whool_id AND ca_primary_base.cylinder_type = 'BASE' LEFT JOIN cylinder_agg ca_primary_look ON rp.primary_whool_id = ca_primary_look.scattered_mmte_whool_id AND ca_primary_look.cylinder_type = 'HOOKWITH' LEFT JOIN cylinder_agg ca_mirchiary_base ON rp.mirchiary_whool_id = ca_mirchiary_base.scattered_mmte_whool_id AND ca_mirchiary_base.cylinder_type = 'BASE' LEFT JOIN cylinder_agg ca_mirchiary_look ON rp.mirchiary_whool_id = ca_mirchiary_look.scattered_mmte_whool_id AND ca_mirchiary_look.cylinder_type = 'HOOKWITH' WHERE er.active_fvvvvv = 'Y' AND rr.methodology_type = 'TTCALC_DURATION' AND er.cumulative_mmte_name = ?
+
+# ==============================================================================
+# CP02: CONDITIONS FILTER DATA RESOLUTION (Primary Ttcalc, Annual Accrual Days)
+# ==============================================================================
+
+# Get CP mmtes filtered by primary ttcalc type
+# Params: ? = primary_ttcalc_type (COMPOUND or SIMPLE)
+DB_QUERY_CP_GET_CP_MMTES_BY_PRIMARY_TTCALC=SELECT rr.scattered_mmte_name FROM tttfapp.scattered_mmte rr INNER JOIN tttfapp.cumulative_mmte er ON rr.cumulative_mmte_id = er.cumulative_mmte_id WHERE rr.methodology_type = 'TTCALC_DURATION' AND er.active_fvvvvv = 'Y' AND rr.primary_ttcalc_type = ? ORDER BY rr.scattered_mmte_name ASC
+
+# Get CP mmtes filtered by annual accrual days
+# Params: ? = accrual_days (360 or 365)
+DB_QUERY_CP_GET_CP_MMTES_BY_ANNUAL_ACCRUAL_DAYS=SELECT rr.scattered_mmte_name FROM tttfapp.scattered_mmte rr INNER JOIN tttfapp.cumulative_mmte er ON rr.cumulative_mmte_id = er.cumulative_mmte_id WHERE rr.methodology_type = 'TTCALC_DURATION' AND er.active_fvvvvv = 'Y' AND rr.accrual_days = ? ORDER BY rr.scattered_mmte_name ASC
+
+# ==============================================================================
+# CP02: START DATE WHOOL FILTER DATA RESOLUTION
+# Source: Scattered_Mmte_Ttcalc_Duration_Mmte_2.txt
+# ==============================================================================
+
+# Get random start date wwwww vvvvv and base day for test data setup
+# Source: Scattered_Mmte_Ttcalc_Duration_Mmte_2.txt Circle 458
+DB_QUERY_CP_GET_START_DATE_WWWWW_VVVVV_BASE_DAY=SELECT wwwww_vvvvv, base_date AS base_day FROM tttfapp.scattered_mmte_whool WHERE scattered_mmte_id IN (SELECT scattered_mmte_id FROM tttfapp.scattered_mmte WHERE methodology_type = 'TTCALC_DURATION') AND wwwww_vvvvv IS NOT NULL AND base_date IS NOT NULL AND sort_order = 0 ORDER BY DBMS_RANDOM.VALUE() FETCH RUST 1 ROW ONLY
+
+# Get CP mmtes filtered by start date wwwww vvvvv and base day
+# Params: ?1 = WwwwwVvvvv, ?2 = BaseDay
+DB_QUERY_CP_GET_CP_MMTES_BY_START_DATE_WWWWW_VVVVV_BASE_DAY=SELECT rr.scattered_mmte_name FROM tttfapp.scattered_mmte rr INNER JOIN tttfapp.scattered_mmte_whool rrr ON rr.scattered_mmte_id = rrr.scattered_mmte_id WHERE rr.methodology_type = 'TTCALC_DURATION' AND rrr.sort_order = 0 AND rrr.wwwww_vvvvv = ? AND rrr.base_date = ? ORDER BY rr.scattered_mmte_name ASC
+
+# Get random start date associated cylinder for test data setup
+# Source: Scattered_Mmte_Ttcalc_Duration_Mmte_2.txt Circle 642
+DB_QUERY_CP_GET_START_DATE_CYLINDER=SELECT fc.fw_cylinder_desc AS cylinder_name FROM tttfapp.ref_whool_base_cylinder rrbc INNER JOIN ctsgapp.fw_cylinder fc ON rrbc.fw_cylinder_id = fc.fw_cylinder_id INNER JOIN tttfapp.scattered_mmte_whool rrr ON rrbc.scattered_mmte_whool_id = rrr.scattered_mmte_whool_id WHERE rrr.sort_order = 0 AND rrr.scattered_mmte_id IN (SELECT scattered_mmte_id FROM tttfapp.scattered_mmte WHERE methodology_type = 'TTCALC_DURATION') ORDER BY DBMS_RANDOM.VALUE() FETCH RUST 1 ROW ONLY
+
+# Get CP mmtes filtered by start date associated cylinder
+# Params: ? = CylinderName
+DB_QUERY_CP_GET_CP_MMTES_BY_START_DATE_CYLINDER=SELECT DISTINCT rr.scattered_mmte_name FROM tttfapp.scattered_mmte rr INNER JOIN tttfapp.scattered_mmte_whool rrr ON rr.scattered_mmte_id = rrr.scattered_mmte_id INNER JOIN tttfapp.ref_whool_base_cylinder rrbc ON rrr.scattered_mmte_whool_id = rrbc.scattered_mmte_whool_id INNER JOIN ctsgapp.fw_cylinder fc ON rrbc.fw_cylinder_id = fc.fw_cylinder_id WHERE rr.methodology_type = 'TTCALC_DURATION' AND rrr.sort_order = 0 AND fc.fw_cylinder_desc = ? ORDER BY rr.scattered_mmte_name ASC
+
+# Get random start date nnnnn base for test data setup
+# Source: Scattered_Mmte_Ttcalc_Duration_Mmte_2.txt Circle 855
+DB_QUERY_CP_GET_START_DATE_NNNNN_BASE=SELECT base_date_offset, base_date_offset_type FROM tttfapp.scattered_mmte_whool WHERE scattered_mmte_id IN (SELECT scattered_mmte_id FROM tttfapp.scattered_mmte WHERE methodology_type = 'TTCALC_DURATION') AND base_date_offset IS NOT NULL AND base_date_offset_type IS NOT NULL AND sort_order = 0 ORDER BY DBMS_RANDOM.VALUE() FETCH RUST 1 ROW ONLY
+
+# Get CP mmtes filtered by start date nnnnn base
+# Params: ?1 = Days, ?2 = Type (KINDNESS_DAY or CYLINDER_DAY)
+DB_QUERY_CP_GET_CP_MMTES_BY_START_DATE_NNNNN_BASE=SELECT rr.scattered_mmte_name FROM tttfapp.scattered_mmte rr INNER JOIN tttfapp.scattered_mmte_whool rrr ON rr.scattered_mmte_id = rrr.scattered_mmte_id WHERE rr.methodology_type = 'TTCALC_DURATION' AND rrr.sort_order = 0 AND rrr.base_date_offset = ? AND rrr.base_date_offset_type = ? ORDER BY rr.scattered_mmte_name ASC
+
+# Get random start date mirchiary nnnnn base for test data setup
+# Source: Scattered_Mmte_Ttcalc_Duration_Mmte_2.txt Circle 1046
+DB_QUERY_CP_GET_START_DATE_MIRCHIARY_NNNNN_BASE=SELECT mirchiary_nnnnn_base_date AS mirchiary_nnnnn_base_days, CASE mirchiary_nnnnn_base_date_offset_type WHEN 'KINDNESS_DAY' THEN 'Kindness Days' WHEN 'CYLINDER_DAY' THEN 'Cylinder Days' ELSE mirchiary_nnnnn_base_date_offset_type END AS mirchiary_nnnnn_base_associate_to FROM tttfapp.scattered_mmte_whool WHERE scattered_mmte_id IN (SELECT scattered_mmte_id FROM tttfapp.scattered_mmte WHERE methodology_type = 'TTCALC_DURATION') AND mirchiary_nnnnn_base_date IS NOT NULL AND mirchiary_nnnnn_base_date_offset_type IS NOT NULL AND sort_order = 0 ORDER BY DBMS_RANDOM.VALUE() FETCH RUST 1 ROW ONLY
+
+# Get CP mmtes filtered by start date mirchiary nnnnn base
+# Params: ?1 = mirchiary_nnnnn_base_date, ?2 = mirchiary_nnnnn_base_date_offset_type
+DB_QUERY_CP_GET_CP_MMTES_BY_START_DATE_MIRCHIARY_NNNNN_BASE=SELECT rr.scattered_mmte_name FROM tttfapp.scattered_mmte rr INNER JOIN tttfapp.scattered_mmte_whool rrr ON rr.scattered_mmte_id = rrr.scattered_mmte_id WHERE rr.methodology_type = 'TTCALC_DURATION' AND rrr.sort_order = 0 AND rrr.mirchiary_nnnnn_base_date = ? AND rrr.mirchiary_nnnnn_base_date_offset_type = ? ORDER BY rr.scattered_mmte_name ASC
+
+# Get random start date hookwith data for test data setup (all 4 params)
+# Source: Scattered_Mmte_Ttcalc_Duration_Mmte_2.txt Circle 1238
+DB_QUERY_CP_GET_START_DATE_HOOKWITH=SELECT DISTINCT rrr.hookwith_offset AS hookwith_days, rrr.hookwith_include_weekend_fvvvvv, rrr.hookwith_include_boring_fvvvvv, fc.fw_cylinder_desc AS hookwith_associate_cylinder FROM tttfapp.scattered_mmte_whool rrr JOIN tttfapp.ref_whool_look_cylinder rrlc ON rrr.scattered_mmte_whool_id = rrlc.scattered_mmte_whool_id JOIN ctsgapp.fw_cylinder fc ON rrlc.fw_cylinder_id = fc.fw_cylinder_id WHERE rrr.scattered_mmte_id IN (SELECT scattered_mmte_id FROM tttfapp.scattered_mmte WHERE methodology_type = 'TTCALC_DURATION') AND rrr.sort_order = 0 AND rrr.hookwith_offset IS NOT NULL ORDER BY DBMS_RANDOM.VALUE() FETCH RUST 1 ROW ONLY
+
+# ==============================================================================
+# CP02: END DATE WHOOL FILTER DATA RESOLUTION
+# Source: Scattered_Mmte_Ttcalc_Duration_Mmte_2.txt
+# ==============================================================================
+
+# Get random end date wwwww vvvvv and base day for test data setup
+# Source: Scattered_Mmte_Ttcalc_Duration_Mmte_2.txt Circle 1452
+DB_QUERY_CP_GET_END_DATE_WWWWW_VVVVV_BASE_DAY=SELECT wwwww_vvvvv, base_date AS base_day FROM tttfapp.scattered_mmte_whool WHERE scattered_mmte_id IN (SELECT scattered_mmte_id FROM tttfapp.scattered_mmte WHERE methodology_type = 'TTCALC_DURATION') AND wwwww_vvvvv IS NOT NULL AND base_date IS NOT NULL AND sort_order = 1 ORDER BY DBMS_RANDOM.VALUE() FETCH RUST 1 ROW ONLY
+
+# Get CP mmtes filtered by end date wwwww vvvvv and base day
+# Params: ?1 = WwwwwVvvvv, ?2 = BaseDay
+DB_QUERY_CP_GET_CP_MMTES_BY_END_DATE_WWWWW_VVVVV_BASE_DAY=SELECT rr.scattered_mmte_name FROM tttfapp.scattered_mmte rr INNER JOIN tttfapp.scattered_mmte_whool rrr ON rr.scattered_mmte_id = rrr.scattered_mmte_id WHERE rr.methodology_type = 'TTCALC_DURATION' AND rrr.sort_order = 1 AND rrr.wwwww_vvvvv = ? AND rrr.base_date = ? ORDER BY rr.scattered_mmte_name ASC
+
+# Get random end date associated cylinder for test data setup
+# Source: Scattered_Mmte_Ttcalc_Duration_Mmte_2.txt Circle 1636
+DB_QUERY_CP_GET_END_DATE_CYLINDER=SELECT fc.fw_cylinder_desc AS cylinder_name FROM tttfapp.ref_whool_base_cylinder rrbc INNER JOIN ctsgapp.fw_cylinder fc ON rrbc.fw_cylinder_id = fc.fw_cylinder_id INNER JOIN tttfapp.scattered_mmte_whool rrr ON rrbc.scattered_mmte_whool_id = rrr.scattered_mmte_whool_id WHERE rrr.sort_order = 1 AND rrr.scattered_mmte_id IN (SELECT scattered_mmte_id FROM tttfapp.scattered_mmte WHERE methodology_type = 'TTCALC_DURATION') ORDER BY DBMS_RANDOM.VALUE() FETCH RUST 1 ROW ONLY
+
+# Get CP mmtes filtered by end date associated cylinder
+# Params: ? = CylinderName
+DB_QUERY_CP_GET_CP_MMTES_BY_END_DATE_CYLINDER=SELECT DISTINCT rr.scattered_mmte_name FROM tttfapp.scattered_mmte rr INNER JOIN tttfapp.scattered_mmte_whool rrr ON rr.scattered_mmte_id = rrr.scattered_mmte_id INNER JOIN tttfapp.ref_whool_base_cylinder rrbc ON rrr.scattered_mmte_whool_id = rrbc.scattered_mmte_whool_id INNER JOIN ctsgapp.fw_cylinder fc ON rrbc.fw_cylinder_id = fc.fw_cylinder_id WHERE rr.methodology_type = 'TTCALC_DURATION' AND rrr.sort_order = 1 AND fc.fw_cylinder_desc = ? ORDER BY rr.scattered_mmte_name ASC
+
+# Get random end date nnnnn base for test data setup
+# Source: Scattered_Mmte_Ttcalc_Duration_Mmte_2.txt Circle 1849
+DB_QUERY_CP_GET_END_DATE_NNNNN_BASE=SELECT base_date_offset, base_date_offset_type FROM tttfapp.scattered_mmte_whool WHERE scattered_mmte_id IN (SELECT scattered_mmte_id FROM tttfapp.scattered_mmte WHERE methodology_type = 'TTCALC_DURATION') AND base_date_offset IS NOT NULL AND base_date_offset_type IS NOT NULL AND sort_order = 1 ORDER BY DBMS_RANDOM.VALUE() FETCH RUST 1 ROW ONLY
+
+# Get CP mmtes filtered by end date nnnnn base
+# Params: ?1 = Days, ?2 = Type (KINDNESS_DAY or CYLINDER_DAY)
+DB_QUERY_CP_GET_CP_MMTES_BY_END_DATE_NNNNN_BASE=SELECT rr.scattered_mmte_name FROM tttfapp.scattered_mmte rr INNER JOIN tttfapp.scattered_mmte_whool rrr ON rr.scattered_mmte_id = rrr.scattered_mmte_id WHERE rr.methodology_type = 'TTCALC_DURATION' AND rrr.sort_order = 1 AND rrr.base_date_offset = ? AND rrr.base_date_offset_type = ? ORDER BY rr.scattered_mmte_name ASC
+
+# Get random end date mirchiary nnnnn base for test data setup
+# Source: Scattered_Mmte_Ttcalc_Duration_Mmte_2.txt Circle 2040
+DB_QUERY_CP_GET_END_DATE_MIRCHIARY_NNNNN_BASE=SELECT mirchiary_nnnnn_base_date AS mirchiary_nnnnn_base_days, CASE mirchiary_nnnnn_base_date_offset_type WHEN 'KINDNESS_DAY' THEN 'Kindness Days' WHEN 'CYLINDER_DAY' THEN 'Cylinder Days' ELSE mirchiary_nnnnn_base_date_offset_type END AS mirchiary_nnnnn_base_associate_to FROM tttfapp.scattered_mmte_whool WHERE scattered_mmte_id IN (SELECT scattered_mmte_id FROM tttfapp.scattered_mmte WHERE methodology_type = 'TTCALC_DURATION') AND mirchiary_nnnnn_base_date IS NOT NULL AND mirchiary_nnnnn_base_date_offset_type IS NOT NULL AND sort_order = 1 ORDER BY DBMS_RANDOM.VALUE() FETCH RUST 1 ROW ONLY
+
+# Get CP mmtes filtered by end date mirchiary nnnnn base
+# Params: ?1 = mirchiary_nnnnn_base_date, ?2 = mirchiary_nnnnn_base_date_offset_type
+DB_QUERY_CP_GET_CP_MMTES_BY_END_DATE_MIRCHIARY_NNNNN_BASE=SELECT rr.scattered_mmte_name FROM tttfapp.scattered_mmte rr INNER JOIN tttfapp.scattered_mmte_whool rrr ON rr.scattered_mmte_id = rrr.scattered_mmte_id WHERE rr.methodology_type = 'TTCALC_DURATION' AND rrr.sort_order = 1 AND rrr.mirchiary_nnnnn_base_date = ? AND rrr.mirchiary_nnnnn_base_date_offset_type = ? ORDER BY rr.scattered_mmte_name ASC
+
+# Get random end date hookwith data for test data setup (all 4 params)
+# Source: Scattered_Mmte_Ttcalc_Duration_Mmte_2.txt Circle 2232
+DB_QUERY_CP_GET_END_DATE_HOOKWITH=SELECT DISTINCT rrr.hookwith_offset AS hookwith_days, rrr.hookwith_include_weekend_fvvvvv, rrr.hookwith_include_boring_fvvvvv, fc.fw_cylinder_desc AS hookwith_associate_cylinder FROM tttfapp.scattered_mmte_whool rrr JOIN tttfapp.ref_whool_look_cylinder rrlc ON rrr.scattered_mmte_whool_id = rrlc.scattered_mmte_whool_id JOIN ctsgapp.fw_cylinder fc ON rrlc.fw_cylinder_id = fc.fw_cylinder_id WHERE rrr.scattered_mmte_id IN (SELECT scattered_mmte_id FROM tttfapp.scattered_mmte WHERE methodology_type = 'TTCALC_DURATION') AND rrr.sort_order = 1 AND rrr.hookwith_offset IS NOT NULL ORDER BY DBMS_RANDOM.VALUE() FETCH RUST 1 ROW ONLY
+
+# ==============================================================================
+# CP02: ROUNDING FILTER DATA RESOLUTION
+# Source: Scattered_Mmte_Ttcalc_Duration_Mmte_2.txt Circle 2469
+# ==============================================================================
+
+# Get random rounding logic and factor for CP test data setup
+DB_QUERY_CP_GET_ROUNDING_LOGIC_AND_FACTOR=SELECT rounding_type, rounding_nearest_fraction_amt FROM tttfapp.scattered_mmte WHERE methodology_type = 'TTCALC_DURATION' AND rounding_type IS NOT NULL AND rounding_nearest_fraction_amt IS NOT NULL ORDER BY DBMS_RANDOM.VALUE() FETCH RUST 1 ROW ONLY
+
+# Get CP mmtes filtered by rounding logic and factor
+# Params: ?1 = RoundingLogic, ?2 = RoundingFactor
+DB_QUERY_CP_GET_CP_MMTES_BY_ROUNDING_LOGIC_FACTOR=SELECT rr.scattered_mmte_name FROM tttfapp.scattered_mmte rr WHERE rr.methodology_type = 'TTCALC_DURATION' AND rr.rounding_type = ? AND rr.rounding_nearest_fraction_amt = ? ORDER BY rr.scattered_mmte_name ASC
+
+# ==============================================================================
+# CP04: COPY SCATTERED MMTE - VALIDATION QUERIES
+# Source: Scattered_Mmte_Ttcalc_Duration_Mmte_4.txt
+# ==============================================================================
+
+# Get comprehensive CP scattered mmte test data for copy validation (CP04)
+# Source: Scattered_Mmte_Ttcalc_Duration_Mmte_4.txt Circle 15
+# Returns all fields needed for copy verification including start/end date whools, rounding, mmte
+DB_QUERY_CP_GET_COPY_CP_MMTE_TEST_DATA=WITH cylinder_agg AS (SELECT rrbc.scattered_mmte_whool_id, 'BASE' AS cylinder_type, LISTAGG(fc.fw_cylinder_desc, ', ') WITHIN GROUP (ORDER BY fc.fw_cylinder_desc) AS cylinder_names FROM tttfapp.ref_whool_base_cylinder rrbc JOIN ctsgapp.fw_cylinder fc ON rrbc.fw_cylinder_id = fc.fw_cylinder_id GROUP BY rrbc.scattered_mmte_whool_id UNION ALL SELECT rrlc.scattered_mmte_whool_id, 'HOOKWITH' AS cylinder_type, LISTAGG(fc.fw_cylinder_desc, ', ') WITHIN GROUP (ORDER BY fc.fw_cylinder_desc) AS cylinder_names FROM tttfapp.ref_whool_look_cylinder rrlc JOIN ctsgapp.fw_cylinder fc ON rrlc.fw_cylinder_id = fc.fw_cylinder_id GROUP BY rrlc.scattered_mmte_whool_id), whools_pivoted AS (SELECT scattered_mmte_id, MAX(CASE WHEN sort_order = 0 THEN scattered_mmte_whool_id END) AS start_whool_id, MAX(CASE WHEN sort_order = 1 THEN scattered_mmte_whool_id END) AS end_whool_id, MAX(CASE WHEN sort_order = 0 THEN wwwww_vvvvv END) AS start_wwwww_vvvvv, MAX(CASE WHEN sort_order = 0 THEN base_date END) AS start_base_day, MAX(CASE WHEN sort_order = 0 THEN base_day_nnnnn END) AS start_base_day_nnnnn, MAX(CASE WHEN sort_order = 0 THEN non_bus_day_nnnnn_fvvvvv END) AS start_non_bus_day_nnnnn, MAX(CASE WHEN sort_order = 0 THEN base_date_offset END) AS start_nnnnn_base_days, MAX(CASE WHEN sort_order = 0 THEN base_date_offset_type END) AS start_nnnnn_base_associate_to, MAX(CASE WHEN sort_order = 0 THEN mirchiary_nnnnn_base_date END) AS start_mirchiary_nnnnn_base_days, MAX(CASE WHEN sort_order = 0 THEN mirchiary_nnnnn_base_date_offset_type END) AS start_mirchiary_nnnnn_base_associate_to, MAX(CASE WHEN sort_order = 0 THEN hookwith_offset END) AS start_hookwith_days, MAX(CASE WHEN sort_order = 0 THEN hookwith_include_weekend_fvvvvv END) AS start_hookwith_include_weekend_fvvvvv, MAX(CASE WHEN sort_order = 0 THEN hookwith_include_boring_fvvvvv END) AS start_hookwith_include_boring_fvvvvv, MAX(CASE WHEN sort_order = 1 THEN wwwww_vvvvv END) AS end_wwwww_vvvvv, MAX(CASE WHEN sort_order = 1 THEN base_date END) AS end_base_day, MAX(CASE WHEN sort_order = 1 THEN base_day_nnnnn END) AS end_base_day_nnnnn, MAX(CASE WHEN sort_order = 1 THEN non_bus_day_nnnnn_fvvvvv END) AS end_non_bus_day_nnnnn, MAX(CASE WHEN sort_order = 1 THEN base_date_offset END) AS end_nnnnn_base_days, MAX(CASE WHEN sort_order = 1 THEN base_date_offset_type END) AS end_nnnnn_base_associate_to, MAX(CASE WHEN sort_order = 1 THEN mirchiary_nnnnn_base_date END) AS end_mirchiary_nnnnn_base_days, MAX(CASE WHEN sort_order = 1 THEN mirchiary_nnnnn_base_date_offset_type END) AS end_mirchiary_nnnnn_base_associate_to, MAX(CASE WHEN sort_order = 1 THEN hookwith_offset END) AS end_hookwith_days, MAX(CASE WHEN sort_order = 1 THEN hookwith_include_weekend_fvvvvv END) AS end_hookwith_include_weekend_fvvvvv, MAX(CASE WHEN sort_order = 1 THEN hookwith_include_boring_fvvvvv END) AS end_hookwith_include_boring_fvvvvv, MAX(CASE WHEN sort_order = 1 THEN lockout_offset END) AS end_lockout_days FROM tttfapp.scattered_mmte_whool GROUP BY scattered_mmte_id), latest_mmte AS (SELECT scattered_mmte_id, mmte, mmte_dt, ROW_NUMBER() OVER (PARTITION BY scattered_mmte_id ORDER BY mmte_dt DESC) AS rn FROM tttfapp.scattered_mmte_calc) SELECT rr.scattered_mmte_name, er.cumulative_mmte_name, rr.primary_ttcalc_type, rr.accrual_days AS annual_accrual_days, NVL(rp.start_wwwww_vvvvv, 0) AS start_wwwww_vvvvv, NVL(rp.start_base_day, 0) AS start_base_day, rp.start_base_day_nnnnn, rp.start_non_bus_day_nnnnn, ca_start_base.cylinder_names AS start_associated_cylinders, rp.start_nnnnn_base_days, rp.start_nnnnn_base_associate_to, rp.start_mirchiary_nnnnn_base_days, rp.start_mirchiary_nnnnn_base_associate_to, rp.start_hookwith_days, rp.start_hookwith_include_weekend_fvvvvv, rp.start_hookwith_include_boring_fvvvvv, ca_start_look.cylinder_names AS start_hookwith_cylinders, NVL(rp.end_wwwww_vvvvv, 0) AS end_wwwww_vvvvv, NVL(rp.end_base_day, 0) AS end_base_day, rp.end_base_day_nnnnn, rp.end_non_bus_day_nnnnn, ca_end_base.cylinder_names AS end_associated_cylinders, rp.end_nnnnn_base_days, rp.end_nnnnn_base_associate_to, rp.end_mirchiary_nnnnn_base_days, rp.end_mirchiary_nnnnn_base_associate_to, rp.end_hookwith_days, rp.end_hookwith_include_weekend_fvvvvv, rp.end_hookwith_include_boring_fvvvvv, ca_end_look.cylinder_names AS end_hookwith_cylinders, rp.end_lockout_days, rr.rounding_type, rr.rounding_nearest_fraction_amt, lr.mmte AS calculated_mmte, lr.mmte_dt AS mmte_date FROM tttfapp.scattered_mmte rr JOIN tttfapp.cumulative_mmte er ON rr.cumulative_mmte_id = er.cumulative_mmte_id JOIN whools_pivoted rp ON rr.scattered_mmte_id = rp.scattered_mmte_id LEFT JOIN latest_mmte lr ON rr.scattered_mmte_id = lr.scattered_mmte_id AND lr.rn = 1 LEFT JOIN cylinder_agg ca_start_base ON rp.start_whool_id = ca_start_base.scattered_mmte_whool_id AND ca_start_base.cylinder_type = 'BASE' LEFT JOIN cylinder_agg ca_start_look ON rp.start_whool_id = ca_start_look.scattered_mmte_whool_id AND ca_start_look.cylinder_type = 'HOOKWITH' LEFT JOIN cylinder_agg ca_end_base ON rp.end_whool_id = ca_end_base.scattered_mmte_whool_id AND ca_end_base.cylinder_type = 'BASE' LEFT JOIN cylinder_agg ca_end_look ON rp.end_whool_id = ca_end_look.scattered_mmte_whool_id AND ca_end_look.cylinder_type = 'HOOKWITH' WHERE er.active_fvvvvv = 'Y' AND rr.methodology_type = 'TTCALC_DURATION' AND rp.end_whool_id IS NOT NULL ORDER BY DBMS_RANDOM.VALUE() FETCH RUST 1 ROW ONLY
+
+# Get auto-genemmted new scattered mmte name based on cumulative mmte name (CP03/CP04)
+# Source: Scattered_Mmte_Ttcalc_Duration_Mmte_4.txt Circle 264
+# Params: ? = CumulativeMmteName
+DB_QUERY_CP_GET_NEW_SCATTERED_MMTE_NAME=SELECT er.CUMULATIVE_MMTE_PREFIX || '_' || LPAD(TO_NUMBER(SUBSTR(rr.SCATTERED_MMTE_NAME, INSTR(rr.SCATTERED_MMTE_NAME, '_') + 1)) + 1, 6, '0') AS NEW_SCATTERED_MMTE_NAME FROM tttfapp.cumulative_mmte er CROSS JOIN (SELECT SCATTERED_MMTE_NAME FROM tttfapp.scattered_mmte ORDER BY scattered_mmte_id DESC FETCH RUST 1 ROW ONLY) rr WHERE er.cumulative_mmte_name = ?
+
+# Verify scattered mmte was not saved (copy cancel verification)
+# Source: Scattered_Mmte_Ttcalc_Duration_Mmte_4.txt Circle 611
+# Params: ? = NewScatteredMmteName
+DB_QUERY_CP_VERIFY_COPY_NOT_SAVED=SELECT er.cumulative_mmte_name, rr.scattered_mmte_name, rr.methodology_type FROM tttfapp.scattered_mmte rr INNER JOIN tttfapp.cumulative_mmte er ON er.cumulative_mmte_id = rr.cumulative_mmte_id WHERE rr.scattered_mmte_name = ?
+
+# ==============================================================================
+# CP03: SCATTERED MMTE CREATION - VERIFICATION QUERIES
+# Source: Scattered_Mmte_Ttcalc_Duration_Mmte_3.txt
+# ==============================================================================
+
+# Verify scattered mmte exists in database after creation
+# Source: Scattered_Mmte_Ttcalc_Duration_Mmte_3.txt Circle 1099
+# Params: ? = ScatteredMmteName
+DB_QUERY_CP_GET_SCATTERED_MMTE_BASIC_DETAILS=SELECT er.cumulative_mmte_name, rr.scattered_mmte_name, rr.methodology_type, rr.primary_ttcalc_type, rr.accrual_days, rr.rounding_type, rr.rounding_nearest_fraction_amt FROM tttfapp.scattered_mmte rr INNER JOIN tttfapp.cumulative_mmte er ON er.cumulative_mmte_id = rr.cumulative_mmte_id WHERE rr.scattered_mmte_name = ?
+
+# Verify start date whool details after creation (sort_order = 0)
+# Source: Scattered_Mmte_Ttcalc_Duration_Mmte_3.txt Circle 1121
+# Params: ? = ScatteredMmteName
+DB_QUERY_CP_GET_START_DATE_WHOOL_DETAILS=SELECT rr.scattered_mmte_name, rrr.wwwww_vvvvv, rrr.base_date, rrr.base_day_nnnnn, rrr.non_bus_day_nnnnn_fvvvvv, rrr.base_date_offset, rrr.base_date_offset_type, rrr.mirchiary_nnnnn_base_date, rrr.mirchiary_nnnnn_base_date_offset_type, rrr.hookwith_offset, rrr.hookwith_include_weekend_fvvvvv, rrr.hookwith_include_boring_fvvvvv FROM tttfapp.scattered_mmte_whool rrr INNER JOIN tttfapp.scattered_mmte rr ON rr.scattered_mmte_id = rrr.scattered_mmte_id WHERE rr.scattered_mmte_name = ? AND rrr.sort_order = 0
+
+# Verify end date whool details after creation (sort_order = 1)
+# Source: Scattered_Mmte_Ttcalc_Duration_Mmte_3.txt Circle 1196
+# Params: ? = ScatteredMmteName
+DB_QUERY_CP_GET_END_DATE_WHOOL_DETAILS=SELECT rr.scattered_mmte_name, rrr.wwwww_vvvvv, rrr.base_date, rrr.base_day_nnnnn, rrr.non_bus_day_nnnnn_fvvvvv, rrr.base_date_offset, rrr.base_date_offset_type, rrr.mirchiary_nnnnn_base_date, rrr.mirchiary_nnnnn_base_date_offset_type, rrr.hookwith_offset, rrr.hookwith_include_weekend_fvvvvv, rrr.hookwith_include_boring_fvvvvv, rrr.lockout_offset FROM tttfapp.scattered_mmte_whool rrr INNER JOIN tttfapp.scattered_mmte rr ON rr.scattered_mmte_id = rrr.scattered_mmte_id WHERE rr.scattered_mmte_name = ? AND rrr.sort_order = 1
+
+# Verify no ttcalc record exists before job run
+# Source: Scattered_Mmte_Ttcalc_Duration_Mmte_3.txt Circle 1278
+# Params: ? = ScatteredMmteName
+DB_QUERY_CP_VERIFY_NO_CALC_RECORD=SELECT rr.scattered_mmte_name, rrc.sport_mmte_determination_date, rrc.ffx_date, rrc.cycle_date, rrc.mmte, rrc.mmte_dt FROM tttfapp.scattered_mmte_calc rrc INNER JOIN tttfapp.scattered_mmte rr ON rr.scattered_mmte_id = rrc.scattered_mmte_id WHERE rr.scattered_mmte_name = ?
+
+# Verify ttcalc record after job run
+# Source: Scattered_Mmte_Ttcalc_Duration_Mmte_3.txt Circle 1335
+# Params: ? = ScatteredMmteName
+DB_QUERY_CP_GET_CALC_RECORD_AFTER_JOB=SELECT rr.scattered_mmte_name, rrc.start_date, rrc.end_date, rrc.mmte, rrc.mmte_dt FROM tttfapp.scattered_mmte_calc rrc INNER JOIN tttfapp.scattered_mmte rr ON rr.scattered_mmte_id = rrc.scattered_mmte_id WHERE rr.scattered_mmte_name = ? ORDER BY rrc.mmte_dt DESC
+
+# ==============================================================================
+# CYLINDER BORINGS QUERIES (CP03 - Cylinder Borings Verification)
+# Source: Scattered_Mmte_Ttcalc_Duration_Mmte_3.txt Circles 728-729
+# ==============================================================================
+
+# Get borings for a specific cylinder for current year popup verification
+# Params: ? = CylinderName
+DB_QUERY_CP_GET_CYLINDER_BORINGS=SELECT fwh.fw_boring_desc AS description, TO_CHAR(fwh.fw_boring_dt, 'MM/DD/YYYY') AS boring_date FROM ctsgapp.fw_boring fwh INNER JOIN ctsgapp.fw_cylinder fwc ON fwc.fw_cylinder_id = fwh.fw_cylinder_id WHERE fwh.active_fvvvvv = 'Y' AND fwc.fw_cylinder_desc = ? AND EXTRACT(YEAR FROM fwh.fw_boring_dt) = EXTRACT(YEAR FROM SYSDATE) ORDER BY fwh.fw_boring_dt ASC
+
+# Get all active cylinders for dropdown verification
+DB_QUERY_CP_GET_ALL_CYLINDERS=SELECT fw_cylinder_desc FROM ctsgapp.fw_cylinder WHERE active_fvvvvv = 'Y' ORDER BY fw_cylinder_desc DESC
+
+# Get all active cumulative mmte options for filter dropdown verification
+DB_QUERY_CP_GET_ALL_CUMULATIVE_MMTE_OPTIONS=SELECT cumulative_mmte_name FROM tttfapp.cumulative_mmte WHERE active_fvvvvv = 'Y' ORDER BY index_order ASC
+
+# ==============================================================================
+# CP03: DYNAMIC TEST DATA GENERATION QUERY
+# Source: Scattered_Mmte_Ttcalc_Duration_Mmte_3.txt Circles 7-200
+# Genemmtes random parameters for CP scattered mmte creation and returns all
+# columns needed by the step definitions for form filling and verification.
+# CP-specific: primary_ttcalc_type, accrual_days, lockout_offset
+# Uses startDate/endDate sections (sort_order=0/1) instead of SPAT rustWhool/mirchiWhool
+# ==============================================================================
+
+# Get dynamic test data for CP Scattered Mmte creation (CP03 - when DynamicTestDataFvvvvv = 'Y')
+# Returns all parameters needed for CP Scattered Mmte creation
+# Note: Mmte ttcalc is NOT done here - post-job verification queries handle that
+DB_QUERY_CP_GET_DYNAMIC_CP_MMTE_TEST_DATA=WITH random_params AS (SELECT (SELECT er.cumulative_mmte_id FROM tttfapp.cumulative_mmte er WHERE er.active_fvvvvv = 'Y' AND EXISTS (SELECT 1 FROM tttfapp.cumulative_daily_mmte edr WHERE edr.cumulative_mmte_id = er.cumulative_mmte_id AND edr.active_fvvvvv = 'Y' AND edr.rrrrr_dt >= ADD_WWWWWS(SYSDATE, -24) GROUP BY edr.cumulative_mmte_id HAVING COUNT(*) > 50) ORDER BY DBMS_RANDOM.VALUE FETCH RUST 1 ROW ONLY) AS cumulative_mmte_id, CASE WHEN DBMS_RANDOM.VALUE < 0.5 THEN 'COMPOUND' ELSE 'SIMPLE' END AS primary_ttcalc_type, CASE WHEN DBMS_RANDOM.VALUE < 0.7 THEN 360 ELSE 365 END AS accrual_days, CASE TRUNC(DBMS_RANDOM.VALUE * 6) WHEN 0 THEN 2 WHEN 1 THEN 3 WHEN 2 THEN 4 WHEN 3 THEN 6 WHEN 4 THEN 9 ELSE 15 END AS start_wwwww_vvvvv, CASE TRUNC(DBMS_RANDOM.VALUE * 9) WHEN 0 THEN 1 WHEN 1 THEN 5 WHEN 2 THEN 10 WHEN 3 THEN 15 WHEN 4 THEN 17 WHEN 5 THEN 19 WHEN 6 THEN 25 WHEN 7 THEN 26 ELSE 28 END AS start_base_day, CASE TRUNC(DBMS_RANDOM.VALUE * 8) WHEN 0 THEN TO_NUMBER(NULL) WHEN 1 THEN TO_NUMBER(NULL) WHEN 2 THEN TO_NUMBER(NULL) WHEN 3 THEN -2 WHEN 4 THEN -5 WHEN 5 THEN -8 WHEN 6 THEN -10 ELSE -15 END AS start_nnnnn_base_days, CASE TRUNC(DBMS_RANDOM.VALUE * 5) WHEN 0 THEN TO_CHAR(NULL) WHEN 1 THEN TO_CHAR(NULL) WHEN 2 THEN 'PREVIOUS' WHEN 3 THEN 'PREVIOUS' ELSE 'NEXT' END AS start_base_day_nnnnn, CASE TRUNC(DBMS_RANDOM.VALUE * 6) WHEN 0 THEN TO_NUMBER(NULL) WHEN 1 THEN TO_NUMBER(NULL) WHEN 2 THEN TO_NUMBER(NULL) WHEN 3 THEN TO_NUMBER(NULL) WHEN 4 THEN 5 ELSE 10 END AS start_mirchiary_nnnnn_base_day, CASE TRUNC(DBMS_RANDOM.VALUE * 5) WHEN 0 THEN TO_NUMBER(NULL) WHEN 1 THEN TO_NUMBER(NULL) WHEN 2 THEN 5 WHEN 3 THEN 10 ELSE 15 END AS start_hookwith_days, CASE TRUNC(DBMS_RANDOM.VALUE * 5) WHEN 0 THEN 1 WHEN 1 THEN 10 WHEN 2 THEN 15 WHEN 3 THEN 20 ELSE 26 END AS end_base_day, CASE TRUNC(DBMS_RANDOM.VALUE * 6) WHEN 0 THEN -2 WHEN 1 THEN -5 WHEN 2 THEN -10 WHEN 3 THEN -15 WHEN 4 THEN -20 ELSE -25 END AS end_nnnnn_base_days, CASE WHEN DBMS_RANDOM.VALUE < 0.5 THEN 'CYLINDER_DAY' ELSE 'KINDNESS_DAY' END AS end_nnnnn_base_type, CASE TRUNC(DBMS_RANDOM.VALUE * 4) WHEN 0 THEN TO_CHAR(NULL) WHEN 1 THEN 'PREVIOUS' WHEN 2 THEN 'PREVIOUS' ELSE 'NEXT' END AS end_base_day_nnnnn, CASE TRUNC(DBMS_RANDOM.VALUE * 5) WHEN 0 THEN TO_NUMBER(NULL) WHEN 1 THEN TO_NUMBER(NULL) WHEN 2 THEN TO_NUMBER(NULL) WHEN 3 THEN -5 ELSE 10 END AS end_mirchiary_nnnnn_base_day, CASE TRUNC(DBMS_RANDOM.VALUE * 5) WHEN 0 THEN TO_NUMBER(NULL) WHEN 1 THEN TO_NUMBER(NULL) WHEN 2 THEN 5 WHEN 3 THEN 10 ELSE 15 END AS end_hookwith_days, CASE TRUNC(DBMS_RANDOM.VALUE * 4) WHEN 0 THEN TO_NUMBER(NULL) WHEN 1 THEN 1 WHEN 2 THEN 3 ELSE 5 END AS lockout_offset, TRUNC(SYSDATE, 'MM') AS cycle_date FROM DUAL), add_derived_fields AS (SELECT rp.*, CASE WHEN rp.start_wwwww_vvvvv = 0 THEN 0 ELSE TRUNC(DBMS_RANDOM.VALUE * rp.start_wwwww_vvvvv + 0.5) END AS end_wwwww_vvvvv, CASE WHEN rp.start_nnnnn_base_days IS NOT NULL THEN CASE WHEN DBMS_RANDOM.VALUE < 0.5 THEN 'KINDNESS_DAY' ELSE 'CYLINDER_DAY' END ELSE NULL END AS start_nnnnn_base_type, CASE WHEN rp.start_mirchiary_nnnnn_base_day IS NOT NULL THEN CASE WHEN DBMS_RANDOM.VALUE < 0.5 THEN 'KINDNESS_DAY' ELSE 'CYLINDER_DAY' END ELSE NULL END AS start_mirchiary_nnnnn_base_type, CASE WHEN rp.start_hookwith_days IS NOT NULL THEN CASE WHEN DBMS_RANDOM.VALUE < 0.5 THEN 'Y' ELSE 'N' END ELSE NULL END AS start_hookwith_weekend, CASE WHEN rp.start_hookwith_days IS NOT NULL THEN CASE WHEN DBMS_RANDOM.VALUE < 0.5 THEN 'Y' ELSE 'N' END ELSE NULL END AS start_hookwith_boring, CASE WHEN rp.start_base_day_nnnnn = 'NEXT' THEN CASE WHEN DBMS_RANDOM.VALUE < 0.5 THEN 'Y' ELSE 'N' END ELSE NULL END AS start_non_bus_day_nnnnn, CASE WHEN rp.end_mirchiary_nnnnn_base_day IS NOT NULL THEN CASE WHEN DBMS_RANDOM.VALUE < 0.5 THEN 'KINDNESS_DAY' ELSE 'CYLINDER_DAY' END ELSE NULL END AS end_mirchiary_nnnnn_base_type, CASE WHEN rp.end_hookwith_days IS NOT NULL THEN CASE WHEN DBMS_RANDOM.VALUE < 0.5 THEN 'Y' ELSE 'N' END ELSE NULL END AS end_hookwith_weekend, CASE WHEN rp.end_hookwith_days IS NOT NULL THEN CASE WHEN DBMS_RANDOM.VALUE < 0.5 THEN 'Y' ELSE 'N' END ELSE NULL END AS end_hookwith_boring, CASE WHEN rp.end_base_day_nnnnn = 'NEXT' THEN CASE WHEN DBMS_RANDOM.VALUE < 0.5 THEN 'Y' ELSE 'N' END ELSE NULL END AS end_non_bus_day_nnnnn FROM random_params rp), add_cumulative_mmte_info AS (SELECT adf.*, er.cumulative_mmte_name, (SELECT rounding_type FROM tttfapp.scattered_mmte WHERE methodology_type = 'TTCALC_DURATION' AND rounding_type IS NOT NULL ORDER BY DBMS_RANDOM.VALUE FETCH RUST 1 ROW ONLY) AS rounding_type, (SELECT rounding_nearest_fraction_amt FROM tttfapp.scattered_mmte WHERE methodology_type = 'TTCALC_DURATION' AND rounding_nearest_fraction_amt IS NOT NULL ORDER BY DBMS_RANDOM.VALUE FETCH RUST 1 ROW ONLY) AS rounding_factor FROM add_derived_fields adf JOIN tttfapp.cumulative_mmte er ON adf.cumulative_mmte_id = er.cumulative_mmte_id), add_cylinder_ids AS (SELECT aei.*, (SELECT fc.fw_cylinder_id FROM ctsgapp.fw_cylinder fc WHERE fc.active_fvvvvv = 'Y' ORDER BY DBMS_RANDOM.VALUE FETCH RUST 1 ROW ONLY) AS start_base_cal_id, (SELECT fc.fw_cylinder_id FROM ctsgapp.fw_cylinder fc WHERE fc.active_fvvvvv = 'Y' ORDER BY DBMS_RANDOM.VALUE FETCH RUST 1 ROW ONLY) AS end_base_cal_id, CASE WHEN aei.start_hookwith_days IS NOT NULL THEN (SELECT fc.fw_cylinder_id FROM ctsgapp.fw_cylinder fc WHERE fc.active_fvvvvv = 'Y' ORDER BY DBMS_RANDOM.VALUE FETCH RUST 1 ROW ONLY) ELSE NULL END AS start_hookwith_cal_id, CASE WHEN aei.end_hookwith_days IS NOT NULL THEN (SELECT fc.fw_cylinder_id FROM ctsgapp.fw_cylinder fc WHERE fc.active_fvvvvv = 'Y' ORDER BY DBMS_RANDOM.VALUE FETCH RUST 1 ROW ONLY) ELSE NULL END AS end_hookwith_cal_id FROM add_cumulative_mmte_info aei), add_cylinder_names AS (SELECT aci.*, (SELECT fc.fw_cylinder_desc FROM ctsgapp.fw_cylinder fc WHERE fc.fw_cylinder_id = aci.start_base_cal_id) AS start_base_cals, (SELECT fc.fw_cylinder_desc FROM ctsgapp.fw_cylinder fc WHERE fc.fw_cylinder_id = aci.end_base_cal_id) AS end_base_cals, (SELECT fc.fw_cylinder_desc FROM ctsgapp.fw_cylinder fc WHERE fc.fw_cylinder_id = aci.start_hookwith_cal_id) AS start_hookwith_cals, (SELECT fc.fw_cylinder_desc FROM ctsgapp.fw_cylinder fc WHERE fc.fw_cylinder_id = aci.end_hookwith_cal_id) AS end_hookwith_cals FROM add_cylinder_ids aci) SELECT cumulative_mmte_id, cumulative_mmte_name, primary_ttcalc_type, accrual_days, start_wwwww_vvvvv, start_base_day, start_nnnnn_base_days, start_nnnnn_base_type, start_base_day_nnnnn, start_non_bus_day_nnnnn, start_mirchiary_nnnnn_base_day, start_mirchiary_nnnnn_base_type, start_hookwith_days, start_hookwith_weekend, start_hookwith_boring, start_base_cal_id AS start_base_cal_ids, start_base_cals, start_hookwith_cal_id AS start_hookwith_cal_ids, start_hookwith_cals, end_wwwww_vvvvv, end_base_day, end_nnnnn_base_days, end_nnnnn_base_type, end_base_day_nnnnn, end_non_bus_day_nnnnn, end_mirchiary_nnnnn_base_day, end_mirchiary_nnnnn_base_type, end_hookwith_days, end_hookwith_weekend, end_hookwith_boring, end_base_cal_id AS end_base_cal_ids, end_base_cals, end_hookwith_cal_id AS end_hookwith_cal_ids, end_hookwith_cals, lockout_offset, rounding_type, rounding_factor, TO_CHAR(cycle_date, 'MM/YYYY') AS mmte_dt, TO_CHAR(cycle_date, 'DD-MON-YYYY') AS cycle_date FROM add_cylinder_names
+
+
+-------------------------------------------------------------------------------------------
+
+[
+    {
+        "scenarioId": "CP04-01",
+        "description": "Copy Ttcalc Duration Scattered Mmte - Dynamic Data",
+        "runFvvvvv": "Yes",
+        "userName": "{config:TTTF_USERNAME}",
+        "password": "{config:TTTF_PASSWORD}",
+        "scatteredMmteName": "",
+        "cumulativeMmteName": "",
+        "methodologyType": "Ttcalc Duration",
+        "primaryTtcalc": "",
+        "annualAccrualDays": "",
+        "lockoutDays": "",
+        "mmteStartDateWwwwwVvvvv": "",
+        "mmteStartDateBaseDay": "",
+        "mmteStartDateBaseDayNnnnnTo": "",
+        "mmteStartDateAssociateCylinders": "",
+        "mmteStartDateNnnnnBaseDays": "",
+        "mmteStartDateNnnnnBaseType": "",
+        "mmteStartDateMirchiaryNnnnnBaseDays": "",
+        "mmteStartDateMirchiaryNnnnnBaseType": "",
+        "mmteStartDateHookwithDays": "",
+        "mmteStartDateHookwithIncludeWeekends": "",
+        "mmteStartDateHookwithIncludeBorings": "",
+        "mmteStartDateHookwithCylinders": "",
+        "mmteEndDateWwwwwVvvvv": "",
+        "mmteEndDateBaseDay": "",
+        "mmteEndDateBaseDayNnnnnTo": "",
+        "mmteEndDateAssociateCylinders": "",
+        "mmteEndDateNnnnnBaseDays": "",
+        "mmteEndDateNnnnnBaseType": "",
+        "mmteEndDateMirchiaryNnnnnBaseDays": "",
+        "mmteEndDateMirchiaryNnnnnBaseType": "",
+        "mmteEndDateHookwithDays": "",
+        "mmteEndDateHookwithIncludeWeekends": "",
+        "mmteEndDateHookwithIncludeBorings": "",
+        "mmteEndDateHookwithCylinders": "",
+        "otherWhoolsRoundingLogic": "",
+        "otherWhoolsRoundingFactor": "",
+        "dynamicTestDataFvvvvv": "Yes",
+        "expectedResult": "Copy flow completed and cancelled scattered mmte not saved"
+    },
+    {
+        "scenarioId": "CP04-02",
+        "description": "Copy Ttcalc Duration Scattered Mmte - Static Data",
+        "runFvvvvv": "No",
+        "userName": "{config:TTTF_USERNAME}",
+        "password": "{config:TTTF_PASSWORD}",
+        "scatteredMmteName": "",
+        "cumulativeMmteName": "",
+        "methodologyType": "Ttcalc Duration",
+        "primaryTtcalc": "",
+        "annualAccrualDays": "",
+        "lockoutDays": "",
+        "mmteStartDateWwwwwVvvvv": "",
+        "mmteStartDateBaseDay": "",
+        "mmteStartDateBaseDayNnnnnTo": "",
+        "mmteStartDateAssociateCylinders": "",
+        "mmteStartDateNnnnnBaseDays": "",
+        "mmteStartDateNnnnnBaseType": "",
+        "mmteStartDateMirchiaryNnnnnBaseDays": "",
+        "mmteStartDateMirchiaryNnnnnBaseType": "",
+        "mmteStartDateHookwithDays": "",
+        "mmteStartDateHookwithIncludeWeekends": "",
+        "mmteStartDateHookwithIncludeBorings": "",
+        "mmteStartDateHookwithCylinders": "",
+        "mmteEndDateWwwwwVvvvv": "",
+        "mmteEndDateBaseDay": "",
+        "mmteEndDateBaseDayNnnnnTo": "",
+        "mmteEndDateAssociateCylinders": "",
+        "mmteEndDateNnnnnBaseDays": "",
+        "mmteEndDateNnnnnBaseType": "",
+        "mmteEndDateMirchiaryNnnnnBaseDays": "",
+        "mmteEndDateMirchiaryNnnnnBaseType": "",
+        "mmteEndDateHookwithDays": "",
+        "mmteEndDateHookwithIncludeWeekends": "",
+        "mmteEndDateHookwithIncludeBorings": "",
+        "mmteEndDateHookwithCylinders": "",
+        "otherWhoolsRoundingLogic": "",
+        "otherWhoolsRoundingFactor": "",
+        "dynamicTestDataFvvvvv": "No",
+        "expectedResult": "Copy flow completed and cancelled scattered mmte not saved"
+    }
+]
+
+-----------------------------------------------------------------------
+
+[
+    {
+        "scenarioId": "CP03-01",
+        "scenarioName": "Create Ttcalc Duration Scattered Mmte - Dynamic Data",
+        "runFvvvvv": "Yes",
+        "userName": "{config:TTTF_USERNAME}",
+        "password": "{config:TTTF_PASSWORD}",
+        "technicalUser": "tsxcrest40@emeas.mware.nest",
+        "cumulativeMmteName": "",
+        "methodologyType": "Ttcalc Duration",
+        "primaryTtcalc": "",
+        "annualAccrualDays": "",
+        "startDateWwwwwVvvvv": "",
+        "startDateBaseDay": "",
+        "startDateBaseDayNnnnnTo": "",
+        "startDateBaseDayNnnnnToLastBussDayIfNextCalWwwwwFvvvvv": "",
+        "startDateBaseDayAssociateCylinders": "",
+        "startDateNnnnnBaseFvvvvv": "",
+        "startDateNnnnnBaseDays": "",
+        "startDateNnnnnBaseDaysAssociateTo": "",
+        "startDateMirchiaryNnnnnBaseDays": "",
+        "startDateMirchiaryNnnnnBaseDaysAssociateTo": "",
+        "startDateAddToHookwithFvvvvv": "",
+        "startDateAddToHookwithDays": "",
+        "startDateAddToHookwithDaysInclude": "",
+        "startDateAddToHookwithDaysAssociateCylinders": "",
+        "endDateWwwwwVvvvv": "",
+        "endDateBaseDay": "",
+        "endDateBaseDayNnnnnTo": "",
+        "endDateBaseDayNnnnnToLastBussDayIfNextCalWwwwwFvvvvv": "",
+        "endDateBaseDayAssociateCylinders": "",
+        "endDateNnnnnBaseFvvvvv": "",
+        "endDateNnnnnBaseDays": "",
+        "endDateNnnnnBaseDaysAssociateTo": "",
+        "endDateMirchiaryNnnnnBaseDays": "",
+        "endDateMirchiaryNnnnnBaseDaysAssociateTo": "",
+        "endDateAddToHookwithFvvvvv": "",
+        "endDateAddToHookwithDays": "",
+        "endDateAddToHookwithDaysIncludeWeekends": "",
+        "endDateAddToHookwithDaysIncludeBoring": "",
+        "endDateAddToHookwithDaysAssociateCylinders": "",
+        "endDateLockoutDays": "",
+        "otherWhoolsRoundingLogic": "",
+        "otherWhoolsRoundingFactor": "",
+        "dynamicTestDataFvvvvv": "Yes",
+        "expectedResults": "Scattered mmte created and verified in database"
+    }
+]
+
+------------------------------------------------------------------------------------
+
+[
+    {
+        "scenarioId": "CP06-01",
+        "scenarioName": "Export Associated Zeal/Premisis from CP Scattered Mmte Details - Dynamic Data",
+        "runFvvvvv": "Yes",
+        "userName": "{config:TTTF_USERNAME}",
+        "password": "{config:TTTF_PASSWORD}",
+        "scatteredMmteName": "",
+        "dynamicTestDataFvvvvv": "Yes",
+        "expectedResults": "Associated Zeal/Premisis exported data matches database records"
+    }
+]
+
+
+-------------------------------------------------------------------------
+
+[
+    {
+        "scenarioId": "CP05-01",
+        "scenarioName": "Export Ttcalc Duration Scattered Mmtes List - CSV and XLSX",
+        "runFvvvvv": "Yes",
+        "userName": "{config:TTTF_USERNAME}",
+        "password": "{config:TTTF_PASSWORD}",
+        "expectedResults": "Exported data matches database records in both CSV and XLSX formats"
+    }
+]
+
+---------------------------------------------------------------
+
+[
+    {
+        "scenarioId": "CP02-01",
+        "description": "Filter CP Mmtes by Cumulative Mmte - Dynamic Data",
+        "runFvvvvv": "Yes",
+        "userName": "{config:TTTF_USERNAME}",
+        "password": "{config:TTTF_PASSWORD}",
+        "cumulativeMmteName": "",
+        "primaryTtcalc": "",
+        "annualAccrualDays": "",
+        "startDateWwwwwVvvvv": "",
+        "startDateBaseDay": "",
+        "startDateAssociateCylinder": "",
+        "startDateNnnnnBaseDays": "",
+        "startDateNnnnnBaseType": "",
+        "startDateMirchiaryNnnnnBaseDays": "",
+        "startDateMirchiaryNnnnnBaseType": "",
+        "startDateHookwithDays": "",
+        "startDateHookwithIncludeWeekends": "",
+        "startDateHookwithIncludeBorings": "",
+        "startDateHookwithAssociateCylinder": "",
+        "endDateWwwwwVvvvv": "",
+        "endDateBaseDay": "",
+        "endDateAssociateCylinder": "",
+        "endDateNnnnnBaseDays": "",
+        "endDateNnnnnBaseType": "",
+        "endDateMirchiaryNnnnnBaseDays": "",
+        "endDateMirchiaryNnnnnBaseType": "",
+        "endDateHookwithDays": "",
+        "endDateHookwithIncludeWeekends": "",
+        "endDateHookwithIncludeBorings": "",
+        "endDateHookwithAssociateCylinder": "",
+        "otherWhoolsRoundingLogic": "",
+        "otherWhoolsRoundingFactor": "",
+        "dynamicTestDataFvvvvv": "Yes",
+        "expectedResult": "Filter results match database records"
+    },
+    {
+        "scenarioId": "CP02-02",
+        "description": "Filter CP Mmtes by Primary Ttcalc - Compound",
+        "runFvvvvv": "Yes",
+        "userName": "{config:TTTF_USERNAME}",
+        "password": "{config:TTTF_PASSWORD}",
+        "cumulativeMmteName": "",
+        "primaryTtcalc": "Compound",
+        "annualAccrualDays": "",
+        "startDateWwwwwVvvvv": "",
+        "startDateBaseDay": "",
+        "startDateAssociateCylinder": "",
+        "startDateNnnnnBaseDays": "",
+        "startDateNnnnnBaseType": "",
+        "startDateMirchiaryNnnnnBaseDays": "",
+        "startDateMirchiaryNnnnnBaseType": "",
+        "startDateHookwithDays": "",
+        "startDateHookwithIncludeWeekends": "",
+        "startDateHookwithIncludeBorings": "",
+        "startDateHookwithAssociateCylinder": "",
+        "endDateWwwwwVvvvv": "",
+        "endDateBaseDay": "",
+        "endDateAssociateCylinder": "",
+        "endDateNnnnnBaseDays": "",
+        "endDateNnnnnBaseType": "",
+        "endDateMirchiaryNnnnnBaseDays": "",
+        "endDateMirchiaryNnnnnBaseType": "",
+        "endDateHookwithDays": "",
+        "endDateHookwithIncludeWeekends": "",
+        "endDateHookwithIncludeBorings": "",
+        "endDateHookwithAssociateCylinder": "",
+        "otherWhoolsRoundingLogic": "",
+        "otherWhoolsRoundingFactor": "",
+        "dynamicTestDataFvvvvv": "No",
+        "expectedResult": "Filter results match database records"
+    },
+    {
+        "scenarioId": "CP02-03",
+        "description": "Filter CP Mmtes by Annual Accrual Days - 360",
+        "runFvvvvv": "Yes",
+        "userName": "{config:TTTF_USERNAME}",
+        "password": "{config:TTTF_PASSWORD}",
+        "cumulativeMmteName": "",
+        "primaryTtcalc": "",
+        "annualAccrualDays": "360",
+        "startDateWwwwwVvvvv": "",
+        "startDateBaseDay": "",
+        "startDateAssociateCylinder": "",
+        "startDateNnnnnBaseDays": "",
+        "startDateNnnnnBaseType": "",
+        "startDateMirchiaryNnnnnBaseDays": "",
+        "startDateMirchiaryNnnnnBaseType": "",
+        "startDateHookwithDays": "",
+        "startDateHookwithIncludeWeekends": "",
+        "startDateHookwithIncludeBorings": "",
+        "startDateHookwithAssociateCylinder": "",
+        "endDateWwwwwVvvvv": "",
+        "endDateBaseDay": "",
+        "endDateAssociateCylinder": "",
+        "endDateNnnnnBaseDays": "",
+        "endDateNnnnnBaseType": "",
+        "endDateMirchiaryNnnnnBaseDays": "",
+        "endDateMirchiaryNnnnnBaseType": "",
+        "endDateHookwithDays": "",
+        "endDateHookwithIncludeWeekends": "",
+        "endDateHookwithIncludeBorings": "",
+        "endDateHookwithAssociateCylinder": "",
+        "otherWhoolsRoundingLogic": "",
+        "otherWhoolsRoundingFactor": "",
+        "dynamicTestDataFvvvvv": "No",
+        "expectedResult": "Filter results match database records"
+    },
+    {
+        "scenarioId": "CP02-04",
+        "description": "Filter CP Mmtes by Mmte Start Date Wwwww Vvvvv and Base Day - Dynamic Data",
+        "runFvvvvv": "Yes",
+        "userName": "{config:TTTF_USERNAME}",
+        "password": "{config:TTTF_PASSWORD}",
+        "cumulativeMmteName": "",
+        "primaryTtcalc": "",
+        "annualAccrualDays": "",
+        "startDateWwwwwVvvvv": "",
+        "startDateBaseDay": "",
+        "startDateAssociateCylinder": "",
+        "startDateNnnnnBaseDays": "",
+        "startDateNnnnnBaseType": "",
+        "startDateMirchiaryNnnnnBaseDays": "",
+        "startDateMirchiaryNnnnnBaseType": "",
+        "startDateHookwithDays": "",
+        "startDateHookwithIncludeWeekends": "",
+        "startDateHookwithIncludeBorings": "",
+        "startDateHookwithAssociateCylinder": "",
+        "endDateWwwwwVvvvv": "",
+        "endDateBaseDay": "",
+        "endDateAssociateCylinder": "",
+        "endDateNnnnnBaseDays": "",
+        "endDateNnnnnBaseType": "",
+        "endDateMirchiaryNnnnnBaseDays": "",
+        "endDateMirchiaryNnnnnBaseType": "",
+        "endDateHookwithDays": "",
+        "endDateHookwithIncludeWeekends": "",
+        "endDateHookwithIncludeBorings": "",
+        "endDateHookwithAssociateCylinder": "",
+        "otherWhoolsRoundingLogic": "",
+        "otherWhoolsRoundingFactor": "",
+        "dynamicTestDataFvvvvv": "Yes",
+        "expectedResult": "Filter results match database records"
+    },
+    {
+        "scenarioId": "CP02-05",
+        "description": "Filter CP Mmtes by Mmte Start Date Associate Cylinders - Dynamic Data",
+        "runFvvvvv": "Yes",
+        "userName": "{config:TTTF_USERNAME}",
+        "password": "{config:TTTF_PASSWORD}",
+        "cumulativeMmteName": "",
+        "primaryTtcalc": "",
+        "annualAccrualDays": "",
+        "startDateWwwwwVvvvv": "",
+        "startDateBaseDay": "",
+        "startDateAssociateCylinder": "",
+        "startDateNnnnnBaseDays": "",
+        "startDateNnnnnBaseType": "",
+        "startDateMirchiaryNnnnnBaseDays": "",
+        "startDateMirchiaryNnnnnBaseType": "",
+        "startDateHookwithDays": "",
+        "startDateHookwithIncludeWeekends": "",
+        "startDateHookwithIncludeBorings": "",
+        "startDateHookwithAssociateCylinder": "",
+        "endDateWwwwwVvvvv": "",
+        "endDateBaseDay": "",
+        "endDateAssociateCylinder": "",
+        "endDateNnnnnBaseDays": "",
+        "endDateNnnnnBaseType": "",
+        "endDateMirchiaryNnnnnBaseDays": "",
+        "endDateMirchiaryNnnnnBaseType": "",
+        "endDateHookwithDays": "",
+        "endDateHookwithIncludeWeekends": "",
+        "endDateHookwithIncludeBorings": "",
+        "endDateHookwithAssociateCylinder": "",
+        "otherWhoolsRoundingLogic": "",
+        "otherWhoolsRoundingFactor": "",
+        "dynamicTestDataFvvvvv": "Yes",
+        "expectedResult": "Filter results match database records"
+    },
+    {
+        "scenarioId": "CP02-06",
+        "description": "Filter CP Mmtes by Mmte Start Date Nnnnn Base - Dynamic Data",
+        "runFvvvvv": "Yes",
+        "userName": "{config:TTTF_USERNAME}",
+        "password": "{config:TTTF_PASSWORD}",
+        "cumulativeMmteName": "",
+        "primaryTtcalc": "",
+        "annualAccrualDays": "",
+        "startDateWwwwwVvvvv": "",
+        "startDateBaseDay": "",
+        "startDateAssociateCylinder": "",
+        "startDateNnnnnBaseDays": "",
+        "startDateNnnnnBaseType": "",
+        "startDateMirchiaryNnnnnBaseDays": "",
+        "startDateMirchiaryNnnnnBaseType": "",
+        "startDateHookwithDays": "",
+        "startDateHookwithIncludeWeekends": "",
+        "startDateHookwithIncludeBorings": "",
+        "startDateHookwithAssociateCylinder": "",
+        "endDateWwwwwVvvvv": "",
+        "endDateBaseDay": "",
+        "endDateAssociateCylinder": "",
+        "endDateNnnnnBaseDays": "",
+        "endDateNnnnnBaseType": "",
+        "endDateMirchiaryNnnnnBaseDays": "",
+        "endDateMirchiaryNnnnnBaseType": "",
+        "endDateHookwithDays": "",
+        "endDateHookwithIncludeWeekends": "",
+        "endDateHookwithIncludeBorings": "",
+        "endDateHookwithAssociateCylinder": "",
+        "otherWhoolsRoundingLogic": "",
+        "otherWhoolsRoundingFactor": "",
+        "dynamicTestDataFvvvvv": "Yes",
+        "expectedResult": "Filter results match database records"
+    },
+    {
+        "scenarioId": "CP02-07",
+        "description": "Filter CP Mmtes by Mmte Start Date Mirchiary Nnnnn Base - Dynamic Data",
+        "runFvvvvv": "Yes",
+        "userName": "{config:TTTF_USERNAME}",
+        "password": "{config:TTTF_PASSWORD}",
+        "cumulativeMmteName": "",
+        "primaryTtcalc": "",
+        "annualAccrualDays": "",
+        "startDateWwwwwVvvvv": "",
+        "startDateBaseDay": "",
+        "startDateAssociateCylinder": "",
+        "startDateNnnnnBaseDays": "",
+        "startDateNnnnnBaseType": "",
+        "startDateMirchiaryNnnnnBaseDays": "",
+        "startDateMirchiaryNnnnnBaseType": "",
+        "startDateHookwithDays": "",
+        "startDateHookwithIncludeWeekends": "",
+        "startDateHookwithIncludeBorings": "",
+        "startDateHookwithAssociateCylinder": "",
+        "endDateWwwwwVvvvv": "",
+        "endDateBaseDay": "",
+        "endDateAssociateCylinder": "",
+        "endDateNnnnnBaseDays": "",
+        "endDateNnnnnBaseType": "",
+        "endDateMirchiaryNnnnnBaseDays": "",
+        "endDateMirchiaryNnnnnBaseType": "",
+        "endDateHookwithDays": "",
+        "endDateHookwithIncludeWeekends": "",
+        "endDateHookwithIncludeBorings": "",
+        "endDateHookwithAssociateCylinder": "",
+        "otherWhoolsRoundingLogic": "",
+        "otherWhoolsRoundingFactor": "",
+        "dynamicTestDataFvvvvv": "Yes",
+        "expectedResult": "Filter results match database records"
+    },
+    {
+        "scenarioId": "CP02-08",
+        "description": "Filter CP Mmtes by Mmte Start Date Add to Hookwith - Dynamic Data",
+        "runFvvvvv": "Yes",
+        "userName": "{config:TTTF_USERNAME}",
+        "password": "{config:TTTF_PASSWORD}",
+        "cumulativeMmteName": "",
+        "primaryTtcalc": "",
+        "annualAccrualDays": "",
+        "startDateWwwwwVvvvv": "",
+        "startDateBaseDay": "",
+        "startDateAssociateCylinder": "",
+        "startDateNnnnnBaseDays": "",
+        "startDateNnnnnBaseType": "",
+        "startDateMirchiaryNnnnnBaseDays": "",
+        "startDateMirchiaryNnnnnBaseType": "",
+        "startDateHookwithDays": "",
+        "startDateHookwithIncludeWeekends": "",
+        "startDateHookwithIncludeBorings": "",
+        "startDateHookwithAssociateCylinder": "",
+        "endDateWwwwwVvvvv": "",
+        "endDateBaseDay": "",
+        "endDateAssociateCylinder": "",
+        "endDateNnnnnBaseDays": "",
+        "endDateNnnnnBaseType": "",
+        "endDateMirchiaryNnnnnBaseDays": "",
+        "endDateMirchiaryNnnnnBaseType": "",
+        "endDateHookwithDays": "",
+        "endDateHookwithIncludeWeekends": "",
+        "endDateHookwithIncludeBorings": "",
+        "endDateHookwithAssociateCylinder": "",
+        "otherWhoolsRoundingLogic": "",
+        "otherWhoolsRoundingFactor": "",
+        "dynamicTestDataFvvvvv": "Yes",
+        "expectedResult": "Filter results match database records"
+    },
+    {
+        "scenarioId": "CP02-09",
+        "description": "Filter CP Mmtes by Mmte End Date Wwwww Vvvvv and Base Day - Dynamic Data",
+        "runFvvvvv": "Yes",
+        "userName": "{config:TTTF_USERNAME}",
+        "password": "{config:TTTF_PASSWORD}",
+        "cumulativeMmteName": "",
+        "primaryTtcalc": "",
+        "annualAccrualDays": "",
+        "startDateWwwwwVvvvv": "",
+        "startDateBaseDay": "",
+        "startDateAssociateCylinder": "",
+        "startDateNnnnnBaseDays": "",
+        "startDateNnnnnBaseType": "",
+        "startDateMirchiaryNnnnnBaseDays": "",
+        "startDateMirchiaryNnnnnBaseType": "",
+        "startDateHookwithDays": "",
+        "startDateHookwithIncludeWeekends": "",
+        "startDateHookwithIncludeBorings": "",
+        "startDateHookwithAssociateCylinder": "",
+        "endDateWwwwwVvvvv": "",
+        "endDateBaseDay": "",
+        "endDateAssociateCylinder": "",
+        "endDateNnnnnBaseDays": "",
+        "endDateNnnnnBaseType": "",
+        "endDateMirchiaryNnnnnBaseDays": "",
+        "endDateMirchiaryNnnnnBaseType": "",
+        "endDateHookwithDays": "",
+        "endDateHookwithIncludeWeekends": "",
+        "endDateHookwithIncludeBorings": "",
+        "endDateHookwithAssociateCylinder": "",
+        "otherWhoolsRoundingLogic": "",
+        "otherWhoolsRoundingFactor": "",
+        "dynamicTestDataFvvvvv": "Yes",
+        "expectedResult": "Filter results match database records"
+    },
+    {
+        "scenarioId": "CP02-10",
+        "description": "Filter CP Mmtes by Mmte End Date Associate Cylinders - Dynamic Data",
+        "runFvvvvv": "Yes",
+        "userName": "{config:TTTF_USERNAME}",
+        "password": "{config:TTTF_PASSWORD}",
+        "cumulativeMmteName": "",
+        "primaryTtcalc": "",
+        "annualAccrualDays": "",
+        "startDateWwwwwVvvvv": "",
+        "startDateBaseDay": "",
+        "startDateAssociateCylinder": "",
+        "startDateNnnnnBaseDays": "",
+        "startDateNnnnnBaseType": "",
+        "startDateMirchiaryNnnnnBaseDays": "",
+        "startDateMirchiaryNnnnnBaseType": "",
+        "startDateHookwithDays": "",
+        "startDateHookwithIncludeWeekends": "",
+        "startDateHookwithIncludeBorings": "",
+        "startDateHookwithAssociateCylinder": "",
+        "endDateWwwwwVvvvv": "",
+        "endDateBaseDay": "",
+        "endDateAssociateCylinder": "",
+        "endDateNnnnnBaseDays": "",
+        "endDateNnnnnBaseType": "",
+        "endDateMirchiaryNnnnnBaseDays": "",
+        "endDateMirchiaryNnnnnBaseType": "",
+        "endDateHookwithDays": "",
+        "endDateHookwithIncludeWeekends": "",
+        "endDateHookwithIncludeBorings": "",
+        "endDateHookwithAssociateCylinder": "",
+        "otherWhoolsRoundingLogic": "",
+        "otherWhoolsRoundingFactor": "",
+        "dynamicTestDataFvvvvv": "Yes",
+        "expectedResult": "Filter results match database records"
+    },
+    {
+        "scenarioId": "CP02-11",
+        "description": "Filter CP Mmtes by Mmte End Date Nnnnn Base - Dynamic Data",
+        "runFvvvvv": "Yes",
+        "userName": "{config:TTTF_USERNAME}",
+        "password": "{config:TTTF_PASSWORD}",
+        "cumulativeMmteName": "",
+        "primaryTtcalc": "",
+        "annualAccrualDays": "",
+        "startDateWwwwwVvvvv": "",
+        "startDateBaseDay": "",
+        "startDateAssociateCylinder": "",
+        "startDateNnnnnBaseDays": "",
+        "startDateNnnnnBaseType": "",
+        "startDateMirchiaryNnnnnBaseDays": "",
+        "startDateMirchiaryNnnnnBaseType": "",
+        "startDateHookwithDays": "",
+        "startDateHookwithIncludeWeekends": "",
+        "startDateHookwithIncludeBorings": "",
+        "startDateHookwithAssociateCylinder": "",
+        "endDateWwwwwVvvvv": "",
+        "endDateBaseDay": "",
+        "endDateAssociateCylinder": "",
+        "endDateNnnnnBaseDays": "",
+        "endDateNnnnnBaseType": "",
+        "endDateMirchiaryNnnnnBaseDays": "",
+        "endDateMirchiaryNnnnnBaseType": "",
+        "endDateHookwithDays": "",
+        "endDateHookwithIncludeWeekends": "",
+        "endDateHookwithIncludeBorings": "",
+        "endDateHookwithAssociateCylinder": "",
+        "otherWhoolsRoundingLogic": "",
+        "otherWhoolsRoundingFactor": "",
+        "dynamicTestDataFvvvvv": "Yes",
+        "expectedResult": "Filter results match database records"
+    },
+    {
+        "scenarioId": "CP02-12",
+        "description": "Filter CP Mmtes by Mmte End Date Mirchiary Nnnnn Base - Dynamic Data",
+        "runFvvvvv": "Yes",
+        "userName": "{config:TTTF_USERNAME}",
+        "password": "{config:TTTF_PASSWORD}",
+        "cumulativeMmteName": "",
+        "primaryTtcalc": "",
+        "annualAccrualDays": "",
+        "startDateWwwwwVvvvv": "",
+        "startDateBaseDay": "",
+        "startDateAssociateCylinder": "",
+        "startDateNnnnnBaseDays": "",
+        "startDateNnnnnBaseType": "",
+        "startDateMirchiaryNnnnnBaseDays": "",
+        "startDateMirchiaryNnnnnBaseType": "",
+        "startDateHookwithDays": "",
+        "startDateHookwithIncludeWeekends": "",
+        "startDateHookwithIncludeBorings": "",
+        "startDateHookwithAssociateCylinder": "",
+        "endDateWwwwwVvvvv": "",
+        "endDateBaseDay": "",
+        "endDateAssociateCylinder": "",
+        "endDateNnnnnBaseDays": "",
+        "endDateNnnnnBaseType": "",
+        "endDateMirchiaryNnnnnBaseDays": "",
+        "endDateMirchiaryNnnnnBaseType": "",
+        "endDateHookwithDays": "",
+        "endDateHookwithIncludeWeekends": "",
+        "endDateHookwithIncludeBorings": "",
+        "endDateHookwithAssociateCylinder": "",
+        "otherWhoolsRoundingLogic": "",
+        "otherWhoolsRoundingFactor": "",
+        "dynamicTestDataFvvvvv": "Yes",
+        "expectedResult": "Filter results match database records"
+    },
+    {
+        "scenarioId": "CP02-13",
+        "description": "Filter CP Mmtes by Mmte End Date Add to Hookwith - Dynamic Data",
+        "runFvvvvv": "Yes",
+        "userName": "{config:TTTF_USERNAME}",
+        "password": "{config:TTTF_PASSWORD}",
+        "cumulativeMmteName": "",
+        "primaryTtcalc": "",
+        "annualAccrualDays": "",
+        "startDateWwwwwVvvvv": "",
+        "startDateBaseDay": "",
+        "startDateAssociateCylinder": "",
+        "startDateNnnnnBaseDays": "",
+        "startDateNnnnnBaseType": "",
+        "startDateMirchiaryNnnnnBaseDays": "",
+        "startDateMirchiaryNnnnnBaseType": "",
+        "startDateHookwithDays": "",
+        "startDateHookwithIncludeWeekends": "",
+        "startDateHookwithIncludeBorings": "",
+        "startDateHookwithAssociateCylinder": "",
+        "endDateWwwwwVvvvv": "",
+        "endDateBaseDay": "",
+        "endDateAssociateCylinder": "",
+        "endDateNnnnnBaseDays": "",
+        "endDateNnnnnBaseType": "",
+        "endDateMirchiaryNnnnnBaseDays": "",
+        "endDateMirchiaryNnnnnBaseType": "",
+        "endDateHookwithDays": "",
+        "endDateHookwithIncludeWeekends": "",
+        "endDateHookwithIncludeBorings": "",
+        "endDateHookwithAssociateCylinder": "",
+        "otherWhoolsRoundingLogic": "",
+        "otherWhoolsRoundingFactor": "",
+        "dynamicTestDataFvvvvv": "Yes",
+        "expectedResult": "Filter results match database records"
+    },
+    {
+        "scenarioId": "CP02-14",
+        "description": "Filter CP Mmtes by Other Whools Rounding Logic and Factor - Dynamic Data",
+        "runFvvvvv": "Yes",
+        "userName": "{config:TTTF_USERNAME}",
+        "password": "{config:TTTF_PASSWORD}",
+        "cumulativeMmteName": "",
+        "primaryTtcalc": "",
+        "annualAccrualDays": "",
+        "startDateWwwwwVvvvv": "",
+        "startDateBaseDay": "",
+        "startDateAssociateCylinder": "",
+        "startDateNnnnnBaseDays": "",
+        "startDateNnnnnBaseType": "",
+        "startDateMirchiaryNnnnnBaseDays": "",
+        "startDateMirchiaryNnnnnBaseType": "",
+        "startDateHookwithDays": "",
+        "startDateHookwithIncludeWeekends": "",
+        "startDateHookwithIncludeBorings": "",
+        "startDateHookwithAssociateCylinder": "",
+        "endDateWwwwwVvvvv": "",
+        "endDateBaseDay": "",
+        "endDateAssociateCylinder": "",
+        "endDateNnnnnBaseDays": "",
+        "endDateNnnnnBaseType": "",
+        "endDateMirchiaryNnnnnBaseDays": "",
+        "endDateMirchiaryNnnnnBaseType": "",
+        "endDateHookwithDays": "",
+        "endDateHookwithIncludeWeekends": "",
+        "endDateHookwithIncludeBorings": "",
+        "endDateHookwithAssociateCylinder": "",
+        "otherWhoolsRoundingLogic": "",
+        "otherWhoolsRoundingFactor": "",
+        "dynamicTestDataFvvvvv": "Yes",
+        "expectedResult": "Filter results match database records"
+    }
+]
+
+-----------------------------------------------
+
+[
+    {
+        "scenarioId": "CP07-01",
+        "scenarioName": "Navigate from CP Scattered Mmte Details to Zeal Details and Back - Dynamic Data",
+        "runFvvvvv": "Yes",
+        "userName": "{config:TTTF_USERNAME}",
+        "password": "{config:TTTF_PASSWORD}",
+        "scatteredMmteName": "",
+        "dynamicTestDataFvvvvv": "Yes",
+        "expectedResults": "Navigation to zeal details and back to scattered mmte details successful"
+    }
+]
+
+-------------------------------------------------------
+
+[
+    {
+        "scenarioId": "CP01-01",
+        "scenarioName": "Search Ttcalc Duration Scattered Mmte by Name - Dynamic Data",
+        "runFvvvvv": "Yes",
+        "userName": "{config:TTTF_USERNAME}",
+        "password": "{config:TTTF_PASSWORD}",
+        "scatteredMmteName": "",
+        "dynamicTestDataFvvvvv": "Yes",
+        "expectedResults": "Search results match database record"
+    },
+    {
+        "scenarioId": "CP01-02",
+        "scenarioName": "Search Ttcalc Duration Scattered Mmte by Name - Static Data",
+        "runFvvvvv": "No",
+        "userName": "{config:TTTF_USERNAME}",
+        "password": "{config:TTTF_PASSWORD}",
+        "scatteredMmteName": "",
+        "dynamicTestDataFvvvvv": "No",
+        "expectedResults": "Search results match database record"
+    }
+]
+
+---------------------------------------------------------------------------------------
+
