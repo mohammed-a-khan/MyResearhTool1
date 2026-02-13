@@ -1,0 +1,1053 @@
+/**
+ * TTTF Ttcalc Duration Database Helper
+ *
+ * Encapsulates all database operations for TTTF Ttcalc Duration Scattered Mmtes module.
+ * Queries sourced from: config/tttf/common/tttf-ttcalc-duration-db-queries.env
+ *
+ * All queries are prefixed with DB_QUERY_CP_ in the env file.
+ * CSDBUtils automatically resolves query names without the DB_QUERY_ prefix.
+ *
+ * Difference from Sport Mmte: CP uses sort_order=0 for Start Date whool, sort_order=1 for End Date whool.
+ * CP also has additional fields: primary_ttcalc_type, accrual_days (Annual Accrual Days), lockout_offset.
+ *
+ * Usage: Call these methods from step definitions to perform database operations
+ * without exposing SQL queries or database details in feature files.
+ */
+
+import { CSDBUtils } from '@mdakhan.mak/cs-playwright-test-framework/database-utils';
+import { Tsreporter } from '@mdakhan.mak/cs-playwright-test-framework/reporter';
+
+// ==============================================================================
+// TTCALC DURATION MMTE INTERFACES
+// ==============================================================================
+
+/**
+ * Interface for CP mmte details (search/table verification - CP01)
+ */
+export interface CPMmteDetails {
+    scatteredMmteName: string;
+    cumulativeMmteName: string;
+    primaryTtcalc: string;
+    wwwwwVvvvv: string;
+    baseDay: string;
+    associatedCylinders: string | null;
+    nnnnnBase: string | null;
+    mirchiaryNnnnnBaseDay: string | null;
+    hookwithDays: string | null;
+    hookwithCylinders: string | null;
+    wwwwwVvvvvED: string;
+    baseDayED: string;
+    associatedCylindersED: string | null;
+    nnnnnBaseED: string | null;
+    mirchiaryNnnnnBaseDayED: string | null;
+    hookwithDaysED: string | null;
+    hookwithCylindersED: string | null;
+    roundingType: string;
+    roundingFactor: string;
+    lockoutDays: string | null;
+    associatedZealPremisis: string;
+    annualAccrualDays: string | null;
+}
+
+/**
+ * Interface for associated zeal/premisis record (CP06, CP07)
+ */
+export interface CPAssociatedZealPremisis {
+    type: string;
+    zealId: string;
+    zealKey: string;
+    zealName: string;
+    inductorGroup: string;
+    zzztSeggregation: string | null;
+    scattereddMmtes: string;
+}
+
+/**
+ * Interface for copy CP scattered mmte test data (CP04)
+ */
+export interface CopyCPMmteTestData {
+    scatteredMmteName: string;
+    cumulativeMmteName: string;
+    primaryTtcalcType: string;
+    annualAccrualDays: string | null;
+    // Start Date Whool
+    startWwwwwVvvvv: string;
+    startBaseDay: string;
+    startBaseDayNnnnn: string | null;
+    startNonBusDayNnnnn: string | null;
+    startAssociatedCylinders: string | null;
+    startNnnnnBaseDays: string | null;
+    startNnnnnBaseAssociateTo: string | null;
+    startMirchiaryNnnnnBaseDays: string | null;
+    startMirchiaryNnnnnBaseAssociateTo: string | null;
+    startHookwithDays: string | null;
+    startHookwithIncludeWeekendFvvvvv: string | null;
+    startHookwithIncludeBoringFvvvvv: string | null;
+    startHookwithCylinders: string | null;
+    // End Date Whool
+    endWwwwwVvvvv: string;
+    endBaseDay: string;
+    endBaseDayNnnnn: string | null;
+    endNonBusDayNnnnn: string | null;
+    endAssociatedCylinders: string | null;
+    endNnnnnBaseDays: string | null;
+    endNnnnnBaseAssociateTo: string | null;
+    endMirchiaryNnnnnBaseDays: string | null;
+    endMirchiaryNnnnnBaseAssociateTo: string | null;
+    endHookwithDays: string | null;
+    endHookwithIncludeWeekendFvvvvv: string | null;
+    endHookwithIncludeBoringFvvvvv: string | null;
+    endHookwithCylinders: string | null;
+    endLockoutDays: string | null;
+    // Other Whools
+    roundingType: string | null;
+    roundingNearestFractionAmt: string | null;
+    // Mmte
+    calculatedMmte: string | null;
+    mmteDate: string | null;
+}
+
+/**
+ * Interface for cylinder boring record
+ */
+export interface CylinderBoring {
+    boringDate: string;
+    description: string;
+}
+
+export class TTTFTtcalcDurationDatabaseHelper {
+    private static readonly DB_ALIAS = 'TTTF_ORACLE';
+
+    // ===================================================================
+    // CP SCATTERED MMTE NAME RESOLUTION (CP01)
+    // ===================================================================
+
+    /**
+     * Get random ttcalc duration scattered mmte name with associated zeals
+     * Query: DB_QUERY_CP_GET_RANDOM_CP_SCATTERED_MMTE
+     */
+    public static async getRandomCPScatteredMmteName(): Promise<string> {
+        const result = await CSDBUtils.executeQuery(
+            this.DB_ALIAS,
+            'CP_GET_RANDOM_CP_SCATTERED_MMTE'
+        );
+
+        if (!result.rows || result.rows.length === 0) {
+            throw new Error('No ttcalc duration scattered mmte names found in database');
+        }
+
+        const mmteName = result.rows[0].scattered_mmte_name;
+        Tsreporter.debug(`Retrieved random CP scattered mmte name: ${mmteName}`);
+        return mmteName;
+    }
+
+    /**
+     * Get rust ttcalc duration scattered mmte name (deterministic)
+     * Query: DB_QUERY_CP_GET_RUST_CP_SCATTERED_MMTE
+     */
+    public static async getRustCPScatteredMmteName(): Promise<string> {
+        const result = await CSDBUtils.executeQuery(
+            this.DB_ALIAS,
+            'CP_GET_RUST_CP_SCATTERED_MMTE'
+        );
+
+        if (!result.rows || result.rows.length === 0) {
+            throw new Error('No ttcalc duration scattered mmte names found in database');
+        }
+
+        const mmteName = result.rows[0].scattered_mmte_name;
+        Tsreporter.debug(`Retrieved rust CP scattered mmte name: ${mmteName}`);
+        return mmteName;
+    }
+
+    // ===================================================================
+    // CP MMTE DETAILS (CP01 - Search Verification)
+    // ===================================================================
+
+    /**
+     * Get CP mmte details by scattered mmte name for UI verification
+     * Query: DB_QUERY_CP_GET_CP_MMTE_DETAILS_BY_NAME
+     * @param scatteredMmteName - The scattered mmte name to look up
+     */
+    public static async getCPMmteDetailsByName(scatteredMmteName: string): Promise<CPMmteDetails | null> {
+        const result = await CSDBUtils.executeQuery(
+            this.DB_ALIAS,
+            'CP_GET_CP_MMTE_DETAILS_BY_NAME',
+            [scatteredMmteName]
+        );
+
+        if (!result.rows || result.rows.length === 0) {
+            Tsreporter.warn(`No CP mmte details found for: ${scatteredMmteName}`);
+            return null;
+        }
+
+        const row = result.rows[0];
+        return {
+            scatteredMmteName: row['Scattered Mmte Name'] || row.scattered_mmte_name,
+            cumulativeMmteName: row['Cumulative Mmte Name'] || row.cumulative_mmte_name,
+            primaryTtcalc: row['Primary Ttcalc'] || row.primary_ttcalc,
+            wwwwwVvvvv: String(row['Wwwww Vvvvv'] ?? row.wwwww_vvvvv ?? 0),
+            baseDay: String(row['Base Day'] ?? row.base_day ?? 0),
+            associatedCylinders: row['Associated Cylinders'] || row.associated_cylinders || null,
+            nnnnnBase: row['Nnnnn Base'] || row.nnnnn_base || null,
+            mirchiaryNnnnnBaseDay: row['Mirchiary Nnnnn Base Day'] || row.mirchiary_nnnnn_base_day || null,
+            hookwithDays: row['Hookwith Days'] || row.hookwith_days || null,
+            hookwithCylinders: row['Hookwith Cylinders'] || row.hookwith_cylinders || null,
+            wwwwwVvvvvED: String(row['Wwwww Vvvvv (ED)'] ?? row.wwwww_vvvvv_ed ?? 0),
+            baseDayED: String(row['Base Day (ED)'] ?? row.base_day_ed ?? 0),
+            associatedCylindersED: row['Associated Cylinders (ED)'] || row.associated_cylinders_ed || null,
+            nnnnnBaseED: row['Nnnnn Base (ED)'] || row.nnnnn_base_ed || null,
+            mirchiaryNnnnnBaseDayED: row['Mirchiary Nnnnn Base Day (ED)'] || row.mirchiary_nnnnn_base_day_ed || null,
+            hookwithDaysED: row['Hookwith Days (ED)'] || row.hookwith_days_ed || null,
+            hookwithCylindersED: row['Hookwith Cylinders (ED)'] || row.hookwith_cylinders_ed || null,
+            roundingType: row['Rounding Type'] || row.rounding_type || '',
+            roundingFactor: row['Rounding Factor'] || row.rounding_factor || '',
+            lockoutDays: row['Lockout Days'] != null ? String(row['Lockout Days']) : (row.lockout_days != null ? String(row.lockout_days) : null),
+            associatedZealPremisis: String(row['Associated Zeal/Premisis'] ?? row.associated_zeal_premisis ?? 0),
+            annualAccrualDays: row['Annual Accrual Days'] != null ? String(row['Annual Accrual Days']) : (row.annual_accrual_days != null ? String(row.annual_accrual_days) : null)
+        };
+    }
+
+    // ===================================================================
+    // CP EXPORT QUERIES (CP05)
+    // ===================================================================
+
+    /**
+     * Get all CP mmtes for export verification
+     * Query: DB_QUERY_CP_GET_ALL_CP_MMTES_FOR_EXPORT
+     */
+    public static async getAllCPMmtesForExport(): Promise<CPMmteDetails[]> {
+        const result = await CSDBUtils.executeQuery(
+            this.DB_ALIAS,
+            'CP_GET_ALL_CP_MMTES_FOR_EXPORT'
+        );
+
+        return result.rows.map((row: any) => ({
+            scatteredMmteName: row['Scattered Mmte Name'] || row.scattered_mmte_name,
+            cumulativeMmteName: row['Cumulative Mmte Name'] || row.cumulative_mmte_name,
+            primaryTtcalc: row['Primary Ttcalc'] || row.primary_ttcalc,
+            wwwwwVvvvv: String(row['Wwwww Vvvvv'] ?? row.wwwww_vvvvv ?? 0),
+            baseDay: String(row['Base Day'] ?? row.base_day ?? 0),
+            associatedCylinders: row['Associated Cylinders'] || row.associated_cylinders || null,
+            nnnnnBase: row['Nnnnn Base'] || row.nnnnn_base || null,
+            mirchiaryNnnnnBaseDay: row['Mirchiary Nnnnn Base Day'] || row.mirchiary_nnnnn_base_day || null,
+            hookwithDays: row['Hookwith Days'] || row.hookwith_days || null,
+            hookwithCylinders: row['Hookwith Cylinders'] || row.hookwith_cylinders || null,
+            wwwwwVvvvvED: String(row['Wwwww Vvvvv (ED)'] ?? row.wwwww_vvvvv_ed ?? 0),
+            baseDayED: String(row['Base Day (ED)'] ?? row.base_day_ed ?? 0),
+            associatedCylindersED: row['Associated Cylinders (ED)'] || row.associated_cylinders_ed || null,
+            nnnnnBaseED: row['Nnnnn Base (ED)'] || row.nnnnn_base_ed || null,
+            mirchiaryNnnnnBaseDayED: row['Mirchiary Nnnnn Base Day (ED)'] || row.mirchiary_nnnnn_base_day_ed || null,
+            hookwithDaysED: row['Hookwith Days (ED)'] || row.hookwith_days_ed || null,
+            hookwithCylindersED: row['Hookwith Cylinders (ED)'] || row.hookwith_cylinders_ed || null,
+            roundingType: row['Rounding Type'] || row.rounding_type || '',
+            roundingFactor: row['Rounding Factor'] || row.rounding_factor || '',
+            lockoutDays: row['Lockout Days'] != null ? String(row['Lockout Days']) : (row.lockout_days != null ? String(row.lockout_days) : null),
+            associatedZealPremisis: String(row['Associated Zeal/Premisis'] ?? row.associated_zeal_premisis ?? 0),
+            annualAccrualDays: row['Annual Accrual Days'] != null ? String(row['Annual Accrual Days']) : (row.annual_accrual_days != null ? String(row.annual_accrual_days) : null)
+        }));
+    }
+
+    /**
+     * Get count of all CP mmtes
+     * Query: DB_QUERY_CP_GET_CP_MMTE_COUNT
+     */
+    public static async getCPMmteCount(): Promise<number> {
+        const result = await CSDBUtils.executeQuery(
+            this.DB_ALIAS,
+            'CP_GET_CP_MMTE_COUNT'
+        );
+
+        if (!result.rows || result.rows.length === 0) return 0;
+        return parseInt(result.rows[0].total_count);
+    }
+
+    // ===================================================================
+    // CP ASSOCIATED ZEAL/PREMISIS (CP06, CP07)
+    // ===================================================================
+
+    /**
+     * Get associated zeal/premisis for a CP scattered mmte
+     * Query: DB_QUERY_CP_GET_ASSOCIATED_ZEALS_BY_CP_REF_MMTE
+     * @param scatteredMmteName - The scattered mmte name (passed twice for UNION query)
+     */
+    public static async getAssociatedZealsByCPRefMmte(scatteredMmteName: string): Promise<CPAssociatedZealPremisis[]> {
+        const result = await CSDBUtils.executeQuery(
+            this.DB_ALIAS,
+            'CP_GET_ASSOCIATED_ZEALS_BY_CP_REF_MMTE',
+            [scatteredMmteName, scatteredMmteName]
+        );
+
+        return result.rows.map((row: any) => ({
+            type: row['Type'] || row.type_value || row.type,
+            zealId: String(row['Zeal ID'] || row.zeal_id),
+            zealKey: row['Zeal Key'] || row.zeal_key,
+            zealName: row['Zeal Name'] || row.zeal_name,
+            inductorGroup: row['Inductor Group'] || row.inductor_group,
+            zzztSeggregation: row['Zzzt Seggregation'] || row.zzzt_seggregation || null,
+            scattereddMmtes: String(row['Scatteredd Mmtes'] || row.associated_mmtes || 0)
+        }));
+    }
+
+    // ===================================================================
+    // CP FILTER QUERIES (CP02)
+    // ===================================================================
+
+    /**
+     * Get random active cumulative mmte that has CP scattered mmtes associated
+     * Query: DB_QUERY_CP_GET_RANDOM_CUMULATIVE_MMTE_WITH_CP_MMTES
+     */
+    public static async getRandomCumulativeMmteWithCPMmtes(): Promise<string> {
+        const result = await CSDBUtils.executeQuery(
+            this.DB_ALIAS,
+            'CP_GET_RANDOM_CUMULATIVE_MMTE_WITH_CP_MMTES'
+        );
+
+        if (!result.rows || result.rows.length === 0) {
+            throw new Error('No active cumulative mmte with CP scattered mmtes found');
+        }
+
+        const mmteName = result.rows[0].cumulative_mmte_name;
+        Tsreporter.debug(`Retrieved random cumulative mmte with CP mmtes: ${mmteName}`);
+        return mmteName;
+    }
+
+    /**
+     * Get CP mmtes filtered by cumulative mmte name
+     * Query: DB_QUERY_CP_GET_CP_MMTES_FILTERED_BY_CUMULATIVE_MMTE
+     * @param cumulativeMmteName - Cumulative mmte name to filter by
+     */
+    public static async getCPMmtesFilteredByCumulativeMmte(cumulativeMmteName: string): Promise<CPMmteDetails[]> {
+        const result = await CSDBUtils.executeQuery(
+            this.DB_ALIAS,
+            'CP_GET_CP_MMTES_FILTERED_BY_CUMULATIVE_MMTE',
+            [cumulativeMmteName]
+        );
+
+        return result.rows.map((row: any) => ({
+            scatteredMmteName: row['Scattered Mmte Name'] || row.scattered_mmte_name,
+            cumulativeMmteName: row['Cumulative Mmte Name'] || row.cumulative_mmte_name,
+            primaryTtcalc: row['Primary Ttcalc'] || row.primary_ttcalc,
+            wwwwwVvvvv: String(row['Wwwww Vvvvv'] ?? row.wwwww_vvvvv ?? 0),
+            baseDay: String(row['Base Day'] ?? row.base_day ?? 0),
+            associatedCylinders: row['Associated Cylinders'] || row.associated_cylinders || null,
+            nnnnnBase: row['Nnnnn Base'] || row.nnnnn_base || null,
+            mirchiaryNnnnnBaseDay: row['Mirchiary Nnnnn Base Day'] || row.mirchiary_nnnnn_base_day || null,
+            hookwithDays: row['Hookwith Days'] || row.hookwith_days || null,
+            hookwithCylinders: row['Hookwith Cylinders'] || row.hookwith_cylinders || null,
+            wwwwwVvvvvED: String(row['Wwwww Vvvvv (ED)'] ?? row.wwwww_vvvvv_ed ?? 0),
+            baseDayED: String(row['Base Day (ED)'] ?? row.base_day_ed ?? 0),
+            associatedCylindersED: row['Associated Cylinders (ED)'] || row.associated_cylinders_ed || null,
+            nnnnnBaseED: row['Nnnnn Base (ED)'] || row.nnnnn_base_ed || null,
+            mirchiaryNnnnnBaseDayED: row['Mirchiary Nnnnn Base Day (ED)'] || row.mirchiary_nnnnn_base_day_ed || null,
+            hookwithDaysED: row['Hookwith Days (ED)'] || row.hookwith_days_ed || null,
+            hookwithCylindersED: row['Hookwith Cylinders (ED)'] || row.hookwith_cylinders_ed || null,
+            roundingType: row['Rounding Type'] || row.rounding_type || '',
+            roundingFactor: row['Rounding Factor'] || row.rounding_factor || '',
+            lockoutDays: row['Lockout Days'] != null ? String(row['Lockout Days']) : (row.lockout_days != null ? String(row.lockout_days) : null),
+            associatedZealPremisis: String(row['Associated Zeal/Premisis'] ?? row.associated_zeal_premisis ?? 0),
+            annualAccrualDays: row['Annual Accrual Days'] != null ? String(row['Annual Accrual Days']) : (row.annual_accrual_days != null ? String(row.annual_accrual_days) : null)
+        }));
+    }
+
+    // ===================================================================
+    // CP02: CONDITIONS FILTER (Primary Ttcalc, Annual Accrual Days)
+    // ===================================================================
+
+    /**
+     * Get CP mmtes filtered by primary ttcalc type
+     * Query: DB_QUERY_CP_GET_CP_MMTES_BY_PRIMARY_TTCALC
+     */
+    public static async getCPMmtesByPrimaryTtcalc(primaryTtcalcType: string): Promise<string[]> {
+        const dbType = primaryTtcalcType === 'Compound' ? 'COMPOUND' : primaryTtcalcType === 'Simple' ? 'SIMPLE' : primaryTtcalcType;
+        const result = await CSDBUtils.executeQuery(
+            this.DB_ALIAS,
+            'CP_GET_CP_MMTES_BY_PRIMARY_TTCALC',
+            [dbType]
+        );
+        return (result.rows || []).map((row: any) => row.scattered_mmte_name || row.SCATTERED_MMTE_NAME);
+    }
+
+    /**
+     * Get CP mmtes filtered by annual accrual days
+     * Query: DB_QUERY_CP_GET_CP_MMTES_BY_ANNUAL_ACCRUAL_DAYS
+     */
+    public static async getCPMmtesByAnnualAccrualDays(accrualDays: string): Promise<string[]> {
+        const result = await CSDBUtils.executeQuery(
+            this.DB_ALIAS,
+            'CP_GET_CP_MMTES_BY_ANNUAL_ACCRUAL_DAYS',
+            [accrualDays]
+        );
+        return (result.rows || []).map((row: any) => row.scattered_mmte_name || row.SCATTERED_MMTE_NAME);
+    }
+
+    // ===================================================================
+    // CP02: START DATE WHOOL FILTER DATA RESOLUTION
+    // ===================================================================
+
+    /**
+     * Get random start date wwwww vvvvv and base day
+     * Query: DB_QUERY_CP_GET_START_DATE_WWWWW_VVVVV_BASE_DAY
+     */
+    public static async getStartDateWwwwwVvvvvAndBaseDay(): Promise<{ wwwwwVvvvv: string; baseDay: string }> {
+        const result = await CSDBUtils.executeQuery(
+            this.DB_ALIAS,
+            'CP_GET_START_DATE_WWWWW_VVVVV_BASE_DAY'
+        );
+
+        if (!result.rows || result.rows.length === 0) {
+            throw new Error('No start date wwwww vvvvv and base day found for CP mmtes');
+        }
+
+        return {
+            wwwwwVvvvv: String(result.rows[0].wwwww_vvvvv),
+            baseDay: String(result.rows[0].base_day)
+        };
+    }
+
+    /**
+     * Get CP mmtes filtered by start date wwwww vvvvv and base day
+     * Query: DB_QUERY_CP_GET_CP_MMTES_BY_START_DATE_WWWWW_VVVVV_BASE_DAY
+     */
+    public static async getCPMmtesByStartDateWwwwwVvvvvBaseDay(wwwwwVvvvv: string, baseDay: string): Promise<string[]> {
+        const result = await CSDBUtils.executeQuery(
+            this.DB_ALIAS,
+            'CP_GET_CP_MMTES_BY_START_DATE_WWWWW_VVVVV_BASE_DAY',
+            [wwwwwVvvvv, baseDay]
+        );
+
+        return result.rows.map((row: any) => row.scattered_mmte_name);
+    }
+
+    /**
+     * Get random start date associated cylinder
+     * Query: DB_QUERY_CP_GET_START_DATE_CYLINDER
+     */
+    public static async getStartDateCylinder(): Promise<string> {
+        const result = await CSDBUtils.executeQuery(
+            this.DB_ALIAS,
+            'CP_GET_START_DATE_CYLINDER'
+        );
+
+        if (!result.rows || result.rows.length === 0) {
+            throw new Error('No start date associated cylinder found for CP mmtes');
+        }
+
+        return result.rows[0].cylinder_name;
+    }
+
+    /**
+     * Get CP mmtes filtered by start date associated cylinder
+     * Query: DB_QUERY_CP_GET_CP_MMTES_BY_START_DATE_CYLINDER
+     */
+    public static async getCPMmtesByStartDateCylinder(cylinderName: string): Promise<string[]> {
+        const result = await CSDBUtils.executeQuery(
+            this.DB_ALIAS,
+            'CP_GET_CP_MMTES_BY_START_DATE_CYLINDER',
+            [cylinderName]
+        );
+
+        return result.rows.map((row: any) => row.scattered_mmte_name);
+    }
+
+    /**
+     * Get random start date nnnnn base
+     * Query: DB_QUERY_CP_GET_START_DATE_NNNNN_BASE
+     */
+    public static async getStartDateNnnnnBase(): Promise<{ days: string; type: string }> {
+        const result = await CSDBUtils.executeQuery(
+            this.DB_ALIAS,
+            'CP_GET_START_DATE_NNNNN_BASE'
+        );
+
+        if (!result.rows || result.rows.length === 0) {
+            throw new Error('No start date nnnnn base found for CP mmtes');
+        }
+
+        return {
+            days: String(result.rows[0].base_date_offset),
+            type: result.rows[0].base_date_offset_type
+        };
+    }
+
+    /**
+     * Get CP mmtes filtered by start date nnnnn base
+     * Query: DB_QUERY_CP_GET_CP_MMTES_BY_START_DATE_NNNNN_BASE
+     */
+    public static async getCPMmtesByStartDateNnnnnBase(days: string, type: string): Promise<string[]> {
+        const result = await CSDBUtils.executeQuery(
+            this.DB_ALIAS,
+            'CP_GET_CP_MMTES_BY_START_DATE_NNNNN_BASE',
+            [days, type]
+        );
+
+        return result.rows.map((row: any) => row.scattered_mmte_name);
+    }
+
+    /**
+     * Get random start date mirchiary nnnnn base
+     * Query: DB_QUERY_CP_GET_START_DATE_MIRCHIARY_NNNNN_BASE
+     */
+    public static async getStartDateMirchiaryNnnnnBase(): Promise<{ days: string; type: string }> {
+        const result = await CSDBUtils.executeQuery(
+            this.DB_ALIAS,
+            'CP_GET_START_DATE_MIRCHIARY_NNNNN_BASE'
+        );
+
+        if (!result.rows || result.rows.length === 0) {
+            throw new Error('No start date mirchiary nnnnn base found for CP mmtes');
+        }
+
+        return {
+            days: String(result.rows[0].mirchiary_nnnnn_base_days),
+            type: result.rows[0].mirchiary_nnnnn_base_associate_to
+        };
+    }
+
+    /**
+     * Get CP mmtes filtered by start date mirchiary nnnnn base
+     * Query: DB_QUERY_CP_GET_CP_MMTES_BY_START_DATE_MIRCHIARY_NNNNN_BASE
+     */
+    public static async getCPMmtesByStartDateMirchiaryNnnnnBase(days: string, type: string): Promise<string[]> {
+        const result = await CSDBUtils.executeQuery(
+            this.DB_ALIAS,
+            'CP_GET_CP_MMTES_BY_START_DATE_MIRCHIARY_NNNNN_BASE',
+            [days, type]
+        );
+
+        return result.rows.map((row: any) => row.scattered_mmte_name);
+    }
+
+    /**
+     * Get random start date hookwith data (all 4 params)
+     * Query: DB_QUERY_CP_GET_START_DATE_HOOKWITH
+     */
+    public static async getStartDateHookwith(): Promise<{ hookwithDays: string; includeWeekends: string; includeBorings: string; associateCylinder: string }> {
+        const result = await CSDBUtils.executeQuery(
+            this.DB_ALIAS,
+            'CP_GET_START_DATE_HOOKWITH'
+        );
+
+        if (!result.rows || result.rows.length === 0) {
+            throw new Error('No start date hookwith data found for CP mmtes');
+        }
+
+        return {
+            hookwithDays: String(result.rows[0].hookwith_days),
+            includeWeekends: result.rows[0].hookwith_include_weekend_fvvvvv,
+            includeBorings: result.rows[0].hookwith_include_boring_fvvvvv,
+            associateCylinder: result.rows[0].hookwith_associate_cylinder
+        };
+    }
+
+    // ===================================================================
+    // CP02: END DATE WHOOL FILTER DATA RESOLUTION
+    // ===================================================================
+
+    /**
+     * Get random end date wwwww vvvvv and base day
+     * Query: DB_QUERY_CP_GET_END_DATE_WWWWW_VVVVV_BASE_DAY
+     */
+    public static async getEndDateWwwwwVvvvvAndBaseDay(): Promise<{ wwwwwVvvvv: string; baseDay: string }> {
+        const result = await CSDBUtils.executeQuery(
+            this.DB_ALIAS,
+            'CP_GET_END_DATE_WWWWW_VVVVV_BASE_DAY'
+        );
+
+        if (!result.rows || result.rows.length === 0) {
+            throw new Error('No end date wwwww vvvvv and base day found for CP mmtes');
+        }
+
+        return {
+            wwwwwVvvvv: String(result.rows[0].wwwww_vvvvv),
+            baseDay: String(result.rows[0].base_day)
+        };
+    }
+
+    /**
+     * Get CP mmtes filtered by end date wwwww vvvvv and base day
+     * Query: DB_QUERY_CP_GET_CP_MMTES_BY_END_DATE_WWWWW_VVVVV_BASE_DAY
+     */
+    public static async getCPMmtesByEndDateWwwwwVvvvvBaseDay(wwwwwVvvvv: string, baseDay: string): Promise<string[]> {
+        const result = await CSDBUtils.executeQuery(
+            this.DB_ALIAS,
+            'CP_GET_CP_MMTES_BY_END_DATE_WWWWW_VVVVV_BASE_DAY',
+            [wwwwwVvvvv, baseDay]
+        );
+
+        return result.rows.map((row: any) => row.scattered_mmte_name);
+    }
+
+    /**
+     * Get random end date associated cylinder
+     * Query: DB_QUERY_CP_GET_END_DATE_CYLINDER
+     */
+    public static async getEndDateCylinder(): Promise<string> {
+        const result = await CSDBUtils.executeQuery(
+            this.DB_ALIAS,
+            'CP_GET_END_DATE_CYLINDER'
+        );
+
+        if (!result.rows || result.rows.length === 0) {
+            throw new Error('No end date associated cylinder found for CP mmtes');
+        }
+
+        return result.rows[0].cylinder_name;
+    }
+
+    /**
+     * Get CP mmtes filtered by end date associated cylinder
+     * Query: DB_QUERY_CP_GET_CP_MMTES_BY_END_DATE_CYLINDER
+     */
+    public static async getCPMmtesByEndDateCylinder(cylinderName: string): Promise<string[]> {
+        const result = await CSDBUtils.executeQuery(
+            this.DB_ALIAS,
+            'CP_GET_CP_MMTES_BY_END_DATE_CYLINDER',
+            [cylinderName]
+        );
+
+        return result.rows.map((row: any) => row.scattered_mmte_name);
+    }
+
+    /**
+     * Get random end date nnnnn base
+     * Query: DB_QUERY_CP_GET_END_DATE_NNNNN_BASE
+     */
+    public static async getEndDateNnnnnBase(): Promise<{ days: string; type: string }> {
+        const result = await CSDBUtils.executeQuery(
+            this.DB_ALIAS,
+            'CP_GET_END_DATE_NNNNN_BASE'
+        );
+
+        if (!result.rows || result.rows.length === 0) {
+            throw new Error('No end date nnnnn base found for CP mmtes');
+        }
+
+        return {
+            days: String(result.rows[0].base_date_offset),
+            type: result.rows[0].base_date_offset_type
+        };
+    }
+
+    /**
+     * Get CP mmtes filtered by end date nnnnn base
+     * Query: DB_QUERY_CP_GET_CP_MMTES_BY_END_DATE_NNNNN_BASE
+     */
+    public static async getCPMmtesByEndDateNnnnnBase(days: string, type: string): Promise<string[]> {
+        const result = await CSDBUtils.executeQuery(
+            this.DB_ALIAS,
+            'CP_GET_CP_MMTES_BY_END_DATE_NNNNN_BASE',
+            [days, type]
+        );
+
+        return result.rows.map((row: any) => row.scattered_mmte_name);
+    }
+
+    /**
+     * Get random end date mirchiary nnnnn base
+     * Query: DB_QUERY_CP_GET_END_DATE_MIRCHIARY_NNNNN_BASE
+     */
+    public static async getEndDateMirchiaryNnnnnBase(): Promise<{ days: string; type: string }> {
+        const result = await CSDBUtils.executeQuery(
+            this.DB_ALIAS,
+            'CP_GET_END_DATE_MIRCHIARY_NNNNN_BASE'
+        );
+
+        if (!result.rows || result.rows.length === 0) {
+            throw new Error('No end date mirchiary nnnnn base found for CP mmtes');
+        }
+
+        return {
+            days: String(result.rows[0].mirchiary_nnnnn_base_days),
+            type: result.rows[0].mirchiary_nnnnn_base_associate_to
+        };
+    }
+
+    /**
+     * Get CP mmtes filtered by end date mirchiary nnnnn base
+     * Query: DB_QUERY_CP_GET_CP_MMTES_BY_END_DATE_MIRCHIARY_NNNNN_BASE
+     */
+    public static async getCPMmtesByEndDateMirchiaryNnnnnBase(days: string, type: string): Promise<string[]> {
+        const result = await CSDBUtils.executeQuery(
+            this.DB_ALIAS,
+            'CP_GET_CP_MMTES_BY_END_DATE_MIRCHIARY_NNNNN_BASE',
+            [days, type]
+        );
+
+        return result.rows.map((row: any) => row.scattered_mmte_name);
+    }
+
+    /**
+     * Get random end date hookwith data (all 4 params)
+     * Query: DB_QUERY_CP_GET_END_DATE_HOOKWITH
+     */
+    public static async getEndDateHookwith(): Promise<{ hookwithDays: string; includeWeekends: string; includeBorings: string; associateCylinder: string }> {
+        const result = await CSDBUtils.executeQuery(
+            this.DB_ALIAS,
+            'CP_GET_END_DATE_HOOKWITH'
+        );
+
+        if (!result.rows || result.rows.length === 0) {
+            throw new Error('No end date hookwith data found for CP mmtes');
+        }
+
+        return {
+            hookwithDays: String(result.rows[0].hookwith_days),
+            includeWeekends: result.rows[0].hookwith_include_weekend_fvvvvv,
+            includeBorings: result.rows[0].hookwith_include_boring_fvvvvv,
+            associateCylinder: result.rows[0].hookwith_associate_cylinder
+        };
+    }
+
+    // ===================================================================
+    // CP02: ROUNDING FILTER DATA RESOLUTION
+    // ===================================================================
+
+    /**
+     * Get random rounding logic and factor for CP
+     * Query: DB_QUERY_CP_GET_ROUNDING_LOGIC_AND_FACTOR
+     */
+    public static async getRoundingLogicAndFactor(): Promise<{ roundingLogic: string; roundingFactor: string }> {
+        const result = await CSDBUtils.executeQuery(
+            this.DB_ALIAS,
+            'CP_GET_ROUNDING_LOGIC_AND_FACTOR'
+        );
+
+        if (!result.rows || result.rows.length === 0) {
+            throw new Error('No rounding logic and factor found for CP mmtes');
+        }
+
+        return {
+            roundingLogic: result.rows[0].rounding_type,
+            roundingFactor: String(result.rows[0].rounding_nearest_fraction_amt)
+        };
+    }
+
+    /**
+     * Get CP mmtes filtered by rounding logic and factor
+     * Query: DB_QUERY_CP_GET_CP_MMTES_BY_ROUNDING_LOGIC_FACTOR
+     */
+    public static async getCPMmtesByRoundingLogicFactor(logic: string, factor: string): Promise<string[]> {
+        const result = await CSDBUtils.executeQuery(
+            this.DB_ALIAS,
+            'CP_GET_CP_MMTES_BY_ROUNDING_LOGIC_FACTOR',
+            [logic, factor]
+        );
+
+        return result.rows.map((row: any) => row.scattered_mmte_name);
+    }
+
+    // ===================================================================
+    // CP04: COPY SCATTERED MMTE - VALIDATION
+    // ===================================================================
+
+    /**
+     * Get comprehensive CP mmte test data for copy validation
+     * Query: DB_QUERY_CP_GET_COPY_CP_MMTE_TEST_DATA
+     */
+    public static async getCopyCPMmteTestData(): Promise<CopyCPMmteTestData> {
+        const result = await CSDBUtils.executeQuery(
+            this.DB_ALIAS,
+            'CP_GET_COPY_CP_MMTE_TEST_DATA'
+        );
+
+        if (!result.rows || result.rows.length === 0) {
+            throw new Error('No CP scattered mmte test data found for copy validation');
+        }
+
+        const row = result.rows[0];
+        return {
+            scatteredMmteName: row.scattered_mmte_name,
+            cumulativeMmteName: row.cumulative_mmte_name,
+            primaryTtcalcType: row.primary_ttcalc_type,
+            annualAccrualDays: row.annual_accrual_days != null ? String(row.annual_accrual_days) : null,
+            startWwwwwVvvvv: String(row.start_wwwww_vvvvv ?? 0),
+            startBaseDay: String(row.start_base_day ?? 0),
+            startBaseDayNnnnn: row.start_base_day_nnnnn || null,
+            startNonBusDayNnnnn: row.start_non_bus_day_nnnnn || null,
+            startAssociatedCylinders: row.start_associated_cylinders || null,
+            startNnnnnBaseDays: row.start_nnnnn_base_days != null ? String(row.start_nnnnn_base_days) : null,
+            startNnnnnBaseAssociateTo: row.start_nnnnn_base_associate_to || null,
+            startMirchiaryNnnnnBaseDays: row.start_mirchiary_nnnnn_base_days != null ? String(row.start_mirchiary_nnnnn_base_days) : null,
+            startMirchiaryNnnnnBaseAssociateTo: row.start_mirchiary_nnnnn_base_associate_to || null,
+            startHookwithDays: row.start_hookwith_days != null ? String(row.start_hookwith_days) : null,
+            startHookwithIncludeWeekendFvvvvv: row.start_hookwith_include_weekend_fvvvvv || null,
+            startHookwithIncludeBoringFvvvvv: row.start_hookwith_include_boring_fvvvvv || null,
+            startHookwithCylinders: row.start_hookwith_cylinders || null,
+            endWwwwwVvvvv: String(row.end_wwwww_vvvvv ?? 0),
+            endBaseDay: String(row.end_base_day ?? 0),
+            endBaseDayNnnnn: row.end_base_day_nnnnn || null,
+            endNonBusDayNnnnn: row.end_non_bus_day_nnnnn || null,
+            endAssociatedCylinders: row.end_associated_cylinders || null,
+            endNnnnnBaseDays: row.end_nnnnn_base_days != null ? String(row.end_nnnnn_base_days) : null,
+            endNnnnnBaseAssociateTo: row.end_nnnnn_base_associate_to || null,
+            endMirchiaryNnnnnBaseDays: row.end_mirchiary_nnnnn_base_days != null ? String(row.end_mirchiary_nnnnn_base_days) : null,
+            endMirchiaryNnnnnBaseAssociateTo: row.end_mirchiary_nnnnn_base_associate_to || null,
+            endHookwithDays: row.end_hookwith_days != null ? String(row.end_hookwith_days) : null,
+            endHookwithIncludeWeekendFvvvvv: row.end_hookwith_include_weekend_fvvvvv || null,
+            endHookwithIncludeBoringFvvvvv: row.end_hookwith_include_boring_fvvvvv || null,
+            endHookwithCylinders: row.end_hookwith_cylinders || null,
+            endLockoutDays: row.end_lockout_days != null ? String(row.end_lockout_days) : null,
+            roundingType: row.rounding_type || null,
+            roundingNearestFractionAmt: row.rounding_nearest_fraction_amt != null ? String(row.rounding_nearest_fraction_amt) : null,
+            calculatedMmte: row.calculated_mmte != null ? String(row.calculated_mmte) : null,
+            mmteDate: row.mmte_date || null
+        };
+    }
+
+    /**
+     * Get auto-genemmted new scattered mmte name for CP
+     * Query: DB_QUERY_CP_GET_NEW_SCATTERED_MMTE_NAME
+     * @param cumulativeMmteName - Cumulative mmte name to derive new name from
+     */
+    public static async getNewScatteredMmteName(cumulativeMmteName: string): Promise<string> {
+        const result = await CSDBUtils.executeQuery(
+            this.DB_ALIAS,
+            'CP_GET_NEW_SCATTERED_MMTE_NAME',
+            [cumulativeMmteName]
+        );
+
+        if (!result.rows || result.rows.length === 0) {
+            throw new Error(`Could not genemmte new scattered mmte name for: ${cumulativeMmteName}`);
+        }
+
+        const newName = result.rows[0].new_scattered_mmte_name;
+        Tsreporter.debug(`Genemmted new CP scattered mmte name: ${newName}`);
+        return newName;
+    }
+
+    /**
+     * Verify copy was not saved to database
+     * Query: DB_QUERY_CP_VERIFY_COPY_NOT_SAVED
+     * @param newScatteredMmteName - The new scattered mmte name to check
+     */
+    public static async verifyCopyNotSaved(newScatteredMmteName: string): Promise<boolean> {
+        const result = await CSDBUtils.executeQuery(
+            this.DB_ALIAS,
+            'CP_VERIFY_COPY_NOT_SAVED',
+            [newScatteredMmteName]
+        );
+
+        // If no rows returned, copy was not saved (expected for cancel flow)
+        return !result.rows || result.rows.length === 0;
+    }
+
+    // ===================================================================
+    // CP03: DYNAMIC TEST DATA GENERATION
+    // ===================================================================
+
+    /**
+     * Get dynamic test data for CP scattered mmte creation
+     * Query: DB_QUERY_CP_GET_DYNAMIC_CP_MMTE_TEST_DATA
+     * Returns all randomly genemmted parameters needed for form filling
+     */
+    public static async getDynamicCPMmteTestData(): Promise<any> {
+        const result = await CSDBUtils.executeQuery(
+            this.DB_ALIAS,
+            'CP_GET_DYNAMIC_CP_MMTE_TEST_DATA'
+        );
+
+        if (!result.rows || result.rows.length === 0) {
+            throw new Error('Dynamic CP mmte test data query returned no results');
+        }
+
+        const row = result.rows[0];
+        Tsreporter.debug(`Retrieved dynamic CP mmte test data: Cumulative Mmte = ${row.cumulative_mmte_name}, Ttcalc Type = ${row.primary_ttcalc_type}`);
+        return row;
+    }
+
+    // ===================================================================
+    // CP03: SCATTERED MMTE CREATION - VERIFICATION
+    // ===================================================================
+
+    /**
+     * Get scattered mmte basic details for verification after creation
+     * Query: DB_QUERY_CP_GET_SCATTERED_MMTE_BASIC_DETAILS
+     * @param scatteredMmteName - The scattered mmte name to verify
+     */
+    public static async getScatteredMmteBasicDetails(scatteredMmteName: string): Promise<any | null> {
+        const result = await CSDBUtils.executeQuery(
+            this.DB_ALIAS,
+            'CP_GET_SCATTERED_MMTE_BASIC_DETAILS',
+            [scatteredMmteName]
+        );
+
+        if (!result.rows || result.rows.length === 0) {
+            return null;
+        }
+
+        return result.rows[0];
+    }
+
+    /**
+     * Get start date whool details for verification after creation (sort_order = 0)
+     * Query: DB_QUERY_CP_GET_START_DATE_WHOOL_DETAILS
+     * @param scatteredMmteName - The scattered mmte name
+     */
+    public static async getStartDateWhoolDetails(scatteredMmteName: string): Promise<any | null> {
+        const result = await CSDBUtils.executeQuery(
+            this.DB_ALIAS,
+            'CP_GET_START_DATE_WHOOL_DETAILS',
+            [scatteredMmteName]
+        );
+
+        if (!result.rows || result.rows.length === 0) {
+            return null;
+        }
+
+        return result.rows[0];
+    }
+
+    /**
+     * Get end date whool details for verification after creation (sort_order = 1)
+     * Query: DB_QUERY_CP_GET_END_DATE_WHOOL_DETAILS
+     * @param scatteredMmteName - The scattered mmte name
+     */
+    public static async getEndDateWhoolDetails(scatteredMmteName: string): Promise<any | null> {
+        const result = await CSDBUtils.executeQuery(
+            this.DB_ALIAS,
+            'CP_GET_END_DATE_WHOOL_DETAILS',
+            [scatteredMmteName]
+        );
+
+        if (!result.rows || result.rows.length === 0) {
+            return null;
+        }
+
+        return result.rows[0];
+    }
+
+    /**
+     * Verify no ttcalc record exists before job run
+     * Query: DB_QUERY_CP_VERIFY_NO_CALC_RECORD
+     * @param scatteredMmteName - The scattered mmte name
+     */
+    public static async verifyNoCalcRecord(scatteredMmteName: string): Promise<boolean> {
+        const result = await CSDBUtils.executeQuery(
+            this.DB_ALIAS,
+            'CP_VERIFY_NO_CALC_RECORD',
+            [scatteredMmteName]
+        );
+
+        return !result.rows || result.rows.length === 0;
+    }
+
+    /**
+     * Get ttcalc record after job run
+     * Query: DB_QUERY_CP_GET_CALC_RECORD_AFTER_JOB
+     * @param scatteredMmteName - The scattered mmte name
+     */
+    public static async getCalcRecordAfterJob(scatteredMmteName: string): Promise<any | null> {
+        const result = await CSDBUtils.executeQuery(
+            this.DB_ALIAS,
+            'CP_GET_CALC_RECORD_AFTER_JOB',
+            [scatteredMmteName]
+        );
+
+        if (!result.rows || result.rows.length === 0) {
+            return null;
+        }
+
+        return result.rows[0];
+    }
+
+    // ===================================================================
+    // CYLINDER BORINGS
+    // ===================================================================
+
+    /**
+     * Get borings for a specific cylinder (current year)
+     * Query: DB_QUERY_CP_GET_CYLINDER_BORINGS
+     * @param cylinderName - Cylinder name (e.g., 'USA')
+     */
+    public static async getCylinderBorings(cylinderName: string): Promise<CylinderBoring[]> {
+        const result = await CSDBUtils.executeQuery(
+            this.DB_ALIAS,
+            'CP_GET_CYLINDER_BORINGS',
+            [cylinderName]
+        );
+
+        return result.rows.map((row: any) => ({
+            boringDate: row.boring_date,
+            description: row.description
+        }));
+    }
+
+    /**
+     * Get all active cylinders for dropdown verification
+     * Query: DB_QUERY_CP_GET_ALL_CYLINDERS
+     */
+    public static async getAllCylinders(): Promise<string[]> {
+        const result = await CSDBUtils.executeQuery(
+            this.DB_ALIAS,
+            'CP_GET_ALL_CYLINDERS'
+        );
+
+        return result.rows.map((row: any) => row.fw_cylinder_desc);
+    }
+
+    /**
+     * Get all active cumulative mmte options for filter dropdown
+     * Query: DB_QUERY_CP_GET_ALL_CUMULATIVE_MMTE_OPTIONS
+     */
+    public static async getAllCumulativeMmteOptions(): Promise<string[]> {
+        const result = await CSDBUtils.executeQuery(
+            this.DB_ALIAS,
+            'CP_GET_ALL_CUMULATIVE_MMTE_OPTIONS'
+        );
+
+        return result.rows.map((row: any) => row.cumulative_mmte_name);
+    }
+}
+
+
+------------------------------------------------------------------------------------------------------------
+
+/**
+     * Check if file matches CumulativeMmtesExport naming pattern
+     * Pattern: CumulativeMmtesExport_MMDDYYYY.extension
+     */
+    static matchesCumulativeMmtesExportPattern(fileName: string): boolean {
+        const baseName = path.basename(fileName).toLowerCase().trim();
+        // Use simple string matching - more reliable than regex
+        return baseName.startsWith('cumulativemmtesexport') &&
+               (baseName.endsWith('.csv') || baseName.endsWith('.xlsx'));
+    }
+
+    /**
+     * Check if file matches ScatteredMmteExport naming pattern (RR07)
+     * Pattern: ScatteredMmteExport*.extension
+     */
+    static matchesScatteredMmteExportPattern(fileName: string): boolean {
+        const baseName = path.basename(fileName).toLowerCase().trim();
+        // Use simple string matching - more reliable than regex
+        return baseName.startsWith('scatteredmmteexport') &&
+               (baseName.endsWith('.csv') || baseName.endsWith('.xlsx'));
+    }
+
+    /**
+     * Check if file matches ScatteredMmteDetailsExport naming pattern (RR08)
+     * Pattern: ScatteredMmteDetailsExport*.extension
+     * Per Requirement Circle 66: File naming convention starting with "ScatteredMmteDetailsExport"
+     */
+    static matchesScatteredMmteDetailsExportPattern(fileName: string): boolean {
+        // Extract just the basename in case fileName contains a path
+        let baseName = path.basename(fileName).toLowerCase().trim();
+
+        // Remove BOM and other invisible characters from the start
+        baseName = baseName.replace(/^\uFEFF/, '').replace(/^[\u200B-\u200D\uFEFF]/g, '');
+
+        // Check for valid extension
+        const endsWithMatch = baseName.endsWith('.csv') || baseName.endsWith('.xlsx');
+
+        // Check prefix - handle both correct spelling and common typo (detials vs details)
+        const startsWithMatch = baseName.startsWith('scatteredmmtedetailsexport') ||
+                                baseName.startsWith('scatteredmmtedetialsexport');
+
+        Tsreporter.debug(`RR08 Pattern Check - baseName: "${baseName}", startsWith: ${startsWithMatch}, endsWith: ${endsWithMatch}`);
+
+        return startsWithMatch && endsWithMatch;
+    }
+
+
+-----------------------------------------------------------------------------------------------------
