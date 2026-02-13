@@ -1,130 +1,94 @@
-export const ELEMENT_TYPE_TO_ROLES: Record<string, string[]> = {
-    'button': ['button'],
-    'link': ['link'],
-    'input': ['textbox', 'searchbox'],
-    'textbox': ['textbox'],
-    'field': ['textbox', 'searchbox', 'combobox'],
-    'text field': ['textbox'],
-    'text input': ['textbox'],
-    'search': ['searchbox', 'search'],
-    'searchbox': ['searchbox'],
-    'checkbox': ['checkbox'],
-    'radio': ['radio'],
-    'radio button': ['radio'],
-    'select': ['combobox', 'listbox'],
-    'dropdown': ['combobox', 'listbox'],
-    'combobox': ['combobox'],
-    'listbox': ['listbox'],
-    'tab': ['tab'],
-    'menu': ['menu'],
-    'menu item': ['menuitem'],
-    'menuitem': ['menuitem'],
-    'heading': ['heading', 'columnheader', 'rowheader', 'banner'],
-    'dialog': ['dialog', 'alertdialog'],
-    'modal': ['dialog'],
-    'switch': ['switch'],
-    'slider': ['slider'],
-    'progressbar': ['progressbar'],
-    'tree': ['tree'],
-    'treeitem': ['treeitem'],
-    'grid': ['grid'],
-    'row': ['row'],
-    'cell': ['cell', 'gridcell'],
-    'table': ['table'],
-    'alert': ['alert'],
-    'tooltip': ['tooltip'],
-    'img': ['img'],
-    'image': ['img'],
-    'navigation': ['navigation'],
-    'region': ['region'],
-    'banner': ['banner'],
-    'form': ['form'],
-    'option': ['option'],
-    'list': ['list'],
-    'listitem': ['listitem'],
-    'list item': ['listitem'],
-    'header': ['heading', 'columnheader', 'rowheader', 'banner'],
-    'popup': ['dialog'],
-    'toggle button': ['button'],
-    'submit': ['button'],
-    'submit button': ['button'],
-    'section': ['region'],
-    'article': ['article'],
-    'main': ['main']
-};
-
-
--------------------------------------------------
-
-
 // ========================================================================
-    // Strategy 3: Text-based Search
+    // VALUE-IN-FIELD ASSERTIONS (Priority 103)
+    // Handles: Verify 'X' is displayed in the Y field [in the Z section]
+    // Must be higher priority than assert-visible to capture the "in the Y" part
     // ========================================================================
+    {
+        id: 'assert-value-displayed-in',
+        pattern: /^(?:verify|assert|check|confirm|ensure)\s+(?:that\s+)?__QUOTED_(\d+)__\s+(?:is\s+)?(?:displayed|shown|visible|present|appearing|available)\s+(?:in|on|at|under|within)\s+(?:the\s+)?(.+)$/i,
+        category: 'assertion',
+        intent: 'verify-text',
+        priority: 103,
+        extract: (match, quotedStrings) => {
+            const expectedValue = quotedStrings[parseInt(match[1])] || '';
+            const rawTarget = match[2].trim();
+            return {
+                targetText: rawTarget,
+                elementType: inferElementType(rawTarget),
+                expectedValue
+            };
+        },
+        examples: [
+            "Verify 'John Smith' is displayed in the Full Name field in the User Details section",
+            "Assert 'USD' is shown in the Currency dropdown",
+            "Check 'Active' is visible in the Status field on the Details page"
+        ]
+    },
 
-    private async matchViaTextSearch(
-        page: Page,
-        target: ElementTarget
-    ): Promise<MatchedElement | null> {
-        const searchText = this.buildSearchText(target);
-        if (!searchText) return null;
 
-        // Try exact match first — higher confidence, fewer false positives
-        // In heavily nested DOMs (legacy apps), inexact search matches ancestor elements too
-        try {
-            const exactLocator = page.getByText(searchText, { exact: true });
-            const exactCount = await exactLocator.count();
-            if (exactCount > 0) {
-                const baseConfidence = exactCount === 1 ? 0.75 : Math.max(0.5, 0.75 - exactCount * 0.05);
-                return {
-                    locator: this.selectByOrdinal(exactLocator, exactCount, target.ordinal),
-                    broadLocator: exactLocator,
-                    confidence: baseConfidence,
-                    method: 'text-search',
-                    description: `getByText('${searchText}', exact)${exactCount > 1 ? ` (${exactCount} matches)` : ''}`,
-                    alternatives: []
-                };
-            }
-        } catch { /* continue */ }
+-----------------------------------------
 
-        // Fall back to inexact match
-        try {
-            const locator = page.getByText(searchText, { exact: false });
-            const count = await locator.count();
-            if (count > 0) {
-                // Reduce confidence when many elements match (broad/generic text)
-                // Single match = 0.65, multiple = progressively lower
-                const baseConfidence = count === 1 ? 0.65 : Math.max(0.4, 0.65 - count * 0.05);
-                return {
-                    locator: this.selectByOrdinal(locator, count, target.ordinal),
-                    broadLocator: locator,
-                    confidence: baseConfidence,
-                    method: 'text-search',
-                    description: `getByText('${searchText}')${count > 1 ? ` (${count} matches)` : ''}`,
-                    alternatives: []
-                };
-            }
-        } catch { /* continue */ }
+case 'verify-text': {
+                this.requireElement(element, 'verify-text');
+                const el = this.createWrappedElement(element!, timeout);
+                if (parameters.expectedValue !== undefined) {
+                    const expected = parameters.expectedValue.trim();
+                    if (modifiers.negated) {
+                        await this.assertWithRetryAndScreenshot(
+                            async () => {
+                                const text = this.normalizeWhitespace(await el.textContent() || '');
+                                return text !== expected && !text.includes(expected);
+                            },
+                            `Expected text to NOT be "${expected}"`,
+                            timeout
+                        );
+                    } else {
+                        await this.assertWithRetryAndScreenshot(
+                            async () => {
+                                const text = this.normalizeWhitespace(await el.textContent() || '');
+                                // Try exact match first, then containment
+                                if (text === expected || text.includes(expected)) return true;
 
-        // Try with individual descriptor words — lower confidence since these are partial matches
-        for (const desc of target.descriptors) {
-            if (desc.length < 3) continue;
-            try {
-                const locator = page.getByText(desc, { exact: false });
-                const count = await locator.count();
-                if (count > 0 && count <= 10) {
-                    // Individual word matches are less reliable
-                    const baseConfidence = count === 1 ? 0.45 : Math.max(0.25, 0.45 - count * 0.05);
-                    return {
-                        locator: this.selectByOrdinal(locator, count, target.ordinal),
-                        broadLocator: locator,
-                        confidence: baseConfidence,
-                        method: 'text-search',
-                        description: `getByText('${desc}')${count > 1 ? ` (${count} matches)` : ''}`,
-                        alternatives: []
-                    };
+                                // Table layout fallback: if the matched element is a <th> or label,
+                                // the value is in the adjacent <td>. Check the parent <tr> row text
+                                // which contains both label and value. Common in legacy IE-era apps:
+                                //   <tr><th>Full Name</th><td>John Smith</td></tr>
+                                try {
+                                    const rowText = await element!.locator.evaluate((el: Element) => {
+                                        // Walk up to find the closest <tr>
+                                        let parent: Element | null = el.parentElement;
+                                        for (let i = 0; i < 5 && parent; i++) {
+                                            if (parent.tagName === 'TR') {
+                                                // Get text from <td> siblings only (exclude the <th> label)
+                                                const tds = parent.querySelectorAll('td');
+                                                return Array.from(tds).map(td => td.textContent?.trim() || '').join(' ');
+                                            }
+                                            parent = parent.parentElement;
+                                        }
+                                        return '';
+                                    });
+                                    if (rowText && (rowText === expected || rowText.includes(expected))) {
+                                        return true;
+                                    }
+                                } catch {
+                                    // Non-critical fallback
+                                }
+
+                                return false;
+                            },
+                            `Expected text "${expected}" but got different content`,
+                            timeout
+                        );
+                    }
+                } else {
+                    await this.assertWithRetryAndScreenshot(
+                        async () => {
+                            const text = (await el.textContent() || '').trim();
+                            return text.length > 0;
+                        },
+                        `Expected element to have text but it was empty`,
+                        timeout
+                    );
                 }
-            } catch { /* continue */ }
-        }
-
-        return null;
-    }
+                return this.success('verify-text');
+            }
