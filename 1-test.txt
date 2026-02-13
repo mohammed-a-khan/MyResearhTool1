@@ -1,75 +1,376 @@
- // ========================================================================
-    // PAGE LOAD STATE WAITS (Priority 87-89)
-    // ========================================================================
-    {
-        id: 'action-wait-domcontentloaded',
-        pattern: /^wait\s+(?:for\s+)?(?:the\s+)?(?:dom\s+content\s+loaded|domcontentloaded|dom\s+(?:to\s+)?(?:be\s+)?(?:loaded|ready))$/i,
-        category: 'action',
-        intent: 'wait-page-load',
-        priority: 87,
-        extract: () => ({
-            targetText: '',
-            params: { loadState: 'domcontentloaded' }
-        }),
-        examples: [
-            'Wait for DOM content loaded',
-            'Wait for domcontentloaded',
-            'Wait for DOM to be loaded',
-            'Wait for DOM ready'
-        ]
-    },
-    {
-        id: 'action-wait-page-load',
-        pattern: /^wait\s+(?:for\s+)?(?:the\s+)?(?:page\s+(?:to\s+)?(?:be\s+)?(?:loaded|load|complete|ready)|full\s+page\s+load|page\s+load\s+complete)$/i,
-        category: 'action',
-        intent: 'wait-page-load',
-        priority: 88,
-        extract: () => ({
-            targetText: '',
-            params: { loadState: 'load' }
-        }),
-        examples: [
-            'Wait for page to load',
-            'Wait for the page to be loaded',
-            'Wait for page load complete',
-            'Wait for page to be ready'
-        ]
-    },
-    {
-        id: 'action-wait-network-idle',
-        pattern: /^wait\s+(?:for\s+)?(?:the\s+)?(?:network\s+(?:to\s+)?(?:be\s+)?idle|network\s*idle|no\s+(?:more\s+)?network\s+(?:activity|requests))$/i,
-        category: 'action',
-        intent: 'wait-page-load',
-        priority: 89,
-        extract: () => ({
-            targetText: '',
-            params: { loadState: 'networkidle' }
-        }),
-        examples: [
-            'Wait for network idle',
-            'Wait for network to be idle',
-            'Wait for no more network activity',
-            'Wait for no network requests'
-        ]
-    },
+case 'verify-value': {
+                this.requireElement(element, 'verify-value');
+                if (parameters.expectedValue === undefined) {
+                    throw new Error('No expected value specified for verify-value. Use: verify the field value is "expected"');
+                }
+                const expected = parameters.expectedValue;
 
-------------------------------------------------------------------------------------------------------
+                // Strategy 1: Try inputValue() — works for <input>, <textarea>, <select>
+                let useInputValue = true;
+                try {
+                    await element!.locator.inputValue({ timeout: 2000 });
+                } catch {
+                    useInputValue = false;
+                }
 
-case 'wait-page-load': {
-                const loadState = (parameters.loadState as 'domcontentloaded' | 'load' | 'networkidle') || 'load';
-                CSReporter.debug(`AI Step: Waiting for page load state: ${loadState}`);
-                await page.waitForLoadState(loadState, { timeout });
-                return this.success('wait-page-load');
+                if (useInputValue) {
+                    const el = this.createWrappedElement(element!, timeout);
+                    await this.assertWithRetryAndScreenshot(
+                        async () => {
+                            const val = await el.inputValue();
+                            return val === expected;
+                        },
+                        `Expected input value to be "${expected}"`,
+                        timeout
+                    );
+                } else {
+                    // Strategy 2: Not an input — read text from sibling cell (table layout)
+                    // Pattern: <td>Label:</td><td>Value</td>
+                    await this.assertWithRetryAndScreenshot(
+                        async () => {
+                            // Try sibling <td> text first
+                            try {
+                                const siblingText = await element!.locator.evaluate((el: Element) => {
+                                    // Check next sibling cell
+                                    const next = el.nextElementSibling;
+                                    if (next && next.tagName === 'TD') {
+                                        return (next.textContent || '').trim();
+                                    }
+                                    // Check parent <tr> for all <td> values
+                                    let parent: Element | null = el.parentElement;
+                                    for (let i = 0; i < 5 && parent; i++) {
+                                        if (parent.tagName === 'TR') {
+                                            const tds = parent.querySelectorAll('td');
+                                            for (let j = 0; j < tds.length; j++) {
+                                                if (tds[j] === el && j + 1 < tds.length) {
+                                                    return (tds[j + 1].textContent || '').trim();
+                                                }
+                                            }
+                                        }
+                                        parent = parent.parentElement;
+                                    }
+                                    return '';
+                                });
+                                if (siblingText === expected || siblingText.includes(expected)) {
+                                    return true;
+                                }
+                            } catch { /* continue to text fallback */ }
+
+                            // Try own text content
+                            const ownText = (await element!.locator.textContent() || '').trim();
+                            return ownText === expected || ownText.includes(expected);
+                        },
+                        `Expected field value to be "${expected}"`,
+                        timeout
+                    );
+                }
+                return this.success('verify-value');
             }
 
 
---------------------------------------------------------------
 
-| 'wait-page-load'
+/**
+     * Validate that a MatchedElement with a locator exists for an action
+     */
+    /**
+     * Table layout resolver: when the matched element is a label cell (td/th),
+     * find the actual interactive element in children, sibling cell, or parent row.
+     * Returns the found locator or null if nothing found.
+     */
+    /**
+     * Resolve an element within a specific table row.
+     * Used for row-scoped actions like "Type 'X' in 'Y' at row 1 in the Z table".
+     *
+     * Strategy:
+     * 1. Find the table by matching description text
+     * 2. Get the Nth data row (1-based, skipping header rows)
+     * 3. Within that row, find the target by column header name or element attributes
+     */
+    private async resolveTableRowElement(
+        page: Page,
+        targetText: string,
+        rowIndex: number,
+        tableRef: string,
+        elementType?: string
+    ): Promise<Locator | null> {
+        try {
+            // Find tables on the page
+            const tables = page.locator('table');
+            const tableCount = await tables.count();
+            if (tableCount === 0) return null;
+
+            // Try to match the table by description — check for text in table or nearby heading
+            let targetTable: Locator | null = null;
+            for (let i = 0; i < tableCount; i++) {
+                const table = tables.nth(i);
+                // Check if the table or a preceding heading/label contains the tableRef text
+                const tableText = await table.textContent().catch(() => '');
+                if (tableText && tableText.toLowerCase().includes(tableRef.toLowerCase())) {
+                    targetTable = table;
+                    break;
+                }
+            }
+            // Fallback: use the last table on the page (data tables are usually at the bottom)
+            if (!targetTable) {
+                targetTable = tables.nth(tableCount - 1);
+                CSReporter.debug(`CSAIActionExecutor: Table "${tableRef}" not found by text, using last table`);
+            }
+
+            // Get all rows
+            const rows = targetTable.locator('tr');
+            const rowCount = await rows.count();
+            if (rowCount < 2) return null; // Need at least header + 1 data row
+
+            // Find header row — first row with <th> elements, or first row
+            let headerRow: Locator | null = null;
+            let dataStartIndex = 0;
+            for (let i = 0; i < Math.min(rowCount, 3); i++) {
+                const row = rows.nth(i);
+                const thCount = await row.locator('th').count();
+                if (thCount > 0) {
+                    headerRow = row;
+                    dataStartIndex = i + 1;
+                    break;
+                }
+            }
+            if (!headerRow) {
+                // No <th> found — assume first row is header
+                headerRow = rows.nth(0);
+                dataStartIndex = 1;
+            }
+
+            // Get the target data row (1-based)
+            const dataRowIdx = dataStartIndex + (rowIndex - 1);
+            if (dataRowIdx >= rowCount) {
+                CSReporter.debug(`CSAIActionExecutor: Row ${rowIndex} out of range (${rowCount - dataStartIndex} data rows)`);
+                return null;
+            }
+            const dataRow = rows.nth(dataRowIdx);
+
+            // Strategy A: Find by column header name
+            // Get header cells and find the column index matching targetText
+            const headerCells = headerRow.locator('th, td');
+            const headerCount = await headerCells.count();
+            let colIndex = -1;
+            for (let i = 0; i < headerCount; i++) {
+                const cellText = (await headerCells.nth(i).textContent() || '').trim();
+                if (cellText.toLowerCase().includes(targetText.toLowerCase())) {
+                    colIndex = i;
+                    break;
+                }
+            }
+
+            if (colIndex >= 0) {
+                // Found the column — get the cell in the data row at that index
+                const dataCells = dataRow.locator('td');
+                if (colIndex < await dataCells.count()) {
+                    const cell = dataCells.nth(colIndex);
+                    // Find the interactive element inside the cell
+                    const selectors = elementType === 'dropdown' ? 'select' :
+                        elementType === 'checkbox' ? 'input[type="checkbox"]' :
+                        'input:visible, textarea:visible, select:visible, [contenteditable]:visible';
+                    const interactive = cell.locator(selectors).first();
+                    if (await interactive.count() > 0) {
+                        CSReporter.debug(`CSAIActionExecutor: Table row — found ${elementType || 'input'} in column "${targetText}" row ${rowIndex}`);
+                        return interactive;
+                    }
+                    // For click actions, might target a button/link — try those
+                    const clickable = cell.locator('input[type="submit"], input[type="button"], button, a').first();
+                    if (await clickable.count() > 0) {
+                        return clickable;
+                    }
+                    // Return the cell itself as last resort
+                    return cell;
+                }
+            }
+
+            // Strategy B: Search the entire data row for the element
+            // Look for input/button/select that matches targetText by value, name, or nearby label
+            const allInputs = dataRow.locator('input:visible, textarea:visible, select:visible, button:visible, input[type="submit"]');
+            const inputCount = await allInputs.count();
+            for (let i = 0; i < inputCount; i++) {
+                const input = allInputs.nth(i);
+                const attrs = await input.evaluate((el: Element) => ({
+                    value: (el as HTMLInputElement).value || '',
+                    name: el.getAttribute('name') || '',
+                    id: el.id || '',
+                    type: (el as HTMLInputElement).type || '',
+                    placeholder: el.getAttribute('placeholder') || ''
+                })).catch(() => ({ value: '', name: '', id: '', type: '', placeholder: '' }));
+
+                const target = targetText.toLowerCase();
+                if (attrs.value.toLowerCase().includes(target) ||
+                    attrs.name.toLowerCase().includes(target) ||
+                    attrs.id.toLowerCase().includes(target) ||
+                    attrs.placeholder.toLowerCase().includes(target)) {
+                    CSReporter.debug(`CSAIActionExecutor: Table row — found element by attribute match in row ${rowIndex}`);
+                    return input;
+                }
+            }
+
+            CSReporter.debug(`CSAIActionExecutor: Table row — no matching element found for "${targetText}" in row ${rowIndex}`);
+            return null;
+        } catch (error: any) {
+            CSReporter.debug(`CSAIActionExecutor: Table row resolution failed: ${error.message}`);
+            return null;
+        }
+    }
+
+    private async findInTableLayout(locator: Locator, cssSelector: string): Promise<Locator | null> {
+        try {
+            // 1. Inside the matched element
+            const child = locator.locator(cssSelector).first();
+            if (await child.count() > 0) {
+                CSReporter.debug(`CSAIActionExecutor: Table layout — found ${cssSelector} inside matched element`);
+                return child;
+            }
+            // 2. Next sibling <td>
+            const sibling = locator.locator(`xpath=following-sibling::td[1]//${cssSelector.replace(':visible', '')}`).first();
+            if (await sibling.count() > 0) {
+                CSReporter.debug(`CSAIActionExecutor: Table layout — found ${cssSelector} in next sibling cell`);
+                return sibling;
+            }
+            // 3. Anywhere in the parent <tr>
+            const inRow = locator.locator(`xpath=ancestor::tr[1]//${cssSelector.replace(':visible', '')}`).first();
+            if (await inRow.count() > 0) {
+                CSReporter.debug(`CSAIActionExecutor: Table layout — found ${cssSelector} in parent row`);
+                return inRow;
+            }
+        } catch {
+            // Non-critical — caller will use original locator
+        }
+        return null;
+    }
 
 
-'wait-page-load': [],
 
 
-/** Page load state for wait-page-load (domcontentloaded, load, networkidle) */
-    loadState?: string;
+// Table row-scoped actions: resolve element within a specific table row
+        // before proceeding with normal action execution
+        if (parameters.rowIndex && parameters.tableRef) {
+            const resolved = await this.resolveTableRowElement(
+                page,
+                step.target.rawText || step.target.descriptors.join(' '),
+                parameters.rowIndex,
+                parameters.tableRef,
+                step.target.elementType
+            );
+            if (resolved) {
+                element = {
+                    locator: resolved,
+                    confidence: 0.85,
+                    description: `table-row[${parameters.rowIndex}] > ${step.target.rawText}`,
+                    method: 'table-row-resolution',
+                    alternatives: []
+                };
+                CSReporter.debug(`CSAIActionExecutor: Resolved element in table "${parameters.tableRef}" row ${parameters.rowIndex}`);
+            } else {
+                CSReporter.warn(`CSAIActionExecutor: Could not resolve element in table row — falling back to normal matching`);
+            }
+        }
+
+
+
+-------------------------------------------------------------------------------------------------
+
+
+/** Table description for row-scoped actions (e.g., "Tranche Balances") */
+    tableRef?: string;
+
+| 'role-search'
+    | 'table-row-resolution';
+------------------------------------------------------
+
+// ========================================================================
+    // TABLE ROW-SCOPED ACTIONS (Priority 5-9)
+    // Must be checked BEFORE basic actions to capture the row/table context
+    // ========================================================================
+    {
+        id: 'action-table-type',
+        pattern: /^(?:type|enter|fill|input|write)\s+__QUOTED_(\d+)__\s+(?:in|into)\s+(?:the\s+)?(.+?)\s+(?:at|in|on)\s+row\s+(?:number\s+)?(\d+)\s+(?:in|of)\s+(?:the\s+)?(.+?)$/i,
+        category: 'action',
+        intent: 'fill',
+        priority: 5,
+        extract: (match, quotedStrings) => {
+            const value = quotedStrings[parseInt(match[1])] || '';
+            const raw = resolveQuoted(match[2], quotedStrings).trim();
+            const rowIndex = parseInt(match[3]);
+            const tableRef = resolveQuoted(match[4], quotedStrings).trim();
+            return {
+                targetText: stripElementType(raw),
+                elementType: inferElementType(raw) || 'input',
+                value,
+                params: { rowIndex, tableRef: stripElementType(tableRef) }
+            };
+        },
+        examples: [
+            "Type '1000' in the 'Amount' input field at row number 1 in the Balances table",
+            "Enter '500' in the 'Quantity' field at row 2 in the Orders table"
+        ]
+    },
+    {
+        id: 'action-table-clear',
+        pattern: /^(?:clear|empty|erase)\s+(?:the\s+)?(?:text\s+in\s+)?(?:the\s+)?(.+?)\s+(?:at|in|on)\s+row\s+(?:number\s+)?(\d+)\s+(?:in|of)\s+(?:the\s+)?(.+?)$/i,
+        category: 'action',
+        intent: 'clear',
+        priority: 6,
+        extract: (match, quotedStrings) => {
+            const raw = resolveQuoted(match[1], quotedStrings).trim();
+            const rowIndex = parseInt(match[2]);
+            const tableRef = resolveQuoted(match[3], quotedStrings).trim();
+            return {
+                targetText: stripElementType(raw),
+                elementType: inferElementType(raw) || 'input',
+                params: { rowIndex, tableRef: stripElementType(tableRef) }
+            };
+        },
+        examples: [
+            "Clear the text in the 'Amount' input field at row number 1 in the Balances table",
+            "Clear the 'Quantity' field at row 2 in the Orders table"
+        ]
+    },
+    {
+        id: 'action-table-click',
+        pattern: /^click\s+(?:on\s+)?(?:the\s+)?(.+?)\s+(?:at|in|on)\s+row\s+(?:number\s+)?(\d+)\s+(?:in|of)\s+(?:the\s+)?(.+?)$/i,
+        category: 'action',
+        intent: 'click',
+        priority: 7,
+        extract: (match, quotedStrings) => {
+            const raw = resolveQuoted(match[1], quotedStrings).trim();
+            const rowIndex = parseInt(match[2]);
+            const tableRef = resolveQuoted(match[3], quotedStrings).trim();
+            return {
+                targetText: stripElementType(raw),
+                elementType: inferElementType(raw),
+                params: { rowIndex, tableRef: stripElementType(tableRef) }
+            };
+        },
+        examples: [
+            "Click the 'Update' button at row number 1 in the Balances table",
+            "Click the 'Delete' link at row 3 in the Orders table"
+        ]
+    },
+    {
+        id: 'action-table-select',
+        pattern: /^(?:select|pick|choose)\s+(?:the\s+)?(?:option\s+)?__QUOTED_(\d+)__\s+(?:option\s+)?(?:from|in)\s+(?:the\s+)?(.+?)\s+(?:at|in|on)\s+row\s+(?:number\s+)?(\d+)\s+(?:in|of)\s+(?:the\s+)?(.+?)$/i,
+        category: 'action',
+        intent: 'select',
+        priority: 8,
+        extract: (match, quotedStrings) => {
+            const value = quotedStrings[parseInt(match[1])] || '';
+            const raw = resolveQuoted(match[2], quotedStrings).trim();
+            const rowIndex = parseInt(match[3]);
+            const tableRef = resolveQuoted(match[4], quotedStrings).trim();
+            return {
+                targetText: stripElementType(raw),
+                elementType: inferElementType(raw) || 'dropdown',
+                value,
+                params: { rowIndex, tableRef: stripElementType(tableRef) }
+            };
+        },
+        examples: [
+            "Select 'USD' from the 'Currency' dropdown at row 1 in the Payments table"
+        ]
+    },
+
+
