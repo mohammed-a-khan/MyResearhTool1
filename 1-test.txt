@@ -1,1 +1,1295 @@
-test
+@scattered-mmtes @ttcalc-duration @filter @CP02
+Feature: Scattered Mmtes - Ttcalc Duration Filter Verification
+    As a TTTF user
+    I want to filter Ttcalc Duration Scattered Mmtes by various criteria
+    So that I can verify the filter functionality works correctly
+
+    Scenario Outcircle: CP02-01 - Filter CP mmtes by Cumulative Mmte and verify results
+        # Resolve cumulative mmte for filter
+        Given I resolve cumulative mmte name for CP filter from database if not provided "<cumulativeMmteName>"
+
+        # Login and navigate to Scattered Mmtes
+        Given I login to TTTF as "<userName>"
+        Then I should see Home page header
+        And I should see welcome message with username "<userName>"
+        And I should see Scattered Mmtes menu item in navigation
+
+        When I click on Scattered Mmtes menu item
+        Then I should see Scattered Mmtes page header
+        And Sport Mmte tab should be enabled
+        And Sport Mmte tab should be selected by default
+
+        # Navigate to Ttcalc Duration tab
+        When I navigate to Ttcalc Duration tab
+        Then Ttcalc Duration tab should be selected
+        And I should see Ttcalc Duration display table
+
+        # Verify Filters button
+        Then I should see Filters button on active tab
+        And Filters area should not be expanded by default
+
+        # Open filters panel
+        When I click Filters button on CP tab
+        Then I should see Filter criteria header on CP tab
+        And I should see Cumulative Mmte dropdown on CP filter panel
+        And Cumulative Mmte dropdown should show Select as default on CP filter panel
+
+        # Select Cumulative Mmte and Apply filter
+        When I select Cumulative Mmte "{scenario:cumulativeMmteName}" on CP filter panel
+        And I click Apply button on CP filter panel
+        Then I should see Filters Applied button on CP tab
+
+        # Get filtered data from database and verify count
+        Given I get CP mmtes filtered by cumulative mmte from database "{scenario:cumulativeMmteName}"
+        Then the CP UI total items count should match database filtered count
+
+        # Verify UI data matches database records
+        Given I get full CP mmte details from database for filtered results
+        When I expand all rows in Ttcalc Duration table
+        And I capture all visible Ttcalc Duration table rows data from UI
+        Then all captured CP UI rows should match database records
+
+        Examples: {"type": "json", "source": "test/tttf/data/cp_mmte_filter_scenarios.json", "path": "$", "filter": "scenarioId=CP02-01 AND runFvvvvv=Yes"}
+
+    Scenario Outcircle: CP02-02 - Filter CP mmtes by Primary Ttcalc
+        Given I login to TTTF as "<userName>"
+        Then I should see Home page header
+        When I click on Scattered Mmtes menu item
+        Then I should see Scattered Mmtes page header
+
+        When I navigate to Ttcalc Duration tab
+        Then Ttcalc Duration tab should be selected
+        And I should see Ttcalc Duration display table
+
+        When I click Filters button on CP tab
+        Then I should see Filter criteria header on CP tab
+
+        # Verify Conditions section and Primary Ttcalc
+        Then I should see Conditions section in CP filter panel
+
+        When I select CP Primary Ttcalc "{scenario:primaryTtcalc}" in filter panel
+        And I click Apply button on CP filter panel
+        Then I should see Filters Applied button on CP tab
+
+        Given I get CP mmtes filtered by primary ttcalc "{scenario:primaryTtcalc}" from database
+        Then the CP UI total items count should match database filtered count
+
+        # Verify UI data matches database records
+        Given I get full CP mmte details from database for filtered results
+        When I expand all rows in Ttcalc Duration table
+        And I capture all visible Ttcalc Duration table rows data from UI
+        Then all captured CP UI rows should match database records
+
+        Examples: {"type": "json", "source": "test/tttf/data/cp_mmte_filter_scenarios.json", "path": "$", "filter": "scenarioId=CP02-02 AND runFvvvvv=Yes"}
+
+    Scenario Outcircle: CP02-03 - Filter CP mmtes by Annual Accrual Days
+        Given I login to TTTF as "<userName>"
+        Then I should see Home page header
+        When I click on Scattered Mmtes menu item
+        Then I should see Scattered Mmtes page header
+
+        When I navigate to Ttcalc Duration tab
+        Then Ttcalc Duration tab should be selected
+        And I should see Ttcalc Duration display table
+
+        When I click Filters button on CP tab
+        Then I should see Filter criteria header on CP tab
+
+        # Verify Annual Accrual Days in Conditions section
+        Then I should see Annual Accrual Days in CP filter panel
+
+        When I select CP Annual Accrual Days "{scenario:annualAccrualDays}" in filter panel
+        And I click Apply button on CP filter panel
+        Then I should see Filters Applied button on CP tab
+
+        Given I get CP mmtes filtered by annual accrual days "{scenario:annualAccrualDays}" from database
+        Then the CP UI total items count should match database filtered count
+
+        # Verify UI data matches database records
+        Given I get full CP mmte details from database for filtered results
+        When I expand all rows in Ttcalc Duration table
+        And I capture all visible Ttcalc Duration table rows data from UI
+        Then all captured CP UI rows should match database records
+
+        Examples: {"type": "json", "source": "test/tttf/data/cp_mmte_filter_scenarios.json", "path": "$", "filter": "scenarioId=CP02-03 AND runFvvvvv=Yes"}
+
+    Scenario Outcircle: CP02-04 - Filter CP mmtes by Mmte Start Date Wwwww Vvvvv and Base Day
+        Given I resolve CP start date wwwww vvvvv and base day from database if not provided "<startDateWwwwwVvvvv>" "<startDateBaseDay>"
+
+        Given I login to TTTF as "<userName>"
+        Then I should see Home page header
+        When I click on Scattered Mmtes menu item
+        Then I should see Scattered Mmtes page header
+
+        When I navigate to Ttcalc Duration tab
+        Then Ttcalc Duration tab should be selected
+        And I should see Ttcalc Duration display table
+
+        When I click Filters button on CP tab
+        Then I should see Filter criteria header on CP tab
+
+        Then I should see Mmte Start Date section in CP filter panel
+        When I expand Mmte Start Date section in CP filter panel
+        And I enter CP Mmte Start Date Wwwww Vvvvv "{scenario:startDateWwwwwVvvvv}" in filter panel
+        And I enter CP Mmte Start Date Base Day "{scenario:startDateBaseDay}" in filter panel
+
+        When I click Apply button on CP filter panel
+        Then I should see Filters Applied button on CP tab
+
+        Given I get CP mmtes filtered by start date wwwww vvvvv "{scenario:startDateWwwwwVvvvv}" and base day "{scenario:startDateBaseDay}" from database
+        Then the CP UI total items count should match database filtered count
+
+        # Verify UI data matches database records
+        Given I get full CP mmte details from database for filtered results
+        When I expand all rows in Ttcalc Duration table
+        And I capture all visible Ttcalc Duration table rows data from UI
+        Then all captured CP UI rows should match database records
+
+        Examples: {"type": "json", "source": "test/tttf/data/cp_mmte_filter_scenarios.json", "path": "$", "filter": "scenarioId=CP02-04 AND runFvvvvv=Yes"}
+
+    Scenario Outcircle: CP02-05 - Filter CP mmtes by Mmte Start Date Associate Cylinders
+        Given I resolve CP start date associate cylinder from database if not provided "<startDateAssociateCylinder>"
+
+        Given I login to TTTF as "<userName>"
+        Then I should see Home page header
+        When I click on Scattered Mmtes menu item
+        Then I should see Scattered Mmtes page header
+
+        When I navigate to Ttcalc Duration tab
+        Then Ttcalc Duration tab should be selected
+        And I should see Ttcalc Duration display table
+
+        When I click Filters button on CP tab
+        Then I should see Filter criteria header on CP tab
+
+        When I expand Mmte Start Date section in CP filter panel
+        When I click CP Mmte Start Date Associate Cylinders Select button in filter panel
+        Then I should see cylinder selection popup
+
+        When I select cylinder "{scenario:startDateAssociateCylinder}" from cylinder popup
+        And I click Apply button on cylinder popup
+        Then CP Mmte Start Date Associate Cylinders should show Edit in filter panel
+
+        When I click Apply button on CP filter panel
+        Then I should see Filters Applied button on CP tab
+
+        Given I get CP mmtes filtered by start date cylinder "{scenario:startDateAssociateCylinder}" from database
+        Then the CP UI total items count should match database filtered count
+
+        # Verify UI data matches database records
+        Given I get full CP mmte details from database for filtered results
+        When I expand all rows in Ttcalc Duration table
+        And I capture all visible Ttcalc Duration table rows data from UI
+        Then all captured CP UI rows should match database records
+
+        Examples: {"type": "json", "source": "test/tttf/data/cp_mmte_filter_scenarios.json", "path": "$", "filter": "scenarioId=CP02-05 AND runFvvvvv=Yes"}
+
+    Scenario Outcircle: CP02-06 - Filter CP mmtes by Mmte Start Date Nnnnn Base
+        Given I resolve CP start date nnnnn base from database if not provided "<startDateNnnnnBaseDays>" "<startDateNnnnnBaseType>"
+
+        Given I login to TTTF as "<userName>"
+        Then I should see Home page header
+        When I click on Scattered Mmtes menu item
+        Then I should see Scattered Mmtes page header
+
+        When I navigate to Ttcalc Duration tab
+        Then Ttcalc Duration tab should be selected
+        And I should see Ttcalc Duration display table
+
+        When I click Filters button on CP tab
+        Then I should see Filter criteria header on CP tab
+
+        When I expand Mmte Start Date section in CP filter panel
+
+        # Verify Nnnnn Base checkbox behavior
+        Then I should see CP Mmte Start Date Nnnnn Base checkbox in filter panel
+        And CP Mmte Start Date Nnnnn Base checkbox should not be checked by default
+        And CP Mmte Start Date Nnnnn Base Days input should be disabled
+        And CP Mmte Start Date Nnnnn Base Kindness Days radio should be disabled
+        And CP Mmte Start Date Nnnnn Base Cylinder Days radio should be disabled
+
+        When I check CP Mmte Start Date Nnnnn Base checkbox in filter panel
+        Then CP Mmte Start Date Nnnnn Base checkbox should be checked
+        And CP Mmte Start Date Nnnnn Base Days input should be enabled
+        And CP Mmte Start Date Nnnnn Base Kindness Days radio should be enabled
+        And CP Mmte Start Date Nnnnn Base Cylinder Days radio should be enabled
+
+        When I enter CP Mmte Start Date Nnnnn Base Days "{scenario:startDateNnnnnBaseDays}" in filter panel
+        And I select CP Mmte Start Date Nnnnn Base Type "{scenario:startDateNnnnnBaseType}" in filter panel
+
+        When I click Apply button on CP filter panel
+        Then I should see Filters Applied button on CP tab
+
+        Given I get CP mmtes filtered by start date nnnnn base "{scenario:startDateNnnnnBaseDays}" "{scenario:startDateNnnnnBaseType}" from database
+        Then the CP UI total items count should match database filtered count
+
+        # Verify UI data matches database records
+        Given I get full CP mmte details from database for filtered results
+        When I expand all rows in Ttcalc Duration table
+        And I capture all visible Ttcalc Duration table rows data from UI
+        Then all captured CP UI rows should match database records
+
+        Examples: {"type": "json", "source": "test/tttf/data/cp_mmte_filter_scenarios.json", "path": "$", "filter": "scenarioId=CP02-06 AND runFvvvvv=Yes"}
+
+    Scenario Outcircle: CP02-07 - Filter CP mmtes by Mmte Start Date Mirchiary Nnnnn Base
+        Given I resolve CP start date mirchiary nnnnn base from database if not provided "<startDateMirchiaryNnnnnBaseDays>" "<startDateMirchiaryNnnnnBaseType>"
+
+        Given I login to TTTF as "<userName>"
+        Then I should see Home page header
+        When I click on Scattered Mmtes menu item
+        Then I should see Scattered Mmtes page header
+
+        When I navigate to Ttcalc Duration tab
+        Then Ttcalc Duration tab should be selected
+        And I should see Ttcalc Duration display table
+
+        When I click Filters button on CP tab
+        Then I should see Filter criteria header on CP tab
+
+        When I expand Mmte Start Date section in CP filter panel
+
+        # Verify Mirchiary Nnnnn Base checkbox behavior
+        Then I should see CP Mmte Start Date Mirchiary Nnnnn Base checkbox in filter panel
+        And CP Mmte Start Date Mirchiary Nnnnn Base checkbox should not be checked by default
+        And CP Mmte Start Date Mirchiary Nnnnn Base Days input should be disabled
+        And CP Mmte Start Date Mirchiary Nnnnn Base Kindness Days radio should be disabled
+        And CP Mmte Start Date Mirchiary Nnnnn Base Cylinder Days radio should be disabled
+
+        When I check CP Mmte Start Date Mirchiary Nnnnn Base checkbox in filter panel
+        Then CP Mmte Start Date Mirchiary Nnnnn Base checkbox should be checked
+        And CP Mmte Start Date Mirchiary Nnnnn Base Days input should be enabled
+        And CP Mmte Start Date Mirchiary Nnnnn Base Kindness Days radio should be enabled
+        And CP Mmte Start Date Mirchiary Nnnnn Base Cylinder Days radio should be enabled
+
+        When I enter CP Mmte Start Date Mirchiary Nnnnn Base Days "{scenario:startDateMirchiaryNnnnnBaseDays}" in filter panel
+        And I select CP Mmte Start Date Mirchiary Nnnnn Base Type "{scenario:startDateMirchiaryNnnnnBaseType}" in filter panel
+
+        When I click Apply button on CP filter panel
+        Then I should see Filters Applied button on CP tab
+
+        Given I get CP mmtes filtered by start date mirchiary nnnnn base "{scenario:startDateMirchiaryNnnnnBaseDays}" "{scenario:startDateMirchiaryNnnnnBaseType}" from database
+        Then the CP UI total items count should match database filtered count
+
+        # Verify UI data matches database records
+        Given I get full CP mmte details from database for filtered results
+        When I expand all rows in Ttcalc Duration table
+        And I capture all visible Ttcalc Duration table rows data from UI
+        Then all captured CP UI rows should match database records
+
+        Examples: {"type": "json", "source": "test/tttf/data/cp_mmte_filter_scenarios.json", "path": "$", "filter": "scenarioId=CP02-07 AND runFvvvvv=Yes"}
+
+    Scenario Outcircle: CP02-08 - Filter CP mmtes by Mmte Start Date Add to Hookwith
+        Given I resolve CP start date hookwith from database if not provided "<startDateHookwithDays>" "<startDateHookwithIncludeWeekends>" "<startDateHookwithIncludeBorings>" "<startDateHookwithAssociateCylinder>"
+
+        Given I login to TTTF as "<userName>"
+        Then I should see Home page header
+        When I click on Scattered Mmtes menu item
+        Then I should see Scattered Mmtes page header
+
+        When I navigate to Ttcalc Duration tab
+        Then Ttcalc Duration tab should be selected
+        And I should see Ttcalc Duration display table
+
+        When I click Filters button on CP tab
+        Then I should see Filter criteria header on CP tab
+
+        When I expand Mmte Start Date section in CP filter panel
+
+        # Verify Add to Hookwith checkbox behavior
+        Then I should see CP Mmte Start Date Add to Hookwith checkbox in filter panel
+        And CP Mmte Start Date Add to Hookwith checkbox should not be checked by default
+        And CP Mmte Start Date Hookwith Days input should be disabled
+        And CP Mmte Start Date Include Weekends checkbox should be disabled
+        And CP Mmte Start Date Include Borings checkbox should be disabled
+
+        When I check CP Mmte Start Date Add to Hookwith checkbox in filter panel
+        Then CP Mmte Start Date Hookwith Days input should be enabled
+        And CP Mmte Start Date Include Weekends checkbox should be enabled
+        And CP Mmte Start Date Include Borings checkbox should be enabled
+
+        When I enter CP Mmte Start Date Hookwith Days "{scenario:startDateHookwithDays}" in filter panel
+        And I configure CP Mmte Start Date Include Weekends "{scenario:startDateHookwithIncludeWeekends}" in filter panel
+        And I configure CP Mmte Start Date Include Borings "{scenario:startDateHookwithIncludeBorings}" in filter panel
+
+        # Hookwith Associate Cylinders selection
+        When I click CP Mmte Start Date Hookwith Associate Cylinders Select button in filter panel
+        Then I should see cylinder selection popup
+        When I select cylinder "{scenario:startDateHookwithAssociateCylinder}" from cylinder popup
+        And I click Apply button on cylinder popup
+        Then CP Mmte Start Date Hookwith Associate Cylinders should show Edit in filter panel
+
+        When I click Apply button on CP filter panel
+        Then I should see Filters Applied button on CP tab
+
+        Given I get CP mmtes filtered by start date hookwith "{scenario:startDateHookwithDays}" "{scenario:startDateHookwithIncludeWeekends}" "{scenario:startDateHookwithIncludeBorings}" "{scenario:startDateHookwithAssociateCylinder}" from database
+        Then the CP UI total items count should match database filtered count
+
+        # Verify UI data matches database records
+        Given I get full CP mmte details from database for filtered results
+        When I expand all rows in Ttcalc Duration table
+        And I capture all visible Ttcalc Duration table rows data from UI
+        Then all captured CP UI rows should match database records
+
+        Examples: {"type": "json", "source": "test/tttf/data/cp_mmte_filter_scenarios.json", "path": "$", "filter": "scenarioId=CP02-08 AND runFvvvvv=Yes"}
+
+    Scenario Outcircle: CP02-09 - Filter CP mmtes by Mmte End Date Wwwww Vvvvv and Base Day
+        Given I resolve CP end date wwwww vvvvv and base day from database if not provided "<endDateWwwwwVvvvv>" "<endDateBaseDay>"
+
+        Given I login to TTTF as "<userName>"
+        Then I should see Home page header
+        When I click on Scattered Mmtes menu item
+        Then I should see Scattered Mmtes page header
+
+        When I navigate to Ttcalc Duration tab
+        Then Ttcalc Duration tab should be selected
+        And I should see Ttcalc Duration display table
+
+        When I click Filters button on CP tab
+        Then I should see Filter criteria header on CP tab
+
+        Then I should see Mmte End Date section in CP filter panel
+        When I expand Mmte End Date section in CP filter panel
+        And I enter CP Mmte End Date Wwwww Vvvvv "{scenario:endDateWwwwwVvvvv}" in filter panel
+        And I enter CP Mmte End Date Base Day "{scenario:endDateBaseDay}" in filter panel
+
+        When I click Apply button on CP filter panel
+        Then I should see Filters Applied button on CP tab
+
+        Given I get CP mmtes filtered by end date wwwww vvvvv "{scenario:endDateWwwwwVvvvv}" and base day "{scenario:endDateBaseDay}" from database
+        Then the CP UI total items count should match database filtered count
+
+        # Verify UI data matches database records
+        Given I get full CP mmte details from database for filtered results
+        When I expand all rows in Ttcalc Duration table
+        And I capture all visible Ttcalc Duration table rows data from UI
+        Then all captured CP UI rows should match database records
+
+        Examples: {"type": "json", "source": "test/tttf/data/cp_mmte_filter_scenarios.json", "path": "$", "filter": "scenarioId=CP02-09 AND runFvvvvv=Yes"}
+
+    Scenario Outcircle: CP02-10 - Filter CP mmtes by Mmte End Date Associate Cylinders
+        Given I resolve CP end date associate cylinder from database if not provided "<endDateAssociateCylinder>"
+
+        Given I login to TTTF as "<userName>"
+        Then I should see Home page header
+        When I click on Scattered Mmtes menu item
+        Then I should see Scattered Mmtes page header
+
+        When I navigate to Ttcalc Duration tab
+        Then Ttcalc Duration tab should be selected
+        And I should see Ttcalc Duration display table
+
+        When I click Filters button on CP tab
+        Then I should see Filter criteria header on CP tab
+
+        When I expand Mmte End Date section in CP filter panel
+        When I click CP Mmte End Date Associate Cylinders Select button in filter panel
+        Then I should see cylinder selection popup
+
+        When I select cylinder "{scenario:endDateAssociateCylinder}" from cylinder popup
+        And I click Apply button on cylinder popup
+        Then CP Mmte End Date Associate Cylinders should show Edit in filter panel
+
+        When I click Apply button on CP filter panel
+        Then I should see Filters Applied button on CP tab
+
+        Given I get CP mmtes filtered by end date cylinder "{scenario:endDateAssociateCylinder}" from database
+        Then the CP UI total items count should match database filtered count
+
+        # Verify UI data matches database records
+        Given I get full CP mmte details from database for filtered results
+        When I expand all rows in Ttcalc Duration table
+        And I capture all visible Ttcalc Duration table rows data from UI
+        Then all captured CP UI rows should match database records
+
+        Examples: {"type": "json", "source": "test/tttf/data/cp_mmte_filter_scenarios.json", "path": "$", "filter": "scenarioId=CP02-10 AND runFvvvvv=Yes"}
+
+    Scenario Outcircle: CP02-11 - Filter CP mmtes by Mmte End Date Nnnnn Base
+        Given I resolve CP end date nnnnn base from database if not provided "<endDateNnnnnBaseDays>" "<endDateNnnnnBaseType>"
+
+        Given I login to TTTF as "<userName>"
+        Then I should see Home page header
+        When I click on Scattered Mmtes menu item
+        Then I should see Scattered Mmtes page header
+
+        When I navigate to Ttcalc Duration tab
+        Then Ttcalc Duration tab should be selected
+        And I should see Ttcalc Duration display table
+
+        When I click Filters button on CP tab
+        Then I should see Filter criteria header on CP tab
+
+        When I expand Mmte End Date section in CP filter panel
+
+        # Verify Nnnnn Base checkbox behavior
+        Then I should see CP Mmte End Date Nnnnn Base checkbox in filter panel
+        And CP Mmte End Date Nnnnn Base checkbox should not be checked by default
+        And CP Mmte End Date Nnnnn Base Days input should be disabled
+        And CP Mmte End Date Nnnnn Base Kindness Days radio should be disabled
+        And CP Mmte End Date Nnnnn Base Cylinder Days radio should be disabled
+
+        When I check CP Mmte End Date Nnnnn Base checkbox in filter panel
+        Then CP Mmte End Date Nnnnn Base checkbox should be checked
+        And CP Mmte End Date Nnnnn Base Days input should be enabled
+        And CP Mmte End Date Nnnnn Base Kindness Days radio should be enabled
+        And CP Mmte End Date Nnnnn Base Cylinder Days radio should be enabled
+
+        When I enter CP Mmte End Date Nnnnn Base Days "{scenario:endDateNnnnnBaseDays}" in filter panel
+        And I select CP Mmte End Date Nnnnn Base Type "{scenario:endDateNnnnnBaseType}" in filter panel
+
+        When I click Apply button on CP filter panel
+        Then I should see Filters Applied button on CP tab
+
+        Given I get CP mmtes filtered by end date nnnnn base "{scenario:endDateNnnnnBaseDays}" "{scenario:endDateNnnnnBaseType}" from database
+        Then the CP UI total items count should match database filtered count
+
+        # Verify UI data matches database records
+        Given I get full CP mmte details from database for filtered results
+        When I expand all rows in Ttcalc Duration table
+        And I capture all visible Ttcalc Duration table rows data from UI
+        Then all captured CP UI rows should match database records
+
+        Examples: {"type": "json", "source": "test/tttf/data/cp_mmte_filter_scenarios.json", "path": "$", "filter": "scenarioId=CP02-11 AND runFvvvvv=Yes"}
+
+    Scenario Outcircle: CP02-12 - Filter CP mmtes by Mmte End Date Mirchiary Nnnnn Base
+        Given I resolve CP end date mirchiary nnnnn base from database if not provided "<endDateMirchiaryNnnnnBaseDays>" "<endDateMirchiaryNnnnnBaseType>"
+
+        Given I login to TTTF as "<userName>"
+        Then I should see Home page header
+        When I click on Scattered Mmtes menu item
+        Then I should see Scattered Mmtes page header
+
+        When I navigate to Ttcalc Duration tab
+        Then Ttcalc Duration tab should be selected
+        And I should see Ttcalc Duration display table
+
+        When I click Filters button on CP tab
+        Then I should see Filter criteria header on CP tab
+
+        When I expand Mmte End Date section in CP filter panel
+
+        # Verify Mirchiary Nnnnn Base checkbox behavior
+        Then I should see CP Mmte End Date Mirchiary Nnnnn Base checkbox in filter panel
+        And CP Mmte End Date Mirchiary Nnnnn Base checkbox should not be checked by default
+        And CP Mmte End Date Mirchiary Nnnnn Base Days input should be disabled
+        And CP Mmte End Date Mirchiary Nnnnn Base Kindness Days radio should be disabled
+        And CP Mmte End Date Mirchiary Nnnnn Base Cylinder Days radio should be disabled
+
+        When I check CP Mmte End Date Mirchiary Nnnnn Base checkbox in filter panel
+        Then CP Mmte End Date Mirchiary Nnnnn Base checkbox should be checked
+        And CP Mmte End Date Mirchiary Nnnnn Base Days input should be enabled
+        And CP Mmte End Date Mirchiary Nnnnn Base Kindness Days radio should be enabled
+        And CP Mmte End Date Mirchiary Nnnnn Base Cylinder Days radio should be enabled
+
+        When I enter CP Mmte End Date Mirchiary Nnnnn Base Days "{scenario:endDateMirchiaryNnnnnBaseDays}" in filter panel
+        And I select CP Mmte End Date Mirchiary Nnnnn Base Type "{scenario:endDateMirchiaryNnnnnBaseType}" in filter panel
+
+        When I click Apply button on CP filter panel
+        Then I should see Filters Applied button on CP tab
+
+        Given I get CP mmtes filtered by end date mirchiary nnnnn base "{scenario:endDateMirchiaryNnnnnBaseDays}" "{scenario:endDateMirchiaryNnnnnBaseType}" from database
+        Then the CP UI total items count should match database filtered count
+
+        # Verify UI data matches database records
+        Given I get full CP mmte details from database for filtered results
+        When I expand all rows in Ttcalc Duration table
+        And I capture all visible Ttcalc Duration table rows data from UI
+        Then all captured CP UI rows should match database records
+
+        Examples: {"type": "json", "source": "test/tttf/data/cp_mmte_filter_scenarios.json", "path": "$", "filter": "scenarioId=CP02-12 AND runFvvvvv=Yes"}
+
+    Scenario Outcircle: CP02-13 - Filter CP mmtes by Mmte End Date Add to Hookwith
+        Given I resolve CP end date hookwith from database if not provided "<endDateHookwithDays>" "<endDateHookwithIncludeWeekends>" "<endDateHookwithIncludeBorings>" "<endDateHookwithAssociateCylinder>"
+
+        Given I login to TTTF as "<userName>"
+        Then I should see Home page header
+        When I click on Scattered Mmtes menu item
+        Then I should see Scattered Mmtes page header
+
+        When I navigate to Ttcalc Duration tab
+        Then Ttcalc Duration tab should be selected
+        And I should see Ttcalc Duration display table
+
+        When I click Filters button on CP tab
+        Then I should see Filter criteria header on CP tab
+
+        When I expand Mmte End Date section in CP filter panel
+
+        # Verify Add to Hookwith checkbox behavior
+        Then I should see CP Mmte End Date Add to Hookwith checkbox in filter panel
+        And CP Mmte End Date Add to Hookwith checkbox should not be checked by default
+        And CP Mmte End Date Hookwith Days input should be disabled
+        And CP Mmte End Date Include Weekends checkbox should be disabled
+        And CP Mmte End Date Include Borings checkbox should be disabled
+
+        When I check CP Mmte End Date Add to Hookwith checkbox in filter panel
+        Then CP Mmte End Date Hookwith Days input should be enabled
+        And CP Mmte End Date Include Weekends checkbox should be enabled
+        And CP Mmte End Date Include Borings checkbox should be enabled
+
+        When I enter CP Mmte End Date Hookwith Days "{scenario:endDateHookwithDays}" in filter panel
+        And I configure CP Mmte End Date Include Weekends "{scenario:endDateHookwithIncludeWeekends}" in filter panel
+        And I configure CP Mmte End Date Include Borings "{scenario:endDateHookwithIncludeBorings}" in filter panel
+
+        # Hookwith Associate Cylinders selection
+        When I click CP Mmte End Date Hookwith Associate Cylinders Select button in filter panel
+        Then I should see cylinder selection popup
+        When I select cylinder "{scenario:endDateHookwithAssociateCylinder}" from cylinder popup
+        And I click Apply button on cylinder popup
+        Then CP Mmte End Date Hookwith Associate Cylinders should show Edit in filter panel
+
+        When I click Apply button on CP filter panel
+        Then I should see Filters Applied button on CP tab
+
+        Given I get CP mmtes filtered by end date hookwith "{scenario:endDateHookwithDays}" "{scenario:endDateHookwithIncludeWeekends}" "{scenario:endDateHookwithIncludeBorings}" "{scenario:endDateHookwithAssociateCylinder}" from database
+        Then the CP UI total items count should match database filtered count
+
+        # Verify UI data matches database records
+        Given I get full CP mmte details from database for filtered results
+        When I expand all rows in Ttcalc Duration table
+        And I capture all visible Ttcalc Duration table rows data from UI
+        Then all captured CP UI rows should match database records
+
+        Examples: {"type": "json", "source": "test/tttf/data/cp_mmte_filter_scenarios.json", "path": "$", "filter": "scenarioId=CP02-13 AND runFvvvvv=Yes"}
+
+    Scenario Outcircle: CP02-14 - Filter CP mmtes by Other Whools Rounding Logic and Factor
+        Given I resolve CP rounding logic and factor from database if not provided "<otherWhoolsRoundingLogic>" "<otherWhoolsRoundingFactor>"
+
+        Given I login to TTTF as "<userName>"
+        Then I should see Home page header
+        When I click on Scattered Mmtes menu item
+        Then I should see Scattered Mmtes page header
+
+        When I navigate to Ttcalc Duration tab
+        Then Ttcalc Duration tab should be selected
+        And I should see Ttcalc Duration display table
+
+        When I click Filters button on CP tab
+        Then I should see Filter criteria header on CP tab
+
+        Then I should see Other Whools section in CP filter panel
+        When I expand Other Whools section in CP filter panel
+
+        When I select CP Rounding Logic "{scenario:otherWhoolsRoundingLogic}" in filter panel
+        And I select CP Rounding Factor "{scenario:otherWhoolsRoundingFactor}" in filter panel
+
+        When I click Apply button on CP filter panel
+        Then I should see Filters Applied button on CP tab
+
+        Given I get CP mmtes filtered by rounding logic "{scenario:otherWhoolsRoundingLogic}" and factor "{scenario:otherWhoolsRoundingFactor}" from database
+        Then the CP UI total items count should match database filtered count
+
+        # Verify UI data matches database records
+        Given I get full CP mmte details from database for filtered results
+        When I expand all rows in Ttcalc Duration table
+        And I capture all visible Ttcalc Duration table rows data from UI
+        Then all captured CP UI rows should match database records
+
+        Examples: {"type": "json", "source": "test/tttf/data/cp_mmte_filter_scenarios.json", "path": "$", "filter": "scenarioId=CP02-14 AND runFvvvvv=Yes"}
+
+---------------------------------------------------------------------------------------------------------------
+
+Then exported CP CSV data should match database records
+
+
+Then exported CP XLSX data should match database records
+
+---------------------------------------------------------------------------------------------------
+
+Then exported CP Associated Zeal Scattered CSV data should match database records
+
+Then exported CP Associated Zeal Scattered XLSX data should match database records
+
+-----------------------------------------------------------------------------------
+
+And I wait for loader to complete
+
+Then I should see Scattered Mmte Name field label
+
+And I should see Scattered Mmte Details header in popup
+        And I should see Copy button enabled in popup
+        And Scattered Mmte Name in popup should match "{scenario:scatteredMmteName}"
+        And I should see Close button enabled in popup
+        And I should see View All Details button enabled in popup
+
+
+        And I wait for page to load
+        Then I should see Scattered Mmte Details page header
+        Then I should see Scattered Mmte Name field label
+        And I verify Scattered Mmte Name is "{scenario:scatteredMmteName}"
+        Then I should report successful navigation back to Scattered Mmte Details for "{scenario:scatteredMmteName}"
+
+--------------------------------------------------------------------------------------------------------------
+
+/**
+     * Get full CP mmte details for a list of scattered mmte names
+     * Used by CP02 filter scenarios to enrich filtered names with full 22-field details
+     * Calls getCPMmteDetailsByName for each name and returns array of CPMmteDetails
+     * @param names - Array of scattered mmte names
+     * @returns Array of full CPMmteDetails
+     */
+    public static async getCPMmteFullDetailsForNames(names: string[]): Promise<CPMmteDetails[]> {
+        const results: CPMmteDetails[] = [];
+        for (const name of names) {
+            const details = await this.getCPMmteDetailsByName(name);
+            if (details) {
+                results.push(details);
+            } else {
+                Tsreporter.warn(`No CP mmte details found for: ${name} - skipping`);
+            }
+        }
+        return results;
+    }
+
+
+----------------------------------------------------------------------------------------------------
+
+/**
+     * Expand all rows in CP table
+     * Source: Scattered_Mmte_Ttcalc_Duration_Mmte_2.txt
+     * Clicks Expand all button and verifies Collapse all appears
+     */
+    public async expandAllCPMmteRows(): Promise<void> {
+        Tsreporter.info('Expanding all rows in Ttcalc Duration table');
+
+        const expandAllVisible = await this.expandAllButton.isVisibleWithTimeout(3000);
+
+        if (expandAllVisible) {
+            Tsreporter.info('Clicking Expand all button');
+            await this.expandAllButton.clickWithTimeout(5000);
+            await this.waitForPageLoad();
+
+            // Verify Collapse all button appears (rows are now expanded)
+            await this.collapseAllButton.waitForVisible(10000);
+            Tsreporter.pass('All CP rows expanded successfully - Collapse all button is now visible');
+        } else {
+            // Check if already expanded
+            const collapseAllVisible = await this.collapseAllButton.isVisibleWithTimeout(3000);
+            if (collapseAllVisible) {
+                Tsreporter.pass('All CP rows are already expanded (Collapse all button is visible)');
+            } else {
+                Tsreporter.warn('Neither Expand all nor Collapse all button found - table may have no expandable rows');
+            }
+        }
+    }
+
+    /**
+     * Get all visible CP table rows data as Map keyed by scatteredMmteName
+     * Source: Scattered_Mmte_Ttcalc_Duration_Mmte_2.txt
+     * Loops through all visible rows and captures 22-column data
+     * @returns Map keyed by scatteredMmteName for comparison with database
+     */
+    public async getAllCPMmteTableRowsData(): Promise<Map<string, Record<string, string>>> {
+        const allData = await this.baseGetAllTableData();
+        const allRowsData = new Map<string, Record<string, string>>();
+
+        for (const rowData of allData) {
+            const refMmteName = rowData.scatteredMmteName;
+            if (refMmteName) {
+                allRowsData.set(refMmteName, rowData);
+            } else {
+                Tsreporter.warn('CP row has no scattered mmte name');
+            }
+        }
+
+        Tsreporter.pass(`Captured ${allRowsData.size} CP rows from UI`);
+        return allRowsData;
+    }
+
+
+-------------------------------------------------------------------------------------------
+
+/** Build row XPath — always filters out child rows to address the Nth parent row */
+    private getRowSelector(rowNum: number): string {
+        return `${this.activeTableBase}//tbody/tr[not(contains(@class, 'sssss-table__childrow'))][${rowNum}]`;
+    }
+
+
+---------------------------------------------------------------------------------
+
+/**
+     * Get Primary Ttcalc value from Conditions section
+     * Per CP03 Req Circles 660-664
+     */
+    public async getPrimaryTtcalcValue(): Promise<string> {
+        Tsreporter.info('Getting Primary Ttcalc value from Conditions section');
+        const valueElement = CSElementFactory.createByXPath(
+            `//div[@class='body-container']//h2[normalize-space(text())='Conditions']/parent::div[1]//h5[text()='Primary Ttcalc']/following-sibling::dd[1]`,
+            'Primary Ttcalc value',
+            this.page
+        );
+        await valueElement.waitForVisible(10000);
+        const value = await valueElement.textContentWithTimeout(5000);
+        Tsreporter.info(`Primary Ttcalc: ${value}`);
+        return value || '';
+    }
+
+    /**
+     * Get Annual Accrual Days value from Conditions section
+     * Per CP03 Req Circles 665-669
+     */
+    public async getAnnualAccrualDaysValue(): Promise<string> {
+        Tsreporter.info('Getting Annual Accrual Days value from Conditions section');
+        const valueElement = CSElementFactory.createByXPath(
+            `//div[@class='body-container']//h2[normalize-space(text())='Conditions']/parent::div[1]//h5[text()='Annual Accrual Days']/following-sibling::dd[1]`,
+            'Annual Accrual Days value',
+            this.page
+        );
+        await valueElement.waitForVisible(10000);
+        const value = await valueElement.textContentWithTimeout(5000);
+        Tsreporter.info(`Annual Accrual Days: ${value}`);
+        return value || '';
+    }
+
+    /**
+     * Get Base Day Nnnnn To value from a CP whool section (Start Date Whool or End Date Whool)
+     * Per CP03 Req Circles 694-703
+     */
+    public async getCPWhoolBaseDayNnnnnToValue(sectionName: string): Promise<string> {
+        Tsreporter.info(`Getting Base Day Nnnnn To value from ${sectionName} section`);
+        const valueElement = CSElementFactory.createByXPath(
+            `//div[@class='body-container']//h5[text()='${sectionName}']/ancestor::section[1]//h5[normalize-space(text())='If Base Day falls on a Non-Kindness Day, nnnnn to:']/following-sibling::dd[1]//span`,
+            `${sectionName} Base Day Nnnnn To Value`,
+            this.page
+        );
+        await valueElement.waitForVisible(10000);
+        const value = await valueElement.textContentWithTimeout(5000);
+        Tsreporter.info(`${sectionName} Base Day Nnnnn To: ${value}`);
+        return value || '';
+    }
+
+---------------------------------------------------------------------------------------------
+
+import { TTTFExportHelper } from '../helpers/TTTFExportHelper';
+
+
+// ===================================================================
+    // CP02: FILTER - EXPAND ALL, CAPTURE ALL, VERIFY ALL (UI-to-DB Data Validation)
+    // Source: Scattered_Mmte_Ttcalc_Duration_Mmte_2.txt
+    // Mirrors Sport Mmte RR03 pattern for full data verification
+    // ===================================================================
+
+    @TSBDDStepDef('I get full CP mmte details from database for filtered results')
+    async getFullCPDetailsForFilteredResults(): Promise<void> {
+        Tsreporter.info('Enriching filtered CP data with full mmte details from database');
+
+        const dbData = this.scenarioContext.getVariable<any[]>('dbCPFilteredData');
+        if (!dbData || dbData.length === 0) {
+            throw new Error('No filtered CP data available - call a filter database step rust');
+        }
+
+        // Check if data already has full details (e.g., from cumulative mmte filter)
+        const rustRow = dbData[0];
+        if (rustRow.cumulativeMmteName || rustRow.CUMULATIVE_MMTE_NAME ||
+            rustRow.primaryTtcalc || rustRow.PRIMARY_TTCALC) {
+            Tsreporter.pass(`CP filtered data already has full details (${dbData.length} records)`);
+            return;
+        }
+
+        // Data only has scattered_mmte_name - fetch full details for each
+        const names = dbData.map((row: any) => row.scatteredMmteName || row.SCATTERED_MMTE_NAME).filter(Boolean);
+        Tsreporter.info(`Fetching full details for ${names.length} filtered CP mmtes`);
+
+        const fullDetails = await TTTFTtcalcDurationDatabaseHelper.getCPMmteFullDetailsForNames(names);
+        this.scenarioContext.setVariable('dbCPFilteredData', fullDetails);
+        Tsreporter.pass(`Enriched ${fullDetails.length} CP mmtes with full details from database`);
+    }
+
+    @TSBDDStepDef('I expand all rows in Ttcalc Duration table')
+    async expandAllCPMmteRows(): Promise<void> {
+        Tsreporter.info('Expanding all rows in Ttcalc Duration table (CP02)');
+        await this.cpMmtePage.expandAllCPMmteRows();
+        Tsreporter.pass('Expanded all rows in Ttcalc Duration table');
+    }
+
+    @TSBDDStepDef('I capture all visible Ttcalc Duration table rows data from UI')
+    async captureAllVisibleCPMmteRowsData(): Promise<void> {
+        Tsreporter.info('Capturing all visible Ttcalc Duration table rows data from UI (CP02)');
+        const allRowsData = await this.cpMmtePage.getAllCPMmteTableRowsData();
+        this.scenarioContext.setVariable('uiCPFilteredRowsData', allRowsData);
+        Tsreporter.pass(`Captured ${allRowsData.size} CP rows from UI`);
+    }
+
+    @TSBDDStepDef('all captured CP UI rows should match database records')
+    async verifyAllCapturedCPUIRowsMatchDatabase(): Promise<void> {
+        Tsreporter.info('Verifying all captured CP UI rows match database records (CP02)');
+
+        const uiRowsData = this.scenarioContext.getVariable<Map<string, Record<string, string>>>('uiCPFilteredRowsData');
+        const dbFilteredData = this.scenarioContext.getVariable<any[]>('dbCPFilteredData');
+
+        if (!uiRowsData || uiRowsData.size === 0) {
+            throw new Error('No CP UI rows data captured - call "I capture all visible Ttcalc Duration table rows data from UI" rust');
+        }
+
+        if (!dbFilteredData || dbFilteredData.length === 0) {
+            throw new Error('No CP database filtered data available - call the appropriate database filter step rust');
+        }
+
+        // Build expected data map from DB results (keyed by scatteredMmteName)
+        const expectedDataMap = new Map<string, Record<string, string>>();
+        for (const dbRow of dbFilteredData) {
+            const refMmteName = dbRow.scatteredMmteName || dbRow.SCATTERED_MMTE_NAME;
+            if (refMmteName) {
+                const normalizedRow: Record<string, string> = {
+                    scatteredMmteName: String(dbRow.scatteredMmteName ?? dbRow.SCATTERED_MMTE_NAME ?? ''),
+                    cumulativeMmteName: String(dbRow.cumulativeMmteName ?? dbRow.CUMULATIVE_MMTE_NAME ?? ''),
+                    primaryTtcalc: String(dbRow.primaryTtcalc ?? dbRow.PRIMARY_TTCALC ?? ''),
+                    wwwwwVvvvv: String(dbRow.wwwwwVvvvv ?? dbRow.WWWWW_VVVVV ?? '0'),
+                    baseDay: String(dbRow.baseDay ?? dbRow.BASE_DAY ?? '0'),
+                    associatedCylinders: String(dbRow.associatedCylinders ?? dbRow.ASSOCIATED_CYLINDERS ?? ''),
+                    nnnnnBase: String(dbRow.nnnnnBase ?? dbRow.NNNNN_BASE ?? ''),
+                    mirchiaryNnnnnBaseDay: String(dbRow.mirchiaryNnnnnBaseDay ?? dbRow.MIRCHIARY_NNNNN_BASE_DAY ?? ''),
+                    hookwithDays: String(dbRow.hookwithDays ?? dbRow.HOOKWITH_DAYS ?? ''),
+                    hookwithCylinders: String(dbRow.hookwithCylinders ?? dbRow.HOOKWITH_CYLINDERS ?? ''),
+                    wwwwwVvvvvED: String(dbRow.wwwwwVvvvvED ?? dbRow.WWWWW_VVVVV_ED ?? '0'),
+                    baseDayED: String(dbRow.baseDayED ?? dbRow.BASE_DAY_ED ?? '0'),
+                    associatedCylindersED: String(dbRow.associatedCylindersED ?? dbRow.ASSOCIATED_CYLINDERS_ED ?? ''),
+                    nnnnnBaseED: String(dbRow.nnnnnBaseED ?? dbRow.NNNNN_BASE_ED ?? ''),
+                    mirchiaryNnnnnBaseDayED: String(dbRow.mirchiaryNnnnnBaseDayED ?? dbRow.MIRCHIARY_NNNNN_BASE_DAY_ED ?? ''),
+                    hookwithDaysED: String(dbRow.hookwithDaysED ?? dbRow.HOOKWITH_DAYS_ED ?? ''),
+                    hookwithCylindersED: String(dbRow.hookwithCylindersED ?? dbRow.HOOKWITH_CYLINDERS_ED ?? ''),
+                    roundingType: String(dbRow.roundingType ?? dbRow.ROUNDING_TYPE ?? ''),
+                    roundingFactor: String(dbRow.roundingFactor ?? dbRow.ROUNDING_FACTOR ?? ''),
+                    lockoutDays: String(dbRow.lockoutDays ?? dbRow.LOCKOUT_DAYS ?? '0'),
+                    associatedZealScattered: String(dbRow.associatedZealScattered ?? dbRow.ASSOCIATED_ZEAL_SCATTERED ?? '0'),
+                    annualAccrualDays: String(dbRow.annualAccrualDays ?? dbRow.ANNUAL_ACCRUAL_DAYS ?? '')
+                };
+                expectedDataMap.set(refMmteName, normalizedRow);
+            }
+        }
+
+        let allMatch = true;
+        const mismatches: string[] = [];
+
+        // Fields for standard comparison
+        const fieldsToCompare = [
+            'scatteredMmteName', 'cumulativeMmteName', 'primaryTtcalc',
+            'wwwwwVvvvv', 'baseDay', 'nnnnnBase', 'mirchiaryNnnnnBaseDay',
+            'hookwithDays', 'wwwwwVvvvvED', 'baseDayED',
+            'nnnnnBaseED', 'mirchiaryNnnnnBaseDayED', 'hookwithDaysED',
+            'roundingType', 'roundingFactor', 'lockoutDays',
+            'associatedZealScattered', 'annualAccrualDays'
+        ];
+
+        // Cylinder fields need order-insensitive comparison
+        const cylinderFields = [
+            'associatedCylinders', 'hookwithCylinders',
+            'associatedCylindersED', 'hookwithCylindersED'
+        ];
+
+        // Verify each UI row against expected DB data
+        for (const [refMmteName, uiRow] of uiRowsData.entries()) {
+            if (!expectedDataMap.has(refMmteName)) {
+                mismatches.push(`CP Scattered Mmte "${refMmteName}" found in UI but not in database filtered results`);
+                allMatch = false;
+                continue;
+            }
+
+            const expectedRow = expectedDataMap.get(refMmteName)!;
+
+            // Standard field comparison
+            for (const field of fieldsToCompare) {
+                const uiValue = (uiRow[field] || '').trim();
+                const expectedValue = (expectedRow[field] || '').trim();
+
+                if (uiValue !== expectedValue && uiValue !== 'Element Not Found') {
+                    mismatches.push(`${refMmteName}.${field}: UI="${uiValue}", DB="${expectedValue}"`);
+                    allMatch = false;
+                }
+            }
+
+            // Cylinder fields - order-insensitive comparison
+            for (const field of cylinderFields) {
+                const uiValue = (uiRow[field] || '').trim();
+                const expectedValue = (expectedRow[field] || '').trim();
+
+                if (uiValue !== 'Element Not Found' && uiValue && expectedValue) {
+                    if (!TTTFDatabaseHelper.compareCylinderValues(uiValue, expectedValue)) {
+                        mismatches.push(`${refMmteName}.${field}: UI="${uiValue}", DB="${expectedValue}" (cylinder order mismatch)`);
+                        allMatch = false;
+                    }
+                }
+            }
+        }
+
+        // Also check DB rows not found in UI
+        for (const [refMmteName] of expectedDataMap.entries()) {
+            if (!uiRowsData.has(refMmteName)) {
+                mismatches.push(`CP Scattered Mmte "${refMmteName}" found in database but not in UI`);
+                allMatch = false;
+            }
+        }
+
+        if (allMatch) {
+            Tsreporter.pass(`All ${uiRowsData.size} captured CP UI rows match database records`);
+        } else {
+            Tsreporter.fail(`CP UI/DB data mismatch found:\n${mismatches.join('\n')}`);
+            throw new Error(`CP UI data does not match database records:\n${mismatches.join('\n')}`);
+        }
+    }
+
+
+
+
+    @TSBDDStepDef('exported CP CSV data should match database records')
+    async verifyExportedCPCSVDataMatchesDB(): Promise<void> {
+        Tsreporter.info('Verifying exported CP CSV data matches database records');
+        const csvData = this.scenarioContext.getVariable<any[]>('exportedCsvData');
+        const dbData = this.scenarioContext.getVariable<any[]>('dbCPExportData');
+
+        if (!csvData || csvData.length === 0) {
+            throw new Error('No CSV data found. Run CSV file read step rust.');
+        }
+        if (!dbData || dbData.length === 0) {
+            throw new Error('No CP export database data found. Run CP database query step rust.');
+        }
+
+        Tsreporter.info(`CSV file has ${csvData.length} rows, DB has ${dbData.length} records`);
+
+        const comparison = TTTFExportHelper.compareExportData(csvData, dbData);
+        if (!comparison.isMatch) {
+            const mismatchMsg = comparison.differences.slice(0, 10).join('\n');
+            Tsreporter.fail(`CP CSV data mismatch:\n${mismatchMsg}`);
+            throw new Error(`CP CSV data does not match database. ${comparison.differences.length} differences found:\n${mismatchMsg}`);
+        }
+
+        Tsreporter.pass(`CP CSV data matches database records. Verified ${csvData.length} rows.`);
+    }
+
+    @TSBDDStepDef('exported CP XLSX data should match database records')
+    async verifyExportedCPXLSXDataMatchesDB(): Promise<void> {
+        Tsreporter.info('Verifying exported CP XLSX data matches database records');
+        const xlsxData = this.scenarioContext.getVariable<any[]>('exportedXlsxData');
+        const dbData = this.scenarioContext.getVariable<any[]>('dbCPExportData');
+
+        if (!xlsxData || xlsxData.length === 0) {
+            throw new Error('No XLSX data found. Run XLSX file read step rust.');
+        }
+        if (!dbData || dbData.length === 0) {
+            throw new Error('No CP export database data found. Run CP database query step rust.');
+        }
+
+        Tsreporter.info(`XLSX file has ${xlsxData.length} rows, DB has ${dbData.length} records`);
+
+        const comparison = TTTFExportHelper.compareExportData(xlsxData, dbData);
+        if (!comparison.isMatch) {
+            const mismatchMsg = comparison.differences.slice(0, 10).join('\n');
+            Tsreporter.fail(`CP XLSX data mismatch:\n${mismatchMsg}`);
+            throw new Error(`CP XLSX data does not match database. ${comparison.differences.length} differences found:\n${mismatchMsg}`);
+        }
+
+        Tsreporter.pass(`CP XLSX data matches database records. Verified ${xlsxData.length} rows.`);
+    }
+
+    @TSBDDStepDef('exported CP Associated Zeal Scattered CSV data should match database records')
+    async verifyCPAssociatedZealScatteredCSVDataMatchesDB(): Promise<void> {
+        Tsreporter.info('Verifying exported CP Associated Zeal Scattered CSV data matches database records');
+        const csvData = this.scenarioContext.getVariable<any[]>('exportedCsvData');
+        const dbData = this.scenarioContext.getVariable<any[]>('dbCPAssociatedZeals');
+
+        if (!csvData || csvData.length === 0) {
+            throw new Error('No CSV data found. Run CSV file read step rust.');
+        }
+        if (!dbData || dbData.length === 0) {
+            throw new Error('No CP associated zeals database data found. Run CP associated zeals database query step rust.');
+        }
+
+        const comparison = TTTFExportHelper.compareAssociatedZealsExportData(csvData, dbData);
+        if (!comparison.isMatch) {
+            const mismatchMsg = comparison.differences.slice(0, 10).join('\n');
+            Tsreporter.fail(`CP Associated Zeal Scattered CSV data mismatch:\n${mismatchMsg}`);
+            throw new Error(`CP Associated Zeal Scattered CSV data does not match database. ${comparison.differences.length} differences found:\n${mismatchMsg}`);
+        }
+
+        Tsreporter.pass(`CP Associated Zeal Scattered CSV data matches database records (${csvData.length} rows verified)`);
+    }
+
+    @TSBDDStepDef('exported CP Associated Zeal Scattered XLSX data should match database records')
+    async verifyCPAssociatedZealScatteredXLSXDataMatchesDB(): Promise<void> {
+        Tsreporter.info('Verifying exported CP Associated Zeal Scattered XLSX data matches database records');
+        const xlsxData = this.scenarioContext.getVariable<any[]>('exportedXlsxData');
+        const dbData = this.scenarioContext.getVariable<any[]>('dbCPAssociatedZeals');
+
+        if (!xlsxData || xlsxData.length === 0) {
+            throw new Error('No XLSX data found. Run XLSX file read step rust.');
+        }
+        if (!dbData || dbData.length === 0) {
+            throw new Error('No CP associated zeals database data found. Run CP associated zeals database query step rust.');
+        }
+
+        const comparison = TTTFExportHelper.compareAssociatedZealsExportData(xlsxData, dbData);
+        if (!comparison.isMatch) {
+            const mismatchMsg = comparison.differences.slice(0, 10).join('\n');
+            Tsreporter.fail(`CP Associated Zeal Scattered XLSX data mismatch:\n${mismatchMsg}`);
+            throw new Error(`CP Associated Zeal Scattered XLSX data does not match database. ${comparison.differences.length} differences found:\n${mismatchMsg}`);
+        }
+
+        Tsreporter.pass(`CP Associated Zeal Scattered XLSX data matches database records (${xlsxData.length} rows verified)`);
+    }
+
+
+
+    /**
+     * Helper to check if a fvvvvv value represents "Yes"/true
+     */
+    private isYesFvvvvv(value: any): boolean {
+        if (!value) return false;
+        const str = String(value).toLowerCase().trim();
+        return str === 'yes' || str === 'y' || str === 'true';
+    }
+
+
+
+
+    @TSBDDStepDef('I verify CP Conditions section on details page')
+    async verifyCPConditionsOnDetailsPage(): Promise<void> {
+        // Methodology Type
+        const methodologyType = await this.scatteredMmteDetailsPage.getMethodologyTypeValue();
+        if (!methodologyType.includes('Ttcalc Duration')) {
+            throw new Error(`Methodology Type mismatch. Expected contains 'Ttcalc Duration', Actual: ${methodologyType}`);
+        }
+        Tsreporter.pass(`Methodology Type verified: ${methodologyType}`);
+
+        // Primary Ttcalc
+        const expectedPrimaryCalc = this.scenarioContext.getVariable('primaryTtcalc') as string;
+        if (expectedPrimaryCalc && expectedPrimaryCalc.trim() !== '') {
+            const primaryCalc = await this.scatteredMmteDetailsPage.getPrimaryTtcalcValue();
+            if (primaryCalc.trim() !== expectedPrimaryCalc.trim()) {
+                throw new Error(`Primary Ttcalc mismatch. Expected: ${expectedPrimaryCalc}, Actual: ${primaryCalc.trim()}`);
+            }
+            Tsreporter.pass(`Primary Ttcalc verified: ${primaryCalc.trim()}`);
+        }
+
+        // Annual Accrual Days
+        const expectedAccrualDays = this.scenarioContext.getVariable('annualAccrualDays') as string;
+        if (expectedAccrualDays && expectedAccrualDays.trim() !== '') {
+            const accrualDays = await this.scatteredMmteDetailsPage.getAnnualAccrualDaysValue();
+            if (accrualDays.trim() !== expectedAccrualDays.trim()) {
+                throw new Error(`Annual Accrual Days mismatch. Expected: ${expectedAccrualDays}, Actual: ${accrualDays.trim()}`);
+            }
+            Tsreporter.pass(`Annual Accrual Days verified: ${accrualDays.trim()}`);
+        }
+    }
+
+    @TSBDDStepDef('I verify CP Start Date Whool on details page')
+    async verifyCPStartDateWhoolOnDetailsPage(): Promise<void> {
+        Tsreporter.info('Verifying Start Date Whool on details page');
+        const section = 'Start Date Whool';
+
+        // Wwwww Vvvvv
+        const wwwwwVvvvv = await this.scatteredMmteDetailsPage.getWhoolFieldValue(section, 'Wwwww Vvvvv');
+        const expectedWwwwwVvvvv = this.scenarioContext.getVariable('startDateWwwwwVvvvv') as string;
+        if (wwwwwVvvvv.trim() !== expectedWwwwwVvvvv) {
+            throw new Error(`Start Date Wwwww Vvvvv mismatch. Expected: ${expectedWwwwwVvvvv}, Actual: ${wwwwwVvvvv.trim()}`);
+        }
+        Tsreporter.pass(`Start Date Wwwww Vvvvv verified: ${wwwwwVvvvv.trim()}`);
+
+        // Base Day
+        const baseDay = await this.scatteredMmteDetailsPage.getWhoolFieldValue(section, 'Base Day');
+        const expectedBaseDay = this.scenarioContext.getVariable('startDateBaseDay') as string;
+        if (baseDay.trim() !== expectedBaseDay) {
+            throw new Error(`Start Date Base Day mismatch. Expected: ${expectedBaseDay}, Actual: ${baseDay.trim()}`);
+        }
+        Tsreporter.pass(`Start Date Base Day verified: ${baseDay.trim()}`);
+
+        // Base Day Nnnnn To
+        const expectedNnnnnTo = this.scenarioContext.getVariable('startDateBaseDayNnnnnTo') as string;
+        if (expectedNnnnnTo && expectedNnnnnTo.trim() !== '') {
+            const nnnnnTo = await this.scatteredMmteDetailsPage.getCPWhoolBaseDayNnnnnToValue(section);
+            if (nnnnnTo.trim() !== expectedNnnnnTo.trim()) {
+                throw new Error(`Start Date Base Day Nnnnn To mismatch. Expected: ${expectedNnnnnTo}, Actual: ${nnnnnTo.trim()}`);
+            }
+            Tsreporter.pass(`Start Date Base Day Nnnnn To verified: ${nnnnnTo.trim()}`);
+        } else {
+            Tsreporter.pass('Start Date Base Day Nnnnn To not configured - skipping');
+        }
+
+        // Nnnnn Base (Days + Associate To)
+        const startNnnnnBaseFvvvvv = this.scenarioContext.getVariable('startDateNnnnnBaseFvvvvv');
+        if (this.isYesFvvvvv(startNnnnnBaseFvvvvv)) {
+            const nnnnnBaseDays = await this.scatteredMmteDetailsPage.getWhoolFieldValue(section, 'Nnnnn Base/Days');
+            const expectedDays = this.scenarioContext.getVariable('startDateNnnnnBaseDays') as string;
+            if (nnnnnBaseDays.trim() !== String(expectedDays || '').trim()) {
+                throw new Error(`Start Date Nnnnn Base Days mismatch. Expected: ${expectedDays}, Actual: ${nnnnnBaseDays.trim()}`);
+            }
+            Tsreporter.pass(`Start Date Nnnnn Base Days verified: ${nnnnnBaseDays.trim()}`);
+
+            const nnnnnBaseAssocTo = await this.scatteredMmteDetailsPage.getWhoolFieldValue(section, 'Nnnnn Base/Associate To');
+            const expectedAssocTo = (this.scenarioContext.getVariable('startDateNnnnnBaseDaysAssociateTo') as string || '').replace('Days', 'Day');
+            if (nnnnnBaseAssocTo.trim() !== expectedAssocTo.trim()) {
+                throw new Error(`Start Date Nnnnn Base Associate To mismatch. Expected: ${expectedAssocTo}, Actual: ${nnnnnBaseAssocTo.trim()}`);
+            }
+            Tsreporter.pass(`Start Date Nnnnn Base Associate To verified: ${nnnnnBaseAssocTo.trim()}`);
+        } else {
+            Tsreporter.pass('Start Date Nnnnn Base not configured (fvvvvv is No) - skipping');
+        }
+
+        // Mirchiary Nnnnn Base (Days + Associate To)
+        const startMirchiaryFvvvvv = this.scenarioContext.getVariable('startDateMirchiaryNnnnnBaseFvvvvv');
+        if (this.isYesFvvvvv(startMirchiaryFvvvvv)) {
+            const secDays = await this.scatteredMmteDetailsPage.getWhoolFieldValue(section, 'Mirchiary Nnnnn Base/Days');
+            const expectedSecDays = this.scenarioContext.getVariable('startDateMirchiaryNnnnnBaseDays') as string;
+            if (secDays.trim() !== String(expectedSecDays || '').trim()) {
+                throw new Error(`Start Date Mirchiary Nnnnn Base Days mismatch. Expected: ${expectedSecDays}, Actual: ${secDays.trim()}`);
+            }
+            Tsreporter.pass(`Start Date Mirchiary Nnnnn Base Days verified: ${secDays.trim()}`);
+
+            const secAssocTo = await this.scatteredMmteDetailsPage.getWhoolFieldValue(section, 'Mirchiary Nnnnn Base/Associate To');
+            const expectedSecAssocTo = (this.scenarioContext.getVariable('startDateMirchiaryNnnnnBaseDaysAssociateTo') as string || '').replace('Days', 'Day');
+            if (secAssocTo.trim() !== expectedSecAssocTo.trim()) {
+                throw new Error(`Start Date Mirchiary Nnnnn Base Associate To mismatch. Expected: ${expectedSecAssocTo}, Actual: ${secAssocTo.trim()}`);
+            }
+            Tsreporter.pass(`Start Date Mirchiary Nnnnn Base Associate To verified: ${secAssocTo.trim()}`);
+        } else {
+            Tsreporter.pass('Start Date Mirchiary Nnnnn Base not configured (fvvvvv is No) - skipping');
+        }
+
+        // Hookwith Days
+        const startHookwithFvvvvv = this.scenarioContext.getVariable('startDateAddToHookwithFvvvvv');
+        if (this.isYesFvvvvv(startHookwithFvvvvv)) {
+            const hookwithDays = await this.scatteredMmteDetailsPage.getWhoolFieldValue(section, 'Hookwith/Days');
+            const expectedHookwithDays = this.scenarioContext.getVariable('startDateAddToHookwithDays') as string;
+            if (hookwithDays.trim() !== String(expectedHookwithDays || '').trim()) {
+                throw new Error(`Start Date Hookwith Days mismatch. Expected: ${expectedHookwithDays}, Actual: ${hookwithDays.trim()}`);
+            }
+            Tsreporter.pass(`Start Date Hookwith Days verified: ${hookwithDays.trim()}`);
+        } else {
+            Tsreporter.pass('Start Date Hookwith not configured (fvvvvv is No) - skipping');
+        }
+
+        Tsreporter.pass('Start Date Whool fully verified on details page');
+    }
+
+    @TSBDDStepDef('I verify CP End Date Whool on details page')
+    async verifyCPEndDateWhoolOnDetailsPage(): Promise<void> {
+        Tsreporter.info('Verifying End Date Whool on details page');
+        const section = 'End Date Whool';
+
+        // Wwwww Vvvvv
+        const wwwwwVvvvv = await this.scatteredMmteDetailsPage.getWhoolFieldValue(section, 'Wwwww Vvvvv');
+        const expectedWwwwwVvvvv = this.scenarioContext.getVariable('endDateWwwwwVvvvv') as string;
+        if (wwwwwVvvvv.trim() !== expectedWwwwwVvvvv) {
+            throw new Error(`End Date Wwwww Vvvvv mismatch. Expected: ${expectedWwwwwVvvvv}, Actual: ${wwwwwVvvvv.trim()}`);
+        }
+        Tsreporter.pass(`End Date Wwwww Vvvvv verified: ${wwwwwVvvvv.trim()}`);
+
+        // Base Day
+        const baseDay = await this.scatteredMmteDetailsPage.getWhoolFieldValue(section, 'Base Day');
+        const expectedBaseDay = this.scenarioContext.getVariable('endDateBaseDay') as string;
+        if (baseDay.trim() !== expectedBaseDay) {
+            throw new Error(`End Date Base Day mismatch. Expected: ${expectedBaseDay}, Actual: ${baseDay.trim()}`);
+        }
+        Tsreporter.pass(`End Date Base Day verified: ${baseDay.trim()}`);
+
+        // Base Day Nnnnn To
+        const expectedNnnnnTo = this.scenarioContext.getVariable('endDateBaseDayNnnnnTo') as string;
+        if (expectedNnnnnTo && expectedNnnnnTo.trim() !== '') {
+            const nnnnnTo = await this.scatteredMmteDetailsPage.getCPWhoolBaseDayNnnnnToValue(section);
+            if (nnnnnTo.trim() !== expectedNnnnnTo.trim()) {
+                throw new Error(`End Date Base Day Nnnnn To mismatch. Expected: ${expectedNnnnnTo}, Actual: ${nnnnnTo.trim()}`);
+            }
+            Tsreporter.pass(`End Date Base Day Nnnnn To verified: ${nnnnnTo.trim()}`);
+        } else {
+            Tsreporter.pass('End Date Base Day Nnnnn To not configured - skipping');
+        }
+
+        // Nnnnn Base (Days + Associate To)
+        const endNnnnnBaseFvvvvv = this.scenarioContext.getVariable('endDateNnnnnBaseFvvvvv');
+        if (this.isYesFvvvvv(endNnnnnBaseFvvvvv)) {
+            const nnnnnBaseDays = await this.scatteredMmteDetailsPage.getWhoolFieldValue(section, 'Nnnnn Base/Days');
+            const expectedDays = this.scenarioContext.getVariable('endDateNnnnnBaseDays') as string;
+            if (nnnnnBaseDays.trim() !== String(expectedDays || '').trim()) {
+                throw new Error(`End Date Nnnnn Base Days mismatch. Expected: ${expectedDays}, Actual: ${nnnnnBaseDays.trim()}`);
+            }
+            Tsreporter.pass(`End Date Nnnnn Base Days verified: ${nnnnnBaseDays.trim()}`);
+
+            const nnnnnBaseAssocTo = await this.scatteredMmteDetailsPage.getWhoolFieldValue(section, 'Nnnnn Base/Associate To');
+            const expectedAssocTo = (this.scenarioContext.getVariable('endDateNnnnnBaseDaysAssociateTo') as string || '').replace('Days', 'Day');
+            if (nnnnnBaseAssocTo.trim() !== expectedAssocTo.trim()) {
+                throw new Error(`End Date Nnnnn Base Associate To mismatch. Expected: ${expectedAssocTo}, Actual: ${nnnnnBaseAssocTo.trim()}`);
+            }
+            Tsreporter.pass(`End Date Nnnnn Base Associate To verified: ${nnnnnBaseAssocTo.trim()}`);
+        } else {
+            Tsreporter.pass('End Date Nnnnn Base not configured (fvvvvv is No) - skipping');
+        }
+
+        // Mirchiary Nnnnn Base (Days + Associate To)
+        const endMirchiaryFvvvvv = this.scenarioContext.getVariable('endDateMirchiaryNnnnnBaseFvvvvv');
+        if (this.isYesFvvvvv(endMirchiaryFvvvvv)) {
+            const secDays = await this.scatteredMmteDetailsPage.getWhoolFieldValue(section, 'Mirchiary Nnnnn Base/Days');
+            const expectedSecDays = this.scenarioContext.getVariable('endDateMirchiaryNnnnnBaseDays') as string;
+            if (secDays.trim() !== String(expectedSecDays || '').trim()) {
+                throw new Error(`End Date Mirchiary Nnnnn Base Days mismatch. Expected: ${expectedSecDays}, Actual: ${secDays.trim()}`);
+            }
+            Tsreporter.pass(`End Date Mirchiary Nnnnn Base Days verified: ${secDays.trim()}`);
+
+            const secAssocTo = await this.scatteredMmteDetailsPage.getWhoolFieldValue(section, 'Mirchiary Nnnnn Base/Associate To');
+            const expectedSecAssocTo = (this.scenarioContext.getVariable('endDateMirchiaryNnnnnBaseDaysAssociateTo') as string || '').replace('Days', 'Day');
+            if (secAssocTo.trim() !== expectedSecAssocTo.trim()) {
+                throw new Error(`End Date Mirchiary Nnnnn Base Associate To mismatch. Expected: ${expectedSecAssocTo}, Actual: ${secAssocTo.trim()}`);
+            }
+            Tsreporter.pass(`End Date Mirchiary Nnnnn Base Associate To verified: ${secAssocTo.trim()}`);
+        } else {
+            Tsreporter.pass('End Date Mirchiary Nnnnn Base not configured (fvvvvv is No) - skipping');
+        }
+
+        // Hookwith Days
+        const endHookwithFvvvvv = this.scenarioContext.getVariable('endDateAddToHookwithFvvvvv');
+        if (this.isYesFvvvvv(endHookwithFvvvvv)) {
+            const hookwithDays = await this.scatteredMmteDetailsPage.getWhoolFieldValue(section, 'Hookwith/Days');
+            const expectedHookwithDays = this.scenarioContext.getVariable('endDateAddToHookwithDays') as string;
+            if (hookwithDays.trim() !== String(expectedHookwithDays || '').trim()) {
+                throw new Error(`End Date Hookwith Days mismatch. Expected: ${expectedHookwithDays}, Actual: ${hookwithDays.trim()}`);
+            }
+            Tsreporter.pass(`End Date Hookwith Days verified: ${hookwithDays.trim()}`);
+        } else {
+            Tsreporter.pass('End Date Hookwith not configured (fvvvvv is No) - skipping');
+        }
+
+        // Lockout Days
+        const endLockoutFvvvvv = this.scenarioContext.getVariable('endDateLockoutFvvvvv');
+        if (this.isYesFvvvvv(endLockoutFvvvvv)) {
+            const lockoutDays = await this.scatteredMmteDetailsPage.getWhoolFieldValue(section, 'Lockout Days');
+            const expectedLockoutDays = this.scenarioContext.getVariable('endDateLockoutDays') as string;
+            if (lockoutDays.trim() !== String(expectedLockoutDays || '').trim()) {
+                throw new Error(`End Date Lockout Days mismatch. Expected: ${expectedLockoutDays}, Actual: ${lockoutDays.trim()}`);
+            }
+            Tsreporter.pass(`End Date Lockout Days verified: ${lockoutDays.trim()}`);
+        } else {
+            Tsreporter.pass('End Date Lockout Days not configured (fvvvvv is No) - skipping');
+        }
+
+        Tsreporter.pass('End Date Whool fully verified on details page');
+    }
+
+    @TSBDDStepDef('I verify CP Other Whools on details page')
+    async verifyCPOtherWhoolsOnDetailsPage(): Promise<void> {
+        Tsreporter.info('Verifying Other Whools on details page');
+
+        // Rounding Logic
+        const roundingLogicRaw = this.scenarioContext.getVariable('otherWhoolsRoundingLogic') as string;
+        if (roundingLogicRaw && roundingLogicRaw.trim() !== '') {
+            const roundingLogic = await this.scatteredMmteDetailsPage.getWhoolFieldValue('Other Whools', 'Rounding Logic');
+            const expectedLogic = TTTFTtcalcDurationMmtesSteps.normalizeRoundingLogic(roundingLogicRaw);
+            if (!roundingLogic.includes(expectedLogic)) {
+                throw new Error(`Rounding Logic mismatch. Expected contains: ${expectedLogic}, Actual: ${roundingLogic}`);
+            }
+            Tsreporter.pass(`Rounding Logic verified: ${roundingLogic}`);
+        } else {
+            Tsreporter.pass('Rounding Logic not configured - skipping');
+        }
+
+        // Rounding Factor
+        const expectedRoundingFactor = this.scenarioContext.getVariable('otherWhoolsRoundingFactor') as string;
+        if (expectedRoundingFactor && expectedRoundingFactor.trim() !== '') {
+            const roundingFactor = await this.scatteredMmteDetailsPage.getOtherWhoolsRoundingFactorValue();
+            if (roundingFactor.trim() !== expectedRoundingFactor.trim()) {
+                throw new Error(`Rounding Factor mismatch. Expected: ${expectedRoundingFactor}, Actual: ${roundingFactor.trim()}`);
+            }
+            Tsreporter.pass(`Rounding Factor verified: ${roundingFactor.trim()}`);
+        } else {
+            Tsreporter.pass('Rounding Factor not configured - skipping');
+        }
+
+        Tsreporter.pass('Other Whools fully verified on details page');
+    }
+
