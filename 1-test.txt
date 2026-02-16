@@ -321,7 +321,18 @@ export class CSMicrosoftSSOHandler {
      *   Layer 2: STRIP auth headers & PRT cookies from login.microsoftonline.com requests
      *   Layer 3: INJECT login_hint + prompt=login into OAuth authorize URLs
      */
+    /**
+     * credentialsEntered flag — set to true after the test user enters email+password.
+     * Used by OAuth interception to stop injecting prompt=login after credentials are in,
+     * so that subsequent OAuth redirects (e.g., after 404 error recovery) can use
+     * the test user's Microsoft session cookie instead of forcing a re-login.
+     */
+    private credentialsEntered: boolean = false;
+
     private async setupOAuthInterception(page: any, testUsername: string): Promise<void> {
+        // Reset flag
+        this.credentialsEntered = false;
+
         // Layer 1: Block Azure AD Seamless SSO endpoint entirely
         // autologon.microsoftonline.com is where Kerberos/PRT-based silent auth happens.
         // By aborting these requests, we force Microsoft to show the interactive login page.
@@ -367,14 +378,25 @@ export class CSMicrosoftSSOHandler {
                 CSReporter.debug(`Stripped Windows SSO credentials from: ${url.substring(0, 80)}...`);
             }
 
-            // Layer 3: Inject login_hint + prompt=login into OAuth authorize URLs
+            // Layer 3: Inject login_hint into OAuth authorize URLs
+            // Only inject prompt=login BEFORE credentials are entered.
+            // After credentials are entered, the test user's Microsoft session cookie
+            // is set — we want Microsoft to use that session silently on subsequent
+            // OAuth redirects (e.g., after 404 error recovery navigation).
             if (url.includes('/oauth2/authorize') || url.includes('/oauth2/v2.0/authorize')) {
                 try {
                     const urlObj = new URL(url);
                     urlObj.searchParams.set('login_hint', testUsername);
-                    urlObj.searchParams.set('prompt', 'login');
+                    if (!this.credentialsEntered) {
+                        urlObj.searchParams.set('prompt', 'login');
+                        CSReporter.debug(`OAuth intercept: login_hint=${testUsername}, prompt=login`);
+                    } else {
+                        // After credentials entered — don't force re-login.
+                        // Remove any existing prompt param so Microsoft uses the session.
+                        urlObj.searchParams.delete('prompt');
+                        CSReporter.debug(`OAuth intercept (post-login): login_hint=${testUsername}, no prompt (use session)`);
+                    }
                     const modifiedUrl = urlObj.toString();
-                    CSReporter.debug(`OAuth intercept: login_hint=${testUsername}, prompt=login`);
                     await route.continue({ url: modifiedUrl, headers });
                     return;
                 } catch (err: any) {
@@ -901,6 +923,10 @@ export class CSMicrosoftSSOHandler {
         // Wait for the page transition
         await page.waitForTimeout(2000);
         CSReporter.debug('Password entered and Sign in clicked');
+
+        // Mark credentials as entered — OAuth interception will stop injecting prompt=login
+        // so subsequent OAuth redirects use the test user's session cookie
+        this.credentialsEntered = true;
 
         // Check for error messages
         try {
