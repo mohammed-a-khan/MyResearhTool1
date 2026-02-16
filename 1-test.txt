@@ -1,1 +1,16 @@
-test
+<!-- NEW TRAINING RESOURCES SECTION -->
+    <div class="annotation">
+      <div class="annotation-box">
+        <div class="annotation-label">✨ New Section — Add Here</div>
+        <div class="training-section">
+          <div class="training-header">
+            <div class="icon">📚</div>
+            <h3>Training Resources — Playwright & TypeScript</h3>
+            <div class="badge">Learning Path</div>
+          </div>
+
+
+ <div class="card-duration"><span class="clock">🕐</span> 14.15 hrs</div>
+
+ <div class="total-time">
+            📊 <strong>Total Learning Time:</strong>
