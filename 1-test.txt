@@ -1,16 +1,1181 @@
-<!-- NEW TRAINING RESOURCES SECTION -->
-    <div class="annotation">
-      <div class="annotation-box">
-        <div class="annotation-label">✨ New Section — Add Here</div>
-        <div class="training-section">
-          <div class="training-header">
-            <div class="icon">📚</div>
-            <h3>Training Resources — Playwright & TypeScript</h3>
-            <div class="badge">Learning Path</div>
-          </div>
+/**
+     * Click Mmte Start Date Associate Cylinders Select button
+     */
+    public async clickMmteStartDateCylindersSelect(): Promise<void> {
+        const xpath = `//div[@id="incircleFilterCalcDuration"]//h5[text()="Mmte Start Date Determination Rule"]/ancestor::section[1]//button[@id="addbuttonRustRuleBaseCylinders"]`;
+        const button = CSElementFactory.createByXPath(xpath, 'Mmte Start Date Cylinders Select', this.page);
+        await button.clickWithTimeout(5000);
+        Tsreporter.pass('Clicked Mmte Start Date Associate Cylinders Select');
+    }
+
+    /**
+     * Check Mmte Start Date Nnnnn Base checkbox
+     */
+    public async checkMmteStartDateNnnnnBase(): Promise<void> {
+        const xpath = `//div[@id="incircleFilterCalcDuration"]//h5[text()="Mmte Start Date Determination Rule"]/ancestor::section[1]//span[@class="sssss-checkbox__label-text" and text()="Nnnnn Base"]/parent::span[@role="checkbox"]`;
+        const checkbox = CSElementFactory.createByXPath(xpath, 'Mmte Start Date Nnnnn Base checkbox', this.page);
+        await checkbox.clickWithTimeout(5000);
+        Tsreporter.pass('Checked Mmte Start Date Nnnnn Base');
+    }
+
+    /**
+     * Enter Mmte Start Date Nnnnn Base Days value
+     */
+    public async enterMmteStartDateNnnnnBaseDays(value: string): Promise<void> {
+        const xpath = `//div[@id="incircleFilterCalcDuration"]//h5[text()="Mmte Start Date Determination Rule"]/ancestor::section[1]//input[@name="addToBaseDaysRustRule"]`;
+        const input = CSElementFactory.createByXPath(xpath, 'Mmte Start Date Nnnnn Base Days input', this.page);
+        await input.fillWithTimeout(value, 5000);
+        Tsreporter.pass(`Entered Mmte Start Date Nnnnn Base Days: ${value}`);
+    }
+
+    /**
+     * Select Mmte Start Date Nnnnn Base Type (Kindness Day / Cylinder Day)
+     */
+    public async selectMmteStartDateNnnnnBaseType(type: string): Promise<void> {
+        const xpath = `//div[@id="incircleFilterCalcDuration"]//h5[text()="Mmte Start Date Determination Rule"]/ancestor::section[1]//input[@name="addToBaseDaysRustRule"]/ancestor::div[contains(@class, "sssss-row")]//span[text()="${type}"]/ancestor::div[contains(@class, "sssss-radio-button")][1]`;
+        const radio = CSElementFactory.createByXPath(xpath, `Mmte Start Date Nnnnn Base Type: ${type}`, this.page);
+        await radio.clickWithTimeout(5000);
+        Tsreporter.pass(`Selected Mmte Start Date Nnnnn Base Type: ${type}`);
+    }
+
+    /**
+     * Check Mmte Start Date Mirchiary Nnnnn Base checkbox
+     */
+    public async checkMmteStartDateMirchiaryNnnnnBase(): Promise<void> {
+        const xpath = `//div[@id="incircleFilterCalcDuration"]//h5[text()="Mmte Start Date Determination Rule"]/ancestor::section[1]//span[@class="sssss-checkbox__label-text" and text()="Mirchiary Nnnnn Base"]/parent::span[@role="checkbox"]`;
+        const checkbox = CSElementFactory.createByXPath(xpath, 'Mmte Start Date Mirchiary Nnnnn Base checkbox', this.page);
+        await checkbox.clickWithTimeout(5000);
+        Tsreporter.pass('Checked Mmte Start Date Mirchiary Nnnnn Base');
+    }
+
+    /**
+     * Enter Mmte Start Date Mirchiary Nnnnn Base Days value
+     */
+    public async enterMmteStartDateMirchiaryNnnnnBaseDays(value: string): Promise<void> {
+        const xpath = `//div[@id="incircleFilterCalcDuration"]//h5[text()="Mmte Start Date Determination Rule"]/ancestor::section[1]//input[@name="addToMirchiaryAdjBaseDaysRustRule"]`;
+        const input = CSElementFactory.createByXPath(xpath, 'Mmte Start Date Mirchiary Nnnnn Base Days input', this.page);
+        await input.fillWithTimeout(value, 5000);
+        Tsreporter.pass(`Entered Mmte Start Date Mirchiary Nnnnn Base Days: ${value}`);
+    }
+
+    /**
+     * Select Mmte Start Date Mirchiary Nnnnn Base Type
+     */
+    public async selectMmteStartDateMirchiaryNnnnnBaseType(type: string): Promise<void> {
+        const xpath = `//div[@id="incircleFilterCalcDuration"]//h5[text()="Mmte Start Date Determination Rule"]/ancestor::section[1]//input[@name="addToMirchiaryAdjBaseDaysRustRule"]/ancestor::div[contains(@class, "sssss-row")]//span[text()="${type}"]/ancestor::div[contains(@class, "sssss-radio-button")][1]`;
+        const radio = CSElementFactory.createByXPath(xpath, `Mmte Start Date Mirchiary Nnnnn Base Type: ${type}`, this.page);
+        await radio.clickWithTimeout(5000);
+        Tsreporter.pass(`Selected Mmte Start Date Mirchiary Nnnnn Base Type: ${type}`);
+    }
+
+    /**
+     * Check Mmte Start Date Add to Hookwith checkbox
+     */
+    public async checkMmteStartDateAddToHookwith(): Promise<void> {
+        const xpath = `//div[@id="incircleFilterCalcDuration"]//h5[text()="Mmte Start Date Determination Rule"]/ancestor::section[1]//span[@class="sssss-checkbox__label-text" and text()="Add to Hookwith"]/parent::span[@role="checkbox"]`;
+        const checkbox = CSElementFactory.createByXPath(xpath, 'Mmte Start Date Add to Hookwith checkbox', this.page);
+        await checkbox.clickWithTimeout(5000);
+        Tsreporter.pass('Checked Mmte Start Date Add to Hookwith');
+    }
 
 
- <div class="card-duration"><span class="clock">🕐</span> 14.15 hrs</div>
 
- <div class="total-time">
-            📊 <strong>Total Learning Time:</strong>
+
+
+     /**
+     * Click Mmte Start Date Hookwith Associate Cylinders Select button
+     */
+    public async clickMmteStartDateHookwithCylindersSelect(): Promise<void> {
+        const xpath = `//div[@id="incircleFilterCalcDuration"]//h5[text()="Mmte Start Date Determination Rule"]/ancestor::section[1]//button[@id="addbuttonRustRuleHookwithCylinders"]`;
+        const button = CSElementFactory.createByXPath(xpath, 'Mmte Start Date Hookwith Cylinders Select', this.page);
+        await button.clickWithTimeout(5000);
+        Tsreporter.pass('Clicked Mmte Start Date Hookwith Cylinders Select');
+    }
+
+
+
+
+    /**
+     * Enter Mmte End Date Wwwww Vvvvv value
+     */
+    public async enterMmteEndDateWwwwwVvvvv(value: string): Promise<void> {
+        const xpath = `//div[@id="incircleFilterCalcDuration"]//h5[text()="Mmte End Date Determination Rule"]/ancestor::section[1]//input[@name="mirchiWwwwwVvvvv"]`;
+        const input = CSElementFactory.createByXPath(xpath, 'Mmte End Date Wwwww Vvvvv input', this.page);
+        await input.fillWithTimeout(value, 5000);
+        Tsreporter.pass(`Entered Mmte End Date Wwwww Vvvvv: ${value}`);
+    }
+
+    /**
+     * Enter Mmte End Date Base Day value
+     */
+    public async enterMmteEndDateBaseDay(value: string): Promise<void> {
+        const xpath = `//div[@id="incircleFilterCalcDuration"]//h5[text()="Mmte End Date Determination Rule"]/ancestor::section[1]//input[@name="mirchiBaseDay"]`;
+        const input = CSElementFactory.createByXPath(xpath, 'Mmte End Date Base Day input', this.page);
+        await input.fillWithTimeout(value, 5000);
+        Tsreporter.pass(`Entered Mmte End Date Base Day: ${value}`);
+    }
+
+    /**
+     * Click Mmte End Date Associate Cylinders Select button
+     */
+    public async clickMmteEndDateCylindersSelect(): Promise<void> {
+        const xpath = `//div[@id="incircleFilterCalcDuration"]//h5[text()="Mmte End Date Determination Rule"]/ancestor::section[1]//button[@id="addbuttonMirchiRuleBaseCylinders"]`;
+        const button = CSElementFactory.createByXPath(xpath, 'Mmte End Date Cylinders Select', this.page);
+        await button.clickWithTimeout(5000);
+        Tsreporter.pass('Clicked Mmte End Date Associate Cylinders Select');
+    }
+
+    /**
+     * Check Mmte End Date Nnnnn Base checkbox
+     */
+    public async checkMmteEndDateNnnnnBase(): Promise<void> {
+        const xpath = `//div[@id="incircleFilterCalcDuration"]//h5[text()="Mmte End Date Determination Rule"]/ancestor::section[1]//span[@class="sssss-checkbox__label-text" and text()="Nnnnn Base"]/parent::span[@role="checkbox"]`;
+        const checkbox = CSElementFactory.createByXPath(xpath, 'Mmte End Date Nnnnn Base checkbox', this.page);
+        await checkbox.clickWithTimeout(5000);
+        Tsreporter.pass('Checked Mmte End Date Nnnnn Base');
+    }
+
+    /**
+     * Enter Mmte End Date Nnnnn Base Days value
+     */
+    public async enterMmteEndDateNnnnnBaseDays(value: string): Promise<void> {
+        const xpath = `//div[@id="incircleFilterCalcDuration"]//h5[text()="Mmte End Date Determination Rule"]/ancestor::section[1]//span[@class="sssss-checkbox__label-text" and text()="Nnnnn Base"]/ancestor::div[contains(@class, "sssss-checkbox")][1]/following::div[1]//input[contains(@id, "sssss-text-input")]`;
+        const input = CSElementFactory.createByXPath(xpath, 'Mmte End Date Nnnnn Base Days input', this.page);
+        await input.fillWithTimeout(value, 5000);
+        Tsreporter.pass(`Entered Mmte End Date Nnnnn Base Days: ${value}`);
+    }
+
+    /**
+     * Select Mmte End Date Nnnnn Base Type
+     */
+    public async selectMmteEndDateNnnnnBaseType(type: string): Promise<void> {
+        const xpath = `//div[@id="incircleFilterCalcDuration"]//h5[text()="Mmte End Date Determination Rule"]/ancestor::section[1]//span[@class="sssss-checkbox__label-text" and text()="Nnnnn Base"]/ancestor::div[contains(@class, "sssss-checkbox")][1]/following::div[1]//input[contains(@id, "sssss-text-input")]/ancestor::div[contains(@class, "sssss-row")]//span[text()="${type}"]/ancestor::div[contains(@class, "sssss-radio-button")][1]`;
+        const radio = CSElementFactory.createByXPath(xpath, `Mmte End Date Nnnnn Base Type: ${type}`, this.page);
+        await radio.clickWithTimeout(5000);
+        Tsreporter.pass(`Selected Mmte End Date Nnnnn Base Type: ${type}`);
+    }
+
+    /**
+     * Check Mmte End Date Mirchiary Nnnnn Base checkbox
+     */
+    public async checkMmteEndDateMirchiaryNnnnnBase(): Promise<void> {
+        const xpath = `//div[@id="incircleFilterCalcDuration"]//h5[text()="Mmte End Date Determination Rule"]/ancestor::section[1]//span[@class="sssss-checkbox__label-text" and text()="Mirchiary Nnnnn Base"]/parent::span[@role="checkbox"]`;
+        const checkbox = CSElementFactory.createByXPath(xpath, 'Mmte End Date Mirchiary Nnnnn Base checkbox', this.page);
+        await checkbox.clickWithTimeout(5000);
+        Tsreporter.pass('Checked Mmte End Date Mirchiary Nnnnn Base');
+    }
+
+    /**
+     * Enter Mmte End Date Mirchiary Nnnnn Base Days value
+     */
+    public async enterMmteEndDateMirchiaryNnnnnBaseDays(value: string): Promise<void> {
+        const xpath = `//div[@id="incircleFilterCalcDuration"]//h5[text()="Mmte End Date Determination Rule"]/ancestor::section[1]//input[@name="addToMirchiaryAdjBaseDaysMirchiRule"]`;
+        const input = CSElementFactory.createByXPath(xpath, 'Mmte End Date Mirchiary Nnnnn Base Days input', this.page);
+        await input.fillWithTimeout(value, 5000);
+        Tsreporter.pass(`Entered Mmte End Date Mirchiary Nnnnn Base Days: ${value}`);
+    }
+
+    /**
+     * Select Mmte End Date Mirchiary Nnnnn Base Type
+     */
+    public async selectMmteEndDateMirchiaryNnnnnBaseType(type: string): Promise<void> {
+        const xpath = `//div[@id="incircleFilterCalcDuration"]//h5[text()="Mmte End Date Determination Rule"]/ancestor::section[1]//input[@name="addToMirchiaryAdjBaseDaysMirchiRule"]/ancestor::div[contains(@class, "sssss-row")]//span[text()="${type}"]/ancestor::div[contains(@class, "sssss-radio-button")][1]`;
+        const radio = CSElementFactory.createByXPath(xpath, `Mmte End Date Mirchiary Nnnnn Base Type: ${type}`, this.page);
+        await radio.clickWithTimeout(5000);
+        Tsreporter.pass(`Selected Mmte End Date Mirchiary Nnnnn Base Type: ${type}`);
+    }
+
+    /**
+     * Check Mmte End Date Add to Hookwith checkbox
+     */
+    public async checkMmteEndDateAddToHookwith(): Promise<void> {
+        const xpath = `//div[@id="incircleFilterCalcDuration"]//h5[text()="Mmte End Date Determination Rule"]/ancestor::section[1]//span[@class="sssss-checkbox__label-text" and text()="Add to Hookwith"]/parent::span[@role="checkbox"]`;
+        const checkbox = CSElementFactory.createByXPath(xpath, 'Mmte End Date Add to Hookwith checkbox', this.page);
+        await checkbox.clickWithTimeout(5000);
+        Tsreporter.pass('Checked Mmte End Date Add to Hookwith');
+    }
+
+    /**
+     * Enter Mmte End Date Hookwith Days
+     */
+    public async enterMmteEndDateHookwithDays(value: string): Promise<void> {
+        const xpath = `//div[@id="incircleFilterCalcDuration"]//h5[text()="Mmte End Date Determination Rule"]/ancestor::section[1]//span[@class="sssss-checkbox__label-text" and text()="Add to Hookwith"]/ancestor::div[contains(@class,"sssss-checkbox")][1]/following::div[1]//input[contains(@id, "sssss-text-input")]`;
+        const input = CSElementFactory.createByXPath(xpath, 'Mmte End Date Hookwith Days input', this.page);
+        await input.fillWithTimeout(value, 5000);
+        Tsreporter.pass(`Entered Mmte End Date Hookwith Days: ${value}`);
+    }
+
+    /**
+     * Configure Mmte End Date Include Weekends checkbox
+     */
+    public async configureMmteEndDateIncludeWeekends(includeWeekends: string): Promise<void> {
+        if (includeWeekends === 'Y' || includeWeekends === 'Yes') {
+            const xpath = `//div[@id="incircleFilterCalcDuration"]//h5[text()="Mmte End Date Determination Rule"]/ancestor::section[1]//span[@class="sssss-checkbox__label-text" and text()="Add to Hookwith"]/ancestor::div[contains(@class,"sssss-checkbox")][1]/following::div[1]//input[contains(@id, "sssss-text-input")]/ancestor::div[contains(@class, "sssss-row")]//span[text()="Weekends"]/ancestor::span[@role="checkbox"][1]`;
+            const checkbox = CSElementFactory.createByXPath(xpath, 'Mmte End Date Include Weekends', this.page);
+            await checkbox.clickWithTimeout(5000);
+            Tsreporter.pass('Checked Mmte End Date Include Weekends');
+        }
+    }
+
+    /**
+     * Configure Mmte End Date Include Borings checkbox
+     */
+    public async configureMmteEndDateIncludeBorings(includeBorings: string): Promise<void> {
+        if (includeBorings === 'Y' || includeBorings === 'Yes') {
+            const xpath = `//div[@id="incircleFilterCalcDuration"]//h5[text()="Mmte End Date Determination Rule"]/ancestor::section[1]//span[@class="sssss-checkbox__label-text" and text()="Add to Hookwith"]/ancestor::div[contains(@class,"sssss-checkbox")][1]/following::div[1]//input[contains(@id, "sssss-text-input")]/ancestor::div[contains(@class, "sssss-row")]//span[text()="Borings"]/ancestor::span[@role="checkbox"][1]`;
+            const checkbox = CSElementFactory.createByXPath(xpath, 'Mmte End Date Include Borings', this.page);
+            await checkbox.clickWithTimeout(5000);
+            Tsreporter.pass('Checked Mmte End Date Include Borings');
+        }
+    }
+
+    /**
+     * Click Mmte End Date Hookwith Associate Cylinders Select button
+     */
+    public async clickMmteEndDateHookwithCylindersSelect(): Promise<void> {
+        const xpath = `//div[@id="incircleFilterCalcDuration"]//h5[text()="Mmte End Date Determination Rule"]/ancestor::section[1]//button[@id="addbuttonMirchiRuleHookwithCylinders"]`;
+        const button = CSElementFactory.createByXPath(xpath, 'Mmte End Date Hookwith Cylinders Select', this.page);
+        await button.clickWithTimeout(5000);
+        Tsreporter.pass('Clicked Mmte End Date Hookwith Cylinders Select');
+    }
+
+
+
+
+
+    /**
+     * Check if a role="checkbox" element in the filter panel is checked
+     * @param sectionTitle - e.g., "Mmte Start Date Determination Rule"
+     * @param checkboxLabel - e.g., "Nnnnn Base"
+     */
+    public async isFilterCheckboxChecked(sectionTitle: string, checkboxLabel: string): Promise<boolean> {
+        const xpath = `//div[@id="incircleFilterCalcDuration"]//h5[text()="${sectionTitle}"]/ancestor::section[1]//span[@class="sssss-checkbox__label-text" and text()="${checkboxLabel}"]/parent::span[@role="checkbox"]`;
+        const element = CSElementFactory.createByXPath(xpath, `${checkboxLabel} checkbox`, this.page);
+        try {
+            const ariaChecked = await element.getAttributeWithTimeout('aria-checked', 5000);
+            return ariaChecked === 'true';
+        } catch {
+            return false;
+        }
+    }
+
+    /**
+     * Check if a role="checkbox" element in the filter panel is visible
+     */
+    public async isFilterCheckboxVisible(sectionTitle: string, checkboxLabel: string): Promise<boolean> {
+        const xpath = `//div[@id="incircleFilterCalcDuration"]//h5[text()="${sectionTitle}"]/ancestor::section[1]//span[@class="sssss-checkbox__label-text" and text()="${checkboxLabel}"]/parent::span[@role="checkbox"]`;
+        const element = CSElementFactory.createByXPath(xpath, `${checkboxLabel} checkbox`, this.page);
+        return await element.isVisibleWithTimeout(5000);
+    }
+
+    /**
+     * Check if a named input in the filter panel is enabled
+     * @param sectionTitle - e.g., "Mmte Start Date Determination Rule"
+     * @param inputName - e.g., "addToBaseDaysRustRule"
+     */
+    public async isFilterInputEnabled(sectionTitle: string, inputName: string): Promise<boolean> {
+        const xpath = `//div[@id="incircleFilterCalcDuration"]//h5[text()="${sectionTitle}"]/ancestor::section[1]//input[@name="${inputName}"]`;
+        const element = CSElementFactory.createByXPath(xpath, `${inputName} input`, this.page);
+        try {
+            const disabled = await element.getAttributeWithTimeout('disabled', 3000);
+            return disabled === null;
+        } catch {
+            return false;
+        }
+    }
+
+    /**
+     * Check if a radio button in the filter panel is enabled
+     * @param sectionTitle - section header text
+     * @param radioLabel - radio button label text (e.g., "Kindness Days", "Cylinder Days")
+     * @param inputName - the input name to anchor from (e.g., "addToBaseDaysRustRule", "addToMirchiaryAdjBaseDaysRustRule")
+     */
+    public async isFilterRadioEnabled(sectionTitle: string, radioLabel: string, inputName?: string): Promise<boolean> {
+        let xpath: string;
+        if (inputName) {
+            xpath = `//div[@id="incircleFilterCalcDuration"]//h5[text()="${sectionTitle}"]/ancestor::section[1]//input[@name="${inputName}"]/ancestor::div[contains(@class, "sssss-row")]//span[text()="${radioLabel}"]/ancestor::div[contains(@class, "sssss-radio-button")][1]//input`;
+        } else {
+            xpath = `//div[@id="incircleFilterCalcDuration"]//h5[text()="${sectionTitle}"]/ancestor::section[1]//span[text()="${radioLabel}"]/ancestor::div[contains(@class, "sssss-radio-button")][1]//input`;
+        }
+        const element = CSElementFactory.createByXPath(xpath, `${radioLabel} radio input`, this.page);
+        try {
+            const isDisabled = await element.isDisabled();
+            return !isDisabled;
+        } catch {
+            return false;
+        }
+    }
+
+    /**
+     * Check if a label checkbox (Weekends/Borings) in the filter panel is enabled
+     * @param sectionTitle - section header text
+     * @param checkboxLabel - label text (e.g., "Weekends", "Borings")
+     * @param inputName - the input name to anchor from (e.g., "rustHookwithRuleDays", "mirchiHookwithRuleDays")
+     */
+    public async isFilterLabelCheckboxEnabled(sectionTitle: string, checkboxLabel: string, inputName?: string): Promise<boolean> {
+        let xpath: string;
+        if (inputName) {
+            xpath = `//div[@id="incircleFilterCalcDuration"]//h5[text()="${sectionTitle}"]/ancestor::section[1]//input[@name="${inputName}"]/ancestor::div[contains(@class, "sssss-row")]//span[text()="${checkboxLabel}"]/ancestor::span[@role="checkbox"][1]`;
+        } else {
+            xpath = `//div[@id="incircleFilterCalcDuration"]//h5[text()="${sectionTitle}"]/ancestor::section[1]//span[text()="${checkboxLabel}"]/ancestor::span[@role="checkbox"][1]`;
+        }
+        const element = CSElementFactory.createByXPath(xpath, `${checkboxLabel} checkbox`, this.page);
+        try {
+            const ariaDisabled = await element.getAttributeWithTimeout('aria-disabled', 3000);
+            return ariaDisabled !== 'true';
+        } catch {
+            return false;
+        }
+    }
+
+    /**
+     * Check if a text-anchored input in the filter panel is enabled
+     * Per CP02: End Date Nnnnn Base and Hookwith Days use text-based anchoring
+     * xpath pattern: ...//span[@class='sssss-checkbox__label-text' and text()='{checkboxLabel}']/ancestor::div[contains(@class,'sssss-checkbox')][1]/following::div[1]//input[contains(@id, 'sssss-text-input')]
+     * @param sectionTitle - section header text
+     * @param checkboxLabel - the checkbox label to anchor from (e.g., "Nnnnn Base", "Add to Hookwith")
+     */
+    public async isFilterTextAnchoredInputEnabled(sectionTitle: string, checkboxLabel: string): Promise<boolean> {
+        const xpath = `//div[@id="incircleFilterCalcDuration"]//h5[text()="${sectionTitle}"]/ancestor::section[1]//span[@class="sssss-checkbox__label-text" and text()="${checkboxLabel}"]/ancestor::div[contains(@class, "sssss-checkbox")][1]/following::div[1]//input[contains(@id, "sssss-text-input")]`;
+        const element = CSElementFactory.createByXPath(xpath, `${checkboxLabel} text-anchored input`, this.page);
+        try {
+            const disabled = await element.getAttributeWithTimeout('disabled', 3000);
+            return disabled === null;
+        } catch {
+            return false;
+        }
+    }
+
+    /**
+     * Check if a text-anchored radio button in the filter panel is enabled
+     * Per CP02: End Date Nnnnn Base radio uses text-based anchoring from checkbox label
+     * @param sectionTitle - section header text
+     * @param checkboxLabel - the checkbox label to anchor from (e.g., "Nnnnn Base")
+     * @param radioLabel - radio button label text (e.g., "Kindness Days", "Cylinder Days")
+     */
+    public async isFilterTextAnchoredRadioEnabled(sectionTitle: string, checkboxLabel: string, radioLabel: string): Promise<boolean> {
+        const xpath = `//div[@id="incircleFilterCalcDuration"]//h5[text()="${sectionTitle}"]/ancestor::section[1]//span[@class="sssss-checkbox__label-text" and text()="${checkboxLabel}"]/ancestor::div[contains(@class, "sssss-checkbox")][1]/following::div[1]//input[contains(@id, "sssss-text-input")]/ancestor::div[contains(@class, "sssss-row")]//span[text()="${radioLabel}"]/ancestor::div[contains(@class, "sssss-radio-button")][1]//input`;
+        const element = CSElementFactory.createByXPath(xpath, `${radioLabel} radio input`, this.page);
+        try {
+            const isDisabled = await element.isDisabled();
+            return !isDisabled;
+        } catch {
+            return false;
+        }
+    }
+
+    /**
+     * Check if a text-anchored label checkbox (Weekends/Borings) in the filter panel is enabled
+     * Per CP02: End Date Hookwith Weekends/Borings use text-based anchoring from "Add to Hookwith"
+     * @param sectionTitle - section header text
+     * @param anchorCheckboxLabel - the checkbox label to anchor from (e.g., "Add to Hookwith")
+     * @param targetLabel - the target checkbox label (e.g., "Weekends", "Borings")
+     */
+    public async isFilterTextAnchoredLabelCheckboxEnabled(sectionTitle: string, anchorCheckboxLabel: string, targetLabel: string): Promise<boolean> {
+        const xpath = `//div[@id="incircleFilterCalcDuration"]//h5[text()="${sectionTitle}"]/ancestor::section[1]//span[@class="sssss-checkbox__label-text" and text()="${anchorCheckboxLabel}"]/ancestor::div[contains(@class,"sssss-checkbox")][1]/following::div[1]//input[contains(@id, "sssss-text-input")]/ancestor::div[contains(@class, "sssss-row")]//span[text()="${targetLabel}"]/ancestor::span[@role="checkbox"][1]`;
+        const element = CSElementFactory.createByXPath(xpath, `${targetLabel} checkbox`, this.page);
+        try {
+            const ariaDisabled = await element.getAttributeWithTimeout('aria-disabled', 3000);
+            return ariaDisabled !== 'true';
+        } catch {
+            return false;
+        }
+    }
+
+    /**
+     * Verify filter cylinder button shows "Edit" after selection
+     * @param sectionTitle - section header text
+     * @param buttonId - the exact button id (e.g., "addbuttonRustRuleBaseCylinders", "addbuttonRustRuleHookwithCylinders")
+     */
+    public async isFilterCylindersShowingEdit(sectionTitle: string, buttonId: string): Promise<boolean> {
+        const xpath = `//div[@id="incircleFilterCalcDuration"]//h5[text()="${sectionTitle}"]/ancestor::section[1]//button[@id="${buttonId}"]/span[@class="sssss-button__label" and text()="Edit"]`;
+        const element = CSElementFactory.createByXPath(xpath, 'Cylinder Edit button', this.page);
+        return await element.isVisibleWithTimeout(5000);
+    }
+
+
+
+    ------------------------------------------------------------------------------------------------------------
+
+
+
+     @TSBDDStepDef('CP Mmte Start Date Associate Cylinders should show Edit in filter panel')
+    async verifyCPStartDateCylindersShowEdit(): Promise<void> {
+        const showsEdit = await this.cpMmtePage.isFilterCylindersShowingEdit('Mmte Start Date Determination Rule', 'addbuttonRustRuleBaseCylinders');
+        if (!showsEdit) throw new Error('Mmte Start Date Associate Cylinders does not show Edit');
+        Tsreporter.pass('Mmte Start Date Associate Cylinders shows Edit');
+    }
+
+    @TSBDDStepDef('I get CP mmtes filtered by start date cylinder {string} from database')
+    async getCPMmtesByStartDateCylinder(calRef: string): Promise<void> {
+        const cal = CSValueResolver.resolve(calRef);
+        const filteredMmtes = await TTTFTtcalcDurationDatabaseHelper.getCPMmtesByStartDateCylinder(cal);
+        this.scenarioContext.setVariable('dbCPFilteredData', filteredMmtes.map(name => ({ scatteredMmteName: name })));
+        Tsreporter.pass(`Retrieved ${filteredMmtes.length} CP mmtes by start date cylinder`);
+    }
+
+    // ===================================================================
+    // CP02: FILTER - MMTE START DATE NNNNN BASE (CP02-06)
+    // ===================================================================
+
+    @TSBDDStepDef('I resolve CP start date nnnnn base from database if not provided {string} {string}')
+    async resolveCPStartDateNnnnnBase(daysRef: string, typeRef: string): Promise<void> {
+        const days = CSValueResolver.resolve(daysRef);
+        const type = CSValueResolver.resolve(typeRef);
+        if (!days || days.trim() === '' || !type || type.trim() === '') {
+            const data = await TTTFTtcalcDurationDatabaseHelper.getStartDateNnnnnBase();
+            this.scenarioContext.setVariable('startDateNnnnnBaseDays', data.days);
+            this.scenarioContext.setVariable('startDateNnnnnBaseType', data.type);
+            Tsreporter.pass(`Resolved start date nnnnn base: days=${data.days}, type=${data.type}`);
+        } else {
+            this.scenarioContext.setVariable('startDateNnnnnBaseDays', days);
+            this.scenarioContext.setVariable('startDateNnnnnBaseType', type);
+        }
+    }
+
+    @TSBDDStepDef('I should see CP Mmte Start Date Nnnnn Base checkbox in filter panel')
+    async verifyCPStartDateNnnnnBaseCheckboxVisible(): Promise<void> {
+        const isVisible = await this.cpMmtePage.isFilterCheckboxVisible('Mmte Start Date Determination Rule', 'Nnnnn Base');
+        if (!isVisible) throw new Error('Mmte Start Date Nnnnn Base checkbox not visible');
+        Tsreporter.pass('Mmte Start Date Nnnnn Base checkbox is visible');
+    }
+
+    @TSBDDStepDef('CP Mmte Start Date Nnnnn Base checkbox should not be checked by default')
+    async verifyCPStartDateNnnnnBaseNotChecked(): Promise<void> {
+        const isChecked = await this.cpMmtePage.isFilterCheckboxChecked('Mmte Start Date Determination Rule', 'Nnnnn Base');
+        if (isChecked) throw new Error('Mmte Start Date Nnnnn Base checkbox is checked by default');
+        Tsreporter.pass('Mmte Start Date Nnnnn Base checkbox is not checked by default');
+    }
+
+    @TSBDDStepDef('CP Mmte Start Date Nnnnn Base Days input should be disabled')
+    async verifyCPStartDateNnnnnBaseDaysDisabled(): Promise<void> {
+        const isEnabled = await this.cpMmtePage.isFilterInputEnabled('Mmte Start Date Determination Rule', 'addToBaseDaysRustRule');
+        if (isEnabled) throw new Error('Mmte Start Date Nnnnn Base Days input is enabled when it should be disabled');
+        Tsreporter.pass('Mmte Start Date Nnnnn Base Days input is disabled');
+    }
+
+    @TSBDDStepDef('CP Mmte Start Date Nnnnn Base Kindness Days radio should be disabled')
+    async verifyCPStartDateNnnnnBaseKindnessDaysDisabled(): Promise<void> {
+        const isEnabled = await this.cpMmtePage.isFilterRadioEnabled('Mmte Start Date Determination Rule', 'Kindness Days', 'addToBaseDaysRustRule');
+        if (isEnabled) throw new Error('Mmte Start Date Nnnnn Base Kindness Days radio is enabled');
+        Tsreporter.pass('Mmte Start Date Nnnnn Base Kindness Days radio is disabled');
+    }
+
+    @TSBDDStepDef('CP Mmte Start Date Nnnnn Base Cylinder Days radio should be disabled')
+    async verifyCPStartDateNnnnnBaseCylinderDaysDisabled(): Promise<void> {
+        const isEnabled = await this.cpMmtePage.isFilterRadioEnabled('Mmte Start Date Determination Rule', 'Cylinder Days', 'addToBaseDaysRustRule');
+        if (isEnabled) throw new Error('Mmte Start Date Nnnnn Base Cylinder Days radio is enabled');
+        Tsreporter.pass('Mmte Start Date Nnnnn Base Cylinder Days radio is disabled');
+    }
+
+    @TSBDDStepDef('I check CP Mmte Start Date Nnnnn Base checkbox in filter panel')
+    async checkCPStartDateNnnnnBase(): Promise<void> {
+        await this.cpMmtePage.checkMmteStartDateNnnnnBase();
+    }
+
+    @TSBDDStepDef('CP Mmte Start Date Nnnnn Base checkbox should be checked')
+    async verifyCPStartDateNnnnnBaseChecked(): Promise<void> {
+        const isChecked = await this.cpMmtePage.isFilterCheckboxChecked('Mmte Start Date Determination Rule', 'Nnnnn Base');
+        if (!isChecked) throw new Error('Mmte Start Date Nnnnn Base checkbox is not checked');
+        Tsreporter.pass('Mmte Start Date Nnnnn Base checkbox is checked');
+    }
+
+    @TSBDDStepDef('CP Mmte Start Date Nnnnn Base Days input should be enabled')
+    async verifyCPStartDateNnnnnBaseDaysEnabled(): Promise<void> {
+        const isEnabled = await this.cpMmtePage.isFilterInputEnabled('Mmte Start Date Determination Rule', 'addToBaseDaysRustRule');
+        if (!isEnabled) throw new Error('Mmte Start Date Nnnnn Base Days input is not enabled');
+        Tsreporter.pass('Mmte Start Date Nnnnn Base Days input is enabled');
+    }
+
+    @TSBDDStepDef('CP Mmte Start Date Nnnnn Base Kindness Days radio should be enabled')
+    async verifyCPStartDateNnnnnBaseKindnessDaysEnabled(): Promise<void> {
+        const isEnabled = await this.cpMmtePage.isFilterRadioEnabled('Mmte Start Date Determination Rule', 'Kindness Days', 'addToBaseDaysRustRule');
+        if (!isEnabled) throw new Error('Mmte Start Date Nnnnn Base Kindness Days radio is not enabled');
+        Tsreporter.pass('Mmte Start Date Nnnnn Base Kindness Days radio is enabled');
+    }
+
+    @TSBDDStepDef('CP Mmte Start Date Nnnnn Base Cylinder Days radio should be enabled')
+    async verifyCPStartDateNnnnnBaseCylinderDaysEnabled(): Promise<void> {
+        const isEnabled = await this.cpMmtePage.isFilterRadioEnabled('Mmte Start Date Determination Rule', 'Cylinder Days', 'addToBaseDaysRustRule');
+        if (!isEnabled) throw new Error('Mmte Start Date Nnnnn Base Cylinder Days radio is not enabled');
+        Tsreporter.pass('Mmte Start Date Nnnnn Base Cylinder Days radio is enabled');
+    }
+
+    @TSBDDStepDef('I enter CP Mmte Start Date Nnnnn Base Days {string} in filter panel')
+    async enterCPStartDateNnnnnBaseDays(valueRef: string): Promise<void> {
+        const value = CSValueResolver.resolve(valueRef);
+        await this.cpMmtePage.enterMmteStartDateNnnnnBaseDays(value);
+    }
+
+    @TSBDDStepDef('I select CP Mmte Start Date Nnnnn Base Type {string} in filter panel')
+    async selectCPStartDateNnnnnBaseType(valueRef: string): Promise<void> {
+        const value = CSValueResolver.resolve(valueRef);
+        await this.cpMmtePage.selectMmteStartDateNnnnnBaseType(value);
+    }
+
+    @TSBDDStepDef('I get CP mmtes filtered by start date nnnnn base {string} {string} from database')
+    async getCPMmtesByStartDateNnnnnBase(daysRef: string, typeRef: string): Promise<void> {
+        const days = CSValueResolver.resolve(daysRef);
+        const type = CSValueResolver.resolve(typeRef);
+        const filteredMmtes = await TTTFTtcalcDurationDatabaseHelper.getCPMmtesByStartDateNnnnnBase(days, type);
+        this.scenarioContext.setVariable('dbCPFilteredData', filteredMmtes.map(name => ({ scatteredMmteName: name })));
+        Tsreporter.pass(`Retrieved ${filteredMmtes.length} CP mmtes by start date nnnnn base`);
+    }
+
+    // ===================================================================
+    // CP02: FILTER - MMTE START DATE MIRCHIARY NNNNN BASE (CP02-07)
+    // ===================================================================
+
+    @TSBDDStepDef('I resolve CP start date mirchiary nnnnn base from database if not provided {string} {string}')
+    async resolveCPStartDateMirchiaryNnnnnBase(daysRef: string, typeRef: string): Promise<void> {
+        const days = CSValueResolver.resolve(daysRef);
+        const type = CSValueResolver.resolve(typeRef);
+        if (!days || days.trim() === '' || !type || type.trim() === '') {
+            const data = await TTTFTtcalcDurationDatabaseHelper.getStartDateMirchiaryNnnnnBase();
+            this.scenarioContext.setVariable('startDateMirchiaryNnnnnBaseDays', data.days);
+            this.scenarioContext.setVariable('startDateMirchiaryNnnnnBaseType', data.type);
+            Tsreporter.pass(`Resolved start date mirchiary nnnnn base: days=${data.days}, type=${data.type}`);
+        } else {
+            this.scenarioContext.setVariable('startDateMirchiaryNnnnnBaseDays', days);
+            this.scenarioContext.setVariable('startDateMirchiaryNnnnnBaseType', type);
+        }
+    }
+
+    @TSBDDStepDef('I should see CP Mmte Start Date Mirchiary Nnnnn Base checkbox in filter panel')
+    async verifyCPStartDateMirchiaryNnnnnBaseCheckboxVisible(): Promise<void> {
+        const isVisible = await this.cpMmtePage.isFilterCheckboxVisible('Mmte Start Date Determination Rule', 'Mirchiary Nnnnn Base');
+        if (!isVisible) throw new Error('Mmte Start Date Mirchiary Nnnnn Base checkbox not visible');
+        Tsreporter.pass('Mmte Start Date Mirchiary Nnnnn Base checkbox is visible');
+    }
+
+    @TSBDDStepDef('CP Mmte Start Date Mirchiary Nnnnn Base checkbox should not be checked by default')
+    async verifyCPStartDateMirchiaryNnnnnBaseNotChecked(): Promise<void> {
+        const isChecked = await this.cpMmtePage.isFilterCheckboxChecked('Mmte Start Date Determination Rule', 'Mirchiary Nnnnn Base');
+        if (isChecked) throw new Error('Mmte Start Date Mirchiary Nnnnn Base checkbox is checked by default');
+        Tsreporter.pass('Mmte Start Date Mirchiary Nnnnn Base checkbox is not checked by default');
+    }
+
+    @TSBDDStepDef('CP Mmte Start Date Mirchiary Nnnnn Base Days input should be disabled')
+    async verifyCPStartDateMirchiaryNnnnnBaseDaysDisabled(): Promise<void> {
+        const isEnabled = await this.cpMmtePage.isFilterInputEnabled('Mmte Start Date Determination Rule', 'addToMirchiaryAdjBaseDaysRustRule');
+        if (isEnabled) throw new Error('Mmte Start Date Mirchiary Nnnnn Base Days input is enabled when it should be disabled');
+        Tsreporter.pass('Mmte Start Date Mirchiary Nnnnn Base Days input is disabled');
+    }
+
+    @TSBDDStepDef('CP Mmte Start Date Mirchiary Nnnnn Base Kindness Days radio should be disabled')
+    async verifyCPStartDateMirchiaryNnnnnBaseKindnessDaysDisabled(): Promise<void> {
+        const isEnabled = await this.cpMmtePage.isFilterRadioEnabled('Mmte Start Date Determination Rule', 'Kindness Days', 'addToMirchiaryAdjBaseDaysRustRule');
+        if (isEnabled) throw new Error('Mmte Start Date Mirchiary Nnnnn Base Kindness Days radio is enabled');
+        Tsreporter.pass('Mmte Start Date Mirchiary Nnnnn Base Kindness Days radio is disabled');
+    }
+
+    @TSBDDStepDef('CP Mmte Start Date Mirchiary Nnnnn Base Cylinder Days radio should be disabled')
+    async verifyCPStartDateMirchiaryNnnnnBaseCylinderDaysDisabled(): Promise<void> {
+        const isEnabled = await this.cpMmtePage.isFilterRadioEnabled('Mmte Start Date Determination Rule', 'Cylinder Days', 'addToMirchiaryAdjBaseDaysRustRule');
+        if (isEnabled) throw new Error('Mmte Start Date Mirchiary Nnnnn Base Cylinder Days radio is enabled');
+        Tsreporter.pass('Mmte Start Date Mirchiary Nnnnn Base Cylinder Days radio is disabled');
+    }
+
+    @TSBDDStepDef('I check CP Mmte Start Date Mirchiary Nnnnn Base checkbox in filter panel')
+    async checkCPStartDateMirchiaryNnnnnBase(): Promise<void> {
+        await this.cpMmtePage.checkMmteStartDateMirchiaryNnnnnBase();
+    }
+
+    @TSBDDStepDef('CP Mmte Start Date Mirchiary Nnnnn Base checkbox should be checked')
+    async verifyCPStartDateMirchiaryNnnnnBaseChecked(): Promise<void> {
+        const isChecked = await this.cpMmtePage.isFilterCheckboxChecked('Mmte Start Date Determination Rule', 'Mirchiary Nnnnn Base');
+        if (!isChecked) throw new Error('Mmte Start Date Mirchiary Nnnnn Base checkbox is not checked');
+        Tsreporter.pass('Mmte Start Date Mirchiary Nnnnn Base checkbox is checked');
+    }
+
+    @TSBDDStepDef('CP Mmte Start Date Mirchiary Nnnnn Base Days input should be enabled')
+    async verifyCPStartDateMirchiaryNnnnnBaseDaysEnabled(): Promise<void> {
+        const isEnabled = await this.cpMmtePage.isFilterInputEnabled('Mmte Start Date Determination Rule', 'addToMirchiaryAdjBaseDaysRustRule');
+        if (!isEnabled) throw new Error('Mmte Start Date Mirchiary Nnnnn Base Days input is not enabled');
+        Tsreporter.pass('Mmte Start Date Mirchiary Nnnnn Base Days input is enabled');
+    }
+
+    @TSBDDStepDef('CP Mmte Start Date Mirchiary Nnnnn Base Kindness Days radio should be enabled')
+    async verifyCPStartDateMirchiaryNnnnnBaseKindnessDaysEnabled(): Promise<void> {
+        const isEnabled = await this.cpMmtePage.isFilterRadioEnabled('Mmte Start Date Determination Rule', 'Kindness Days', 'addToMirchiaryAdjBaseDaysRustRule');
+        if (!isEnabled) throw new Error('Mmte Start Date Mirchiary Nnnnn Base Kindness Days radio is not enabled');
+        Tsreporter.pass('Mmte Start Date Mirchiary Nnnnn Base Kindness Days radio is enabled');
+    }
+
+    @TSBDDStepDef('CP Mmte Start Date Mirchiary Nnnnn Base Cylinder Days radio should be enabled')
+    async verifyCPStartDateMirchiaryNnnnnBaseCylinderDaysEnabled(): Promise<void> {
+        const isEnabled = await this.cpMmtePage.isFilterRadioEnabled('Mmte Start Date Determination Rule', 'Cylinder Days', 'addToMirchiaryAdjBaseDaysRustRule');
+        if (!isEnabled) throw new Error('Mmte Start Date Mirchiary Nnnnn Base Cylinder Days radio is not enabled');
+        Tsreporter.pass('Mmte Start Date Mirchiary Nnnnn Base Cylinder Days radio is enabled');
+    }
+
+    @TSBDDStepDef('I enter CP Mmte Start Date Mirchiary Nnnnn Base Days {string} in filter panel')
+    async enterCPStartDateMirchiaryNnnnnBaseDays(valueRef: string): Promise<void> {
+        const value = CSValueResolver.resolve(valueRef);
+        await this.cpMmtePage.enterMmteStartDateMirchiaryNnnnnBaseDays(value);
+    }
+
+    @TSBDDStepDef('I select CP Mmte Start Date Mirchiary Nnnnn Base Type {string} in filter panel')
+    async selectCPStartDateMirchiaryNnnnnBaseType(valueRef: string): Promise<void> {
+        const value = CSValueResolver.resolve(valueRef);
+        await this.cpMmtePage.selectMmteStartDateMirchiaryNnnnnBaseType(value);
+    }
+
+    @TSBDDStepDef('I get CP mmtes filtered by start date mirchiary nnnnn base {string} {string} from database')
+    async getCPMmtesByStartDateMirchiaryNnnnnBase(daysRef: string, typeRef: string): Promise<void> {
+        const days = CSValueResolver.resolve(daysRef);
+        const type = CSValueResolver.resolve(typeRef);
+        const filteredMmtes = await TTTFTtcalcDurationDatabaseHelper.getCPMmtesByStartDateMirchiaryNnnnnBase(days, type);
+        this.scenarioContext.setVariable('dbCPFilteredData', filteredMmtes.map(name => ({ scatteredMmteName: name })));
+        Tsreporter.pass(`Retrieved ${filteredMmtes.length} CP mmtes by start date mirchiary nnnnn base`);
+    }
+
+    // ===================================================================
+    // CP02: FILTER - MMTE START DATE HOOKWITH (CP02-08)
+    // ===================================================================
+
+    @TSBDDStepDef('I resolve CP start date hookwith from database if not provided {string} {string} {string} {string}')
+    async resolveCPStartDateHookwith(daysRef: string, weekendsRef: string, boringsRef: string, calRef: string): Promise<void> {
+        const days = CSValueResolver.resolve(daysRef);
+        const weekends = CSValueResolver.resolve(weekendsRef);
+        const borings = CSValueResolver.resolve(boringsRef);
+        const cal = CSValueResolver.resolve(calRef);
+        if (!days || days.trim() === '' || !cal || cal.trim() === '') {
+            const data = await TTTFTtcalcDurationDatabaseHelper.getStartDateHookwith();
+            this.scenarioContext.setVariable('startDateHookwithDays', data.hookwithDays);
+            this.scenarioContext.setVariable('startDateHookwithIncludeWeekends', data.includeWeekends);
+            this.scenarioContext.setVariable('startDateHookwithIncludeBorings', data.includeBorings);
+            this.scenarioContext.setVariable('startDateHookwithAssociateCylinder', data.associateCylinder);
+            Tsreporter.pass(`Resolved start date hookwith from database`);
+        } else {
+            this.scenarioContext.setVariable('startDateHookwithDays', days);
+            this.scenarioContext.setVariable('startDateHookwithIncludeWeekends', weekends);
+            this.scenarioContext.setVariable('startDateHookwithIncludeBorings', borings);
+            this.scenarioContext.setVariable('startDateHookwithAssociateCylinder', cal);
+        }
+    }
+
+    @TSBDDStepDef('I should see CP Mmte Start Date Add to Hookwith checkbox in filter panel')
+    async verifyCPStartDateAddToHookwithCheckboxVisible(): Promise<void> {
+        const isVisible = await this.cpMmtePage.isFilterCheckboxVisible('Mmte Start Date Determination Rule', 'Add to Hookwith');
+        if (!isVisible) throw new Error('Mmte Start Date Add to Hookwith checkbox not visible');
+        Tsreporter.pass('Mmte Start Date Add to Hookwith checkbox is visible');
+    }
+
+    @TSBDDStepDef('CP Mmte Start Date Add to Hookwith checkbox should not be checked by default')
+    async verifyCPStartDateAddToHookwithNotChecked(): Promise<void> {
+        const isChecked = await this.cpMmtePage.isFilterCheckboxChecked('Mmte Start Date Determination Rule', 'Add to Hookwith');
+        if (isChecked) throw new Error('Mmte Start Date Add to Hookwith checkbox is checked by default');
+        Tsreporter.pass('Mmte Start Date Add to Hookwith checkbox is not checked by default');
+    }
+
+    @TSBDDStepDef('CP Mmte Start Date Hookwith Days input should be disabled')
+    async verifyCPStartDateHookwithDaysDisabled(): Promise<void> {
+        const isEnabled = await this.cpMmtePage.isFilterInputEnabled('Mmte Start Date Determination Rule', 'rustHookwithRuleDays');
+        if (isEnabled) throw new Error('Mmte Start Date Hookwith Days input is enabled when it should be disabled');
+        Tsreporter.pass('Mmte Start Date Hookwith Days input is disabled');
+    }
+
+    @TSBDDStepDef('CP Mmte Start Date Include Weekends checkbox should be disabled')
+    async verifyCPStartDateIncludeWeekendsDisabled(): Promise<void> {
+        const isEnabled = await this.cpMmtePage.isFilterLabelCheckboxEnabled('Mmte Start Date Determination Rule', 'Weekends', 'rustHookwithRuleDays');
+        if (isEnabled) throw new Error('Mmte Start Date Include Weekends checkbox is enabled');
+        Tsreporter.pass('Mmte Start Date Include Weekends checkbox is disabled');
+    }
+
+    @TSBDDStepDef('CP Mmte Start Date Include Borings checkbox should be disabled')
+    async verifyCPStartDateIncludeBoringsDisabled(): Promise<void> {
+        const isEnabled = await this.cpMmtePage.isFilterLabelCheckboxEnabled('Mmte Start Date Determination Rule', 'Borings', 'rustHookwithRuleDays');
+        if (isEnabled) throw new Error('Mmte Start Date Include Borings checkbox is enabled');
+        Tsreporter.pass('Mmte Start Date Include Borings checkbox is disabled');
+    }
+
+    @TSBDDStepDef('I check CP Mmte Start Date Add to Hookwith checkbox in filter panel')
+    async checkCPStartDateAddToHookwith(): Promise<void> {
+        await this.cpMmtePage.checkMmteStartDateAddToHookwith();
+    }
+
+    @TSBDDStepDef('CP Mmte Start Date Hookwith Days input should be enabled')
+    async verifyCPStartDateHookwithDaysEnabled(): Promise<void> {
+        const isEnabled = await this.cpMmtePage.isFilterInputEnabled('Mmte Start Date Determination Rule', 'rustHookwithRuleDays');
+        if (!isEnabled) throw new Error('Mmte Start Date Hookwith Days input is not enabled');
+        Tsreporter.pass('Mmte Start Date Hookwith Days input is enabled');
+    }
+
+    @TSBDDStepDef('CP Mmte Start Date Include Weekends checkbox should be enabled')
+    async verifyCPStartDateIncludeWeekendsEnabled(): Promise<void> {
+        const isEnabled = await this.cpMmtePage.isFilterLabelCheckboxEnabled('Mmte Start Date Determination Rule', 'Weekends', 'rustHookwithRuleDays');
+        if (!isEnabled) throw new Error('Mmte Start Date Include Weekends checkbox is not enabled');
+        Tsreporter.pass('Mmte Start Date Include Weekends checkbox is enabled');
+    }
+
+    @TSBDDStepDef('CP Mmte Start Date Include Borings checkbox should be enabled')
+    async verifyCPStartDateIncludeBoringsEnabled(): Promise<void> {
+        const isEnabled = await this.cpMmtePage.isFilterLabelCheckboxEnabled('Mmte Start Date Determination Rule', 'Borings', 'rustHookwithRuleDays');
+        if (!isEnabled) throw new Error('Mmte Start Date Include Borings checkbox is not enabled');
+        Tsreporter.pass('Mmte Start Date Include Borings checkbox is enabled');
+    }
+
+    @TSBDDStepDef('I enter CP Mmte Start Date Hookwith Days {string} in filter panel')
+    async enterCPStartDateHookwithDays(valueRef: string): Promise<void> {
+        const value = CSValueResolver.resolve(valueRef);
+        await this.cpMmtePage.enterMmteStartDateHookwithDays(value);
+    }
+
+    @TSBDDStepDef('I configure CP Mmte Start Date Include Weekends {string} in filter panel')
+    async configureCPStartDateIncludeWeekends(valueRef: string): Promise<void> {
+        const value = CSValueResolver.resolve(valueRef);
+        await this.cpMmtePage.configureMmteStartDateIncludeWeekends(value);
+    }
+
+    @TSBDDStepDef('I configure CP Mmte Start Date Include Borings {string} in filter panel')
+    async configureCPStartDateIncludeBorings(valueRef: string): Promise<void> {
+        const value = CSValueResolver.resolve(valueRef);
+        await this.cpMmtePage.configureMmteStartDateIncludeBorings(value);
+    }
+
+    @TSBDDStepDef('I click CP Mmte Start Date Hookwith Associate Cylinders Select button in filter panel')
+    async clickCPStartDateHookwithCylindersSelect(): Promise<void> {
+        await this.cpMmtePage.clickMmteStartDateHookwithCylindersSelect();
+    }
+
+    @TSBDDStepDef('CP Mmte Start Date Hookwith Associate Cylinders should show Edit in filter panel')
+    async verifyCPStartDateHookwithCylindersShowEdit(): Promise<void> {
+        const showsEdit = await this.cpMmtePage.isFilterCylindersShowingEdit('Mmte Start Date Determination Rule', 'addbuttonRustRuleHookwithCylinders');
+        if (!showsEdit) throw new Error('Mmte Start Date Hookwith Associate Cylinders does not show Edit');
+        Tsreporter.pass('Mmte Start Date Hookwith Associate Cylinders shows Edit');
+    }
+
+    @TSBDDStepDef('I get CP mmtes filtered by start date hookwith {string} {string} {string} {string} from database')
+    async getCPMmtesByStartDateHookwith(daysRef: string, weekendsRef: string, boringsRef: string, calRef: string): Promise<void> {
+        const days = CSValueResolver.resolve(daysRef);
+        const weekends = CSValueResolver.resolve(weekendsRef);
+        const borings = CSValueResolver.resolve(boringsRef);
+        const cal = CSValueResolver.resolve(calRef);
+        Tsreporter.info(`Getting CP mmtes by start date hookwith: days=${days}, weekends=${weekends}, borings=${borings}, cal=${cal}`);
+        const dbRows = await TTTFTtcalcDurationDatabaseHelper.getCPMmtesFilteredByStartDateHookwith(days, weekends, borings, cal);
+        this.scenarioContext.setVariable('dbCPFilteredData', dbRows);
+        Tsreporter.pass(`Retrieved ${dbRows.length} CP mmtes filtered by start date hookwith from database`);
+    }
+
+    // ===================================================================
+    // CP02: FILTER - MMTE END DATE SECTION (CP02-09)
+    // ===================================================================
+
+    @TSBDDStepDef('I resolve CP end date wwwww vvvvv and base day from database if not provided {string} {string}')
+    async resolveCPEndDateWwwwwVvvvvBaseDay(wwwwwVvvvvRef: string, baseDayRef: string): Promise<void> {
+        const wwwwwVvvvv = CSValueResolver.resolve(wwwwwVvvvvRef);
+        const baseDay = CSValueResolver.resolve(baseDayRef);
+        if (!wwwwwVvvvv || wwwwwVvvvv.trim() === '' || !baseDay || baseDay.trim() === '') {
+            Tsreporter.info('Resolving CP end date wwwww vvvvv and base day from database');
+            const data = await TTTFTtcalcDurationDatabaseHelper.getEndDateWwwwwVvvvvAndBaseDay();
+            this.scenarioContext.setVariable('endDateWwwwwVvvvv', data.wwwwwVvvvv);
+            this.scenarioContext.setVariable('endDateBaseDay', data.baseDay);
+            Tsreporter.pass(`Resolved: wwwwwVvvvv=${data.wwwwwVvvvv}, baseDay=${data.baseDay}`);
+        } else {
+            this.scenarioContext.setVariable('endDateWwwwwVvvvv', wwwwwVvvvv);
+            this.scenarioContext.setVariable('endDateBaseDay', baseDay);
+        }
+    }
+
+    @TSBDDStepDef('I should see Mmte End Date section in CP filter panel')
+    async verifyMmteEndDateSectionInCPFilter(): Promise<void> {
+        const isVisible = await this.cpMmtePage.filterMmteEndDateSection.isVisibleWithTimeout(5000);
+        if (!isVisible) throw new Error('Mmte End Date section not found in CP filter panel');
+        Tsreporter.pass('Mmte End Date section is visible in CP filter panel');
+    }
+
+    @TSBDDStepDef('I expand Mmte End Date section in CP filter panel')
+    async expandMmteEndDateSectionInCPFilter(): Promise<void> {
+        await this.cpMmtePage.expandMmteEndDateSection();
+    }
+
+    @TSBDDStepDef('I enter CP Mmte End Date Wwwww Vvvvv {string} in filter panel')
+    async enterCPEndDateWwwwwVvvvv(valueRef: string): Promise<void> {
+        const value = CSValueResolver.resolve(valueRef);
+        await this.cpMmtePage.enterMmteEndDateWwwwwVvvvv(value);
+    }
+
+    @TSBDDStepDef('I enter CP Mmte End Date Base Day {string} in filter panel')
+    async enterCPEndDateBaseDay(valueRef: string): Promise<void> {
+        const value = CSValueResolver.resolve(valueRef);
+        await this.cpMmtePage.enterMmteEndDateBaseDay(value);
+    }
+
+    @TSBDDStepDef('I get CP mmtes filtered by end date wwwww vvvvv {string} and base day {string} from database')
+    async getCPMmtesByEndDateWwwwwVvvvvBaseDay(wwwwwVvvvvRef: string, baseDayRef: string): Promise<void> {
+        const wwwwwVvvvv = CSValueResolver.resolve(wwwwwVvvvvRef);
+        const baseDay = CSValueResolver.resolve(baseDayRef);
+        Tsreporter.info(`Getting CP mmtes by end date wwwwwVvvvv=${wwwwwVvvvv}, baseDay=${baseDay}`);
+        const filteredMmtes = await TTTFTtcalcDurationDatabaseHelper.getCPMmtesByEndDateWwwwwVvvvvBaseDay(wwwwwVvvvv, baseDay);
+        this.scenarioContext.setVariable('dbCPFilteredData', filteredMmtes.map(name => ({ scatteredMmteName: name })));
+        Tsreporter.pass(`Retrieved ${filteredMmtes.length} CP mmtes`);
+    }
+
+    // ===================================================================
+    // CP02: FILTER - MMTE END DATE CYLINDER (CP02-10)
+    // ===================================================================
+
+    @TSBDDStepDef('I resolve CP end date associate cylinder from database if not provided {string}')
+    async resolveCPEndDateCylinder(calRef: string): Promise<void> {
+        const cal = CSValueResolver.resolve(calRef);
+        if (!cal || cal.trim() === '') {
+            const cylinderName = await TTTFTtcalcDurationDatabaseHelper.getEndDateCylinder();
+            this.scenarioContext.setVariable('endDateAssociateCylinder', cylinderName);
+            Tsreporter.pass(`Resolved end date cylinder: ${cylinderName}`);
+        } else {
+            this.scenarioContext.setVariable('endDateAssociateCylinder', cal);
+        }
+    }
+
+    @TSBDDStepDef('I click CP Mmte End Date Associate Cylinders Select button in filter panel')
+    async clickCPEndDateCylindersSelect(): Promise<void> {
+        await this.cpMmtePage.clickMmteEndDateCylindersSelect();
+    }
+
+    @TSBDDStepDef('CP Mmte End Date Associate Cylinders should show Edit in filter panel')
+    async verifyCPEndDateCylindersShowEdit(): Promise<void> {
+        const showsEdit = await this.cpMmtePage.isFilterCylindersShowingEdit('Mmte End Date Determination Rule', 'addbuttonMirchiRuleBaseCylinders');
+        if (!showsEdit) throw new Error('Mmte End Date Associate Cylinders does not show Edit');
+        Tsreporter.pass('Mmte End Date Associate Cylinders shows Edit');
+    }
+
+    @TSBDDStepDef('I get CP mmtes filtered by end date cylinder {string} from database')
+    async getCPMmtesByEndDateCylinder(calRef: string): Promise<void> {
+        const cal = CSValueResolver.resolve(calRef);
+        const filteredMmtes = await TTTFTtcalcDurationDatabaseHelper.getCPMmtesByEndDateCylinder(cal);
+        this.scenarioContext.setVariable('dbCPFilteredData', filteredMmtes.map(name => ({ scatteredMmteName: name })));
+        Tsreporter.pass(`Retrieved ${filteredMmtes.length} CP mmtes by end date cylinder`);
+    }
+
+    // ===================================================================
+    // CP02: FILTER - MMTE END DATE NNNNN BASE (CP02-11)
+    // ===================================================================
+
+    @TSBDDStepDef('I resolve CP end date nnnnn base from database if not provided {string} {string}')
+    async resolveCPEndDateNnnnnBase(daysRef: string, typeRef: string): Promise<void> {
+        const days = CSValueResolver.resolve(daysRef);
+        const type = CSValueResolver.resolve(typeRef);
+        if (!days || days.trim() === '' || !type || type.trim() === '') {
+            const data = await TTTFTtcalcDurationDatabaseHelper.getEndDateNnnnnBase();
+            this.scenarioContext.setVariable('endDateNnnnnBaseDays', data.days);
+            this.scenarioContext.setVariable('endDateNnnnnBaseType', data.type);
+            Tsreporter.pass(`Resolved end date nnnnn base: days=${data.days}, type=${data.type}`);
+        } else {
+            this.scenarioContext.setVariable('endDateNnnnnBaseDays', days);
+            this.scenarioContext.setVariable('endDateNnnnnBaseType', type);
+        }
+    }
+
+    @TSBDDStepDef('I should see CP Mmte End Date Nnnnn Base checkbox in filter panel')
+    async verifyCPEndDateNnnnnBaseCheckboxVisible(): Promise<void> {
+        const isVisible = await this.cpMmtePage.isFilterCheckboxVisible('Mmte End Date Determination Rule', 'Nnnnn Base');
+        if (!isVisible) throw new Error('Mmte End Date Nnnnn Base checkbox not visible');
+        Tsreporter.pass('Mmte End Date Nnnnn Base checkbox is visible');
+    }
+
+    @TSBDDStepDef('CP Mmte End Date Nnnnn Base checkbox should not be checked by default')
+    async verifyCPEndDateNnnnnBaseNotChecked(): Promise<void> {
+        const isChecked = await this.cpMmtePage.isFilterCheckboxChecked('Mmte End Date Determination Rule', 'Nnnnn Base');
+        if (isChecked) throw new Error('Mmte End Date Nnnnn Base checkbox is checked by default');
+        Tsreporter.pass('Mmte End Date Nnnnn Base checkbox is not checked by default');
+    }
+
+    @TSBDDStepDef('CP Mmte End Date Nnnnn Base Days input should be disabled')
+    async verifyCPEndDateNnnnnBaseDaysDisabled(): Promise<void> {
+        const isEnabled = await this.cpMmtePage.isFilterTextAnchoredInputEnabled('Mmte End Date Determination Rule', 'Nnnnn Base');
+        if (isEnabled) throw new Error('Mmte End Date Nnnnn Base Days input is enabled when it should be disabled');
+        Tsreporter.pass('Mmte End Date Nnnnn Base Days input is disabled');
+    }
+
+    @TSBDDStepDef('CP Mmte End Date Nnnnn Base Kindness Days radio should be disabled')
+    async verifyCPEndDateNnnnnBaseKindnessDaysDisabled(): Promise<void> {
+        const isEnabled = await this.cpMmtePage.isFilterTextAnchoredRadioEnabled('Mmte End Date Determination Rule', 'Nnnnn Base', 'Kindness Days');
+        if (isEnabled) throw new Error('Mmte End Date Nnnnn Base Kindness Days radio is enabled');
+        Tsreporter.pass('Mmte End Date Nnnnn Base Kindness Days radio is disabled');
+    }
+
+    @TSBDDStepDef('CP Mmte End Date Nnnnn Base Cylinder Days radio should be disabled')
+    async verifyCPEndDateNnnnnBaseCylinderDaysDisabled(): Promise<void> {
+        const isEnabled = await this.cpMmtePage.isFilterTextAnchoredRadioEnabled('Mmte End Date Determination Rule', 'Nnnnn Base', 'Cylinder Days');
+        if (isEnabled) throw new Error('Mmte End Date Nnnnn Base Cylinder Days radio is enabled');
+        Tsreporter.pass('Mmte End Date Nnnnn Base Cylinder Days radio is disabled');
+    }
+
+    @TSBDDStepDef('I check CP Mmte End Date Nnnnn Base checkbox in filter panel')
+    async checkCPEndDateNnnnnBase(): Promise<void> {
+        await this.cpMmtePage.checkMmteEndDateNnnnnBase();
+    }
+
+    @TSBDDStepDef('CP Mmte End Date Nnnnn Base checkbox should be checked')
+    async verifyCPEndDateNnnnnBaseChecked(): Promise<void> {
+        const isChecked = await this.cpMmtePage.isFilterCheckboxChecked('Mmte End Date Determination Rule', 'Nnnnn Base');
+        if (!isChecked) throw new Error('Mmte End Date Nnnnn Base checkbox is not checked');
+        Tsreporter.pass('Mmte End Date Nnnnn Base checkbox is checked');
+    }
+
+    @TSBDDStepDef('CP Mmte End Date Nnnnn Base Days input should be enabled')
+    async verifyCPEndDateNnnnnBaseDaysEnabled(): Promise<void> {
+        const isEnabled = await this.cpMmtePage.isFilterTextAnchoredInputEnabled('Mmte End Date Determination Rule', 'Nnnnn Base');
+        if (!isEnabled) throw new Error('Mmte End Date Nnnnn Base Days input is not enabled');
+        Tsreporter.pass('Mmte End Date Nnnnn Base Days input is enabled');
+    }
+
+    @TSBDDStepDef('CP Mmte End Date Nnnnn Base Kindness Days radio should be enabled')
+    async verifyCPEndDateNnnnnBaseKindnessDaysEnabled(): Promise<void> {
+        const isEnabled = await this.cpMmtePage.isFilterTextAnchoredRadioEnabled('Mmte End Date Determination Rule', 'Nnnnn Base', 'Kindness Days');
+        if (!isEnabled) throw new Error('Mmte End Date Nnnnn Base Kindness Days radio is not enabled');
+        Tsreporter.pass('Mmte End Date Nnnnn Base Kindness Days radio is enabled');
+    }
+
+    @TSBDDStepDef('CP Mmte End Date Nnnnn Base Cylinder Days radio should be enabled')
+    async verifyCPEndDateNnnnnBaseCylinderDaysEnabled(): Promise<void> {
+        const isEnabled = await this.cpMmtePage.isFilterTextAnchoredRadioEnabled('Mmte End Date Determination Rule', 'Nnnnn Base', 'Cylinder Days');
+        if (!isEnabled) throw new Error('Mmte End Date Nnnnn Base Cylinder Days radio is not enabled');
+        Tsreporter.pass('Mmte End Date Nnnnn Base Cylinder Days radio is enabled');
+    }
+
+    @TSBDDStepDef('I enter CP Mmte End Date Nnnnn Base Days {string} in filter panel')
+    async enterCPEndDateNnnnnBaseDays(valueRef: string): Promise<void> {
+        const value = CSValueResolver.resolve(valueRef);
+        await this.cpMmtePage.enterMmteEndDateNnnnnBaseDays(value);
+    }
+
+    @TSBDDStepDef('I select CP Mmte End Date Nnnnn Base Type {string} in filter panel')
+    async selectCPEndDateNnnnnBaseType(valueRef: string): Promise<void> {
+        const value = CSValueResolver.resolve(valueRef);
+        await this.cpMmtePage.selectMmteEndDateNnnnnBaseType(value);
+    }
+
+    @TSBDDStepDef('I get CP mmtes filtered by end date nnnnn base {string} {string} from database')
+    async getCPMmtesByEndDateNnnnnBase(daysRef: string, typeRef: string): Promise<void> {
+        const days = CSValueResolver.resolve(daysRef);
+        const type = CSValueResolver.resolve(typeRef);
+        const filteredMmtes = await TTTFTtcalcDurationDatabaseHelper.getCPMmtesByEndDateNnnnnBase(days, type);
+        this.scenarioContext.setVariable('dbCPFilteredData', filteredMmtes.map(name => ({ scatteredMmteName: name })));
+        Tsreporter.pass(`Retrieved ${filteredMmtes.length} CP mmtes by end date nnnnn base`);
+    }
+
+    // ===================================================================
+    // CP02: FILTER - MMTE END DATE MIRCHIARY NNNNN BASE (CP02-12)
+    // ===================================================================
+
+    @TSBDDStepDef('I resolve CP end date mirchiary nnnnn base from database if not provided {string} {string}')
+    async resolveCPEndDateMirchiaryNnnnnBase(daysRef: string, typeRef: string): Promise<void> {
+        const days = CSValueResolver.resolve(daysRef);
+        const type = CSValueResolver.resolve(typeRef);
+        if (!days || days.trim() === '' || !type || type.trim() === '') {
+            const data = await TTTFTtcalcDurationDatabaseHelper.getEndDateMirchiaryNnnnnBase();
+            this.scenarioContext.setVariable('endDateMirchiaryNnnnnBaseDays', data.days);
+            this.scenarioContext.setVariable('endDateMirchiaryNnnnnBaseType', data.type);
+            Tsreporter.pass(`Resolved end date mirchiary nnnnn base: days=${data.days}, type=${data.type}`);
+        } else {
+            this.scenarioContext.setVariable('endDateMirchiaryNnnnnBaseDays', days);
+            this.scenarioContext.setVariable('endDateMirchiaryNnnnnBaseType', type);
+        }
+    }
+
+    @TSBDDStepDef('I should see CP Mmte End Date Mirchiary Nnnnn Base checkbox in filter panel')
+    async verifyCPEndDateMirchiaryNnnnnBaseCheckboxVisible(): Promise<void> {
+        const isVisible = await this.cpMmtePage.isFilterCheckboxVisible('Mmte End Date Determination Rule', 'Mirchiary Nnnnn Base');
+        if (!isVisible) throw new Error('Mmte End Date Mirchiary Nnnnn Base checkbox not visible');
+        Tsreporter.pass('Mmte End Date Mirchiary Nnnnn Base checkbox is visible');
+    }
+
+    @TSBDDStepDef('CP Mmte End Date Mirchiary Nnnnn Base checkbox should not be checked by default')
+    async verifyCPEndDateMirchiaryNnnnnBaseNotChecked(): Promise<void> {
+        const isChecked = await this.cpMmtePage.isFilterCheckboxChecked('Mmte End Date Determination Rule', 'Mirchiary Nnnnn Base');
+        if (isChecked) throw new Error('Mmte End Date Mirchiary Nnnnn Base checkbox is checked by default');
+        Tsreporter.pass('Mmte End Date Mirchiary Nnnnn Base checkbox is not checked by default');
+    }
+
+    @TSBDDStepDef('CP Mmte End Date Mirchiary Nnnnn Base Days input should be disabled')
+    async verifyCPEndDateMirchiaryNnnnnBaseDaysDisabled(): Promise<void> {
+        const isEnabled = await this.cpMmtePage.isFilterInputEnabled('Mmte End Date Determination Rule', 'addToMirchiaryAdjBaseDaysMirchiRule');
+        if (isEnabled) throw new Error('Mmte End Date Mirchiary Nnnnn Base Days input is enabled when it should be disabled');
+        Tsreporter.pass('Mmte End Date Mirchiary Nnnnn Base Days input is disabled');
+    }
+
+    @TSBDDStepDef('CP Mmte End Date Mirchiary Nnnnn Base Kindness Days radio should be disabled')
+    async verifyCPEndDateMirchiaryNnnnnBaseKindnessDaysDisabled(): Promise<void> {
+        const isEnabled = await this.cpMmtePage.isFilterRadioEnabled('Mmte End Date Determination Rule', 'Kindness Days', 'addToMirchiaryAdjBaseDaysMirchiRule');
+        if (isEnabled) throw new Error('Mmte End Date Mirchiary Nnnnn Base Kindness Days radio is enabled');
+        Tsreporter.pass('Mmte End Date Mirchiary Nnnnn Base Kindness Days radio is disabled');
+    }
+
+    @TSBDDStepDef('CP Mmte End Date Mirchiary Nnnnn Base Cylinder Days radio should be disabled')
+    async verifyCPEndDateMirchiaryNnnnnBaseCylinderDaysDisabled(): Promise<void> {
+        const isEnabled = await this.cpMmtePage.isFilterRadioEnabled('Mmte End Date Determination Rule', 'Cylinder Days', 'addToMirchiaryAdjBaseDaysMirchiRule');
+        if (isEnabled) throw new Error('Mmte End Date Mirchiary Nnnnn Base Cylinder Days radio is enabled');
+        Tsreporter.pass('Mmte End Date Mirchiary Nnnnn Base Cylinder Days radio is disabled');
+    }
+
+    @TSBDDStepDef('I check CP Mmte End Date Mirchiary Nnnnn Base checkbox in filter panel')
+    async checkCPEndDateMirchiaryNnnnnBase(): Promise<void> {
+        await this.cpMmtePage.checkMmteEndDateMirchiaryNnnnnBase();
+    }
+
+    @TSBDDStepDef('CP Mmte End Date Mirchiary Nnnnn Base checkbox should be checked')
+    async verifyCPEndDateMirchiaryNnnnnBaseChecked(): Promise<void> {
+        const isChecked = await this.cpMmtePage.isFilterCheckboxChecked('Mmte End Date Determination Rule', 'Mirchiary Nnnnn Base');
+        if (!isChecked) throw new Error('Mmte End Date Mirchiary Nnnnn Base checkbox is not checked');
+        Tsreporter.pass('Mmte End Date Mirchiary Nnnnn Base checkbox is checked');
+    }
+
+    @TSBDDStepDef('CP Mmte End Date Mirchiary Nnnnn Base Days input should be enabled')
+    async verifyCPEndDateMirchiaryNnnnnBaseDaysEnabled(): Promise<void> {
+        const isEnabled = await this.cpMmtePage.isFilterInputEnabled('Mmte End Date Determination Rule', 'addToMirchiaryAdjBaseDaysMirchiRule');
+        if (!isEnabled) throw new Error('Mmte End Date Mirchiary Nnnnn Base Days input is not enabled');
+        Tsreporter.pass('Mmte End Date Mirchiary Nnnnn Base Days input is enabled');
+    }
+
+    @TSBDDStepDef('CP Mmte End Date Mirchiary Nnnnn Base Kindness Days radio should be enabled')
+    async verifyCPEndDateMirchiaryNnnnnBaseKindnessDaysEnabled(): Promise<void> {
+        const isEnabled = await this.cpMmtePage.isFilterRadioEnabled('Mmte End Date Determination Rule', 'Kindness Days', 'addToMirchiaryAdjBaseDaysMirchiRule');
+        if (!isEnabled) throw new Error('Mmte End Date Mirchiary Nnnnn Base Kindness Days radio is not enabled');
+        Tsreporter.pass('Mmte End Date Mirchiary Nnnnn Base Kindness Days radio is enabled');
+    }
+
+    @TSBDDStepDef('CP Mmte End Date Mirchiary Nnnnn Base Cylinder Days radio should be enabled')
+    async verifyCPEndDateMirchiaryNnnnnBaseCylinderDaysEnabled(): Promise<void> {
+        const isEnabled = await this.cpMmtePage.isFilterRadioEnabled('Mmte End Date Determination Rule', 'Cylinder Days', 'addToMirchiaryAdjBaseDaysMirchiRule');
+        if (!isEnabled) throw new Error('Mmte End Date Mirchiary Nnnnn Base Cylinder Days radio is not enabled');
+        Tsreporter.pass('Mmte End Date Mirchiary Nnnnn Base Cylinder Days radio is enabled');
+    }
+
+    @TSBDDStepDef('I enter CP Mmte End Date Mirchiary Nnnnn Base Days {string} in filter panel')
+    async enterCPEndDateMirchiaryNnnnnBaseDays(valueRef: string): Promise<void> {
+        const value = CSValueResolver.resolve(valueRef);
+        await this.cpMmtePage.enterMmteEndDateMirchiaryNnnnnBaseDays(value);
+    }
+
+    @TSBDDStepDef('I select CP Mmte End Date Mirchiary Nnnnn Base Type {string} in filter panel')
+    async selectCPEndDateMirchiaryNnnnnBaseType(valueRef: string): Promise<void> {
+        const value = CSValueResolver.resolve(valueRef);
+        await this.cpMmtePage.selectMmteEndDateMirchiaryNnnnnBaseType(value);
+    }
+
+    @TSBDDStepDef('I get CP mmtes filtered by end date mirchiary nnnnn base {string} {string} from database')
+    async getCPMmtesByEndDateMirchiaryNnnnnBase(daysRef: string, typeRef: string): Promise<void> {
+        const days = CSValueResolver.resolve(daysRef);
+        const type = CSValueResolver.resolve(typeRef);
+        const filteredMmtes = await TTTFTtcalcDurationDatabaseHelper.getCPMmtesByEndDateMirchiaryNnnnnBase(days, type);
+        this.scenarioContext.setVariable('dbCPFilteredData', filteredMmtes.map(name => ({ scatteredMmteName: name })));
+        Tsreporter.pass(`Retrieved ${filteredMmtes.length} CP mmtes by end date mirchiary nnnnn base`);
+    }
+
+    // ===================================================================
+    // CP02: FILTER - MMTE END DATE HOOKWITH (CP02-13)
+    // ===================================================================
+
+    @TSBDDStepDef('I resolve CP end date hookwith from database if not provided {string} {string} {string} {string}')
+    async resolveCPEndDateHookwith(daysRef: string, weekendsRef: string, boringsRef: string, calRef: string): Promise<void> {
+        const days = CSValueResolver.resolve(daysRef);
+        const weekends = CSValueResolver.resolve(weekendsRef);
+        const borings = CSValueResolver.resolve(boringsRef);
+        const cal = CSValueResolver.resolve(calRef);
+        if (!days || days.trim() === '' || !cal || cal.trim() === '') {
+            const data = await TTTFTtcalcDurationDatabaseHelper.getEndDateHookwith();
+            this.scenarioContext.setVariable('endDateHookwithDays', data.hookwithDays);
+            this.scenarioContext.setVariable('endDateHookwithIncludeWeekends', data.includeWeekends);
+            this.scenarioContext.setVariable('endDateHookwithIncludeBorings', data.includeBorings);
+            this.scenarioContext.setVariable('endDateHookwithAssociateCylinder', data.associateCylinder);
+            Tsreporter.pass(`Resolved end date hookwith from database`);
+        } else {
+            this.scenarioContext.setVariable('endDateHookwithDays', days);
+            this.scenarioContext.setVariable('endDateHookwithIncludeWeekends', weekends);
+            this.scenarioContext.setVariable('endDateHookwithIncludeBorings', borings);
+            this.scenarioContext.setVariable('endDateHookwithAssociateCylinder', cal);
+        }
+    }
+
+    @TSBDDStepDef('I should see CP Mmte End Date Add to Hookwith checkbox in filter panel')
+    async verifyCPEndDateAddToHookwithCheckboxVisible(): Promise<void> {
+        const isVisible = await this.cpMmtePage.isFilterCheckboxVisible('Mmte End Date Determination Rule', 'Add to Hookwith');
+        if (!isVisible) throw new Error('Mmte End Date Add to Hookwith checkbox not visible');
+        Tsreporter.pass('Mmte End Date Add to Hookwith checkbox is visible');
+    }
+
+    @TSBDDStepDef('CP Mmte End Date Add to Hookwith checkbox should not be checked by default')
+    async verifyCPEndDateAddToHookwithNotChecked(): Promise<void> {
+        const isChecked = await this.cpMmtePage.isFilterCheckboxChecked('Mmte End Date Determination Rule', 'Add to Hookwith');
+        if (isChecked) throw new Error('Mmte End Date Add to Hookwith checkbox is checked by default');
+        Tsreporter.pass('Mmte End Date Add to Hookwith checkbox is not checked by default');
+    }
+
+    @TSBDDStepDef('CP Mmte End Date Hookwith Days input should be disabled')
+    async verifyCPEndDateHookwithDaysDisabled(): Promise<void> {
+        const isEnabled = await this.cpMmtePage.isFilterTextAnchoredInputEnabled('Mmte End Date Determination Rule', 'Add to Hookwith');
+        if (isEnabled) throw new Error('Mmte End Date Hookwith Days input is enabled when it should be disabled');
+        Tsreporter.pass('Mmte End Date Hookwith Days input is disabled');
+    }
+
+    @TSBDDStepDef('CP Mmte End Date Include Weekends checkbox should be disabled')
+    async verifyCPEndDateIncludeWeekendsDisabled(): Promise<void> {
+        const isEnabled = await this.cpMmtePage.isFilterTextAnchoredLabelCheckboxEnabled('Mmte End Date Determination Rule', 'Add to Hookwith', 'Weekends');
+        if (isEnabled) throw new Error('Mmte End Date Include Weekends checkbox is enabled');
+        Tsreporter.pass('Mmte End Date Include Weekends checkbox is disabled');
+    }
+
+    @TSBDDStepDef('CP Mmte End Date Include Borings checkbox should be disabled')
+    async verifyCPEndDateIncludeBoringsDisabled(): Promise<void> {
+        const isEnabled = await this.cpMmtePage.isFilterTextAnchoredLabelCheckboxEnabled('Mmte End Date Determination Rule', 'Add to Hookwith', 'Borings');
+        if (isEnabled) throw new Error('Mmte End Date Include Borings checkbox is enabled');
+        Tsreporter.pass('Mmte End Date Include Borings checkbox is disabled');
+    }
+
+    @TSBDDStepDef('I check CP Mmte End Date Add to Hookwith checkbox in filter panel')
+    async checkCPEndDateAddToHookwith(): Promise<void> {
+        await this.cpMmtePage.checkMmteEndDateAddToHookwith();
+    }
+
+    @TSBDDStepDef('CP Mmte End Date Hookwith Days input should be enabled')
+    async verifyCPEndDateHookwithDaysEnabled(): Promise<void> {
+        const isEnabled = await this.cpMmtePage.isFilterTextAnchoredInputEnabled('Mmte End Date Determination Rule', 'Add to Hookwith');
+        if (!isEnabled) throw new Error('Mmte End Date Hookwith Days input is not enabled');
+        Tsreporter.pass('Mmte End Date Hookwith Days input is enabled');
+    }
+
+    @TSBDDStepDef('CP Mmte End Date Include Weekends checkbox should be enabled')
+    async verifyCPEndDateIncludeWeekendsEnabled(): Promise<void> {
+        const isEnabled = await this.cpMmtePage.isFilterTextAnchoredLabelCheckboxEnabled('Mmte End Date Determination Rule', 'Add to Hookwith', 'Weekends');
+        if (!isEnabled) throw new Error('Mmte End Date Include Weekends checkbox is not enabled');
+        Tsreporter.pass('Mmte End Date Include Weekends checkbox is enabled');
+    }
+
+    @TSBDDStepDef('CP Mmte End Date Include Borings checkbox should be enabled')
+    async verifyCPEndDateIncludeBoringsEnabled(): Promise<void> {
+        const isEnabled = await this.cpMmtePage.isFilterTextAnchoredLabelCheckboxEnabled('Mmte End Date Determination Rule', 'Add to Hookwith', 'Borings');
+        if (!isEnabled) throw new Error('Mmte End Date Include Borings checkbox is not enabled');
+        Tsreporter.pass('Mmte End Date Include Borings checkbox is enabled');
+    }
+
+    @TSBDDStepDef('I enter CP Mmte End Date Hookwith Days {string} in filter panel')
+    async enterCPEndDateHookwithDays(valueRef: string): Promise<void> {
+        const value = CSValueResolver.resolve(valueRef);
+        await this.cpMmtePage.enterMmteEndDateHookwithDays(value);
+    }
+
+    @TSBDDStepDef('I configure CP Mmte End Date Include Weekends {string} in filter panel')
+    async configureCPEndDateIncludeWeekends(valueRef: string): Promise<void> {
+        const value = CSValueResolver.resolve(valueRef);
+        await this.cpMmtePage.configureMmteEndDateIncludeWeekends(value);
+    }
+
+    @TSBDDStepDef('I configure CP Mmte End Date Include Borings {string} in filter panel')
+    async configureCPEndDateIncludeBorings(valueRef: string): Promise<void> {
+        const value = CSValueResolver.resolve(valueRef);
+        await this.cpMmtePage.configureMmteEndDateIncludeBorings(value);
+    }
+
+    @TSBDDStepDef('I click CP Mmte End Date Hookwith Associate Cylinders Select button in filter panel')
+    async clickCPEndDateHookwithCylindersSelect(): Promise<void> {
+        await this.cpMmtePage.clickMmteEndDateHookwithCylindersSelect();
+    }
+
+    @TSBDDStepDef('CP Mmte End Date Hookwith Associate Cylinders should show Edit in filter panel')
+    async verifyCPEndDateHookwithCylindersShowEdit(): Promise<void> {
+        const showsEdit = await this.cpMmtePage.isFilterCylindersShowingEdit('Mmte End Date Determination Rule', 'addbuttonMirchiRuleHookwithCylinders');
+        if (!showsEdit) throw new Error('Mmte End Date Hookwith Associate Cylinders does not show Edit');
+        Tsreporter.pass('Mmte End Date Hookwith Associate Cylinders shows Edit');
+    }
