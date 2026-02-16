@@ -155,19 +155,27 @@ export class CSMicrosoftSSOHandler {
                 await this.setupOAuthInterception(page, username);
             } else {
                 // === Mode B: Persistent context (VDI Edge profile) ===
-                // Clear all browser cookies from previous runs.
-                // Stale CRM session cookies and sign-out cookies (SetSignOutCookie) from
-                // previous runs cause the CRM internal server to return 404 on redirect.
-                // Device compliance tokens are stored in the Edge profile directory, not
-                // in cookies, so clearing cookies is safe for Conditional Access.
-                CSReporter.info('Step 0: Clearing stale cookies from previous runs...');
+                // Aggressively clear ALL browsing data from previous runs using CDP.
+                // context.clearCookies() is unreliable for persistent contexts because
+                // cookies are stored in the Edge profile's disk database.
+                // CDP commands flush directly to the browser's storage engine.
+                CSReporter.info('Step 0: Clearing all browsing data from previous runs (CDP)...');
                 try {
-                    const context = this.browserManager.getContext();
-                    await context.clearCookies();
-                    CSReporter.debug('All browser cookies cleared (device compliance preserved in profile)');
+                    const cdpSession = await page.context().newCDPSession(page);
+                    await cdpSession.send('Network.clearBrowserCookies');
+                    await cdpSession.send('Network.clearBrowserCache');
+                    CSReporter.debug('CDP: Cleared all browser cookies and cache');
+                    await cdpSession.detach();
                 } catch (e: any) {
-                    CSReporter.debug(`Cookie clear failed (non-critical): ${e.message}`);
+                    CSReporter.debug(`CDP clear failed, falling back to context.clearCookies(): ${e.message}`);
+                    try {
+                        const context = this.browserManager.getContext();
+                        await context.clearCookies();
+                    } catch {}
                 }
+                // Navigate to about:blank to ensure clean state before starting
+                await page.goto('about:blank');
+                await page.waitForTimeout(500);
             }
 
             // Navigate to the application URL
@@ -223,15 +231,6 @@ export class CSMicrosoftSSOHandler {
             // Enter email
             CSReporter.info('Entering email address...');
             await this.enterEmail(page, username, timeout);
-
-            // Set up CRM redirect interception BEFORE entering password.
-            // After clicking Sign In, Microsoft's form_post will try to POST auth tokens
-            // to an internal CRM server. This server may 404 (especially on second runs).
-            // The interceptor catches this POST and re-routes it to the main app URL.
-            if (isPersistentContext) {
-                CSReporter.info('Setting up CRM redirect interception (internal server → main app)...');
-                await this.setupCrmRedirectInterception(page, loginUrl);
-            }
 
             // Enter password
             CSReporter.info('Entering password...');
@@ -1258,42 +1257,45 @@ ${fields.join('\n')}
         }
 
         if (isErrorPage || isInternalServerError) {
-            // Set up lightweight interception before re-navigation (persistent context only).
-            // This blocks autologon + strips PRT so Microsoft uses the test user's session,
-            // but does NOT inject prompt=login (which would force a re-login loop).
-            const isPersistentContext = !!this.config.get('BROWSER_USER_DATA_DIR');
-            if (isPersistentContext) {
-                await this.setupPostLoginInterception(page);
+            // The OAuth form_post went to an internal CRM server that returned 404.
+            // The auth code is consumed and lost. We need to start a FRESH OAuth flow.
+            // Clear ALL cookies via CDP first (the stale state causes the 404), then navigate.
+            CSReporter.debug(`Post-login error: ${currentUrl}. Clearing cookies and retrying...`);
+
+            try {
+                const cdpSession = await page.context().newCDPSession(page);
+                await cdpSession.send('Network.clearBrowserCookies');
+                await cdpSession.send('Network.clearBrowserCache');
+                await cdpSession.detach();
+                CSReporter.debug('CDP: Cleared cookies/cache before retry');
+            } catch {
+                try { await page.context().clearCookies(); } catch {}
             }
 
-            CSReporter.debug(`Post-login page is an error (${currentUrl}) — navigating to original app URL: ${originalUrl}`);
+            // Navigate to the app URL — this starts a fresh OAuth flow
+            CSReporter.debug(`Navigating to app URL for fresh OAuth flow: ${originalUrl}`);
             await page.goto(originalUrl, {
                 waitUntil: 'domcontentloaded',
                 timeout: timeout
             });
 
-            // Wait for the FULL redirect chain to complete:
-            // app URL → OAuth redirect → Microsoft auto-auth (using test user session) → back to app
-            // This can take a while on enterprise networks, so we wait up to 30s
-            // and specifically wait until we're NOT on a Microsoft login page anymore
-            const redirectTimeout = Math.min(timeout, 30000);
+            // Wait for the full redirect chain (up to 60s)
+            const redirectTimeout = Math.min(timeout, 60000);
             const redirectStart = Date.now();
             while (Date.now() - redirectStart < redirectTimeout) {
                 await this.waitForNavigationToSettle(page, 5000);
                 const url = page.url().toLowerCase();
-                // If we're no longer on a Microsoft login/OAuth page, we're done
                 if (!url.includes('login.microsoftonline.com') &&
                     !url.includes('login.microsoft.com') &&
-                    !url.includes('login.live.com') &&
-                    !url.includes('sts.windows.net') &&
                     !url.startsWith('chrome-error://') &&
-                    !url.startsWith('edge-error://')) {
+                    !url.startsWith('edge-error://') &&
+                    !url.startsWith('about:blank')) {
                     break;
                 }
-                CSReporter.debug(`Still on login/error page, waiting for redirect to complete... (${page.url().substring(0, 80)})`);
-                await page.waitForTimeout(2000);
+                CSReporter.debug(`Waiting for OAuth redirect... (${page.url().substring(0, 80)})`);
+                await page.waitForTimeout(3000);
             }
-            CSReporter.debug(`After re-navigation, now at: ${page.url()}`);
+            CSReporter.debug(`After retry, now at: ${page.url()}`);
         }
     }
 
