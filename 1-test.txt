@@ -1025,7 +1025,11 @@ export class CSMicrosoftSSOHandler {
             );
 
             // Additional wait for the app to fully load
-            await page.waitForLoadState('domcontentloaded', { timeout: timeout });
+            try {
+                await page.waitForLoadState('domcontentloaded', { timeout: 10000 });
+            } catch {
+                // domcontentloaded may not fire on error pages — that's OK
+            }
 
             CSReporter.debug(`Redirected back to application: ${page.url()}`);
         } catch (error) {
@@ -1037,6 +1041,47 @@ export class CSMicrosoftSSOHandler {
                 return;
             }
             throw new Error(`App redirect did not complete within ${timeout}ms. Current URL: ${currentUrl}`);
+        }
+
+        // After redirect, check if we landed on an error page (404, chrome-error://, etc.)
+        // This happens when the OAuth redirect_uri points to an internal CRM server URL
+        // (e.g., an internal CRM server hostname) that returns 404.
+        // The session cookies are already set, so navigating to the original app URL will work.
+        const currentUrl = page.url();
+        const isErrorPage =
+            currentUrl.startsWith('chrome-error://') ||
+            currentUrl.startsWith('edge-error://') ||
+            currentUrl.includes('ERR_') ||
+            currentUrl === 'about:blank';
+
+        // Also check if we're on a different CRM server (internal redirect) that gave a 404
+        let isInternalServerError = false;
+        if (!isErrorPage) {
+            try {
+                isInternalServerError = await page.evaluate(() => {
+                    const bodyText = document.body?.innerText?.toLowerCase() || '';
+                    const title = document.title?.toLowerCase() || '';
+                    return bodyText.includes('page can\'t be found') ||
+                        bodyText.includes('page not found') ||
+                        bodyText.includes('http error 404') ||
+                        bodyText.includes('http error 403') ||
+                        title.includes('404') ||
+                        title.includes('error');
+                });
+            } catch {
+                // page.evaluate may fail on chrome-error:// pages
+                isInternalServerError = false;
+            }
+        }
+
+        if (isErrorPage || isInternalServerError) {
+            CSReporter.debug(`Post-login page is an error (${currentUrl}) — navigating to original app URL: ${originalUrl}`);
+            await page.goto(originalUrl, {
+                waitUntil: 'domcontentloaded',
+                timeout: timeout
+            });
+            await this.waitForNavigationToSettle(page, 10000);
+            CSReporter.debug(`After re-navigation, now at: ${page.url()}`);
         }
     }
 
