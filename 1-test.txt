@@ -153,6 +153,21 @@ export class CSMicrosoftSSOHandler {
 
                 CSReporter.info('Step 2: Setting up OAuth redirect interception...');
                 await this.setupOAuthInterception(page, username);
+            } else {
+                // === Mode B: Persistent context (VDI Edge profile) ===
+                // Clear all browser cookies from previous runs.
+                // Stale CRM session cookies and sign-out cookies (SetSignOutCookie) from
+                // previous runs cause the CRM internal server to return 404 on redirect.
+                // Device compliance tokens are stored in the Edge profile directory, not
+                // in cookies, so clearing cookies is safe for Conditional Access.
+                CSReporter.info('Step 0: Clearing stale cookies from previous runs...');
+                try {
+                    const context = this.browserManager.getContext();
+                    await context.clearCookies();
+                    CSReporter.debug('All browser cookies cleared (device compliance preserved in profile)');
+                } catch (e: any) {
+                    CSReporter.debug(`Cookie clear failed (non-critical): ${e.message}`);
+                }
             }
 
             // Navigate to the application URL
