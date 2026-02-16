@@ -223,6 +223,10 @@ export class CSMicrosoftSSOHandler {
             CSReporter.info('Waiting for redirect back to application...');
             await this.waitForAppRedirect(page, loginUrl, timeout);
 
+            // Wait for the application to fully load (spinners gone, key elements visible)
+            CSReporter.info('Waiting for application to fully load...');
+            await this.waitForAppReady(page, timeout);
+
             // Remove route interception (cleanup)
             await this.removeOAuthInterception(page);
 
@@ -1083,6 +1087,83 @@ export class CSMicrosoftSSOHandler {
             await this.waitForNavigationToSettle(page, 10000);
             CSReporter.debug(`After re-navigation, now at: ${page.url()}`);
         }
+    }
+
+    /**
+     * Wait for the application to fully load after SSO login redirect.
+     *
+     * Dynamics 365 / Power Platform apps can take several seconds to initialize after redirect.
+     * This method waits for:
+     *   1. Network to settle (no pending requests)
+     *   2. Loading spinners to disappear (uses framework's SPINNER_SELECTORS config)
+     *   3. SSO_APP_READY_SELECTOR — a configurable CSS selector or text that indicates the app is ready
+     *      e.g., SSO_APP_READY_SELECTOR=text=SANDBOX  or  SSO_APP_READY_SELECTOR=#headerTitle
+     *   4. SSO_APP_READY_TEXT — wait for specific text to appear on the page
+     *      e.g., SSO_APP_READY_TEXT=SANDBOX
+     */
+    private async waitForAppReady(page: any, timeout: number): Promise<void> {
+        // Step 1: Wait for networkidle (all XHR/fetch requests done)
+        try {
+            await page.waitForLoadState('networkidle', { timeout: Math.min(timeout, 30000) });
+            CSReporter.debug('App page: networkidle reached');
+        } catch {
+            CSReporter.debug('App page: networkidle timeout — continuing (app may use long-polling)');
+        }
+
+        // Step 2: Wait for loading spinners to disappear (framework-level)
+        try {
+            await this.browserManager.waitForSpinnersToDisappear(Math.min(timeout, 15000));
+        } catch {
+            // Spinner wait is best-effort
+        }
+
+        // Step 3: Wait for app-ready selector if configured
+        const readySelector = this.config.get('SSO_APP_READY_SELECTOR');
+        if (readySelector) {
+            try {
+                CSReporter.debug(`Waiting for app-ready selector: ${readySelector}`);
+                if (readySelector.startsWith('text=')) {
+                    // Text-based selector: wait for text to appear
+                    const textToFind = readySelector.substring(5);
+                    await page.waitForFunction(
+                        (text: string) => {
+                            return document.body?.innerText?.includes(text) || false;
+                        },
+                        textToFind,
+                        { timeout: Math.min(timeout, 30000) }
+                    );
+                } else {
+                    // CSS selector
+                    await page.waitForSelector(readySelector, {
+                        state: 'visible',
+                        timeout: Math.min(timeout, 30000)
+                    });
+                }
+                CSReporter.debug(`App-ready selector found: ${readySelector}`);
+            } catch (error: any) {
+                CSReporter.warn(`App-ready selector "${readySelector}" not found within timeout — continuing`);
+            }
+        }
+
+        // Step 4: Wait for app-ready text if configured
+        const readyText = this.config.get('SSO_APP_READY_TEXT');
+        if (readyText) {
+            try {
+                CSReporter.debug(`Waiting for app-ready text: "${readyText}"`);
+                await page.waitForFunction(
+                    (text: string) => {
+                        return document.body?.innerText?.includes(text) || false;
+                    },
+                    readyText,
+                    { timeout: Math.min(timeout, 30000) }
+                );
+                CSReporter.debug(`App-ready text found: "${readyText}"`);
+            } catch (error: any) {
+                CSReporter.warn(`App-ready text "${readyText}" not found within timeout — continuing`);
+            }
+        }
+
+        CSReporter.info(`Application loaded at: ${page.url()}`);
     }
 
     /**
