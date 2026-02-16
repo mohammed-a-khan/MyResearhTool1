@@ -224,6 +224,15 @@ export class CSMicrosoftSSOHandler {
             CSReporter.info('Entering email address...');
             await this.enterEmail(page, username, timeout);
 
+            // Set up CRM redirect interception BEFORE entering password.
+            // After clicking Sign In, Microsoft's form_post will try to POST auth tokens
+            // to an internal CRM server. This server may 404 (especially on second runs).
+            // The interceptor catches this POST and re-routes it to the main app URL.
+            if (isPersistentContext) {
+                CSReporter.info('Setting up CRM redirect interception (internal server → main app)...');
+                await this.setupCrmRedirectInterception(page, loginUrl);
+            }
+
             // Enter password
             CSReporter.info('Entering password...');
             await this.enterPassword(page, password, timeout);
@@ -280,6 +289,7 @@ export class CSMicrosoftSSOHandler {
      */
     private oauthRouteHandler: ((route: any) => Promise<void>) | null = null;
     private autologonRouteHandler: ((route: any) => Promise<void>) | null = null;
+    private crmRedirectRouteHandler: ((route: any) => Promise<void>) | null = null;
 
     /**
      * Clear any existing Microsoft session by navigating to the Microsoft sign-out endpoint.
@@ -468,6 +478,74 @@ export class CSMicrosoftSSOHandler {
     }
 
     /**
+     * Intercept form_post requests to internal CRM servers and re-route them to the main app URL.
+     *
+     * Problem: Microsoft OAuth uses response_mode=form_post. After authentication, Microsoft
+     * returns an HTML page with a form that auto-submits (POST) to the redirect_uri. The
+     * redirect_uri points to an internal load-balanced CRM server (e.g., bn1--namcrmlive*.crm.dynamics.com).
+     * On second runs, this internal server returns 404 (stale cookies/state). The auth code is
+     * one-time use and gets consumed by the 404 — it's lost forever.
+     *
+     * Solution: Intercept the POST to the internal CRM server. Extract the auth code/tokens
+     * from the POST body. Respond with a self-submitting form that POSTs to the MAIN app URL
+     * instead. The main app URL is always accessible and can process the tokens.
+     */
+    private async setupCrmRedirectInterception(page: any, mainAppUrl: string): Promise<void> {
+        // Remove any existing CRM redirect handler
+        if (this.crmRedirectRouteHandler) {
+            try { await page.unroute(/https:\/\/[a-z0-9]+--[a-z0-9]+\.crm\.dynamics\.com/, this.crmRedirectRouteHandler); } catch {}
+            this.crmRedirectRouteHandler = null;
+        }
+
+        const mainUrl = mainAppUrl.replace(/\/$/, ''); // Remove trailing slash
+
+        this.crmRedirectRouteHandler = async (route: any) => {
+            const request = route.request();
+            const url = request.url();
+            const method = request.method();
+
+            // Only intercept POST requests (the form_post from Microsoft)
+            if (method === 'POST') {
+                const postData = request.postData() || '';
+                CSReporter.debug(`Intercepted form_post to internal CRM server: ${url.substring(0, 80)}`);
+                CSReporter.debug(`Re-routing form_post to main app URL: ${mainUrl}`);
+
+                // Parse the form data to extract individual fields
+                const params = new URLSearchParams(postData);
+                const fields: string[] = [];
+                params.forEach((value: string, key: string) => {
+                    // HTML-encode the value to prevent XSS in the self-submitting form
+                    const safeValue = value.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                    fields.push(`<input type="hidden" name="${key}" value="${safeValue}"/>`);
+                });
+
+                // Return a self-submitting form that POSTs to the main app URL
+                const html = `<html><head><title>Redirecting...</title></head>
+<body onload="document.forms[0].submit()">
+<form method="POST" action="${mainUrl}/">
+${fields.join('\n')}
+<noscript><button type="submit">Continue</button></noscript>
+</form></body></html>`;
+
+                await route.fulfill({
+                    status: 200,
+                    contentType: 'text/html',
+                    body: html
+                });
+                return;
+            }
+
+            // For GET requests to internal CRM servers, redirect to main app URL
+            CSReporter.debug(`Redirecting GET to internal CRM server: ${url.substring(0, 80)} → ${mainUrl}`);
+            await route.continue({ url: `${mainUrl}/` });
+        };
+
+        // Match internal CRM server hostnames: bn1--namcrmlive*.crm.dynamics.com, fbn1--*, etc.
+        await page.route(/https:\/\/[a-z0-9]+--[a-z0-9]+\.crm\.dynamics\.com/, this.crmRedirectRouteHandler);
+        CSReporter.debug(`CRM redirect interception active: internal servers → ${mainUrl}`);
+    }
+
+    /**
      * Remove all route interception after login is complete
      */
     private async removeOAuthInterception(page: any): Promise<void> {
@@ -479,6 +557,10 @@ export class CSMicrosoftSSOHandler {
             if (this.oauthRouteHandler) {
                 await page.unroute('**/*login.microsoftonline.com/**', this.oauthRouteHandler);
                 this.oauthRouteHandler = null;
+            }
+            if (this.crmRedirectRouteHandler) {
+                try { await page.unroute(/https:\/\/[a-z0-9]+--[a-z0-9]+\.crm\.dynamics\.com/, this.crmRedirectRouteHandler); } catch {}
+                this.crmRedirectRouteHandler = null;
             }
             CSReporter.debug('VDI SSO bypass routes removed');
         } catch {
