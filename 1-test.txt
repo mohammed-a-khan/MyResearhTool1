@@ -181,27 +181,11 @@ export class CSMicrosoftSSOHandler {
                 CSReporter.info('App loaded as VDI user — clicking Sign Out to switch accounts...');
                 await this.clickAppSignOut(page, timeout);
 
-                // Set up OAuth interception AFTER sign-out for persistent context mode.
-                // This is critical: after the test user logs in, the redirect may 404 on an
-                // internal CRM server. When we re-navigate to the app URL, the CRM app starts
-                // a new OAuth flow. Without interception, the Edge profile's PRT (Primary Refresh
-                // Token) would auto-authenticate as the VDI user instead of the test user.
-                if (isPersistentContext) {
-                    CSReporter.info('Setting up OAuth interception (PRT bypass for persistent context)...');
-                    await this.setupOAuthInterception(page, username);
-                }
-
             } else if (landingState === 'conditionalAccess') {
                 // Conditional Access "Sign in with work account" / "can't get there from here"
                 // Look for "Sign out and sign in with a different account" link
                 CSReporter.info('Conditional Access block — clicking "Sign out and sign in with different account"...');
                 await this.clickConditionalAccessSignOut(page, timeout);
-
-                // Same PRT bypass needed for conditional access flow
-                if (isPersistentContext) {
-                    CSReporter.info('Setting up OAuth interception (PRT bypass for persistent context)...');
-                    await this.setupOAuthInterception(page, username);
-                }
 
             } else if (landingState === 'appLoaded') {
                 // App loaded successfully — already authenticated as the right user!
@@ -410,6 +394,62 @@ export class CSMicrosoftSSOHandler {
 
         await page.route('**/*login.microsoftonline.com/**', this.oauthRouteHandler);
         CSReporter.debug('VDI SSO bypass active: autologon blocked + headers stripped + OAuth params injected');
+    }
+
+    /**
+     * Lightweight interception for post-login error recovery on persistent context.
+     * ONLY blocks autologon and strips PRT cookies — no prompt, no login_hint.
+     * This lets Microsoft use the test user's session cookie for silent auth
+     * while preventing the VDI user's PRT from hijacking the flow.
+     */
+    private async setupPostLoginInterception(page: any): Promise<void> {
+        // Remove any existing interception first
+        await this.removeOAuthInterception(page);
+
+        // Block autologon (prevents PRT/Kerberos silent SSO that hangs)
+        this.autologonRouteHandler = async (route: any) => {
+            CSReporter.debug(`[PostLogin] Blocked autologon: ${route.request().url().substring(0, 80)}`);
+            await route.abort('blockedbyclient');
+        };
+        await page.route('**/*autologon.microsoftonline.com/**', this.autologonRouteHandler);
+
+        // Strip PRT cookies but do NOT modify OAuth URLs (no prompt, no login_hint)
+        this.oauthRouteHandler = async (route: any) => {
+            const headers = { ...route.request().headers() };
+            let modified = false;
+
+            // Strip Kerberos/NTLM auth header
+            if (headers['authorization']) {
+                delete headers['authorization'];
+                modified = true;
+            }
+
+            // Strip PRT and device credential cookies
+            if (headers['cookie']) {
+                const original = headers['cookie'];
+                const filtered = original
+                    .split(';')
+                    .map((c: string) => c.trim())
+                    .filter((c: string) =>
+                        !c.startsWith('x-ms-RefreshTokenCredential') &&
+                        !c.startsWith('x-ms-DeviceCredential')
+                    )
+                    .join('; ');
+                if (filtered !== original) {
+                    headers['cookie'] = filtered;
+                    modified = true;
+                }
+            }
+
+            if (modified) {
+                CSReporter.debug(`[PostLogin] Stripped PRT/auth from: ${route.request().url().substring(0, 60)}`);
+            }
+
+            await route.continue({ headers });
+        };
+        await page.route('**/*login.microsoftonline.com/**', this.oauthRouteHandler);
+
+        CSReporter.debug('Post-login interception active: autologon blocked + PRT stripped (no prompt/login_hint)');
     }
 
     /**
@@ -1121,6 +1161,14 @@ export class CSMicrosoftSSOHandler {
         }
 
         if (isErrorPage || isInternalServerError) {
+            // Set up lightweight interception before re-navigation (persistent context only).
+            // This blocks autologon + strips PRT so Microsoft uses the test user's session,
+            // but does NOT inject prompt=login (which would force a re-login loop).
+            const isPersistentContext = !!this.config.get('BROWSER_USER_DATA_DIR');
+            if (isPersistentContext) {
+                await this.setupPostLoginInterception(page);
+            }
+
             CSReporter.debug(`Post-login page is an error (${currentUrl}) — navigating to original app URL: ${originalUrl}`);
             await page.goto(originalUrl, {
                 waitUntil: 'domcontentloaded',
