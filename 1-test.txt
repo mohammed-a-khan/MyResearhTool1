@@ -1400,14 +1400,62 @@ export class CSMicrosoftSSOHandler {
     /**
      * Smart login: Use saved session if valid, otherwise perform fresh login
      * This is the recommended method for test suites
+     *
+     * When a valid session file exists:
+     *   1. Loads the storageState (cookies + localStorage) into the browser context
+     *   2. Navigates to the app URL
+     *   3. If the app redirects to the Microsoft login page (tokens expired), falls back to fresh login
+     *
+     * This handles the common case where BROWSER_REUSE_CLEAR_STATE=true wipes cookies
+     * between scenarios — the session file is still valid on disk but the browser has no cookies.
      */
     public async ensureLoggedIn(options?: Partial<SSOLoginOptions>): Promise<void> {
         const maxSessionAge = this.config.getNumber('SSO_SESSION_MAX_AGE_HOURS', 12);
 
         if (this.isSessionValid(maxSessionAge)) {
-            CSReporter.info('Using existing saved session (still valid)');
-            // Session will be loaded automatically via AUTH_STORAGE_STATE_PATH in createContext
-            return;
+            CSReporter.info('Valid session file found — loading into browser and navigating to app');
+
+            const sessionPath = this.config.get('AUTH_STORAGE_STATE_PATH');
+            const loginUrl = options?.loginUrl || this.config.get('SSO_LOGIN_URL') || this.config.get('BASE_URL');
+            const timeout = options?.timeout || this.config.getNumber('SSO_WAIT_TIMEOUT', 60000);
+
+            try {
+                // Step 1: Load the saved session (cookies + localStorage) into the browser context
+                // This recreates the context with the saved storageState
+                await this.browserManager.loadStorageState(sessionPath);
+                CSReporter.debug('Session loaded into browser context');
+
+                // Step 2: Navigate to the app URL
+                if (loginUrl) {
+                    const page = this.browserManager.getPage();
+                    CSReporter.info(`Navigating to app: ${loginUrl}`);
+                    await page.goto(loginUrl, {
+                        waitUntil: 'domcontentloaded',
+                        timeout: timeout
+                    });
+
+                    // Wait for redirects to complete
+                    await this.waitForNavigationToSettle(page, 10000);
+
+                    // Step 3: Check if we landed on the app or got redirected to login (expired tokens)
+                    const currentUrl = page.url().toLowerCase();
+                    if (currentUrl.includes('login.microsoftonline.com') ||
+                        currentUrl.includes('login.microsoft.com') ||
+                        currentUrl.includes('login.live.com')) {
+                        // Session tokens expired — fall back to fresh login
+                        CSReporter.info('Saved session expired (redirected to login) — performing fresh SSO login');
+                        await this.loginWithConfigCredentials(options);
+                        return;
+                    }
+
+                    // Step 4: Wait for app to be ready
+                    await this.waitForAppReady(page, timeout);
+                    CSReporter.pass('Session restored and app loaded successfully');
+                    return;
+                }
+            } catch (error: any) {
+                CSReporter.warn(`Session restore failed: ${error.message} — falling back to fresh login`);
+            }
         }
 
         CSReporter.info('No valid session found — performing fresh SSO login');
