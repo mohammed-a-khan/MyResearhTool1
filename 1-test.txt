@@ -1,1 +1,196 @@
-test
+3. "Sign in required" popup check — Dynamics 365 may partially load but show a popup
+     *      asking the user to sign in for certain features (real-time notifications, presence, etc.)
+     *   4. SSO_APP_READY_SELECTOR — a configurable CSS selector or text that indicates the app is ready
+     *      e.g., SSO_APP_READY_SELECTOR=text=SANDBOX  or  SSO_APP_READY_SELECTOR=#headerTitle
+     *   5. SSO_APP_READY_TEXT — wait for specific text to appear on the page
+
+
+
+
+// Step 3: Handle "Sign in required" popup if it appears
+        // Dynamics 365 may partially load with cookies but show a dialog:
+        //   "It is required you to sign in. Some of the features requires sign in..."
+        //   with a "Sign in" button.
+        // This happens when cookies are restored but MSAL tokens are missing/expired.
+        await this.handleSignInRequiredPopup(page, timeout);
+
+        // Step 4: Wait for app-ready selector if configured
+
+
+
+
+/**
+     * Handle the Dynamics 365 "Sign in required" popup.
+     *
+     * When cookies are restored from a saved session but MSAL tokens (localStorage) are
+     * missing or expired, Dynamics 365 partially loads and shows a dialog/popup:
+     *
+     *   "It is required you to sign in"
+     *   "Some of the features requires sign in"
+     *   [Sign in] button
+     *
+     * This popup can appear in:
+     *   - The main page DOM as a dialog/modal
+     *   - An iframe overlay
+     *   - A Dynamics 365 UCI notification bar
+     *
+     * Clicking "Sign in" triggers an inline OAuth redirect that uses the existing
+     * cookies/session to re-authenticate silently (no password entry needed).
+     *
+     * This method is safe to call even when no popup is present — it does a quick
+     * check and returns immediately if no popup is found.
+     *
+     * Can be called from external code (page objects, step definitions) via the
+     * public method on the SSO handler instance.
+     */
+    public async handleSignInRequiredPopup(page: any, timeout?: number): Promise<boolean> {
+        const waitTimeout = timeout || this.config.getNumber('SSO_WAIT_TIMEOUT', 60000);
+
+        try {
+            // Quick check (3s) — don't wait long since popup may not appear
+            const popupDetected = await page.evaluate(() => {
+                const bodyText = document.body?.innerText?.toLowerCase() || '';
+
+                // Check for common Dynamics 365 sign-in required popup texts
+                const signInRequired =
+                    (bodyText.includes('required') && bodyText.includes('sign in')) ||
+                    (bodyText.includes('sign in') && bodyText.includes('features')) ||
+                    bodyText.includes('sign in to continue') ||
+                    bodyText.includes('session has expired') ||
+                    bodyText.includes('your session has timed out');
+
+                if (!signInRequired) return false;
+
+                // Look for the Sign in button — multiple patterns
+                const signInSelectors = [
+                    'button',
+                    'a',
+                    'input[type="button"]',
+                    'input[type="submit"]',
+                    '[role="button"]',
+                    'span[role="button"]',
+                ];
+
+                for (const selector of signInSelectors) {
+                    const elements = Array.from(document.querySelectorAll(selector));
+                    for (const el of elements) {
+                        const text = ((el as HTMLElement).innerText || (el as HTMLElement).textContent || '').trim().toLowerCase();
+                        if (text === 'sign in' || text === 'signin' || text === 'log in' || text === 'login') {
+                            return true;
+                        }
+                    }
+                }
+
+                return false;
+            });
+
+            if (!popupDetected) {
+                CSReporter.debug('No "Sign in required" popup detected — app loaded cleanly');
+                return false;
+            }
+
+            CSReporter.info('"Sign in required" popup detected — clicking Sign in button...');
+
+            // Click the Sign in button
+            const clicked = await page.evaluate(() => {
+                const signInSelectors = [
+                    'button',
+                    'a',
+                    'input[type="button"]',
+                    'input[type="submit"]',
+                    '[role="button"]',
+                    'span[role="button"]',
+                ];
+
+                for (const selector of signInSelectors) {
+                    const elements = Array.from(document.querySelectorAll(selector));
+                    for (const el of elements) {
+                        const text = ((el as HTMLElement).innerText || (el as HTMLElement).textContent || '').trim().toLowerCase();
+                        if (text === 'sign in' || text === 'signin' || text === 'log in' || text === 'login') {
+                            (el as HTMLElement).click();
+                            return true;
+                        }
+                    }
+                }
+
+                return false;
+            });
+
+            if (clicked) {
+                CSReporter.debug('"Sign in" button clicked — waiting for re-authentication...');
+
+                // Wait for the page to process the sign-in click
+                // This typically triggers an inline OAuth flow using existing cookies
+                await page.waitForTimeout(3000);
+
+                // Check if we got redirected to the Microsoft login page
+                // (tokens fully expired — need fresh credentials)
+                const currentUrl = page.url().toLowerCase();
+                if (currentUrl.includes('login.microsoftonline.com') ||
+                    currentUrl.includes('login.microsoft.com')) {
+                    CSReporter.info('Sign-in popup triggered OAuth redirect — waiting for redirect back...');
+                    // Wait for redirect back to the app (OAuth should auto-complete using session cookies)
+                    try {
+                        await page.waitForFunction(
+                            () => {
+                                const url = window.location.href.toLowerCase();
+                                return !url.includes('login.microsoftonline.com') &&
+                                       !url.includes('login.microsoft.com') &&
+                                       !url.includes('login.live.com');
+                            },
+                            { timeout: Math.min(waitTimeout, 30000) }
+                        );
+                        await this.waitForNavigationToSettle(page, 10000);
+                        CSReporter.debug('OAuth redirect completed after sign-in popup');
+                    } catch {
+                        CSReporter.warn('OAuth redirect after sign-in popup did not complete — may need fresh login');
+                    }
+                } else {
+                    // Sign-in was handled inline (no redirect) — wait for page to settle
+                    await this.waitForNavigationToSettle(page, 10000);
+                }
+
+                // Wait for spinners after re-authentication
+                try {
+                    await this.browserManager.waitForSpinnersToDisappear(Math.min(waitTimeout, 15000));
+                } catch { /* best-effort */ }
+
+                CSReporter.pass('"Sign in required" popup handled — app re-authenticated');
+                return true;
+            }
+
+            CSReporter.debug('"Sign in required" text detected but could not find clickable button');
+            return false;
+
+        } catch (error: any) {
+            // Non-fatal — popup may not exist or page may have navigated
+            CSReporter.debug(`Sign-in popup check: ${error.message}`);
+            return false;
+        }
+    }
+
+
+
+
+/**
+     * Handle "Sign in required" popup that Dynamics 365 shows when session is partially valid.
+     * Safe to call even if no popup is present — returns immediately.
+     *
+     * Example: Then I handle the sign in required popup if present
+     */
+    @CSBDDStepDef('I handle the sign in required popup if present')
+    async handleSignInPopup(): Promise<void> {
+        const { CSMicrosoftSSOHandler } = await import('../../auth/CSMicrosoftSSOHandler');
+        const { CSBrowserManager } = await import('../../browser/CSBrowserManager');
+        const handler = new CSMicrosoftSSOHandler();
+        const browserManager = CSBrowserManager.getInstance();
+        const page = browserManager.getPage();
+        const handled = await handler.handleSignInRequiredPopup(page);
+        if (handled) {
+            CSReporter.pass('Sign in required popup handled successfully');
+        } else {
+            CSReporter.info('No sign in required popup detected — continuing');
+        }
+    }
+
+
