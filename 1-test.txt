@@ -354,14 +354,15 @@ export class CSMicrosoftSSOHandler {
         // autologon.microsoftonline.com is where Kerberos/PRT-based silent auth happens.
         // By aborting these requests, we force Microsoft to show the interactive login page.
         this.autologonRouteHandler = async (route: any) => {
-            CSReporter.debug(`Blocked Seamless SSO request: ${route.request().url()}`);
+            CSReporter.debug(`Blocked Seamless SSO: ${route.request().url().substring(0, 80)}`);
             await route.abort('blockedbyclient');
         };
-        await page.route('**/*autologon.microsoftonline.com/**', this.autologonRouteHandler);
+        await page.route(/autologon\.microsoftonline\.com/, this.autologonRouteHandler);
 
         // Layers 2 + 3 + 4: Intercept login.microsoftonline.com requests
         this.oauthRouteHandler = async (route: any) => {
             const url = route.request().url();
+            CSReporter.debug(`[Route] login.msol: ${url.substring(0, 120)}`);
             const headers = { ...route.request().headers() };
 
             // Layer 2: Strip Windows SSO credentials
@@ -464,7 +465,7 @@ export class CSMicrosoftSSOHandler {
             await route.continue({ headers });
         };
 
-        await page.route('**/*login.microsoftonline.com/**', this.oauthRouteHandler);
+        await page.route(/login\.microsoftonline\.com/, this.oauthRouteHandler);
 
         CSReporter.debug('OAuth interception active: autologon blocked + OAuth params injected' +
             (mainAppUrl ? ' + redirect_uri rewriting' : ''));
@@ -476,11 +477,11 @@ export class CSMicrosoftSSOHandler {
     private async removeOAuthInterception(page: any): Promise<void> {
         try {
             if (this.autologonRouteHandler) {
-                await page.unroute('**/*autologon.microsoftonline.com/**', this.autologonRouteHandler);
+                await page.unroute(/autologon\.microsoftonline\.com/, this.autologonRouteHandler);
                 this.autologonRouteHandler = null;
             }
             if (this.oauthRouteHandler) {
-                await page.unroute('**/*login.microsoftonline.com/**', this.oauthRouteHandler);
+                await page.unroute(/login\.microsoftonline\.com/, this.oauthRouteHandler);
                 this.oauthRouteHandler = null;
             }
             CSReporter.debug('OAuth interception routes removed');
