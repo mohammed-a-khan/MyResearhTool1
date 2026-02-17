@@ -155,10 +155,10 @@ export class CSMicrosoftSSOHandler {
                 await this.setupOAuthInterception(page, username, loginUrl);
             } else {
                 // === Mode B: Persistent context (VDI Edge profile) ===
-                // Clear stale app cookies. Do NOT set up OAuth interception yet —
+                // Clear stale app cookies. Do NOT set up full OAuth interception yet —
                 // the initial navigation must go through naturally so the VDI user
                 // can auto-authenticate (proves Conditional Access device compliance).
-                // Interception is set up later, AFTER detecting the error page.
+                // Full interception is set up later, AFTER detecting the error page.
                 CSReporter.info('Step 0: Clearing browsing data from previous runs (CDP)...');
                 try {
                     const cdpSession = await page.context().newCDPSession(page);
@@ -173,6 +173,15 @@ export class CSMicrosoftSSOHandler {
                         await context.clearCookies();
                     } catch {}
                 }
+
+                // Set up LIGHTWEIGHT redirect_uri rewriting BEFORE navigation.
+                // This ensures ALL authorize URLs use the main app URL as redirect_uri
+                // (not internal CRM load-balanced servers that may return 404).
+                // This handler does NOT block autologon, strip PRT, or inject prompt —
+                // VDI auto-auth must proceed naturally for Conditional Access compliance.
+                CSReporter.info('Step 0b: Setting up redirect_uri rewriting...');
+                await this.setupRedirectUriRewriting(page, loginUrl);
+
                 await page.goto('about:blank');
                 await page.waitForTimeout(500);
             }
@@ -296,6 +305,7 @@ export class CSMicrosoftSSOHandler {
      */
     private oauthRouteHandler: ((route: any) => Promise<void>) | null = null;
     private autologonRouteHandler: ((route: any) => Promise<void>) | null = null;
+    private redirectUriHandler: ((route: any) => Promise<void>) | null = null;
 
     /**
      * Clear any existing Microsoft session by navigating to the Microsoft sign-out endpoint.
@@ -324,6 +334,57 @@ export class CSMicrosoftSSOHandler {
     }
 
     /**
+     * Lightweight redirect_uri-only interception — set up BEFORE navigation.
+     *
+     * CRM load balancers sometimes assign internal server hostnames (e.g., abc123--xyz.crm.dynamics.com)
+     * as the redirect_uri in OAuth authorize URLs. These internal hostnames return 404 on subsequent runs,
+     * consuming the one-time auth code and breaking login.
+     *
+     * This handler ONLY rewrites redirect_uri from internal hostnames to the main app URL.
+     * It does NOT block autologon, strip PRT, or inject prompt — VDI auto-authentication must
+     * proceed naturally for Conditional Access device compliance.
+     */
+    private async setupRedirectUriRewriting(page: any, mainAppUrl: string): Promise<void> {
+        const mainHostname = new URL(mainAppUrl).hostname;
+
+        this.redirectUriHandler = async (route: any) => {
+            const url = route.request().url();
+
+            // Only modify OAuth authorize URLs
+            if (url.includes('/oauth2/authorize') || url.includes('/oauth2/v2.0/authorize')) {
+                const redirectMatch = url.match(/redirect_uri=([^&]+)/);
+                if (redirectMatch) {
+                    const encodedRedirectUri = redirectMatch[1];
+                    const decodedRedirectUri = decodeURIComponent(encodedRedirectUri);
+
+                    // Match internal CRM load-balanced server hostnames
+                    const internalHostMatch = decodedRedirectUri.match(
+                        /^(https?:\/\/)([a-z0-9]+--[a-z0-9]+\.crm\.dynamics\.com)(\/.*)?$/i
+                    );
+                    if (internalHostMatch) {
+                        const originalHostname = internalHostMatch[2];
+                        const newRedirectUri = `${internalHostMatch[1]}${mainHostname}${internalHostMatch[3] || '/'}`;
+                        const newEncoded = encodeURIComponent(newRedirectUri);
+                        const modifiedUrl = url.replace(
+                            `redirect_uri=${encodedRedirectUri}`,
+                            `redirect_uri=${newEncoded}`
+                        );
+                        CSReporter.debug(`[Pre-nav] redirect_uri REWRITTEN: ${originalHostname} → ${mainHostname}`);
+                        await route.continue({ url: modifiedUrl });
+                        return;
+                    }
+                }
+            }
+
+            // Non-authorize requests or no rewriting needed — pass through
+            await route.continue();
+        };
+
+        await page.route(/login\.microsoftonline\.com/, this.redirectUriHandler);
+        CSReporter.debug('Pre-navigation redirect_uri rewriting active');
+    }
+
+    /**
      * Set up Playwright route interception for VDI/domain-joined machine SSO bypass.
      *
      * Problem: On enterprise VDIs (especially with Edge), multiple SSO mechanisms auto-authenticate:
@@ -345,6 +406,15 @@ export class CSMicrosoftSSOHandler {
     private credentialsEntered: boolean = false;
 
     private async setupOAuthInterception(page: any, testUsername: string, mainAppUrl?: string): Promise<void> {
+        // Remove lightweight redirect_uri handler if active (avoid double handling)
+        if (this.redirectUriHandler) {
+            try {
+                await page.unroute(/login\.microsoftonline\.com/, this.redirectUriHandler);
+            } catch {}
+            this.redirectUriHandler = null;
+            CSReporter.debug('Removed pre-navigation redirect_uri handler (upgrading to full interception)');
+        }
+
         // Reset flag
         this.credentialsEntered = false;
 
@@ -476,6 +546,10 @@ export class CSMicrosoftSSOHandler {
      */
     private async removeOAuthInterception(page: any): Promise<void> {
         try {
+            if (this.redirectUriHandler) {
+                await page.unroute(/login\.microsoftonline\.com/, this.redirectUriHandler);
+                this.redirectUriHandler = null;
+            }
             if (this.autologonRouteHandler) {
                 await page.unroute(/autologon\.microsoftonline\.com/, this.autologonRouteHandler);
                 this.autologonRouteHandler = null;
@@ -1188,7 +1262,60 @@ export class CSMicrosoftSSOHandler {
                 timeout: timeout
             });
             await this.waitForNavigationToSettle(page, 15000);
+
+            const recoveryUrl = page.url().toLowerCase();
             CSReporter.debug(`After recovery navigation, now at: ${page.url()}`);
+
+            // If recovery landed on the Microsoft login page (e.g., "Pick an account"),
+            // the auth code was consumed by the 404. Try to reuse the test user's session
+            // by clicking their account tile, or wait for auto-redirect.
+            if (recoveryUrl.includes('login.microsoftonline.com')) {
+                CSReporter.warn('Recovery landed on Microsoft login page — attempting to reuse test user session...');
+
+                // Check if "Pick an account" is shown — click the test user's tile
+                try {
+                    const clickedAccount = await page.evaluate(() => {
+                        // Look for account tiles (Microsoft's "Pick an account" page)
+                        const tiles = Array.from(document.querySelectorAll('[data-test-id]'));
+                        for (const tile of tiles) {
+                            const testId = tile.getAttribute('data-test-id') || '';
+                            // Click the first non-"other" tile (the test user's account)
+                            if (testId && testId !== 'otherTile' && testId.includes('Tile')) {
+                                (tile as HTMLElement).click();
+                                return true;
+                            }
+                        }
+                        // Fallback: look for any account tile by role
+                        const listItems = Array.from(document.querySelectorAll('[role="listitem"], .table[role="presentation"] div[tabindex]'));
+                        if (listItems.length > 0) {
+                            (listItems[0] as HTMLElement).click();
+                            return true;
+                        }
+                        return false;
+                    });
+
+                    if (clickedAccount) {
+                        CSReporter.debug('Clicked test user account tile on "Pick an account" page');
+                        // Wait for the re-authentication redirect to complete
+                        try {
+                            await page.waitForFunction(
+                                (domain: string) => !window.location.href.toLowerCase().includes('login.microsoftonline.com') ||
+                                    window.location.href.toLowerCase().includes(domain),
+                                new URL(originalUrl).hostname.toLowerCase(),
+                                { timeout: 30000 }
+                            );
+                            await this.waitForNavigationToSettle(page, 10000);
+                            CSReporter.debug(`After account selection, now at: ${page.url()}`);
+                        } catch {
+                            CSReporter.warn('Account selection did not redirect to app within timeout');
+                        }
+                    } else {
+                        CSReporter.warn('No account tile found — login page may require fresh credentials');
+                    }
+                } catch (e: any) {
+                    CSReporter.debug(`Pick-an-account recovery failed: ${e.message}`);
+                }
+            }
         }
     }
 
