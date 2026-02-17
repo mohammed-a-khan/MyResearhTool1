@@ -119,9 +119,9 @@ export class CSMicrosoftSSOHandler {
      *   Navigate → Microsoft logout → OAuth interception → enter credentials → redirect back
      *
      * Mode B: Persistent context (BROWSER_USER_DATA_DIR set — VDI Edge profile)
-     *   Clear cookies → set up OAuth interception (block autologon, keep PRT, rewrite redirect_uri)
-     *   → Navigate to app → Microsoft login page → enter test credentials → redirect back
-     *   Falls back to sign-out flow if VDI auto-authenticates despite interception.
+     *   Clear cookies → Navigate to app → VDI auto-authenticates (Conditional Access OK) →
+     *   app error page → set up OAuth interception (block autologon + rewrite redirect_uri) →
+     *   click Sign Out → Microsoft login → enter test credentials → redirect back to app
      *
      * The method detects which page it lands on and handles it accordingly.
      */
@@ -155,7 +155,10 @@ export class CSMicrosoftSSOHandler {
                 await this.setupOAuthInterception(page, username, loginUrl);
             } else {
                 // === Mode B: Persistent context (VDI Edge profile) ===
-                // Clear stale app cookies, then set up OAuth interception before navigating.
+                // Clear stale app cookies. Do NOT set up OAuth interception yet —
+                // the initial navigation must go through naturally so the VDI user
+                // can auto-authenticate (proves Conditional Access device compliance).
+                // Interception is set up later, AFTER detecting the error page.
                 CSReporter.info('Step 0: Clearing browsing data from previous runs (CDP)...');
                 try {
                     const cdpSession = await page.context().newCDPSession(page);
@@ -172,14 +175,6 @@ export class CSMicrosoftSSOHandler {
                 }
                 await page.goto('about:blank');
                 await page.waitForTimeout(500);
-
-                // Set up OAuth interception BEFORE navigating to app URL:
-                //   - Block autologon (prevents VDI silent SSO via Kerberos)
-                //   - Keep PRT cookies (needed for Conditional Access device compliance proof)
-                //   - Inject login_hint + prompt=login (force interactive login for test user)
-                //   - Rewrite redirect_uri (prevent form_post to broken internal CRM servers)
-                CSReporter.info('Step 1: Setting up OAuth interception...');
-                await this.setupOAuthInterception(page, username, loginUrl);
             }
 
             // Navigate to the application URL
@@ -204,13 +199,22 @@ export class CSMicrosoftSSOHandler {
                 // App loaded but showing error (wrong user / not in security group)
                 // This happens with persistent context — the VDI user is authenticated
                 // but doesn't have access to this specific app.
-                // Click "Sign Out" to go to Microsoft login as different user.
+                // Set up OAuth interception NOW (before sign-out triggers the re-auth flow):
+                //   - Block autologon (prevents VDI re-authentication after sign-out)
+                //   - Rewrite redirect_uri (prevents form_post to broken internal CRM servers)
+                if (isPersistentContext) {
+                    CSReporter.info('Setting up OAuth interception for post-sign-out login...');
+                    await this.setupOAuthInterception(page, username, loginUrl);
+                }
                 CSReporter.info('App loaded as VDI user — clicking Sign Out to switch accounts...');
                 await this.clickAppSignOut(page, timeout);
 
             } else if (landingState === 'conditionalAccess') {
                 // Conditional Access "Sign in with work account" / "can't get there from here"
-                // Look for "Sign out and sign in with a different account" link
+                if (isPersistentContext) {
+                    CSReporter.info('Setting up OAuth interception for post-sign-out login...');
+                    await this.setupOAuthInterception(page, username, loginUrl);
+                }
                 CSReporter.info('Conditional Access block — clicking "Sign out and sign in with different account"...');
                 await this.clickConditionalAccessSignOut(page, timeout);
 
