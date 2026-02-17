@@ -152,6 +152,7 @@ export class CSMicrosoftSSOHandler {
                 await this.clearMicrosoftSession(page, timeout);
 
                 CSReporter.info('Step 2: Setting up OAuth redirect interception...');
+                await this.setupRedirectUriRewriting(page, loginUrl);
                 await this.setupOAuthInterception(page, username, loginUrl);
             } else {
                 // === Mode B: Persistent context (VDI Edge profile) ===
@@ -305,7 +306,7 @@ export class CSMicrosoftSSOHandler {
      */
     private oauthRouteHandler: ((route: any) => Promise<void>) | null = null;
     private autologonRouteHandler: ((route: any) => Promise<void>) | null = null;
-    private redirectUriHandler: ((route: any) => Promise<void>) | null = null;
+    private cdpFetchSession: any = null;
 
     /**
      * Clear any existing Microsoft session by navigating to the Microsoft sign-out endpoint.
@@ -334,54 +335,92 @@ export class CSMicrosoftSSOHandler {
     }
 
     /**
-     * Lightweight redirect_uri-only interception — set up BEFORE navigation.
+     * redirect_uri rewriting via CDP Fetch — intercepts at the NETWORK level.
      *
-     * CRM load balancers sometimes assign internal server hostnames (e.g., abc123--xyz.crm.dynamics.com)
-     * as the redirect_uri in OAuth authorize URLs. These internal hostnames return 404 on subsequent runs,
-     * consuming the one-time auth code and breaking login.
+     * page.route() does NOT intercept server-side redirect targets (e.g., CRM 302 → authorize URL).
+     * CDP Fetch intercepts ALL requests, including redirect targets, so it reliably catches
+     * every authorize URL regardless of how the browser reaches it.
      *
-     * This handler ONLY rewrites redirect_uri from internal hostnames to the main app URL.
-     * It does NOT block autologon, strip PRT, or inject prompt — VDI auto-authentication must
-     * proceed naturally for Conditional Access device compliance.
+     * This ONLY rewrites redirect_uri from internal CRM hostnames to the main app URL.
+     * It does NOT block autologon, strip PRT, or inject prompt.
      */
     private async setupRedirectUriRewriting(page: any, mainAppUrl: string): Promise<void> {
         const mainHostname = new URL(mainAppUrl).hostname;
 
-        this.redirectUriHandler = async (route: any) => {
-            const url = route.request().url();
+        try {
+            this.cdpFetchSession = await page.context().newCDPSession(page);
 
-            // Only modify OAuth authorize URLs
-            if (url.includes('/oauth2/authorize') || url.includes('/oauth2/v2.0/authorize')) {
-                const redirectMatch = url.match(/redirect_uri=([^&]+)/);
-                if (redirectMatch) {
-                    const encodedRedirectUri = redirectMatch[1];
-                    const decodedRedirectUri = decodeURIComponent(encodedRedirectUri);
+            // Only intercept OAuth authorize URLs — all other requests pass through untouched
+            await this.cdpFetchSession.send('Fetch.enable', {
+                patterns: [
+                    { urlPattern: '*login.microsoftonline.com/*/oauth2/authorize*', requestStage: 'Request' },
+                    { urlPattern: '*login.microsoftonline.com/*/oauth2/v2.0/authorize*', requestStage: 'Request' }
+                ]
+            });
 
-                    // Match internal CRM load-balanced server hostnames
-                    const internalHostMatch = decodedRedirectUri.match(
-                        /^(https?:\/\/)([a-z0-9]+--[a-z0-9]+\.crm\.dynamics\.com)(\/.*)?$/i
-                    );
-                    if (internalHostMatch) {
-                        const originalHostname = internalHostMatch[2];
-                        const newRedirectUri = `${internalHostMatch[1]}${mainHostname}${internalHostMatch[3] || '/'}`;
-                        const newEncoded = encodeURIComponent(newRedirectUri);
-                        const modifiedUrl = url.replace(
-                            `redirect_uri=${encodedRedirectUri}`,
-                            `redirect_uri=${newEncoded}`
+            this.cdpFetchSession.on('Fetch.requestPaused', async (event: any) => {
+                try {
+                    const url: string = event.request.url;
+                    let modifiedUrl: string | undefined = undefined;
+
+                    const redirectMatch = url.match(/redirect_uri=([^&]+)/);
+                    if (redirectMatch) {
+                        const encodedRedirectUri = redirectMatch[1];
+                        const decodedRedirectUri = decodeURIComponent(encodedRedirectUri);
+
+                        // Match internal CRM load-balanced server hostnames
+                        const internalHostMatch = decodedRedirectUri.match(
+                            /^(https?:\/\/)([a-z0-9]+--[a-z0-9]+\.crm\.dynamics\.com)(\/.*)?$/i
                         );
-                        CSReporter.debug(`[Pre-nav] redirect_uri REWRITTEN: ${originalHostname} → ${mainHostname}`);
-                        await route.continue({ url: modifiedUrl });
-                        return;
+                        if (internalHostMatch) {
+                            const originalHostname = internalHostMatch[2];
+                            const newRedirectUri = `${internalHostMatch[1]}${mainHostname}${internalHostMatch[3] || '/'}`;
+                            const newEncoded = encodeURIComponent(newRedirectUri);
+                            modifiedUrl = url.replace(
+                                `redirect_uri=${encodedRedirectUri}`,
+                                `redirect_uri=${newEncoded}`
+                            );
+                            CSReporter.debug(`[CDP] redirect_uri REWRITTEN: ${originalHostname} → ${mainHostname}`);
+                        } else {
+                            CSReporter.debug(`[CDP] redirect_uri already OK (not internal): ${decodedRedirectUri.substring(0, 60)}`);
+                        }
+                    } else {
+                        CSReporter.debug(`[CDP] authorize URL has no redirect_uri param`);
                     }
+
+                    // Continue with modified URL or unchanged
+                    await this.cdpFetchSession.send('Fetch.continueRequest', {
+                        requestId: event.requestId,
+                        ...(modifiedUrl ? { url: modifiedUrl } : {})
+                    });
+                } catch (e: any) {
+                    // If error, still continue the request to avoid hanging the browser
+                    CSReporter.debug(`[CDP] Fetch handler error: ${e.message}`);
+                    try {
+                        await this.cdpFetchSession.send('Fetch.continueRequest', {
+                            requestId: event.requestId
+                        });
+                    } catch { /* session may already be detached */ }
                 }
-            }
+            });
 
-            // Non-authorize requests or no rewriting needed — pass through
-            await route.continue();
-        };
+            CSReporter.debug('CDP Fetch redirect_uri rewriting active (network-level interception)');
+        } catch (e: any) {
+            CSReporter.warn(`CDP Fetch setup failed (falling back to page.route): ${e.message}`);
+            // Fallback: won't catch redirect targets, but better than nothing
+            this.cdpFetchSession = null;
+        }
+    }
 
-        await page.route(/login\.microsoftonline\.com/, this.redirectUriHandler);
-        CSReporter.debug('Pre-navigation redirect_uri rewriting active');
+    private async removeRedirectUriRewriting(): Promise<void> {
+        if (this.cdpFetchSession) {
+            try {
+                await this.cdpFetchSession.send('Fetch.disable');
+                await this.cdpFetchSession.detach();
+            } catch { /* ignore — session may already be closed */ }
+            this.cdpFetchSession = null;
+            CSReporter.debug('CDP Fetch redirect_uri rewriting removed');
+        }
     }
 
     /**
@@ -406,15 +445,6 @@ export class CSMicrosoftSSOHandler {
     private credentialsEntered: boolean = false;
 
     private async setupOAuthInterception(page: any, testUsername: string, mainAppUrl?: string): Promise<void> {
-        // Remove lightweight redirect_uri handler if active (avoid double handling)
-        if (this.redirectUriHandler) {
-            try {
-                await page.unroute(/login\.microsoftonline\.com/, this.redirectUriHandler);
-            } catch {}
-            this.redirectUriHandler = null;
-            CSReporter.debug('Removed pre-navigation redirect_uri handler (upgrading to full interception)');
-        }
-
         // Reset flag
         this.credentialsEntered = false;
 
@@ -467,10 +497,11 @@ export class CSMicrosoftSSOHandler {
                 CSReporter.debug(`Stripped SSO credentials from: ${url.substring(0, 80)}...`);
             }
 
-            // Layer 3 + 4: Modify OAuth authorize URLs using RAW string replacement.
-            // We must NOT use URLSearchParams.toString() because it re-encodes the
-            // complex 'state' parameter (which contains nested URL-encoded CRM data),
-            // corrupting the OAuth request.
+            // Layer 3: Modify OAuth authorize URLs (login_hint + prompt).
+            // Note: redirect_uri rewriting (Layer 4) is handled by CDP Fetch at the network
+            // level, since page.route() cannot intercept server-side redirect targets.
+            // Layer 3 here only fires for authorize URLs that are direct navigations
+            // (not 302 redirect targets), which is a subset of all authorize requests.
             if (url.includes('/oauth2/authorize') || url.includes('/oauth2/v2.0/authorize')) {
                 try {
                     let modifiedUrl = url;
@@ -497,33 +528,6 @@ export class CSMicrosoftSSOHandler {
                         CSReporter.debug(`OAuth intercept (post-login): login_hint=${testUsername}, no prompt`);
                     }
 
-                    // Layer 4: Rewrite redirect_uri from internal CRM server to main app URL.
-                    // Uses raw string replacement to avoid re-encoding the entire URL.
-                    if (mainAppUrl) {
-                        const redirectMatch = modifiedUrl.match(/redirect_uri=([^&]+)/);
-                        if (redirectMatch) {
-                            const encodedRedirectUri = redirectMatch[1];
-                            const decodedRedirectUri = decodeURIComponent(encodedRedirectUri);
-                            CSReporter.debug(`OAuth: original redirect_uri=${decodedRedirectUri}`);
-
-                            // Match internal CRM load-balanced server hostnames
-                            const internalHostMatch = decodedRedirectUri.match(
-                                /^(https?:\/\/)([a-z0-9]+--[a-z0-9]+\.crm\.dynamics\.com)(\/.*)?$/i
-                            );
-                            if (internalHostMatch) {
-                                const mainHostname = new URL(mainAppUrl).hostname;
-                                const originalHostname = internalHostMatch[2];
-                                const newRedirectUri = `${internalHostMatch[1]}${mainHostname}${internalHostMatch[3] || '/'}`;
-                                const newEncoded = encodeURIComponent(newRedirectUri);
-                                modifiedUrl = modifiedUrl.replace(
-                                    `redirect_uri=${encodedRedirectUri}`,
-                                    `redirect_uri=${newEncoded}`
-                                );
-                                CSReporter.debug(`OAuth: redirect_uri REWRITTEN: ${originalHostname} → ${mainHostname}`);
-                            }
-                        }
-                    }
-
                     await route.continue({ url: modifiedUrl, headers });
                     return;
                 } catch (err: any) {
@@ -537,8 +541,7 @@ export class CSMicrosoftSSOHandler {
 
         await page.route(/login\.microsoftonline\.com/, this.oauthRouteHandler);
 
-        CSReporter.debug('OAuth interception active: autologon blocked + OAuth params injected' +
-            (mainAppUrl ? ' + redirect_uri rewriting' : ''));
+        CSReporter.debug('OAuth interception active: autologon blocked + OAuth params injected (redirect_uri via CDP)');
     }
 
     /**
@@ -546,10 +549,7 @@ export class CSMicrosoftSSOHandler {
      */
     private async removeOAuthInterception(page: any): Promise<void> {
         try {
-            if (this.redirectUriHandler) {
-                await page.unroute(/login\.microsoftonline\.com/, this.redirectUriHandler);
-                this.redirectUriHandler = null;
-            }
+            await this.removeRedirectUriRewriting();
             if (this.autologonRouteHandler) {
                 await page.unroute(/autologon\.microsoftonline\.com/, this.autologonRouteHandler);
                 this.autologonRouteHandler = null;
