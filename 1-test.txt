@@ -119,9 +119,9 @@ export class CSMicrosoftSSOHandler {
      *   Navigate → Microsoft logout → OAuth interception → enter credentials → redirect back
      *
      * Mode B: Persistent context (BROWSER_USER_DATA_DIR set — VDI Edge profile)
-     *   Navigate to app → app loads as VDI user (wrong user) → click Sign Out on app page →
-     *   Microsoft shows account picker → click "Use another account" → enter test credentials →
-     *   redirect back to app as test user
+     *   Clear cookies → set up OAuth interception (block autologon, keep PRT, rewrite redirect_uri)
+     *   → Navigate to app → Microsoft login page → enter test credentials → redirect back
+     *   Falls back to sign-out flow if VDI auto-authenticates despite interception.
      *
      * The method detects which page it lands on and handles it accordingly.
      */
@@ -152,14 +152,11 @@ export class CSMicrosoftSSOHandler {
                 await this.clearMicrosoftSession(page, timeout);
 
                 CSReporter.info('Step 2: Setting up OAuth redirect interception...');
-                await this.setupOAuthInterception(page, username);
+                await this.setupOAuthInterception(page, username, loginUrl);
             } else {
                 // === Mode B: Persistent context (VDI Edge profile) ===
-                // Aggressively clear ALL browsing data from previous runs using CDP.
-                // context.clearCookies() is unreliable for persistent contexts because
-                // cookies are stored in the Edge profile's disk database.
-                // CDP commands flush directly to the browser's storage engine.
-                CSReporter.info('Step 0: Clearing all browsing data from previous runs (CDP)...');
+                // Clear stale app cookies, then set up OAuth interception before navigating.
+                CSReporter.info('Step 0: Clearing browsing data from previous runs (CDP)...');
                 try {
                     const cdpSession = await page.context().newCDPSession(page);
                     await cdpSession.send('Network.clearBrowserCookies');
@@ -173,9 +170,16 @@ export class CSMicrosoftSSOHandler {
                         await context.clearCookies();
                     } catch {}
                 }
-                // Navigate to about:blank to ensure clean state before starting
                 await page.goto('about:blank');
                 await page.waitForTimeout(500);
+
+                // Set up OAuth interception BEFORE navigating to app URL:
+                //   - Block autologon (prevents VDI silent SSO via Kerberos)
+                //   - Keep PRT cookies (needed for Conditional Access device compliance proof)
+                //   - Inject login_hint + prompt=login (force interactive login for test user)
+                //   - Rewrite redirect_uri (prevent form_post to broken internal CRM servers)
+                CSReporter.info('Step 1: Setting up OAuth interception...');
+                await this.setupOAuthInterception(page, username, loginUrl);
             }
 
             // Navigate to the application URL
@@ -288,7 +292,6 @@ export class CSMicrosoftSSOHandler {
      */
     private oauthRouteHandler: ((route: any) => Promise<void>) | null = null;
     private autologonRouteHandler: ((route: any) => Promise<void>) | null = null;
-    private crmRedirectRouteHandler: ((route: any) => Promise<void>) | null = null;
 
     /**
      * Clear any existing Microsoft session by navigating to the Microsoft sign-out endpoint.
@@ -337,9 +340,11 @@ export class CSMicrosoftSSOHandler {
      */
     private credentialsEntered: boolean = false;
 
-    private async setupOAuthInterception(page: any, testUsername: string): Promise<void> {
+    private async setupOAuthInterception(page: any, testUsername: string, mainAppUrl?: string): Promise<void> {
         // Reset flag
         this.credentialsEntered = false;
+
+        const isPersistentContext = !!this.config.get('BROWSER_USER_DATA_DIR');
 
         // Layer 1: Block Azure AD Seamless SSO endpoint entirely
         // autologon.microsoftonline.com is where Kerberos/PRT-based silent auth happens.
@@ -350,14 +355,13 @@ export class CSMicrosoftSSOHandler {
         };
         await page.route('**/*autologon.microsoftonline.com/**', this.autologonRouteHandler);
 
-        // Layer 2 + 3: Intercept login.microsoftonline.com requests
+        // Layers 2 + 3 + 4: Intercept login.microsoftonline.com requests
         this.oauthRouteHandler = async (route: any) => {
             const url = route.request().url();
             const headers = { ...route.request().headers() };
 
-            // Layer 2: Strip Windows SSO credentials from ALL Microsoft login requests
-            // - Authorization header carries Kerberos/NTLM negotiate tokens
-            // - x-ms-RefreshTokenCredential cookie carries the PRT (Edge-specific)
+            // Layer 2: Strip Windows SSO credentials
+            // Authorization header carries Kerberos/NTLM negotiate tokens
             let headersModified = false;
 
             if (headers['authorization']) {
@@ -365,8 +369,10 @@ export class CSMicrosoftSSOHandler {
                 headersModified = true;
             }
 
-            // Strip PRT cookie from the cookie header
-            if (headers['cookie']) {
+            // Strip PRT cookie ONLY for fresh browser (not persistent context).
+            // Persistent context needs PRT on login.microsoftonline.com for
+            // Conditional Access device compliance proof.
+            if (!isPersistentContext && headers['cookie']) {
                 const originalCookie = headers['cookie'];
                 const filteredCookies = originalCookie
                     .split(';')
@@ -383,14 +389,10 @@ export class CSMicrosoftSSOHandler {
             }
 
             if (headersModified) {
-                CSReporter.debug(`Stripped Windows SSO credentials from: ${url.substring(0, 80)}...`);
+                CSReporter.debug(`Stripped SSO credentials from: ${url.substring(0, 80)}...`);
             }
 
-            // Layer 3: Inject login_hint into OAuth authorize URLs
-            // Only inject prompt=login BEFORE credentials are entered.
-            // After credentials are entered, the test user's Microsoft session cookie
-            // is set — we want Microsoft to use that session silently on subsequent
-            // OAuth redirects (e.g., after 404 error recovery navigation).
+            // Layer 3: Inject login_hint + prompt into OAuth authorize URLs
             if (url.includes('/oauth2/authorize') || url.includes('/oauth2/v2.0/authorize')) {
                 try {
                     const urlObj = new URL(url);
@@ -399,11 +401,32 @@ export class CSMicrosoftSSOHandler {
                         urlObj.searchParams.set('prompt', 'login');
                         CSReporter.debug(`OAuth intercept: login_hint=${testUsername}, prompt=login`);
                     } else {
-                        // After credentials entered — don't force re-login.
-                        // Remove any existing prompt param so Microsoft uses the session.
                         urlObj.searchParams.delete('prompt');
-                        CSReporter.debug(`OAuth intercept (post-login): login_hint=${testUsername}, no prompt (use session)`);
+                        CSReporter.debug(`OAuth intercept (post-login): login_hint=${testUsername}, no prompt`);
                     }
+
+                    // Layer 4: Rewrite redirect_uri from internal CRM server to main app URL.
+                    // Internal CRM load-balanced servers (pattern: xyz--abc.crm.dynamics.com)
+                    // return 404 on subsequent runs, consuming the one-time auth code.
+                    // Rewriting redirect_uri in the AUTHORIZE request ensures Microsoft
+                    // generates the auth code for the main app URL, so form_post goes
+                    // directly to a working server.
+                    if (mainAppUrl) {
+                        const redirectUri = urlObj.searchParams.get('redirect_uri');
+                        if (redirectUri) {
+                            try {
+                                const redirectUrl = new URL(redirectUri);
+                                if (/^[a-z0-9]+--[a-z0-9]+\.crm\.dynamics\.com$/i.test(redirectUrl.hostname)) {
+                                    const mainHost = new URL(mainAppUrl).host;
+                                    const originalHost = redirectUrl.host;
+                                    redirectUrl.host = mainHost;
+                                    urlObj.searchParams.set('redirect_uri', redirectUrl.toString());
+                                    CSReporter.debug(`OAuth: redirect_uri rewritten: ${originalHost} → ${mainHost}`);
+                                }
+                            } catch { /* redirect_uri parse failed — skip rewrite */ }
+                        }
+                    }
+
                     const modifiedUrl = urlObj.toString();
                     await route.continue({ url: modifiedUrl, headers });
                     return;
@@ -412,136 +435,13 @@ export class CSMicrosoftSSOHandler {
                 }
             }
 
-            // For non-OAuth requests to login.microsoftonline.com, still strip headers
+            // For non-OAuth requests, continue with (possibly modified) headers
             await route.continue({ headers });
         };
 
         await page.route('**/*login.microsoftonline.com/**', this.oauthRouteHandler);
-        CSReporter.debug('VDI SSO bypass active: autologon blocked + headers stripped + OAuth params injected');
-    }
-
-    /**
-     * Lightweight interception for post-login error recovery on persistent context.
-     * ONLY blocks autologon and strips PRT cookies — no prompt, no login_hint.
-     * This lets Microsoft use the test user's session cookie for silent auth
-     * while preventing the VDI user's PRT from hijacking the flow.
-     */
-    private async setupPostLoginInterception(page: any): Promise<void> {
-        // Remove any existing interception first
-        await this.removeOAuthInterception(page);
-
-        // Block autologon (prevents PRT/Kerberos silent SSO that hangs)
-        this.autologonRouteHandler = async (route: any) => {
-            CSReporter.debug(`[PostLogin] Blocked autologon: ${route.request().url().substring(0, 80)}`);
-            await route.abort('blockedbyclient');
-        };
-        await page.route('**/*autologon.microsoftonline.com/**', this.autologonRouteHandler);
-
-        // Strip PRT cookies but do NOT modify OAuth URLs (no prompt, no login_hint)
-        this.oauthRouteHandler = async (route: any) => {
-            const headers = { ...route.request().headers() };
-            let modified = false;
-
-            // Strip Kerberos/NTLM auth header
-            if (headers['authorization']) {
-                delete headers['authorization'];
-                modified = true;
-            }
-
-            // Strip PRT and device credential cookies
-            if (headers['cookie']) {
-                const original = headers['cookie'];
-                const filtered = original
-                    .split(';')
-                    .map((c: string) => c.trim())
-                    .filter((c: string) =>
-                        !c.startsWith('x-ms-RefreshTokenCredential') &&
-                        !c.startsWith('x-ms-DeviceCredential')
-                    )
-                    .join('; ');
-                if (filtered !== original) {
-                    headers['cookie'] = filtered;
-                    modified = true;
-                }
-            }
-
-            if (modified) {
-                CSReporter.debug(`[PostLogin] Stripped PRT/auth from: ${route.request().url().substring(0, 60)}`);
-            }
-
-            await route.continue({ headers });
-        };
-        await page.route('**/*login.microsoftonline.com/**', this.oauthRouteHandler);
-
-        CSReporter.debug('Post-login interception active: autologon blocked + PRT stripped (no prompt/login_hint)');
-    }
-
-    /**
-     * Intercept form_post requests to internal CRM servers and re-route them to the main app URL.
-     *
-     * Problem: Microsoft OAuth uses response_mode=form_post. After authentication, Microsoft
-     * returns an HTML page with a form that auto-submits (POST) to the redirect_uri. The
-     * redirect_uri points to an internal load-balanced CRM server (e.g., bn1--namcrmlive*.crm.dynamics.com).
-     * On second runs, this internal server returns 404 (stale cookies/state). The auth code is
-     * one-time use and gets consumed by the 404 — it's lost forever.
-     *
-     * Solution: Intercept the POST to the internal CRM server. Extract the auth code/tokens
-     * from the POST body. Respond with a self-submitting form that POSTs to the MAIN app URL
-     * instead. The main app URL is always accessible and can process the tokens.
-     */
-    private async setupCrmRedirectInterception(page: any, mainAppUrl: string): Promise<void> {
-        // Remove any existing CRM redirect handler
-        if (this.crmRedirectRouteHandler) {
-            try { await page.unroute(/https:\/\/[a-z0-9]+--[a-z0-9]+\.crm\.dynamics\.com/, this.crmRedirectRouteHandler); } catch {}
-            this.crmRedirectRouteHandler = null;
-        }
-
-        const mainUrl = mainAppUrl.replace(/\/$/, ''); // Remove trailing slash
-
-        this.crmRedirectRouteHandler = async (route: any) => {
-            const request = route.request();
-            const url = request.url();
-            const method = request.method();
-
-            // Only intercept POST requests (the form_post from Microsoft)
-            if (method === 'POST') {
-                const postData = request.postData() || '';
-                CSReporter.debug(`Intercepted form_post to internal CRM server: ${url.substring(0, 80)}`);
-                CSReporter.debug(`Re-routing form_post to main app URL: ${mainUrl}`);
-
-                // Parse the form data to extract individual fields
-                const params = new URLSearchParams(postData);
-                const fields: string[] = [];
-                params.forEach((value: string, key: string) => {
-                    // HTML-encode the value to prevent XSS in the self-submitting form
-                    const safeValue = value.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-                    fields.push(`<input type="hidden" name="${key}" value="${safeValue}"/>`);
-                });
-
-                // Return a self-submitting form that POSTs to the main app URL
-                const html = `<html><head><title>Redirecting...</title></head>
-<body onload="document.forms[0].submit()">
-<form method="POST" action="${mainUrl}/">
-${fields.join('\n')}
-<noscript><button type="submit">Continue</button></noscript>
-</form></body></html>`;
-
-                await route.fulfill({
-                    status: 200,
-                    contentType: 'text/html',
-                    body: html
-                });
-                return;
-            }
-
-            // For GET requests to internal CRM servers, redirect to main app URL
-            CSReporter.debug(`Redirecting GET to internal CRM server: ${url.substring(0, 80)} → ${mainUrl}`);
-            await route.continue({ url: `${mainUrl}/` });
-        };
-
-        // Match internal CRM server hostnames: bn1--namcrmlive*.crm.dynamics.com, fbn1--*, etc.
-        await page.route(/https:\/\/[a-z0-9]+--[a-z0-9]+\.crm\.dynamics\.com/, this.crmRedirectRouteHandler);
-        CSReporter.debug(`CRM redirect interception active: internal servers → ${mainUrl}`);
+        CSReporter.debug('OAuth interception active: autologon blocked + OAuth params injected' +
+            (mainAppUrl ? ' + redirect_uri rewriting' : ''));
     }
 
     /**
@@ -557,11 +457,7 @@ ${fields.join('\n')}
                 await page.unroute('**/*login.microsoftonline.com/**', this.oauthRouteHandler);
                 this.oauthRouteHandler = null;
             }
-            if (this.crmRedirectRouteHandler) {
-                try { await page.unroute(/https:\/\/[a-z0-9]+--[a-z0-9]+\.crm\.dynamics\.com/, this.crmRedirectRouteHandler); } catch {}
-                this.crmRedirectRouteHandler = null;
-            }
-            CSReporter.debug('VDI SSO bypass routes removed');
+            CSReporter.debug('OAuth interception routes removed');
         } catch {
             // Ignore — page may already be closed
         }
@@ -1257,45 +1153,15 @@ ${fields.join('\n')}
         }
 
         if (isErrorPage || isInternalServerError) {
-            // The OAuth form_post went to an internal CRM server that returned 404.
-            // The auth code is consumed and lost. We need to start a FRESH OAuth flow.
-            // Clear ALL cookies via CDP first (the stale state causes the 404), then navigate.
-            CSReporter.debug(`Post-login error: ${currentUrl}. Clearing cookies and retrying...`);
-
-            try {
-                const cdpSession = await page.context().newCDPSession(page);
-                await cdpSession.send('Network.clearBrowserCookies');
-                await cdpSession.send('Network.clearBrowserCache');
-                await cdpSession.detach();
-                CSReporter.debug('CDP: Cleared cookies/cache before retry');
-            } catch {
-                try { await page.context().clearCookies(); } catch {}
-            }
-
-            // Navigate to the app URL — this starts a fresh OAuth flow
-            CSReporter.debug(`Navigating to app URL for fresh OAuth flow: ${originalUrl}`);
+            // Post-login error page detected. This typically means the OAuth redirect_uri
+            // went to an unreachable internal server. Navigate to the main app URL as recovery.
+            CSReporter.warn(`Post-login error detected at: ${currentUrl}. Navigating to main app URL...`);
             await page.goto(originalUrl, {
                 waitUntil: 'domcontentloaded',
                 timeout: timeout
             });
-
-            // Wait for the full redirect chain (up to 60s)
-            const redirectTimeout = Math.min(timeout, 60000);
-            const redirectStart = Date.now();
-            while (Date.now() - redirectStart < redirectTimeout) {
-                await this.waitForNavigationToSettle(page, 5000);
-                const url = page.url().toLowerCase();
-                if (!url.includes('login.microsoftonline.com') &&
-                    !url.includes('login.microsoft.com') &&
-                    !url.startsWith('chrome-error://') &&
-                    !url.startsWith('edge-error://') &&
-                    !url.startsWith('about:blank')) {
-                    break;
-                }
-                CSReporter.debug(`Waiting for OAuth redirect... (${page.url().substring(0, 80)})`);
-                await page.waitForTimeout(3000);
-            }
-            CSReporter.debug(`After retry, now at: ${page.url()}`);
+            await this.waitForNavigationToSettle(page, 15000);
+            CSReporter.debug(`After recovery navigation, now at: ${page.url()}`);
         }
     }
 
