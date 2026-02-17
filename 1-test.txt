@@ -292,6 +292,7 @@ export class CSMicrosoftSSOHandler {
      */
     private oauthRouteHandler: ((route: any) => Promise<void>) | null = null;
     private autologonRouteHandler: ((route: any) => Promise<void>) | null = null;
+    private crmRedirectRouteHandler: ((route: any) => Promise<void>) | null = null;
 
     /**
      * Clear any existing Microsoft session by navigating to the Microsoft sign-out endpoint.
@@ -392,42 +393,63 @@ export class CSMicrosoftSSOHandler {
                 CSReporter.debug(`Stripped SSO credentials from: ${url.substring(0, 80)}...`);
             }
 
-            // Layer 3: Inject login_hint + prompt into OAuth authorize URLs
+            // Layer 3 + 4: Modify OAuth authorize URLs using RAW string replacement.
+            // We must NOT use URLSearchParams.toString() because it re-encodes the
+            // complex 'state' parameter (which contains nested URL-encoded CRM data),
+            // corrupting the OAuth request.
             if (url.includes('/oauth2/authorize') || url.includes('/oauth2/v2.0/authorize')) {
                 try {
-                    const urlObj = new URL(url);
-                    urlObj.searchParams.set('login_hint', testUsername);
+                    let modifiedUrl = url;
+
+                    // Layer 3a: Add or replace login_hint
+                    const encodedHint = encodeURIComponent(testUsername);
+                    if (modifiedUrl.includes('login_hint=')) {
+                        modifiedUrl = modifiedUrl.replace(/login_hint=[^&]*/, `login_hint=${encodedHint}`);
+                    } else {
+                        modifiedUrl += `&login_hint=${encodedHint}`;
+                    }
+
+                    // Layer 3b: Add or replace prompt
                     if (!this.credentialsEntered) {
-                        urlObj.searchParams.set('prompt', 'login');
+                        if (modifiedUrl.includes('prompt=')) {
+                            modifiedUrl = modifiedUrl.replace(/prompt=[^&]*/, 'prompt=login');
+                        } else {
+                            modifiedUrl += '&prompt=login';
+                        }
                         CSReporter.debug(`OAuth intercept: login_hint=${testUsername}, prompt=login`);
                     } else {
-                        urlObj.searchParams.delete('prompt');
+                        // Remove prompt param so Microsoft uses the existing session
+                        modifiedUrl = modifiedUrl.replace(/[&?]prompt=[^&]*/, '');
                         CSReporter.debug(`OAuth intercept (post-login): login_hint=${testUsername}, no prompt`);
                     }
 
                     // Layer 4: Rewrite redirect_uri from internal CRM server to main app URL.
-                    // Internal CRM load-balanced servers (pattern: xyz--abc.crm.dynamics.com)
-                    // return 404 on subsequent runs, consuming the one-time auth code.
-                    // Rewriting redirect_uri in the AUTHORIZE request ensures Microsoft
-                    // generates the auth code for the main app URL, so form_post goes
-                    // directly to a working server.
+                    // Uses raw string replacement to avoid re-encoding the entire URL.
                     if (mainAppUrl) {
-                        const redirectUri = urlObj.searchParams.get('redirect_uri');
-                        if (redirectUri) {
-                            try {
-                                const redirectUrl = new URL(redirectUri);
-                                if (/^[a-z0-9]+--[a-z0-9]+\.crm\.dynamics\.com$/i.test(redirectUrl.hostname)) {
-                                    const mainHost = new URL(mainAppUrl).host;
-                                    const originalHost = redirectUrl.host;
-                                    redirectUrl.host = mainHost;
-                                    urlObj.searchParams.set('redirect_uri', redirectUrl.toString());
-                                    CSReporter.debug(`OAuth: redirect_uri rewritten: ${originalHost} → ${mainHost}`);
-                                }
-                            } catch { /* redirect_uri parse failed — skip rewrite */ }
+                        const redirectMatch = modifiedUrl.match(/redirect_uri=([^&]+)/);
+                        if (redirectMatch) {
+                            const encodedRedirectUri = redirectMatch[1];
+                            const decodedRedirectUri = decodeURIComponent(encodedRedirectUri);
+                            CSReporter.debug(`OAuth: original redirect_uri=${decodedRedirectUri}`);
+
+                            // Match internal CRM load-balanced server hostnames
+                            const internalHostMatch = decodedRedirectUri.match(
+                                /^(https?:\/\/)([a-z0-9]+--[a-z0-9]+\.crm\.dynamics\.com)(\/.*)?$/i
+                            );
+                            if (internalHostMatch) {
+                                const mainHostname = new URL(mainAppUrl).hostname;
+                                const originalHostname = internalHostMatch[2];
+                                const newRedirectUri = `${internalHostMatch[1]}${mainHostname}${internalHostMatch[3] || '/'}`;
+                                const newEncoded = encodeURIComponent(newRedirectUri);
+                                modifiedUrl = modifiedUrl.replace(
+                                    `redirect_uri=${encodedRedirectUri}`,
+                                    `redirect_uri=${newEncoded}`
+                                );
+                                CSReporter.debug(`OAuth: redirect_uri REWRITTEN: ${originalHostname} → ${mainHostname}`);
+                            }
                         }
                     }
 
-                    const modifiedUrl = urlObj.toString();
                     await route.continue({ url: modifiedUrl, headers });
                     return;
                 } catch (err: any) {
@@ -440,8 +462,34 @@ export class CSMicrosoftSSOHandler {
         };
 
         await page.route('**/*login.microsoftonline.com/**', this.oauthRouteHandler);
+
+        // Layer 5: Intercept requests to internal CRM load-balanced servers.
+        // Even with redirect_uri rewriting, CRM may redirect the browser to internal
+        // server hostnames (from the state parameter's ReplyUrl). These servers are
+        // often unreachable on subsequent runs. Redirect them to the main app URL.
+        if (mainAppUrl) {
+            const mainHostname = new URL(mainAppUrl).hostname;
+            this.crmRedirectRouteHandler = async (route: any) => {
+                const requestUrl = route.request().url();
+                try {
+                    const urlObj = new URL(requestUrl);
+                    urlObj.hostname = mainHostname;
+                    const redirectUrl = urlObj.toString();
+                    CSReporter.debug(`CRM internal redirect: ${requestUrl.substring(0, 60)} → ${mainHostname}`);
+                    // Use 307 to preserve POST method + body (important for form_post)
+                    await route.fulfill({
+                        status: 307,
+                        headers: { 'Location': redirectUrl }
+                    });
+                } catch {
+                    await route.continue();
+                }
+            };
+            await page.route(/https:\/\/[a-z0-9]+--[a-z0-9]+\.crm\.dynamics\.com/, this.crmRedirectRouteHandler);
+        }
+
         CSReporter.debug('OAuth interception active: autologon blocked + OAuth params injected' +
-            (mainAppUrl ? ' + redirect_uri rewriting' : ''));
+            (mainAppUrl ? ' + redirect_uri rewriting + CRM server redirect' : ''));
     }
 
     /**
@@ -456,6 +504,10 @@ export class CSMicrosoftSSOHandler {
             if (this.oauthRouteHandler) {
                 await page.unroute('**/*login.microsoftonline.com/**', this.oauthRouteHandler);
                 this.oauthRouteHandler = null;
+            }
+            if (this.crmRedirectRouteHandler) {
+                try { await page.unroute(/https:\/\/[a-z0-9]+--[a-z0-9]+\.crm\.dynamics\.com/, this.crmRedirectRouteHandler); } catch {}
+                this.crmRedirectRouteHandler = null;
             }
             CSReporter.debug('OAuth interception routes removed');
         } catch {
