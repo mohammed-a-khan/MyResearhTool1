@@ -155,45 +155,68 @@ export class CSMicrosoftSSOHandler {
                 await this.setupOAuthInterception(page, username, loginUrl);
             } else {
                 // === Mode B: Persistent context (VDI Edge profile) ===
-                // Clear ONLY Microsoft login cookies — preserve CRM app cookies.
                 //
-                // Why not clear all cookies?
-                // CRM internal servers (e.g., abc--xyz.crm.dynamics.com) use the redirect_uri
-                // from the authorize URL for the form_post. These internal servers require
-                // CRM session/affinity cookies to match the form_post to its pending auth
-                // session. Clearing ALL cookies removes these, causing 404 on the form_post.
+                // Strategy: Clear ALL state and set up OAuth interception BEFORE navigating
+                // to the app. This prevents VDI auto-authentication and goes directly to the
+                // Microsoft login page, bypassing the error page → Sign Out flow entirely.
                 //
-                // By preserving CRM cookies:
-                //   - If test user session is still valid → app loads immediately (appLoaded)
-                //   - If CRM session expired → CRM redirects to authorize → normal login flow
-                //   - CRM affinity cookies ensure form_post reaches the correct backend server
-                CSReporter.info('Step 0: Clearing Microsoft login cookies (preserving CRM session)...');
+                // Why skip the Sign Out flow?
+                // The CRM Sign Out redirect chain embeds the sign-out page URL (notification.aspx)
+                // as the return URL in the OAuth state. After form_post, CRM tries to redirect
+                // to notification.aspx which fails or triggers another sign-out — creating a loop.
+                // By navigating fresh (no CRM sign-out), the OAuth state has the correct return URL.
+
+                // Phase 1: Clear ALL cookies (CRM + Microsoft) for a clean slate
+                CSReporter.info('Step 0: Clearing all browsing state for clean login...');
+                try {
+                    await page.context().clearCookies();
+                    CSReporter.debug('Cleared all cookies');
+                } catch (e: any) {
+                    CSReporter.debug(`Cookie clear: ${e.message}`);
+                }
+
+                // Phase 2: CDP — clear cache, storage, and service workers
                 try {
                     const cdpSession = await page.context().newCDPSession(page);
                     await cdpSession.send('Network.clearBrowserCache');
-                    CSReporter.debug('CDP: Cleared browser cache');
+                    // Clear all storage for the CRM origin (localStorage, indexedDB, service workers)
+                    const crmOrigin = new URL(loginUrl).origin;
+                    await cdpSession.send('Storage.clearDataForOrigin', {
+                        origin: crmOrigin,
+                        storageTypes: 'all'
+                    });
+                    await cdpSession.send('Storage.clearDataForOrigin', {
+                        origin: 'https://login.microsoftonline.com',
+                        storageTypes: 'all'
+                    });
+                    CSReporter.debug('CDP: Cleared cache, storage, and service workers');
                     await cdpSession.detach();
                 } catch (e: any) {
-                    CSReporter.debug(`CDP cache clear: ${e.message}`);
+                    CSReporter.debug(`CDP state clear: ${e.message}`);
                 }
 
-                // Selectively clear only Microsoft login domain cookies
+                // Phase 3: Microsoft logout — clear server-side session
+                CSReporter.info('Step 1: Clearing Microsoft server-side session...');
                 try {
-                    const context = page.context();
-                    await context.clearCookies({ domain: 'login.microsoftonline.com' });
-                    await context.clearCookies({ domain: 'login.live.com' });
-                    await context.clearCookies({ domain: 'login.microsoft.com' });
-                    CSReporter.debug('Cleared Microsoft login cookies (CRM cookies preserved)');
+                    await page.goto('https://login.microsoftonline.com/common/oauth2/logout', {
+                        waitUntil: 'domcontentloaded',
+                        timeout: 15000
+                    });
+                    await page.waitForTimeout(2000);
+                    CSReporter.debug('Microsoft server-side session cleared');
                 } catch (e: any) {
-                    CSReporter.debug(`Selective cookie clear: ${e.message}`);
+                    CSReporter.debug(`Microsoft logout: ${e.message}`);
                 }
 
-                await page.goto('about:blank');
-                await page.waitForTimeout(500);
+                // Phase 4: Set up OAuth interception BEFORE navigating to CRM
+                // By blocking autologon before the first CRM request, we prevent
+                // VDI Kerberos/PRT auto-authentication and go directly to the login page.
+                CSReporter.info('Step 2: Setting up OAuth interception...');
+                await this.setupOAuthInterception(page, username, loginUrl);
             }
 
             // Navigate to the application URL
-            CSReporter.info(`Step ${isPersistentContext ? '1' : '3'}: Navigating to application URL...`);
+            CSReporter.info(`Step ${isPersistentContext ? '3' : '3'}: Navigating to application URL...`);
             await page.goto(loginUrl, {
                 waitUntil: 'domcontentloaded',
                 timeout: timeout
@@ -211,23 +234,43 @@ export class CSMicrosoftSSOHandler {
                 CSReporter.info('On Microsoft login page — entering credentials...');
 
             } else if (landingState === 'appError' || landingState === 'accessRestriction') {
-                // App loaded but showing error (wrong user / not in security group)
-                // This happens with persistent context — the VDI user is authenticated
-                // but doesn't have access to this specific app.
-                // Set up OAuth interception NOW (before sign-out triggers the re-auth flow):
-                //   - Block autologon (prevents VDI re-authentication after sign-out)
-                //   - Rewrite redirect_uri (prevents form_post to broken internal CRM servers)
-                if (isPersistentContext) {
-                    CSReporter.info('Setting up OAuth interception for post-sign-out login...');
+                // VDI user auto-authenticated despite OAuth interception (PRT bypassed autologon block).
+                // Instead of clicking the app's Sign Out (which embeds notification.aspx as return URL
+                // in the OAuth state, causing form_post → redirect to notification.aspx → 404 loop),
+                // we: Microsoft logout → clear cookies → re-navigate to app with interception active.
+                CSReporter.info('VDI user auto-authenticated — performing direct Microsoft logout...');
+                if (!isPersistentContext) {
                     await this.setupOAuthInterception(page, username, loginUrl);
                 }
-                CSReporter.info('App loaded as VDI user — clicking Sign Out to switch accounts...');
-                await this.clickAppSignOut(page, timeout);
+                // Microsoft logout directly (skip CRM sign-out redirect chain)
+                await page.goto('https://login.microsoftonline.com/common/oauth2/logout', {
+                    waitUntil: 'domcontentloaded',
+                    timeout: 15000
+                });
+                await page.waitForTimeout(2000);
+                // Clear all cookies again (remove VDI user's CRM session)
+                try { await page.context().clearCookies(); } catch {}
+                // Re-navigate to app — interception already active, autologon blocked
+                CSReporter.info('Re-navigating to app with interception active...');
+                await page.goto(loginUrl, {
+                    waitUntil: 'domcontentloaded',
+                    timeout: timeout
+                });
+                await this.waitForNavigationToSettle(page, 10000);
+                const retryLanding = await this.detectLandingPage(page);
+                CSReporter.info(`After logout + re-navigation: ${retryLanding}`);
+                if (retryLanding === 'appLoaded') {
+                    CSReporter.pass('App loaded after re-navigation!');
+                    if (saveSessionPath) {
+                        await this.browserManager.saveStorageState(saveSessionPath);
+                    }
+                    return;
+                }
+                // If still not on login page, continue — waitForMicrosoftLoginPage will handle it
 
             } else if (landingState === 'conditionalAccess') {
                 // Conditional Access "Sign in with work account" / "can't get there from here"
-                if (isPersistentContext) {
-                    CSReporter.info('Setting up OAuth interception for post-sign-out login...');
+                if (!isPersistentContext) {
                     await this.setupOAuthInterception(page, username, loginUrl);
                 }
                 CSReporter.info('Conditional Access block — clicking "Sign out and sign in with different account"...');
@@ -414,10 +457,10 @@ export class CSMicrosoftSSOHandler {
             }
 
             // Layer 3: Modify OAuth authorize URLs (login_hint + prompt).
-            // Note: redirect_uri rewriting (Layer 4) is handled by CDP Fetch at the network
-            // level, since page.route() cannot intercept server-side redirect targets.
-            // Layer 3 here only fires for authorize URLs that are direct navigations
-            // (not 302 redirect targets), which is a subset of all authorize requests.
+            // Note: page.route() only fires for XHR/fetch requests and direct navigations,
+            // not for 302 redirect targets. The authorize URL from CRM → Azure AD is a
+            // redirect target and won't be intercepted here. But autologon blocking (Layer 1)
+            // and header stripping (Layer 2) prevent VDI auto-auth on the login page itself.
             if (url.includes('/oauth2/authorize') || url.includes('/oauth2/v2.0/authorize')) {
                 try {
                     let modifiedUrl = url;
@@ -457,7 +500,7 @@ export class CSMicrosoftSSOHandler {
 
         await page.route(/login\.microsoftonline\.com/, this.oauthRouteHandler);
 
-        CSReporter.debug('OAuth interception active: autologon blocked + OAuth params injected (redirect_uri via CDP)');
+        CSReporter.debug('OAuth interception active: autologon blocked + login_hint/prompt injected');
     }
 
     /**
