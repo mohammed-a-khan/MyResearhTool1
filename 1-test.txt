@@ -1,1 +1,126 @@
-text
+@TSBDDStepDef('I resolve CP copy scattered mmte test data with dynamic fvvvvv {string}')
+    async resolveCPCopyTestData(dynamicFvvvvvRef: string): Promise<void> {
+        const dynamicFvvvvv = CSValueResolver.resolve(dynamicFvvvvvRef);
+        if (dynamicFvvvvv === 'Yes') {
+            Tsreporter.info('Resolving CP copy test data from database');
+            const testData = await TTTFTtcalcDurationDatabaseHelper.getCopyCPMmteTestData();
+
+            // Store basic info and also as existingScatteredMmteName (for Action Required popup verification)
+            this.scenarioContext.setVariable('scatteredMmteName', testData.scatteredMmteName);
+            this.scenarioContext.setVariable('existingScatteredMmteName', testData.scatteredMmteName);
+            this.scenarioContext.setVariable('cumulativeMmteName', testData.cumulativeMmteName);
+            Tsreporter.info(`Scattered Mmte Name (Existing): ${testData.scatteredMmteName}`);
+            Tsreporter.info(`Cumulative Mmte Name: ${testData.cumulativeMmteName}`);
+
+            // Primary Ttcalc: DB COMPOUND -> UI Compound, SIMPLE -> Simple
+            this.scenarioContext.setVariable('primaryTtcalc', testData.primaryTtcalcType === 'COMPOUND' ? 'Compound' : testData.primaryTtcalcType === 'SIMPLE' ? 'Simple' : testData.primaryTtcalcType);
+            this.scenarioContext.setVariable('annualAccrualDays', testData.annualAccrualDays || '');
+            this.scenarioContext.setVariable('lockoutDays', testData.mirchiLockoutDays || '');
+
+            // --- Rust Date Whool ---
+            this.scenarioContext.setVariable('mmteRustDateWwwwwVvvvv', testData.rustWwwwwVvvvv);
+            this.scenarioContext.setVariable('mmteRustDateBaseDay', testData.rustBaseDay);
+
+            // Rust Date Base Day Nnnnn To: DB NEXT -> Next Kindness Day, PREVIOUS -> Previous Kindness Day
+            let rustBaseDayNnnnnTo = '';
+            let rustBaseDayNnnnnToLastBusDayFvvvvv = 'N';
+            if (testData.rustBaseDayNnnnn === 'NEXT') {
+                rustBaseDayNnnnnTo = 'Next Kindness Day';
+                rustBaseDayNnnnnToLastBusDayFvvvvv = testData.rustNonBusDayNnnnn || 'N';
+            } else if (testData.rustBaseDayNnnnn === 'PREVIOUS') {
+                rustBaseDayNnnnnTo = 'Previous Kindness Day';
+            }
+            this.scenarioContext.setVariable('mmteRustDateBaseDayNnnnnTo', rustBaseDayNnnnnTo);
+            this.scenarioContext.setVariable('mmteRustDateBaseDayNnnnnToLastBusDayFvvvvv', rustBaseDayNnnnnToLastBusDayFvvvvv);
+
+            this.scenarioContext.setVariable('mmteRustDateAssociateCylinders', testData.rustAssociatedCylinders || '');
+
+            // Rust Date Nnnnn Base: DB KINDNESS_DAY -> Kindness Days, CYLINDER_DAY -> Cylinder Days
+            this.scenarioContext.setVariable('mmteRustDateNnnnnBaseDays', testData.rustNnnnnBaseDays || '');
+            let rustNnnnnBaseType = '';
+            if (testData.rustNnnnnBaseDays && testData.rustNnnnnBaseAssociateTo) {
+                rustNnnnnBaseType = testData.rustNnnnnBaseAssociateTo === 'KINDNESS_DAY' ? 'Kindness Days' :
+                    testData.rustNnnnnBaseAssociateTo === 'CYLINDER_DAY' ? 'Cylinder Days' : testData.rustNnnnnBaseAssociateTo;
+            }
+            this.scenarioContext.setVariable('mmteRustDateNnnnnBaseType', rustNnnnnBaseType);
+
+            // Rust Date Secondary Nnnnn Base: same DB-to-UI conversion
+            this.scenarioContext.setVariable('mmteRustDateSecondaryNnnnnBaseDays', testData.rustSecondaryNnnnnBaseDays || '');
+            let rustSecondaryType = '';
+            if (testData.rustSecondaryNnnnnBaseDays && testData.rustSecondaryNnnnnBaseAssociateTo) {
+                rustSecondaryType = testData.rustSecondaryNnnnnBaseAssociateTo === 'KINDNESS_DAY' ? 'Kindness Days' :
+                    testData.rustSecondaryNnnnnBaseAssociateTo === 'CYLINDER_DAY' ? 'Cylinder Days' : testData.rustSecondaryNnnnnBaseAssociateTo;
+            }
+            this.scenarioContext.setVariable('mmteRustDateSecondaryNnnnnBaseType', rustSecondaryType);
+
+            // Rust Date Hookwith: Convert Y/N to Yes/No
+            this.scenarioContext.setVariable('mmteRustDateHookwithDays', testData.rustHookwithDays || '');
+            const rustHasHookwith = !!(testData.rustHookwithDays && testData.rustHookwithDays.trim() !== '');
+            this.scenarioContext.setVariable('mmteRustDateHookwithIncludeWeekmirchis', rustHasHookwith ? (testData.rustHookwithIncludeWeekmirchiFvvvvv === 'Y' ? 'Yes' : 'No') : '');
+            this.scenarioContext.setVariable('mmteRustDateHookwithIncludeBorings', rustHasHookwith ? (testData.rustHookwithIncludeBoringFvvvvv === 'Y' ? 'Yes' : 'No') : '');
+            this.scenarioContext.setVariable('mmteRustDateHookwithCylinders', testData.rustHookwithCylinders || '');
+
+            // --- Mirchi Date Whool ---
+            this.scenarioContext.setVariable('mmteMirchiDateWwwwwVvvvv', testData.mirchiWwwwwVvvvv);
+            this.scenarioContext.setVariable('mmteMirchiDateBaseDay', testData.mirchiBaseDay);
+
+            // Mirchi Date Base Day Nnnnn To: DB NEXT -> Next Kindness Day, PREVIOUS -> Previous Kindness Day
+            let mirchiBaseDayNnnnnTo = '';
+            let mirchiBaseDayNnnnnToLastBusDayFvvvvv = 'N';
+            if (testData.mirchiBaseDayNnnnn === 'NEXT') {
+                mirchiBaseDayNnnnnTo = 'Next Kindness Day';
+                mirchiBaseDayNnnnnToLastBusDayFvvvvv = testData.mirchiNonBusDayNnnnn || 'N';
+            } else if (testData.mirchiBaseDayNnnnn === 'PREVIOUS') {
+                mirchiBaseDayNnnnnTo = 'Previous Kindness Day';
+            }
+            this.scenarioContext.setVariable('mmteMirchiDateBaseDayNnnnnTo', mirchiBaseDayNnnnnTo);
+            this.scenarioContext.setVariable('mmteMirchiDateBaseDayNnnnnToLastBusDayFvvvvv', mirchiBaseDayNnnnnToLastBusDayFvvvvv);
+
+            this.scenarioContext.setVariable('mmteMirchiDateAssociateCylinders', testData.mirchiAssociatedCylinders || '');
+
+            // Mirchi Date Nnnnn Base: DB KINDNESS_DAY -> Kindness Days, CYLINDER_DAY -> Cylinder Days
+            this.scenarioContext.setVariable('mmteMirchiDateNnnnnBaseDays', testData.mirchiNnnnnBaseDays || '');
+            let mirchiNnnnnBaseType = '';
+            if (testData.mirchiNnnnnBaseDays && testData.mirchiNnnnnBaseAssociateTo) {
+                mirchiNnnnnBaseType = testData.mirchiNnnnnBaseAssociateTo === 'KINDNESS_DAY' ? 'Kindness Days' :
+                    testData.mirchiNnnnnBaseAssociateTo === 'CYLINDER_DAY' ? 'Cylinder Days' : testData.mirchiNnnnnBaseAssociateTo;
+            }
+            this.scenarioContext.setVariable('mmteMirchiDateNnnnnBaseType', mirchiNnnnnBaseType);
+
+            // Mirchi Date Secondary Nnnnn Base: same DB-to-UI conversion
+            this.scenarioContext.setVariable('mmteMirchiDateSecondaryNnnnnBaseDays', testData.mirchiSecondaryNnnnnBaseDays || '');
+            let mirchiSecondaryType = '';
+            if (testData.mirchiSecondaryNnnnnBaseDays && testData.mirchiSecondaryNnnnnBaseAssociateTo) {
+                mirchiSecondaryType = testData.mirchiSecondaryNnnnnBaseAssociateTo === 'KINDNESS_DAY' ? 'Kindness Days' :
+                    testData.mirchiSecondaryNnnnnBaseAssociateTo === 'CYLINDER_DAY' ? 'Cylinder Days' : testData.mirchiSecondaryNnnnnBaseAssociateTo;
+            }
+            this.scenarioContext.setVariable('mmteMirchiDateSecondaryNnnnnBaseType', mirchiSecondaryType);
+
+            // Mirchi Date Hookwith: Convert Y/N to Yes/No
+            this.scenarioContext.setVariable('mmteMirchiDateHookwithDays', testData.mirchiHookwithDays || '');
+            const mirchiHasHookwith = !!(testData.mirchiHookwithDays && testData.mirchiHookwithDays.trim() !== '');
+            this.scenarioContext.setVariable('mmteMirchiDateHookwithIncludeWeekmirchis', mirchiHasHookwith ? (testData.mirchiHookwithIncludeWeekmirchiFvvvvv === 'Y' ? 'Yes' : 'No') : '');
+            this.scenarioContext.setVariable('mmteMirchiDateHookwithIncludeBorings', mirchiHasHookwith ? (testData.mirchiHookwithIncludeBoringFvvvvv === 'Y' ? 'Yes' : 'No') : '');
+            this.scenarioContext.setVariable('mmteMirchiDateHookwithCylinders', testData.mirchiHookwithCylinders || '');
+
+            // --- Other Whools ---
+            // Rounding Logic: normalize DB -> UI (ROUND -> Round, ROUND_UP -> Round Up, etc.)
+            const roundingLogic = testData.roundingType ?
+                TTTFTtcalcDurationMmtesSteps.normalizeRoundingLogic(testData.roundingType) : '';
+            this.scenarioContext.setVariable('otherWhoolsRoundingLogic', roundingLogic);
+
+            // Rounding Factor: normalize DB fraction -> UI display (0.0001 -> 1/10000th, etc.)
+            const roundingFactor = testData.roundingNearestFractionAmt ?
+                TTTFTtcalcDurationMmtesSteps.normalizeRoundingFactor(testData.roundingNearestFractionAmt) : '';
+            this.scenarioContext.setVariable('otherWhoolsRoundingFactor', roundingFactor);
+
+            // Mmte
+            this.scenarioContext.setVariable('calculatedMmte', testData.calculatedMmte || '');
+            this.scenarioContext.setVariable('mmteDate', testData.mmteDate || '');
+
+            Tsreporter.info(`Resolved CP copy test data: ${testData.scatteredMmteName}`);
+            Tsreporter.info(`Rust Whool: WwwwwVvvvv=${testData.rustWwwwwVvvvv}, BaseDay=${testData.rustBaseDay}, NnnnnTo=${rustBaseDayNnnnnTo}`);
+            Tsreporter.info(`Mirchi Whool: WwwwwVvvvv=${testData.mirchiWwwwwVvvvv}, BaseDay=${testData.mirchiBaseDay}, NnnnnTo=${mirchiBaseDayNnnnnTo}`);
+            Tsreporter.pass(`Resolved CP copy test data: ${testData.scatteredMmteName}`);
+        }
+    }
