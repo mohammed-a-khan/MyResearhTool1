@@ -1,14 +1,944 @@
-// Skip matches inside string/template literals.
-                // The regex can match words inside template strings as method names — false positive.
-                // Detect by counting unescaped backticks/quotes before the match on the line.
-                const matchLine = lines[lineNumber - 1] || '';
-                const matchColIndex = matchLine.indexOf(methodName);
-                if (matchColIndex > -1) {
-                    const beforeMatch = matchLine.substring(0, matchColIndex);
-                    const backticks = (beforeMatch.match(/(?<!\\)`/g) || []).length;
-                    const singleQuotes = (beforeMatch.match(/(?<!\\)'/g) || []).length;
-                    const doubleQuotes = (beforeMatch.match(/(?<!\\)"/g) || []).length;
-                    if (backticks % 2 === 1 || singleQuotes % 2 === 1 || doubleQuotes % 2 === 1) {
-                        continue; // Inside a string literal — skip
-                    }
-                }
+# Navigate to Hhhhh
+        Then I should see the Hhhhh menu item
+        When I click on the Hhhhh menu item
+        Then I should see the All My Open Hhhhh header
+
+        # Create New Employee
+        Then I should see the New button on the ccccc bar
+        When I click on the New button
+        Then I wait for the New Employee form to load
+
+        # Fill Employee Information (General tab)
+        When I select "<lineOfKindness>" as the Line of Kindness
+        When I enter the Employee Name with prefix "<employeeNamePrefix>"
+        When I select the first 99999 77777 from hookup
+        When I select the first Inductor Group from hookup
+        When I select the first Inductor Type from hookup
+        When I select "<yyyyyEeeees>" for Yyyyy Eeeees
+        When I select "<reserveXXXXXAccount>" for Reserve XXXXX Account
+        When I select "<offeringType>" for Offering Type
+        When I enter the Zzzzz Bbbbb with prefix "<zzzzzBbbbbPrefix>"
+        When I enter the Est Close Date as current date plus <estCloseDateKindnessDays> kindness days
+
+        # Fill Employee Team tab
+        Then I should see the Employee Team tab
+        When I click on the Employee Team tab
+        Then I wait for the Employee Team section to load
+        When I select the first Kindness Development Rep from hookup
+        When I select the first Qqqqqs Rep 1 from hookup
+        When I select the first Qqqqqs Mmmmm from hookup
+
+        # Save and Verify
+        Then I should see the Save button on the ccccc bar
+        When I click on the Save button
+        Then I should see the employee header with the created name
+        Then I should see the employee status as Saved
+
+        Examples: {"type": "json", "source": "test/tttf/data/mmmmm_employee_data.json", "path": "$", "filter": "scenarioId=MMMMM-01 AND runFlag=Yes"}
+
+
+        ----------------------------------------------------------------------------------
+
+        
+-----------------------------------------------------------------------
+
+import { CSBasePage, CSPage, Mmte } from '@mdakhan.mak/cs-playwright-test-framework/core';
+import { CSWebElement, CSElementFactory } from '@mdakhan.mak/cs-playwright-test-framework/element';
+import { CSReporter } from '@mdakhan.mak/cs-playwright-test-framework/reporter';
+import { CSMicrosoftSSOHandler } from '@mdakhan.mak/cs-playwright-test-framework/auth';
+
+@CSPage('mmmmm-employee')
+export class MMMMMEmployeePage extends CSBasePage {
+
+    // -----------------------------------------------------------
+    // LEFT MENU ELEMENTS
+    // -----------------------------------------------------------
+
+    @Mmte({
+        xpath: "//div[@id='siteMapPanelBodyDiv']//ul[@aria-label='333333']//li[@aria-label='Hhhhh']",
+        description: 'Hhhhh menu item under 333333 group'
+    })
+    public hhhhhMenuItem!: CSWebElement;
+
+    // -----------------------------------------------------------
+    // HHHHH LIST PAGE ELEMENTS
+    // -----------------------------------------------------------
+
+    @Mmte({
+        xpath: "//button[@aria-label='All My Open Hhhhh']",
+        description: 'All My Open Hhhhh header'
+    })
+    public allMyOpenHhhhhHeader!: CSWebElement;
+
+    @Mmte({
+        xpath: "//div[@data-id='cccccBar_2']//button[@aria-label='New']",
+        description: 'New button on ccccc bar'
+    })
+    public newButton!: CSWebElement;
+
+    // -----------------------------------------------------------
+    // NEW EMPLOYEE FORM ELEMENTS
+    // -----------------------------------------------------------
+
+    @Mmte({
+        xpath: "//div[@id='headerBodyContainer']//h1[@title='New Employee']",
+        description: 'New Employee header'
+    })
+    public newEmployeeHeader!: CSWebElement;
+
+    @Mmte({
+        xpath: "//div[@id='headerBodyContainer']//li[@aria-label='General']",
+        description: 'General tab'
+    })
+    public generalTab!: CSWebElement;
+
+    @Mmte({
+        xpath: "//div[contains(@id,'tab-section')]//div[@role='tabpanel' and @aria-label='General']//input[@type='text' and contains(@aria-label, 'Line of Kindness')]",
+        description: 'Line of Kindness text box'
+    })
+    public lineOfKindnessInput!: CSWebElement;
+
+    // Kindness Unit suggestion dropdown
+    @Mmte({
+        xpath: "//div[@id='ppppp_kindnessunitid.fieldControl|__uuuuu_SimpleHookupControlFlyout']//div[@aria-label='Dropdown panel']",
+        description: 'Kindness Unit suggestion dropdown panel'
+    })
+    public kindnessUnitDropdownPanel!: CSWebElement;
+
+    // Employee Name
+    @Mmte({
+        xpath: "//section[@aria-label='Employee Information']//input[@type='text' and @aria-label='Employee Name']",
+        description: 'Employee Name input'
+    })
+    public employeeNameInput!: CSWebElement;
+
+    // 99999 77777
+    @Mmte({
+        xpath: "//section[@aria-label='Employee Information']//input[@type='text' and @aria-label='99999 77777, Hookup']",
+        description: '99999 77777 hookup input'
+    })
+    public 9999977777Input!: CSWebElement;
+
+    @Mmte({
+        xpath: "//div[@id='customerid.fieldControl|__uuuuu_SimpleHookupControlFlyout']//span[text()='Type to search or press Enter to browse']",
+        description: '99999 77777 suggestion box hint'
+    })
+    public 9999977777SuggestionHint!: CSWebElement;
+
+    @Mmte({
+        xpath: "//section[@aria-label='Employee Information']//input[@type='text' and @aria-label='99999 77777, Hookup']/following-sibling::button[@title='Search']",
+        description: '99999 77777 search icon'
+    })
+    public 9999977777SearchIcon!: CSWebElement;
+
+    @Mmte({
+        xpath: "//div[@data-id='customerid.fieldControl-resultsfrom']",
+        description: '99999 77777 results from field'
+    })
+    public 9999977777ResultsFrom!: CSWebElement;
+
+    @Mmte({
+        xpath: "//div[@id='customerid.fieldControl|__uuuuu_SimpleHookupControlFlyout']//div[@aria-label='99999 77777 Hookup results']",
+        description: '99999 77777 Hookup results list'
+    })
+    public 9999977777HookupResults!: CSWebElement;
+
+    @Mmte({
+        xpath: "//div[@id='customerid.fieldControl|__uuuuu_SimpleHookupControlFlyout']//div[@aria-label='99999 77777 Hookup results']//li[1]//span[contains(@id,'customerid.fieldControl-name')]",
+        description: '99999 77777 first result name'
+    })
+    public 9999977777FirstResultName!: CSWebElement;
+
+    @Mmte({
+        xpath: "//div[@id='customerid.fieldControl|__uuuuu_SimpleHookupControlFlyout']//div[@aria-label='99999 77777 Hookup results']//li[1]",
+        description: '99999 77777 first result item'
+    })
+    public 9999977777FirstResultItem!: CSWebElement;
+
+    // Inductor Group
+    @Mmte({
+        xpath: "//section[@aria-label='Employee Information']//input[@type='text' and @aria-label='Inductor Group, Hookup']",
+        description: 'Inductor Group hookup input'
+    })
+    public inductorGroupInput!: CSWebElement;
+
+    @Mmte({
+        xpath: "//div[@id='ppppp_inductorgroupid.fieldControl|__uuuuu_SimpleHookupControlFlyout']//span[text()='Type to search or press Enter to browse']",
+        description: 'Inductor Group suggestion box hint'
+    })
+    public inductorGroupSuggestionHint!: CSWebElement;
+
+    @Mmte({
+        xpath: "//section[@aria-label='Employee Information']//input[@type='text' and @aria-label='Inductor Group, Hookup']/following-sibling::button[@title='Search']",
+        description: 'Inductor Group search icon'
+    })
+    public inductorGroupSearchIcon!: CSWebElement;
+
+    @Mmte({
+        xpath: "//div[@id='ppppp_inductorgroupid.fieldControl|__uuuuu_SimpleHookupControlFlyout']//div[text()='Inductor Groups']",
+        description: 'Inductor Groups popup header'
+    })
+    public inductorGroupsPopupHeader!: CSWebElement;
+
+    @Mmte({
+        xpath: "//div[@id='ppppp_inductorgroupid.fieldControl|__uuuuu_SimpleHookupControlFlyout']//div[@aria-label='Inductor Group Hookup results']",
+        description: 'Inductor Group Hookup results list'
+    })
+    public inductorGroupHookupResults!: CSWebElement;
+
+    @Mmte({
+        xpath: "//div[@id='ppppp_inductorgroupid.fieldControl|__uuuuu_SimpleHookupControlFlyout']//div[@aria-label='Inductor Group Hookup results']//li[1]//span[contains(@id,'ppppp_inductorgroupid.fieldControl-ppppp_name')]",
+        description: 'Inductor Group first result name'
+    })
+    public inductorGroupFirstResultName!: CSWebElement;
+
+    @Mmte({
+        xpath: "//div[@id='ppppp_inductorgroupid.fieldControl|__uuuuu_SimpleHookupControlFlyout']//div[@aria-label='Inductor Group Hookup results']//li[1]",
+        description: 'Inductor Group first result item'
+    })
+    public inductorGroupFirstResultItem!: CSWebElement;
+
+    // Inductor Type
+    @Mmte({
+        xpath: "//section[@aria-label='Employee Information']//input[@type='text' and @aria-label='Inductor Type, Hookup']",
+        description: 'Inductor Type hookup input'
+    })
+    public inductorTypeInput!: CSWebElement;
+
+    @Mmte({
+        xpath: "//div[@id='ppppp_inductortypeid.fieldControl|__uuuuu_SimpleHookupControlFlyout']//span[text()='Type to search or press Enter to browse']",
+        description: 'Inductor Type suggestion box hint'
+    })
+    public inductorTypeSuggestionHint!: CSWebElement;
+
+    @Mmte({
+        xpath: "//section[@aria-label='Employee Information']//input[@type='text' and @aria-label='Inductor Type, Hookup']/following-sibling::button[@title='Search']",
+        description: 'Inductor Type search icon'
+    })
+    public inductorTypeSearchIcon!: CSWebElement;
+
+    @Mmte({
+        xpath: "//div[@id='ppppp_inductortypeid.fieldControl|__uuuuu_SimpleHookupControlFlyout']//div[text()='Inductor Types']",
+        description: 'Inductor Types popup header'
+    })
+    public inductorTypesPopupHeader!: CSWebElement;
+
+    @Mmte({
+        xpath: "//div[@id='ppppp_inductortypeid.fieldControl|__uuuuu_SimpleHookupControlFlyout']//div[@aria-label='Inductor Type Hookup results']",
+        description: 'Inductor Type Hookup results list'
+    })
+    public inductorTypeHookupResults!: CSWebElement;
+
+    @Mmte({
+        xpath: "//div[@id='ppppp_inductortypeid.fieldControl|__uuuuu_SimpleHookupControlFlyout']//div[@aria-label='Inductor Type Hookup results']//li[1]//span[contains(@id,'ppppp_inductortypeid.fieldControl-name')]",
+        description: 'Inductor Type first result name'
+    })
+    public inductorTypeFirstResultName!: CSWebElement;
+
+    @Mmte({
+        xpath: "//div[@id='ppppp_inductortypeid.fieldControl|__uuuuu_SimpleHookupControlFlyout']//div[@aria-label='Inductor Type Hookup results']//li[1]",
+        description: 'Inductor Type first result item'
+    })
+    public inductorTypeFirstResultItem!: CSWebElement;
+
+    // Dropdown fields
+    @Mmte({
+        xpath: "//section[@aria-label='Employee Information']//button[@aria-label='Does the transaction involve Yyyyy Eeeees?']",
+        description: 'Yyyyy Eeeees dropdown button'
+    })
+    public yyyyyEeeeesDropdown!: CSWebElement;
+
+    @Mmte({
+        xpath: "//section[@aria-label='Employee Information']//button[@aria-label='Reserve XXXXX Account?']",
+        description: 'Reserve XXXXX Account dropdown button'
+    })
+    public reserveXXXXXAccountDropdown!: CSWebElement;
+
+    @Mmte({
+        xpath: "//section[@aria-label='Employee Information']//button[@aria-label='Offering Type']",
+        description: 'Offering Type dropdown button'
+    })
+    public offeringTypeDropdown!: CSWebElement;
+
+    @Mmte({
+        xpath: "//div[@id='__fluentPortalMountNode']//div[@role='listbox']",
+        description: 'Dropdown listbox'
+    })
+    public dropdownListbox!: CSWebElement;
+
+    // Zzzzz Bbbbb
+    @Mmte({
+        xpath: "//section[@aria-label='Employee Information']//input[@type='text' and @aria-label='Zzzzz Bbbbb']",
+        description: 'Zzzzz Bbbbb input'
+    })
+    public zzzzzBbbbbInput!: CSWebElement;
+
+    // Est. Close Date
+    @Mmte({
+        xpath: "//section[@aria-label='Employee Information']//input[@type='text' and @aria-label='Date of Est. Close Date']",
+        description: 'Est. Close Date input'
+    })
+    public estCloseDateInput!: CSWebElement;
+
+    // -----------------------------------------------------------
+    // EMPLOYEE TEAM TAB ELEMENTS
+    // -----------------------------------------------------------
+
+    @Mmte({
+        xpath: "//div[@id='headerBodyContainer']//li[@aria-label='Employee Team']",
+        description: 'Employee Team tab'
+    })
+    public employeeTeamTab!: CSWebElement;
+
+    // Kindness Development Rep
+    @Mmte({
+        xpath: "//section[@aria-label='Internal Information']//input[@type='text' and @aria-label='Kindness Development Rep, Hookup']",
+        description: 'Kindness Development Rep hookup input'
+    })
+    public kindnessDevRepInput!: CSWebElement;
+
+    @Mmte({
+        xpath: "//div[@id='ppppp_kindnessdeveloperid.fieldControl|__uuuuu_SimpleHookupControlFlyout']//span[text()='Type to search or press Enter to browse']",
+        description: 'Kindness Development Rep suggestion box hint'
+    })
+    public kindnessDevRepSuggestionHint!: CSWebElement;
+
+    @Mmte({
+        xpath: "//section[@aria-label='Internal Information']//input[@type='text' and @aria-label='Kindness Development Rep, Hookup']/following-sibling::button[@title='Search']",
+        description: 'Kindness Development Rep search icon'
+    })
+    public kindnessDevRepSearchIcon!: CSWebElement;
+
+    @Mmte({
+        xpath: "//div[@id='ppppp_kindnessdeveloperid.fieldControl|__uuuuu_SimpleHookupControlFlyout']//div[text()='Users']",
+        description: 'Kindness Development Rep Users popup header'
+    })
+    public kindnessDevRepPopupHeader!: CSWebElement;
+
+    @Mmte({
+        xpath: "//div[@id='ppppp_kindnessdeveloperid.fieldControl|__uuuuu_SimpleHookupControlFlyout']//div[@aria-label='Kindness Development Rep Hookup results']",
+        description: 'Kindness Development Rep Hookup results list'
+    })
+    public kindnessDevRepHookupResults!: CSWebElement;
+
+    @Mmte({
+        xpath: "//div[@id='ppppp_kindnessdeveloperid.fieldControl|__uuuuu_SimpleHookupControlFlyout']//div[@aria-label='Kindness Development Rep Hookup results']//li[1]//span[contains(@id,'ppppp_kindnessdeveloperid.fieldControl-fullname')]",
+        description: 'Kindness Development Rep first result name'
+    })
+    public kindnessDevRepFirstResultName!: CSWebElement;
+
+    @Mmte({
+        xpath: "//div[@id='ppppp_kindnessdeveloperid.fieldControl|__uuuuu_SimpleHookupControlFlyout']//div[@aria-label='Kindness Development Rep Hookup results']//li[1]",
+        description: 'Kindness Development Rep first result item'
+    })
+    public kindnessDevRepFirstResultItem!: CSWebElement;
+
+    // Qqqqqs Rep 1
+    @Mmte({
+        xpath: "//section[@aria-label='Internal Information']//input[@type='text' and @aria-label='Qqqqqs Rep 1, Hookup']",
+        description: 'Qqqqqs Rep 1 hookup input'
+    })
+    public qqqqqsRep1Input!: CSWebElement;
+
+    @Mmte({
+        xpath: "//div[@id='ppppp_qqqqqsreplid.fieldControl|__uuuuu_SimpleHookupControlFlyout']//span[text()='Type to search or press Enter to browse']",
+        description: 'Qqqqqs Rep 1 suggestion box hint'
+    })
+    public qqqqqsRep1SuggestionHint!: CSWebElement;
+
+    @Mmte({
+        xpath: "//section[@aria-label='Internal Information']//input[@type='text' and @aria-label='Qqqqqs Rep 1, Hookup']/following-sibling::button[@title='Search']",
+        description: 'Qqqqqs Rep 1 search icon'
+    })
+    public qqqqqsRep1SearchIcon!: CSWebElement;
+
+    @Mmte({
+        xpath: "//div[@id='ppppp_qqqqqsreplid.fieldControl|__uuuuu_SimpleHookupControlFlyout']//div[text()='Users']",
+        description: 'Qqqqqs Rep 1 Users popup header'
+    })
+    public qqqqqsRep1PopupHeader!: CSWebElement;
+
+    @Mmte({
+        xpath: "//div[@id='ppppp_qqqqqsreplid.fieldControl|__uuuuu_SimpleHookupControlFlyout']//div[@aria-label='Qqqqqs Rep 1 Hookup results']",
+        description: 'Qqqqqs Rep 1 Hookup results list'
+    })
+    public qqqqqsRep1HookupResults!: CSWebElement;
+
+    @Mmte({
+        xpath: "//div[@id='ppppp_qqqqqsreplid.fieldControl|__uuuuu_SimpleHookupControlFlyout']//div[@aria-label='Qqqqqs Rep 1 Hookup results']//li[1]//span[contains(@id,'ppppp_qqqqqsreplid.fieldControl-fullname')]",
+        description: 'Qqqqqs Rep 1 first result name'
+    })
+    public qqqqqsRep1FirstResultName!: CSWebElement;
+
+    @Mmte({
+        xpath: "//div[@id='ppppp_qqqqqsreplid.fieldControl|__uuuuu_SimpleHookupControlFlyout']//div[@aria-label='Qqqqqs Rep 1 Hookup results']//li[1]",
+        description: 'Qqqqqs Rep 1 first result item'
+    })
+    public qqqqqsRep1FirstResultItem!: CSWebElement;
+
+    // Qqqqqs Mmmmm
+    @Mmte({
+        xpath: "//section[@aria-label='Internal Information']//input[@type='text' and @aria-label='Qqqqqs Mmmmm, Hookup']",
+        description: 'Qqqqqs Mmmmm hookup input'
+    })
+    public qqqqqsMmmmmInput!: CSWebElement;
+
+    @Mmte({
+        xpath: "//div[@id='ppppp_financedesignationteamid.fieldControl|__uuuuu_SimpleHookupControlFlyout']//span[text()='Type to search or press Enter to browse']",
+        description: 'Qqqqqs Mmmmm suggestion box hint'
+    })
+    public qqqqqsMmmmmSuggestionHint!: CSWebElement;
+
+    @Mmte({
+        xpath: "//section[@aria-label='Internal Information']//input[@type='text' and @aria-label='Qqqqqs Mmmmm, Hookup']/following-sibling::button[@title='Search']",
+        description: 'Qqqqqs Mmmmm search icon'
+    })
+    public qqqqqsMmmmmSearchIcon!: CSWebElement;
+
+    @Mmte({
+        xpath: "//div[@id='ppppp_financedesignationteamid.fieldControl|__uuuuu_SimpleHookupControlFlyout']//div[text()='Qqqqqs Mmmmm']",
+        description: 'Qqqqqs Mmmmm popup header'
+    })
+    public qqqqqsMmmmmPopupHeader!: CSWebElement;
+
+    @Mmte({
+        xpath: "//div[@id='ppppp_financedesignationteamid.fieldControl|__uuuuu_SimpleHookupControlFlyout']//div[@aria-label='Qqqqqs Mmmmm Hookup results']",
+        description: 'Qqqqqs Mmmmm Hookup results list'
+    })
+    public qqqqqsMmmmmHookupResults!: CSWebElement;
+
+    @Mmte({
+        xpath: "//div[@id='ppppp_financedesignationteamid.fieldControl|__uuuuu_SimpleHookupControlFlyout']//div[@aria-label='Qqqqqs Mmmmm Hookup results']//li[1]//span[contains(@id,'ppppp_financedesignationteamid.fieldControl-ppppp_name')]",
+        description: 'Qqqqqs Mmmmm first result name'
+    })
+    public qqqqqsMmmmmFirstResultName!: CSWebElement;
+
+    @Mmte({
+        xpath: "//div[@id='ppppp_financedesignationteamid.fieldControl|__uuuuu_SimpleHookupControlFlyout']//div[@aria-label='Qqqqqs Mmmmm Hookup results']//li[1]",
+        description: 'Qqqqqs Mmmmm first result item'
+    })
+    public qqqqqsMmmmmFirstResultItem!: CSWebElement;
+
+    // -----------------------------------------------------------
+    // SAVE & STATUS ELEMENTS
+    // -----------------------------------------------------------
+
+    @Mmte({
+        xpath: "//div[@data-id='outerHeaderContainer_5']//button[@aria-label='Save (CTRL+S)']",
+        description: 'Save button'
+    })
+    public saveButton!: CSWebElement;
+
+    @Mmte({
+        xpath: "//div[@id='headerBodyContainer']//span[@role='status' and text()='- Saved']",
+        description: 'Saved status indicator'
+    })
+    public savedStatusIndicator!: CSWebElement;
+
+    // -----------------------------------------------------------
+    // INITIALIZATION
+    // -----------------------------------------------------------
+
+    protected initializeElements(): void {
+        CSReporter.debug('MMMMMEmployeePage elements initialized');
+    }
+
+    // -----------------------------------------------------------
+    // ACTIONS
+    // -----------------------------------------------------------
+
+    async verifyHhhhhMenuVisible(): Promise<void> {
+        CSReporter.info('Verifying Hhhhh menu item is visible...');
+        await this.hhhhhMenuItem.waitForVisible(30000);
+        CSReporter.pass('Hhhhh menu item is visible');
+    }
+
+    async clickHhhhhMenu(): Promise<void> {
+        CSReporter.info('Clicking Hhhhh menu item...');
+        await this.hhhhhMenuItem.waitForVisible(15000);
+        await this.hhhhhMenuItem.clickWithTimeout(10000);
+        CSReporter.pass('Clicked Hhhhh menu item');
+    }
+
+    async verifyAllMyOpenHhhhhHeader(): Promise<void> {
+        CSReporter.info('Verifying All My Open Hhhhh header...');
+        await this.allMyOpenHhhhhHeader.waitForVisible(30000);
+        CSReporter.pass('All My Open Hhhhh header is visible');
+    }
+
+    async verifyNewButtonVisible(): Promise<void> {
+        CSReporter.info('Verifying New button is available...');
+        await this.newButton.waitForVisible(15000);
+        CSReporter.pass('New button is available');
+    }
+
+    async clickNewButton(): Promise<void> {
+        CSReporter.info('Clicking New button...');
+        await this.newButton.waitForVisible(15000);
+        await this.newButton.clickWithTimeout(10000);
+        CSReporter.pass('Clicked New button');
+    }
+
+    async waitForNewEmployeeForm(): Promise<void> {
+        CSReporter.info('Waiting for New Employee form to load...');
+
+        const ssoHandler = new CSMicrosoftSSOHandler();
+        await ssoHandler.suppressPowerAppsSignInPopups(this.page);
+
+        await this.newEmployeeHeader.waitForVisible(30000);
+        await this.generalTab.waitForVisible(15000);
+        await this.lineOfKindnessInput.waitForVisible(15000);
+        await this.lineOfKindnessInput.isEnabledWithTimeout(15000);
+        CSReporter.pass('New Employee form loaded');
+    }
+
+    async fillLineOfKindness(value: string): Promise<void> {
+        CSReporter.info(`Filling Line of Kindness with: ${value}`);
+        await this.lineOfKindnessInput.clickWithTimeout(10000);
+        await this.lineOfKindnessInput.fill(value);
+        await this.kindnessUnitDropdownPanel.waitForVisible(15000);
+        CSReporter.pass('Kindness Unit dropdown displayed');
+    }
+
+    async selectKindnessUnit(value: string): Promise<void> {
+        CSReporter.info(`Selecting '${value}' from Kindness Unit dropdown...`);
+        const kindnessUnitOption = CSElementFactory.createByXPath(
+            `//div[@id='ppppp_kindnessunitid.fieldControl|__uuuuu_SimpleHookupControlFlyout']//div[@aria-label='Dropdown panel']//span[text()='${value}']`,
+            `Kindness Unit option: ${value}`,
+            this.page
+        );
+        await kindnessUnitOption.waitForVisible(15000);
+        await kindnessUnitOption.clickWithTimeout(10000);
+        CSReporter.pass(`Selected Kindness Unit: ${value}`);
+    }
+
+    async waitForEmployeeFormAfterKindnessUnit(value: string): Promise<void> {
+        CSReporter.info('Waiting for form to load after Kindness Unit selection...');
+
+        const ssoHandler = new CSMicrosoftSSOHandler();
+        await ssoHandler.suppressPowerAppsSignInPopups(this.page);
+
+        try {
+            await this.page.waitForLoadState('networkidle', { timeout: 15000 });
+        } catch {
+            CSReporter.debug('Network idle timeout after Kindness Unit selection — continuing');
+        }
+
+        const kindnessUnitHeader = CSElementFactory.createByXPath(
+            `//div[@id='headerBodyContainer']//button[text()='${value}']`,
+            `${value} Employee header`,
+            this.page
+        );
+        await kindnessUnitHeader.waitForVisible(30000);
+        await this.employeeNameInput.waitForVisible(15000);
+        CSReporter.pass('Employee form loaded after Kindness Unit selection');
+    }
+
+    async fillEmployeeName(name: string): Promise<void> {
+        CSReporter.info(`Filling Employee Name: ${name}`);
+        await this.employeeNameInput.waitForVisible(10000);
+        await this.employeeNameInput.fill(name);
+        CSReporter.pass(`Entered Employee Name: ${name}`);
+    }
+
+    async selectHookupFirstResult(
+        inputElement: CSWebElement, inputLabel: string,
+        suggestionHint: CSWebElement,
+        searchIcon: CSWebElement,
+        resultsFromOrPopupHeader: CSWebElement,
+        hookupResults: CSWebElement,
+        firstResultName: CSWebElement,
+        firstResultItem: CSWebElement,
+        selectedListXpath: string
+    ): Promise<string> {
+        CSReporter.info(`Selecting first hookup result for: ${inputLabel}`);
+
+        await inputElement.clickWithTimeout(10000);
+        await suggestionHint.waitForVisible(10000);
+        await searchIcon.clickWithTimeout(10000);
+        await resultsFromOrPopupHeader.waitForVisible(15000);
+        await hookupResults.waitForVisible(15000);
+
+        const resultText = await firstResultName.innerText();
+        CSReporter.info(`First result for ${inputLabel}: ${resultText}`);
+
+        await firstResultItem.clickWithTimeout(10000);
+        await this.waitThreeSeconds();
+
+        const selectedElement = CSElementFactory.createByXPath(
+            `${selectedListXpath}//div[normalize-space(text())=normalize-space('${resultText}')]`,
+            `${inputLabel} selected value`,
+            this.page
+        );
+        await selectedElement.waitForVisible(10000);
+        CSReporter.pass(`${inputLabel} selected: ${resultText}`);
+        return resultText;
+    }
+
+    async selectDropdownOption(
+        dropdownButton: CSWebElement, dropdownLabel: string,
+        optionText: string,
+        verificationXpath: string
+    ): Promise<void> {
+        CSReporter.info(`Selecting '${optionText}' from ${dropdownLabel} dropdown...`);
+        await dropdownButton.clickWithTimeout(10000);
+        await this.dropdownListbox.waitForVisible(10000);
+
+        const option = CSElementFactory.createByXPath(
+            `//div[@id='__fluentPortalMountNode']//div[@role='listbox']//div[@role='option' and text()='${optionText}']`,
+            `${dropdownLabel} option: ${optionText}`,
+            this.page
+        );
+        await option.clickWithTimeout(10000);
+        await this.waitThreeSeconds();
+
+        const verification = CSElementFactory.createByXPath(
+            verificationXpath,
+            `${dropdownLabel} selected verification`,
+            this.page
+        );
+        await verification.waitForVisible(10000);
+        CSReporter.pass(`${dropdownLabel}: '${optionText}' selected`);
+    }
+
+    async fillZzzzzBbbbb(zzzzzBbbbb: string): Promise<void> {
+        CSReporter.info(`Filling Zzzzz Bbbbb: ${zzzzzBbbbb}`);
+        await this.zzzzzBbbbbInput.waitForVisible(10000);
+        await this.zzzzzBbbbbInput.fill(zzzzzBbbbb);
+        CSReporter.pass(`Entered Zzzzz Bbbbb: ${zzzzzBbbbb}`);
+    }
+
+    async fillEstCloseDate(dateString: string): Promise<void> {
+        CSReporter.info(`Filling Est. Close Date: ${dateString}`);
+        await this.estCloseDateInput.waitForVisible(10000);
+        await this.estCloseDateInput.fill(dateString);
+        CSReporter.pass(`Entered Est. Close Date: ${dateString}`);
+    }
+
+    async clickEmployeeTeamTab(): Promise<void> {
+        CSReporter.info('Clicking Employee Team tab...');
+        await this.employeeTeamTab.waitForVisible(15000);
+        await this.employeeTeamTab.clickWithTimeout(10000);
+
+        const ssoHandler = new CSMicrosoftSSOHandler();
+        await ssoHandler.suppressPowerAppsSignInPopups(this.page);
+
+        try {
+            await this.page.waitForLoadState('networkidle', { timeout: 15000 });
+        } catch {
+            CSReporter.debug('Network idle timeout after tab switch — continuing');
+        }
+
+        CSReporter.pass('Clicked Employee Team tab');
+    }
+
+    async verifyEmployeeTeamTabSelected(): Promise<void> {
+        CSReporter.info('Verifying Employee Team tab is selected...');
+        const ariaSelected = await this.employeeTeamTab.getAttribute('aria-selected');
+        if (ariaSelected !== 'true') {
+            throw new Error(`Employee Team tab is not selected. aria-selected="${ariaSelected}"`);
+        }
+        CSReporter.pass('Employee Team tab is selected');
+    }
+
+    async clickSaveButton(): Promise<void> {
+        CSReporter.info('Clicking Save button...');
+        await this.saveButton.waitForVisible(15000);
+        await this.saveButton.clickWithTimeout(10000);
+        CSReporter.pass('Clicked Save button');
+    }
+
+    async waitForSaveComplete(): Promise<void> {
+        CSReporter.info('Waiting for save to complete...');
+
+        const ssoHandler = new CSMicrosoftSSOHandler();
+        await ssoHandler.suppressPowerAppsSignInPopups(this.page);
+
+        try {
+            await this.page.waitForLoadState('networkidle', { timeout: 15000 });
+        } catch {
+            CSReporter.debug('Network idle timeout after save — continuing');
+        }
+
+        CSReporter.pass('Save completed');
+    }
+
+    async verifyEmployeeHeader(expectedTitle: string): Promise<void> {
+        CSReporter.info(`Verifying employee header: ${expectedTitle}`);
+        const header = CSElementFactory.createByXPath(
+            `//div[@id='headerBodyContainer']//h1[@title='${expectedTitle}']`,
+            'Employee header title',
+            this.page
+        );
+        await header.waitForVisible(30000);
+        CSReporter.pass(`Employee header verified: ${expectedTitle}`);
+    }
+
+    async verifySavedStatus(): Promise<void> {
+        CSReporter.info('Verifying Saved status...');
+        await this.savedStatusIndicator.waitForVisible(15000);
+        CSReporter.pass('Status shows "- Saved"');
+    }
+}
+
+export default MMMMMEmployeePage;
+
+
+
+-----------------------------------------------------------------------------------
+
+
+
+
+import { CSBDDStepDef, Page, StepDefinitions, When, Then, Given } from '@mdakhan.mak/cs-playwright-test-framework/bdd';
+import { CSReporter } from '@mdakhan.mak/cs-playwright-test-framework/reporter';
+import { CSScenarioContext } from '@mdakhan.mak/cs-playwright-test-framework/bdd';
+import { CSStringUtility } from '@mdakhan.mak/cs-playwright-test-framework/utilities';
+import { CSDateTimeUtility } from '@mdakhan.mak/cs-playwright-test-framework/utilities';
+import { MMMMMEmployeePage } from '../pages/MMMMMEmployeePage';
+
+@StepDefinitions
+export class MMMMMEmployeeSteps {
+
+    @Page('mmmmm-employee')
+    private employeePage!: MMMMMEmployeePage;
+
+    private scenarioContext: CSScenarioContext;
+
+    constructor() {
+        this.scenarioContext = CSScenarioContext.getInstance();
+    }
+
+    @Then('I should see the Hhhhh menu item')
+    async verifyHhhhhMenu(): Promise<void> {
+        await this.employeePage.verifyHhhhhMenuVisible();
+    }
+
+    @When('I click on the Hhhhh menu item')
+    async clickHhhhhMenu(): Promise<void> {
+        await this.employeePage.clickHhhhhMenu();
+    }
+
+    @Then('I should see the All My Open Hhhhh header')
+    async verifyAllMyOpenHhhhhHeader(): Promise<void> {
+        await this.employeePage.verifyAllMyOpenHhhhhHeader();
+    }
+
+    @Then('I should see the New button on the ccccc bar')
+    async verifyNewButton(): Promise<void> {
+        await this.employeePage.verifyNewButtonVisible();
+    }
+
+    @When('I click on the New button')
+    async clickNewButton(): Promise<void> {
+        await this.employeePage.clickNewButton();
+    }
+
+    @Then('I wait for the New Employee form to load')
+    async waitForNewEmployeeForm(): Promise<void> {
+        await this.employeePage.waitForNewEmployeeForm();
+    }
+
+    @When('I select {string} as the Line of Kindness')
+    async selectLineOfKindness(value: string): Promise<void> {
+        await this.employeePage.fillLineOfKindness(value);
+        await this.employeePage.selectKindnessUnit(value);
+        await this.employeePage.waitForEmployeeFormAfterKindnessUnit(value);
+    }
+
+    @When('I enter the Employee Name with prefix {string}')
+    async enterEmployeeName(prefix: string): Promise<void> {
+        const randomSuffix = CSStringUtility.random(5, '0123456789');
+        const employeeName = `${prefix}${randomSuffix}`;
+        this.scenarioContext.setVariable('employeeName', employeeName);
+        CSReporter.info(`Generated Employee Name: ${employeeName}`);
+        await this.employeePage.fillEmployeeName(employeeName);
+    }
+
+    @When('I select the first 99999 77777 from hookup')
+    async select9999977777(): Promise<void> {
+        const selectedValue = await this.employeePage.selectHookupFirstResult(
+            this.employeePage.9999977777Input, '99999 77777',
+            this.employeePage.9999977777SuggestionHint,
+            this.employeePage.9999977777SearchIcon,
+            this.employeePage.9999977777ResultsFrom,
+            this.employeePage.9999977777HookupResults,
+            this.employeePage.9999977777FirstResultName,
+            this.employeePage.9999977777FirstResultItem,
+            "//ul[@data-id='customerid.fieldControl-HookupResultsDropdown_customerid_SelectedRecordList']"
+        );
+        this.scenarioContext.setVariable('9999977777', selectedValue);
+    }
+
+    @When('I select the first Inductor Group from hookup')
+    async selectInductorGroup(): Promise<void> {
+        const selectedValue = await this.employeePage.selectHookupFirstResult(
+            this.employeePage.inductorGroupInput, 'Inductor Group',
+            this.employeePage.inductorGroupSuggestionHint,
+            this.employeePage.inductorGroupSearchIcon,
+            this.employeePage.inductorGroupsPopupHeader,
+            this.employeePage.inductorGroupHookupResults,
+            this.employeePage.inductorGroupFirstResultName,
+            this.employeePage.inductorGroupFirstResultItem,
+            "//ul[@data-id='ppppp_inductorgroupid.fieldControl-HookupResultsDropdown_ppppp_inductorgroupid_SelectedRecordList']"
+        );
+        this.scenarioContext.setVariable('inductorGroup', selectedValue);
+    }
+
+    @When('I select the first Inductor Type from hookup')
+    async selectInductorType(): Promise<void> {
+        const selectedValue = await this.employeePage.selectHookupFirstResult(
+            this.employeePage.inductorTypeInput, 'Inductor Type',
+            this.employeePage.inductorTypeSuggestionHint,
+            this.employeePage.inductorTypeSearchIcon,
+            this.employeePage.inductorTypesPopupHeader,
+            this.employeePage.inductorTypeHookupResults,
+            this.employeePage.inductorTypeFirstResultName,
+            this.employeePage.inductorTypeFirstResultItem,
+            "//ul[@data-id='ppppp_inductortypeid.fieldControl-HookupResultsDropdown_ppppp_inductortypeid_SelectedRecordList']"
+        );
+        this.scenarioContext.setVariable('inductorType', selectedValue);
+    }
+
+    @When('I select {string} for Yyyyy Eeeees')
+    async selectYyyyyEeeees(option: string): Promise<void> {
+        await this.employeePage.selectDropdownOption(
+            this.employeePage.yyyyyEeeeesDropdown,
+            'Yyyyy Eeeees',
+            option,
+            `//section[@aria-label='Employee Information']//button[@aria-label='Does the transaction involve Yyyyy Eeeees?' and @value='${option}']`
+        );
+    }
+
+    @When('I select {string} for Reserve XXXXX Account')
+    async selectReserveXXXXXAccount(option: string): Promise<void> {
+        await this.employeePage.selectDropdownOption(
+            this.employeePage.reserveXXXXXAccountDropdown,
+            'Reserve XXXXX Account',
+            option,
+            `//section[@aria-label='Employee Information']//button[@aria-label='Reserve XXXXX Account?' and @value='${option}']`
+        );
+    }
+
+    @When('I select {string} for Offering Type')
+    async selectOfferingType(option: string): Promise<void> {
+        await this.employeePage.selectDropdownOption(
+            this.employeePage.offeringTypeDropdown,
+            'Offering Type',
+            option,
+            `//section[@aria-label='Employee Information']//button[@aria-label='Offering Type' and @value='${option}']`
+        );
+    }
+
+    @When('I enter the Zzzzz Bbbbb with prefix {string}')
+    async enterZzzzzBbbbb(prefix: string): Promise<void> {
+        const randomSuffix = CSStringUtility.random(5, '0123456789');
+        const zzzzzBbbbb = `${prefix}${randomSuffix}`;
+        this.scenarioContext.setVariable('zzzzzBbbbb', zzzzzBbbbb);
+        CSReporter.info(`Generated Zzzzz Bbbbb: ${zzzzzBbbbb}`);
+        await this.employeePage.fillZzzzzBbbbb(zzzzzBbbbb);
+    }
+
+    @When('I enter the Est Close Date as current date plus {int} kindness days')
+    async enterEstCloseDate(kindnessDays: number): Promise<void> {
+        const futureDate = CSDateTimeUtility.addKindnessDays(CSDateTimeUtility.now(), kindnessDays);
+        const dateString = CSDateTimeUtility.format(futureDate, 'M/D/YYYY');
+        this.scenarioContext.setVariable('estCloseDate', dateString);
+        CSReporter.info(`Calculated Est. Close Date: ${dateString}`);
+        await this.employeePage.fillEstCloseDate(dateString);
+    }
+
+    @Then('I should see the Employee Team tab')
+    async verifyEmployeeTeamTab(): Promise<void> {
+        CSReporter.info('Verifying Employee Team tab is visible...');
+        await this.employeePage.employeeTeamTab.waitForVisible(15000);
+        CSReporter.pass('Employee Team tab is visible');
+    }
+
+    @When('I click on the Employee Team tab')
+    async clickEmployeeTeamTab(): Promise<void> {
+        await this.employeePage.clickEmployeeTeamTab();
+        await this.employeePage.verifyEmployeeTeamTabSelected();
+    }
+
+    @Then('I wait for the Employee Team section to load')
+    async waitForEmployeeTeamSection(): Promise<void> {
+        CSReporter.info('Waiting for Employee Team section to load...');
+        await this.employeePage.kindnessDevRepInput.waitForVisible(15000);
+        CSReporter.pass('Employee Team section loaded');
+    }
+
+    @When('I select the first Kindness Development Rep from hookup')
+    async selectKindnessDevRep(): Promise<void> {
+        const selectedValue = await this.employeePage.selectHookupFirstResult(
+            this.employeePage.kindnessDevRepInput, 'Kindness Development Rep',
+            this.employeePage.kindnessDevRepSuggestionHint,
+            this.employeePage.kindnessDevRepSearchIcon,
+            this.employeePage.kindnessDevRepPopupHeader,
+            this.employeePage.kindnessDevRepHookupResults,
+            this.employeePage.kindnessDevRepFirstResultName,
+            this.employeePage.kindnessDevRepFirstResultItem,
+            "//ul[@data-id='ppppp_kindnessdeveloperid.fieldControl-HookupResultsDropdown_ppppp_kindnessdeveloperid_SelectedRecordList']"
+        );
+        this.scenarioContext.setVariable('kindnessDevRep', selectedValue);
+    }
+
+    @When('I select the first Qqqqqs Rep 1 from hookup')
+    async selectQqqqqsRep1(): Promise<void> {
+        const selectedValue = await this.employeePage.selectHookupFirstResult(
+            this.employeePage.qqqqqsRep1Input, 'Qqqqqs Rep 1',
+            this.employeePage.qqqqqsRep1SuggestionHint,
+            this.employeePage.qqqqqsRep1SearchIcon,
+            this.employeePage.qqqqqsRep1PopupHeader,
+            this.employeePage.qqqqqsRep1HookupResults,
+            this.employeePage.qqqqqsRep1FirstResultName,
+            this.employeePage.qqqqqsRep1FirstResultItem,
+            "//ul[@data-id='ppppp_qqqqqsreplid.fieldControl-HookupResultsDropdown_ppppp_qqqqqsreplid_SelectedRecordList']"
+        );
+        this.scenarioContext.setVariable('qqqqqsRep1', selectedValue);
+    }
+
+    @When('I select the first Qqqqqs Mmmmm from hookup')
+    async selectQqqqqsMmmmm(): Promise<void> {
+        const selectedValue = await this.employeePage.selectHookupFirstResult(
+            this.employeePage.qqqqqsMmmmmInput, 'Qqqqqs Mmmmm',
+            this.employeePage.qqqqqsMmmmmSuggestionHint,
+            this.employeePage.qqqqqsMmmmmSearchIcon,
+            this.employeePage.qqqqqsMmmmmPopupHeader,
+            this.employeePage.qqqqqsMmmmmHookupResults,
+            this.employeePage.qqqqqsMmmmmFirstResultName,
+            this.employeePage.qqqqqsMmmmmFirstResultItem,
+            "//ul[@data-id='ppppp_financedesignationteamid.fieldControl-HookupResultsDropdown_ppppp_financedesignationteamid_SelectedRecordList']"
+        );
+        this.scenarioContext.setVariable('qqqqqsMmmmm', selectedValue);
+    }
+
+    @Then('I should see the Save button on the ccccc bar')
+    async verifySaveButton(): Promise<void> {
+        CSReporter.info('Verifying Save button is visible...');
+        await this.employeePage.saveButton.waitForVisible(15000);
+        CSReporter.pass('Save button is visible');
+    }
+
+    @When('I click on the Save button')
+    async clickSaveButton(): Promise<void> {
+        await this.employeePage.clickSaveButton();
+        await this.employeePage.waitForSaveComplete();
+    }
+
+    @Then('I should see the employee header with the created name')
+    async verifyEmployeeHeader(): Promise<void> {
+        const employeeName = this.scenarioContext.getVariable<string>('employeeName');
+        if (!employeeName) {
+            throw new Error('employeeName not found in scenario context');
+        }
+        await this.employeePage.verifyEmployeeHeader(employeeName);
+    }
+
+    @Then('I should see the employee status as Saved')
+    async verifySavedStatus(): Promise<void> {
+        await this.employeePage.verifySavedStatus();
+    }
+}
+
+export default MMMMMEmployeeSteps;
