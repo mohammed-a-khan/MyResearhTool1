@@ -1,1 +1,554 @@
-test
+// ===================================================================
+    // CP03: DATABASE VERIFICATION
+    // ===================================================================
+
+    @TSBDDStepDef('I verify CP SCATTERED_MMTE table data for created scattered mmte')
+    async verifyCPScatteredMmteTableData(): Promise<void> {
+        Tsreporter.info('Verifying CP SCATTERED_MMTE table data');
+        const scatteredMmteName = this.scenarioContext.getVariable('scatteredMmteName') as string;
+
+        const result = await TTTFTtcalcDurationDatabaseHelper.getScatteredMmteBasicDetails(scatteredMmteName);
+        if (!result) {
+            throw new Error(`No data found in SCATTERED_MMTE table for: ${scatteredMmteName}`);
+        }
+
+        const dbCumulativeMmteName = result.CUMULATIVE_MMTE_NAME || result.cumulative_mmte_name;
+        const dbMethodologyType = result.METHODOLOGY_TYPE || result.methodology_type;
+        const dbSportMmteWhoolPriorityType = result.SPORT_MMTE_WHOOL_PRIORITY_TYPE || result.sport_mmte_whool_priority_type;
+        const dbPrimaryTtcalcType = result.PRIMARY_TTCALC_TYPE || result.primary_ttcalc_type;
+        const dbRoundingType = result.ROUNDING_TYPE || result.rounding_type;
+        const dbRoundingFactor = result.ROUNDING_NEAREST_FRACTION_AMT ?? result.rounding_nearest_fraction_amt;
+        const dbAccrualDays = result.ACCRUAL_DAYS ?? result.accrual_days;
+        const dbIsWhoolsManual = result.IS_WHOOLS_MANUAL || result.is_whools_manual;
+
+        // Verify Cumulative Mmte Name
+        const expectedCumulativeMmte = this.scenarioContext.getVariable('cumulativeMmteName') as string;
+        if (dbCumulativeMmteName !== expectedCumulativeMmte) {
+            throw new Error(`Cumulative Mmte Name mismatch. Expected: ${expectedCumulativeMmte}, DB: ${dbCumulativeMmteName}`);
+        }
+        Tsreporter.pass(`Cumulative Mmte Name verified: ${dbCumulativeMmteName}`);
+
+        // Verify Methodology Type is TTCALC_DURATION
+        if (dbMethodologyType !== 'TTCALC_DURATION') {
+            throw new Error(`Methodology Type mismatch. Expected: TTCALC_DURATION, DB: ${dbMethodologyType}`);
+        }
+        Tsreporter.pass(`Methodology Type verified: ${dbMethodologyType}`);
+
+        // Verify Primary Ttcalc Type
+        const expectedPrimaryCalc = this.scenarioContext.getVariable('primaryTtcalc') as string;
+        const expectedDbCalc = expectedPrimaryCalc === 'Compound' ? 'COMPOUND' : 'SIMPLE';
+        if (dbPrimaryTtcalcType !== expectedDbCalc) {
+            throw new Error(`Primary Ttcalc Type mismatch. Expected: ${expectedDbCalc}, DB: ${dbPrimaryTtcalcType}`);
+        }
+        Tsreporter.pass(`Primary Ttcalc Type verified: ${dbPrimaryTtcalcType}`);
+
+        // Verify Sport Mmte Whool Priority Type should be null/empty for CP
+        if (dbSportMmteWhoolPriorityType && dbSportMmteWhoolPriorityType !== '') {
+            throw new Error(`Sport Mmte Whool Priority Type should be null/empty for CP but got: ${dbSportMmteWhoolPriorityType}`);
+        }
+        Tsreporter.pass('Sport Mmte Whool Priority Type is null/empty as expected for CP');
+
+        // Verify Rounding Logic (convert UI format to DB format)
+        const expectedRoundingLogic = this.scenarioContext.getVariable('otherWhoolsRoundingLogic') as string;
+        if (expectedRoundingLogic) {
+            const expectedRoundingLogicDb = TTTFDatabaseHelper.mapRoundingTypeToDb(expectedRoundingLogic);
+            if (dbRoundingType !== expectedRoundingLogicDb) {
+                throw new Error(`Rounding Logic mismatch. Expected: ${expectedRoundingLogicDb} (from UI: ${expectedRoundingLogic}), DB: ${dbRoundingType}`);
+            }
+            Tsreporter.pass(`Rounding Logic verified: ${dbRoundingType}`);
+        }
+
+        // Verify Rounding Factor (use flexible matching for UI/DB format differences)
+        const expectedRoundingFactor = this.scenarioContext.getVariable('otherWhoolsRoundingFactor') as string;
+        if (expectedRoundingFactor) {
+            if (!TTTFDatabaseHelper.isRoundingFactorDbMatch(expectedRoundingFactor, String(dbRoundingFactor || ''))) {
+                const expectedDbValue = TTTFDatabaseHelper.mapRoundingFactorToDb(expectedRoundingFactor);
+                throw new Error(`Rounding Factor mismatch. Expected: ${expectedDbValue} (from UI: ${expectedRoundingFactor}), DB: ${dbRoundingFactor}`);
+            }
+            Tsreporter.pass(`Rounding Factor verified: ${dbRoundingFactor} (matches UI: ${expectedRoundingFactor})`);
+        }
+
+        // Verify Annual Accrual Days (CP-specific)
+        const expectedAccrualDays = this.scenarioContext.getVariable('annualAccrualDays') as string;
+        if (expectedAccrualDays) {
+            if (String(dbAccrualDays) !== expectedAccrualDays) {
+                throw new Error(`Annual Accrual Days mismatch. Expected: ${expectedAccrualDays}, DB: ${dbAccrualDays}`);
+            }
+            Tsreporter.pass(`Annual Accrual Days verified: ${dbAccrualDays}`);
+        }
+
+        // Verify Is Whools Manual is N
+        if (dbIsWhoolsManual !== 'N') {
+            throw new Error(`Is Whools Manual should be 'N' but got: ${dbIsWhoolsManual}`);
+        }
+        Tsreporter.pass("Is Whools Manual verified: 'N'");
+
+        Tsreporter.pass('CP SCATTERED_MMTE table data verification completed');
+    }
+
+    @TSBDDStepDef('I verify CP Start Date Whool database data for created scattered mmte')
+    async verifyCPStartDateWhoolDatabaseData(): Promise<void> {
+        Tsreporter.info('Verifying CP Start Date Whool database data');
+        const scatteredMmteName = this.scenarioContext.getVariable('scatteredMmteName') as string;
+
+        const result = await TTTFTtcalcDurationDatabaseHelper.getStartDateWhoolDetails(scatteredMmteName);
+        if (!result) {
+            throw new Error(`No Start Date Whool data found for: ${scatteredMmteName}`);
+        }
+
+        const dbWwwwwVvvvv = result.WWWWW_VVVVV ?? result.wwwww_vvvvv;
+        const dbBaseDate = result.BASE_DATE ?? result.base_date;
+        const dbBaseDayNnnnn = result.BASE_DAY_NNNNN || result.base_day_nnnnn;
+        const dbNonBusDayNnnnnFvvvvv = result.NON_BUS_DAY_NNNNN_FVVVVV || result.non_bus_day_nnnnn_fvvvvv;
+        const dbBaseAssociateCylinders = result.BASE_ASSOCIATE_CYLINDERS || result.base_associate_cylinders;
+        const dbBaseDateOffset = result.BASE_DATE_OFFSET ?? result.base_date_offset;
+        const dbBaseDateOffsetType = result.BASE_DATE_OFFSET_TYPE || result.base_date_offset_type;
+        const dbMirchiaryNnnnnBaseDate = result.MIRCHIARY_NNNNN_BASE_DATE ?? result.mirchiary_nnnnn_base_date;
+        const dbMirchiaryNnnnnBaseDateOffsetType = result.MIRCHIARY_NNNNN_BASE_DATE_OFFSET_TYPE || result.mirchiary_nnnnn_base_date_offset_type;
+        const dbHookwithOffset = result.HOOKWITH_OFFSET ?? result.hookwith_offset;
+        const dbHookwithIncludeWeekendFvvvvv = result.HOOKWITH_INCLUDE_WEEKEND_FVVVVV || result.hookwith_include_weekend_fvvvvv;
+        const dbHookwithIncludeBoringFvvvvv = result.HOOKWITH_INCLUDE_BORING_FVVVVV || result.hookwith_include_boring_fvvvvv;
+        const dbHookwithAssociateCylinders = result.HOOKWITH_ASSOCIATE_CYLINDERS || result.hookwith_associate_cylinders;
+
+        // Verify Wwwww Vvvvv
+        const expectedWwwwwVvvvv = this.scenarioContext.getVariable('startDateWwwwwVvvvv') as string;
+        if (String(dbWwwwwVvvvv) !== String(expectedWwwwwVvvvv)) {
+            throw new Error(`Start Date Wwwww Vvvvv mismatch. Expected: ${expectedWwwwwVvvvv}, DB: ${dbWwwwwVvvvv}`);
+        }
+        Tsreporter.pass(`Start Date Wwwww Vvvvv verified: ${dbWwwwwVvvvv}`);
+
+        // Verify Base Day
+        const expectedBaseDay = this.scenarioContext.getVariable('startDateBaseDay') as string;
+        if (String(dbBaseDate) !== String(expectedBaseDay)) {
+            throw new Error(`Start Date Base Day mismatch. Expected: ${expectedBaseDay}, DB: ${dbBaseDate}`);
+        }
+        Tsreporter.pass(`Start Date Base Day verified: ${dbBaseDate}`);
+
+        // Verify Base Day Nnnnn To and Non-Bus Day Fvvvvv
+        const expectedNnnnnTo = this.scenarioContext.getVariable('startDateBaseDayNnnnnTo') as string;
+        const expectedLastBusDayFvvvvv = this.scenarioContext.getVariable('startDateBaseDayNnnnnToLastBusDayFvvvvv') as string;
+
+        if (!expectedNnnnnTo || expectedNnnnnTo === '') {
+            if (dbBaseDayNnnnn !== 'NEXT' || dbNonBusDayNnnnnFvvvvv !== 'N') {
+                Tsreporter.warn(`Start Date Base Day Nnnnn defaults check - baseDayNnnnn: ${dbBaseDayNnnnn}, nonBusDayNnnnn: ${dbNonBusDayNnnnnFvvvvv}`);
+            }
+        } else {
+            const dbNnnnn = dbBaseDayNnnnn?.toUpperCase();
+            const expectedDbNnnnn = TTTFDatabaseHelper.mapBaseDayNnnnnToDb(expectedNnnnnTo);
+            if (dbNnnnn !== expectedDbNnnnn) {
+                throw new Error(`Start Date Base Day Nnnnn mismatch. Expected: ${expectedDbNnnnn} (from UI: ${expectedNnnnnTo}), DB: ${dbNnnnn}`);
+            }
+            Tsreporter.pass(`Start Date Base Day Nnnnn verified: ${dbNnnnn}`);
+
+            if (expectedDbNnnnn === 'NEXT' && (expectedLastBusDayFvvvvv === 'Yes' || expectedLastBusDayFvvvvv === 'Y')) {
+                if (dbNonBusDayNnnnnFvvvvv !== 'Y') {
+                    throw new Error(`Start Date Non-Bus Day Nnnnn should be 'Y' but got: ${dbNonBusDayNnnnnFvvvvv}`);
+                }
+                Tsreporter.pass('Start Date Non-Bus Day Nnnnn Fvvvvv verified: Y');
+            } else if (expectedDbNnnnn === 'NEXT') {
+                if (dbNonBusDayNnnnnFvvvvv !== 'N') {
+                    throw new Error(`Start Date Non-Bus Day Nnnnn should be 'N' but got: ${dbNonBusDayNnnnnFvvvvv}`);
+                }
+                Tsreporter.pass('Start Date Non-Bus Day Nnnnn Fvvvvv verified: N');
+            }
+        }
+
+        // Verify Associate Cylinders (order-insensitive)
+        const expectedCylinders = this.scenarioContext.getVariable('startDateAssociateCylinders') as string;
+        if (expectedCylinders) {
+            const expectedArray = TTTFWhoolConfigHelper.parseCylinderList(expectedCylinders).sort();
+            const dbArray = TTTFWhoolConfigHelper.parseCylinderList(dbBaseAssociateCylinders || '').sort();
+            const isEqual = expectedArray.length === dbArray.length && expectedArray.every((val: string, ffx: number) => val === dbArray[ffx]);
+            if (!isEqual) {
+                throw new Error(`Start Date Associate Cylinders mismatch. Expected: ${expectedCylinders}, DB: ${dbBaseAssociateCylinders}`);
+            }
+            Tsreporter.pass(`Start Date Associate Cylinders verified: ${dbBaseAssociateCylinders}`);
+        }
+
+        // Verify Nnnnn Base Days
+        const nnnnnBaseFvvvvv = this.scenarioContext.getVariable('startDateNnnnnBaseFvvvvv') as string;
+        if (nnnnnBaseFvvvvv === 'Yes' || nnnnnBaseFvvvvv === 'Y') {
+            const expectedDays = this.scenarioContext.getVariable('startDateNnnnnBaseDays');
+            if (String(dbBaseDateOffset) !== String(expectedDays)) {
+                throw new Error(`Start Date Nnnnn Base Days mismatch. Expected: ${expectedDays}, DB: ${dbBaseDateOffset}`);
+            }
+            Tsreporter.pass(`Start Date Nnnnn Base Days verified: ${dbBaseDateOffset}`);
+
+            const expectedType = this.scenarioContext.getVariable('startDateNnnnnBaseDaysAssociateTo') as string;
+            const expectedDbType = TTTFDatabaseHelper.mapNnnnnBaseTypeToDb(expectedType);
+            if (dbBaseDateOffsetType !== expectedDbType) {
+                throw new Error(`Start Date Nnnnn Base Type mismatch. Expected: ${expectedDbType} (from UI: ${expectedType}), DB: ${dbBaseDateOffsetType}`);
+            }
+            Tsreporter.pass(`Start Date Nnnnn Base Type verified: ${dbBaseDateOffsetType}`);
+        } else {
+            if (dbBaseDateOffset != null && String(dbBaseDateOffset) !== '' && String(dbBaseDateOffset) !== 'null') {
+                Tsreporter.warn(`Start Date Nnnnn Base Days expected null but got: ${dbBaseDateOffset}`);
+            }
+        }
+
+        // Verify Mirchiary Nnnnn Base
+        const mirchiaryNnnnnFvvvvv = this.scenarioContext.getVariable('startDateMirchiaryNnnnnBaseFvvvvv') as string;
+        if (mirchiaryNnnnnFvvvvv === 'Yes' || mirchiaryNnnnnFvvvvv === 'Y') {
+            const expectedDays = this.scenarioContext.getVariable('startDateMirchiaryNnnnnBaseDays');
+            if (String(dbMirchiaryNnnnnBaseDate) !== String(expectedDays)) {
+                throw new Error(`Start Date Mirchiary Nnnnn Days mismatch. Expected: ${expectedDays}, DB: ${dbMirchiaryNnnnnBaseDate}`);
+            }
+            Tsreporter.pass(`Start Date Mirchiary Nnnnn Days verified: ${dbMirchiaryNnnnnBaseDate}`);
+
+            const expectedMirchiaryType = this.scenarioContext.getVariable('startDateMirchiaryNnnnnBaseDaysAssociateTo') as string;
+            if (expectedMirchiaryType) {
+                const expectedDbMirchiaryType = TTTFDatabaseHelper.mapNnnnnBaseTypeToDb(expectedMirchiaryType);
+                if (dbMirchiaryNnnnnBaseDateOffsetType !== expectedDbMirchiaryType) {
+                    throw new Error(`Start Date Mirchiary Nnnnn Base Type mismatch. Expected: ${expectedDbMirchiaryType} (from UI: ${expectedMirchiaryType}), DB: ${dbMirchiaryNnnnnBaseDateOffsetType}`);
+                }
+                Tsreporter.pass(`Start Date Mirchiary Nnnnn Base Type verified: ${dbMirchiaryNnnnnBaseDateOffsetType}`);
+            }
+        } else {
+            if (dbMirchiaryNnnnnBaseDate != null && String(dbMirchiaryNnnnnBaseDate) !== '' && String(dbMirchiaryNnnnnBaseDate) !== 'null') {
+                Tsreporter.warn(`Start Date Mirchiary Nnnnn Base Days expected null but got: ${dbMirchiaryNnnnnBaseDate}`);
+            }
+        }
+
+        // Verify Hookwith
+        const hookwithFvvvvv = this.scenarioContext.getVariable('startDateAddToHookwithDaysFvvvvv') as string;
+        if (hookwithFvvvvv === 'Yes' || hookwithFvvvvv === 'Y') {
+            const expectedDays = this.scenarioContext.getVariable('startDateAddToHookwithDays');
+            if (String(dbHookwithOffset) !== String(expectedDays)) {
+                throw new Error(`Start Date Hookwith Days mismatch. Expected: ${expectedDays}, DB: ${dbHookwithOffset}`);
+            }
+            Tsreporter.pass(`Start Date Hookwith Days verified: ${dbHookwithOffset}`);
+
+            // Verify Hookwith Include Weekend
+            const expectedIncludeWeekend = this.scenarioContext.getVariable('startDateAddToHookwithDaysIncludeWeekend') as string;
+            if (expectedIncludeWeekend) {
+                const expectedDbWeekend = (expectedIncludeWeekend === 'Yes' || expectedIncludeWeekend === 'Y') ? 'Y' : 'N';
+                if (dbHookwithIncludeWeekendFvvvvv !== expectedDbWeekend) {
+                    throw new Error(`Start Date Hookwith Include Weekend mismatch. Expected: ${expectedDbWeekend} (from UI: ${expectedIncludeWeekend}), DB: ${dbHookwithIncludeWeekendFvvvvv}`);
+                }
+                Tsreporter.pass(`Start Date Hookwith Include Weekend verified: ${dbHookwithIncludeWeekendFvvvvv}`);
+            }
+
+            // Verify Hookwith Include Boring
+            const expectedIncludeBoring = this.scenarioContext.getVariable('startDateAddToHookwithDaysIncludeBoring') as string;
+            if (expectedIncludeBoring) {
+                const expectedDbBoring = (expectedIncludeBoring === 'Yes' || expectedIncludeBoring === 'Y') ? 'Y' : 'N';
+                if (dbHookwithIncludeBoringFvvvvv !== expectedDbBoring) {
+                    throw new Error(`Start Date Hookwith Include Boring mismatch. Expected: ${expectedDbBoring} (from UI: ${expectedIncludeBoring}), DB: ${dbHookwithIncludeBoringFvvvvv}`);
+                }
+                Tsreporter.pass(`Start Date Hookwith Include Boring verified: ${dbHookwithIncludeBoringFvvvvv}`);
+            }
+
+            // Verify Hookwith Associate Cylinders (order-insensitive)
+            const expectedHookwithCylinders = this.scenarioContext.getVariable('startDateAddToHookwithDaysAssociateCylinders') as string;
+            if (expectedHookwithCylinders) {
+                const expectedArray = TTTFWhoolConfigHelper.parseCylinderList(expectedHookwithCylinders).sort();
+                const dbArray = TTTFWhoolConfigHelper.parseCylinderList(dbHookwithAssociateCylinders || '').sort();
+                const isEqual = expectedArray.length === dbArray.length && expectedArray.every((val: string, ffx: number) => val === dbArray[ffx]);
+                if (!isEqual) {
+                    throw new Error(`Start Date Hookwith Associate Cylinders mismatch. Expected: ${expectedHookwithCylinders}, DB: ${dbHookwithAssociateCylinders}`);
+                }
+                Tsreporter.pass(`Start Date Hookwith Associate Cylinders verified: ${dbHookwithAssociateCylinders}`);
+            }
+        }
+
+        Tsreporter.pass('CP Start Date Whool database verification completed');
+    }
+
+    @TSBDDStepDef('I verify CP End Date Whool database data for created scattered mmte')
+    async verifyCPEndDateWhoolDatabaseData(): Promise<void> {
+        Tsreporter.info('Verifying CP End Date Whool database data');
+        const scatteredMmteName = this.scenarioContext.getVariable('scatteredMmteName') as string;
+
+        const result = await TTTFTtcalcDurationDatabaseHelper.getEndDateWhoolDetails(scatteredMmteName);
+        if (!result) {
+            throw new Error(`No End Date Whool data found for: ${scatteredMmteName}`);
+        }
+
+        const dbWwwwwVvvvv = result.WWWWW_VVVVV ?? result.wwwww_vvvvv;
+        const dbBaseDate = result.BASE_DATE ?? result.base_date;
+        const dbBaseDayNnnnn = result.BASE_DAY_NNNNN || result.base_day_nnnnn;
+        const dbNonBusDayNnnnnFvvvvv = result.NON_BUS_DAY_NNNNN_FVVVVV || result.non_bus_day_nnnnn_fvvvvv;
+        const dbBaseAssociateCylinders = result.BASE_ASSOCIATE_CYLINDERS || result.base_associate_cylinders;
+        const dbBaseDateOffset = result.BASE_DATE_OFFSET ?? result.base_date_offset;
+        const dbBaseDateOffsetType = result.BASE_DATE_OFFSET_TYPE || result.base_date_offset_type;
+        const dbMirchiaryNnnnnBaseDate = result.MIRCHIARY_NNNNN_BASE_DATE ?? result.mirchiary_nnnnn_base_date;
+        const dbMirchiaryNnnnnBaseDateOffsetType = result.MIRCHIARY_NNNNN_BASE_DATE_OFFSET_TYPE || result.mirchiary_nnnnn_base_date_offset_type;
+        const dbHookwithOffset = result.HOOKWITH_OFFSET ?? result.hookwith_offset;
+        const dbHookwithIncludeWeekendFvvvvv = result.HOOKWITH_INCLUDE_WEEKEND_FVVVVV || result.hookwith_include_weekend_fvvvvv;
+        const dbHookwithIncludeBoringFvvvvv = result.HOOKWITH_INCLUDE_BORING_FVVVVV || result.hookwith_include_boring_fvvvvv;
+        const dbHookwithAssociateCylinders = result.HOOKWITH_ASSOCIATE_CYLINDERS || result.hookwith_associate_cylinders;
+        const dbLockoutOffset = result.LOCKOUT_OFFSET ?? result.lockout_offset;
+
+        // Verify Wwwww Vvvvv
+        const expectedWwwwwVvvvv = this.scenarioContext.getVariable('endDateWwwwwVvvvv') as string;
+        if (String(dbWwwwwVvvvv) !== String(expectedWwwwwVvvvv)) {
+            throw new Error(`End Date Wwwww Vvvvv mismatch. Expected: ${expectedWwwwwVvvvv}, DB: ${dbWwwwwVvvvv}`);
+        }
+        Tsreporter.pass(`End Date Wwwww Vvvvv verified: ${dbWwwwwVvvvv}`);
+
+        // Verify Base Day
+        const expectedBaseDay = this.scenarioContext.getVariable('endDateBaseDay') as string;
+        if (String(dbBaseDate) !== String(expectedBaseDay)) {
+            throw new Error(`End Date Base Day mismatch. Expected: ${expectedBaseDay}, DB: ${dbBaseDate}`);
+        }
+        Tsreporter.pass(`End Date Base Day verified: ${dbBaseDate}`);
+
+        // Verify Base Day Nnnnn To and Non-Bus Day Fvvvvv
+        const expectedNnnnnTo = this.scenarioContext.getVariable('endDateBaseDayNnnnnTo') as string;
+        const expectedLastBusDayFvvvvv = this.scenarioContext.getVariable('endDateBaseDayNnnnnToLastBusDayFvvvvv') as string;
+
+        if (!expectedNnnnnTo || expectedNnnnnTo === '') {
+            if (dbBaseDayNnnnn !== 'NEXT' || dbNonBusDayNnnnnFvvvvv !== 'N') {
+                Tsreporter.warn(`End Date Base Day Nnnnn defaults check - baseDayNnnnn: ${dbBaseDayNnnnn}, nonBusDayNnnnn: ${dbNonBusDayNnnnnFvvvvv}`);
+            }
+        } else {
+            const dbNnnnn = dbBaseDayNnnnn?.toUpperCase();
+            const expectedDbNnnnn = TTTFDatabaseHelper.mapBaseDayNnnnnToDb(expectedNnnnnTo);
+            if (dbNnnnn !== expectedDbNnnnn) {
+                throw new Error(`End Date Base Day Nnnnn mismatch. Expected: ${expectedDbNnnnn} (from UI: ${expectedNnnnnTo}), DB: ${dbNnnnn}`);
+            }
+            Tsreporter.pass(`End Date Base Day Nnnnn verified: ${dbNnnnn}`);
+
+            if (expectedDbNnnnn === 'NEXT' && (expectedLastBusDayFvvvvv === 'Yes' || expectedLastBusDayFvvvvv === 'Y')) {
+                if (dbNonBusDayNnnnnFvvvvv !== 'Y') {
+                    throw new Error(`End Date Non-Bus Day Nnnnn should be 'Y' but got: ${dbNonBusDayNnnnnFvvvvv}`);
+                }
+                Tsreporter.pass('End Date Non-Bus Day Nnnnn Fvvvvv verified: Y');
+            } else if (expectedDbNnnnn === 'NEXT') {
+                if (dbNonBusDayNnnnnFvvvvv !== 'N') {
+                    throw new Error(`End Date Non-Bus Day Nnnnn should be 'N' but got: ${dbNonBusDayNnnnnFvvvvv}`);
+                }
+                Tsreporter.pass('End Date Non-Bus Day Nnnnn Fvvvvv verified: N');
+            }
+        }
+
+        // Verify Associate Cylinders (order-insensitive)
+        const expectedCylinders = this.scenarioContext.getVariable('endDateAssociateCylinders') as string;
+        if (expectedCylinders) {
+            const expectedArray = TTTFWhoolConfigHelper.parseCylinderList(expectedCylinders).sort();
+            const dbArray = TTTFWhoolConfigHelper.parseCylinderList(dbBaseAssociateCylinders || '').sort();
+            const isEqual = expectedArray.length === dbArray.length && expectedArray.every((val: string, ffx: number) => val === dbArray[ffx]);
+            if (!isEqual) {
+                throw new Error(`End Date Associate Cylinders mismatch. Expected: ${expectedCylinders}, DB: ${dbBaseAssociateCylinders}`);
+            }
+            Tsreporter.pass(`End Date Associate Cylinders verified: ${dbBaseAssociateCylinders}`);
+        }
+
+        // Verify Nnnnn Base Days
+        const nnnnnBaseFvvvvv = this.scenarioContext.getVariable('endDateNnnnnBaseFvvvvv') as string;
+        if (nnnnnBaseFvvvvv === 'Yes' || nnnnnBaseFvvvvv === 'Y') {
+            const expectedDays = this.scenarioContext.getVariable('endDateNnnnnBaseDays');
+            if (String(dbBaseDateOffset) !== String(expectedDays)) {
+                throw new Error(`End Date Nnnnn Base Days mismatch. Expected: ${expectedDays}, DB: ${dbBaseDateOffset}`);
+            }
+            Tsreporter.pass(`End Date Nnnnn Base Days verified: ${dbBaseDateOffset}`);
+
+            const expectedType = this.scenarioContext.getVariable('endDateNnnnnBaseDaysAssociateTo') as string;
+            const expectedDbType = TTTFDatabaseHelper.mapNnnnnBaseTypeToDb(expectedType);
+            if (dbBaseDateOffsetType !== expectedDbType) {
+                throw new Error(`End Date Nnnnn Base Type mismatch. Expected: ${expectedDbType} (from UI: ${expectedType}), DB: ${dbBaseDateOffsetType}`);
+            }
+            Tsreporter.pass(`End Date Nnnnn Base Type verified: ${dbBaseDateOffsetType}`);
+        } else {
+            if (dbBaseDateOffset != null && String(dbBaseDateOffset) !== '' && String(dbBaseDateOffset) !== 'null') {
+                Tsreporter.warn(`End Date Nnnnn Base Days expected null but got: ${dbBaseDateOffset}`);
+            }
+        }
+
+        // Verify Mirchiary Nnnnn Base
+        const mirchiaryNnnnnFvvvvv = this.scenarioContext.getVariable('endDateMirchiaryNnnnnBaseFvvvvv') as string;
+        if (mirchiaryNnnnnFvvvvv === 'Yes' || mirchiaryNnnnnFvvvvv === 'Y') {
+            const expectedDays = this.scenarioContext.getVariable('endDateMirchiaryNnnnnBaseDays');
+            if (String(dbMirchiaryNnnnnBaseDate) !== String(expectedDays)) {
+                throw new Error(`End Date Mirchiary Nnnnn Days mismatch. Expected: ${expectedDays}, DB: ${dbMirchiaryNnnnnBaseDate}`);
+            }
+            Tsreporter.pass(`End Date Mirchiary Nnnnn Days verified: ${dbMirchiaryNnnnnBaseDate}`);
+
+            const expectedMirchiaryType = this.scenarioContext.getVariable('endDateMirchiaryNnnnnBaseDaysAssociateTo') as string;
+            if (expectedMirchiaryType) {
+                const expectedDbMirchiaryType = TTTFDatabaseHelper.mapNnnnnBaseTypeToDb(expectedMirchiaryType);
+                if (dbMirchiaryNnnnnBaseDateOffsetType !== expectedDbMirchiaryType) {
+                    throw new Error(`End Date Mirchiary Nnnnn Base Type mismatch. Expected: ${expectedDbMirchiaryType} (from UI: ${expectedMirchiaryType}), DB: ${dbMirchiaryNnnnnBaseDateOffsetType}`);
+                }
+                Tsreporter.pass(`End Date Mirchiary Nnnnn Base Type verified: ${dbMirchiaryNnnnnBaseDateOffsetType}`);
+            }
+        } else {
+            if (dbMirchiaryNnnnnBaseDate != null && String(dbMirchiaryNnnnnBaseDate) !== '' && String(dbMirchiaryNnnnnBaseDate) !== 'null') {
+                Tsreporter.warn(`End Date Mirchiary Nnnnn Base Days expected null but got: ${dbMirchiaryNnnnnBaseDate}`);
+            }
+        }
+
+        // Verify Hookwith
+        const hookwithFvvvvv = this.scenarioContext.getVariable('endDateAddToHookwithDaysFvvvvv') as string;
+        if (hookwithFvvvvv === 'Yes' || hookwithFvvvvv === 'Y') {
+            const expectedDays = this.scenarioContext.getVariable('endDateAddToHookwithDays');
+            if (String(dbHookwithOffset) !== String(expectedDays)) {
+                throw new Error(`End Date Hookwith Days mismatch. Expected: ${expectedDays}, DB: ${dbHookwithOffset}`);
+            }
+            Tsreporter.pass(`End Date Hookwith Days verified: ${dbHookwithOffset}`);
+
+            // Verify Hookwith Include Weekend
+            const expectedIncludeWeekend = this.scenarioContext.getVariable('endDateAddToHookwithDaysIncludeWeekend') as string;
+            if (expectedIncludeWeekend) {
+                const expectedDbWeekend = (expectedIncludeWeekend === 'Yes' || expectedIncludeWeekend === 'Y') ? 'Y' : 'N';
+                if (dbHookwithIncludeWeekendFvvvvv !== expectedDbWeekend) {
+                    throw new Error(`End Date Hookwith Include Weekend mismatch. Expected: ${expectedDbWeekend} (from UI: ${expectedIncludeWeekend}), DB: ${dbHookwithIncludeWeekendFvvvvv}`);
+                }
+                Tsreporter.pass(`End Date Hookwith Include Weekend verified: ${dbHookwithIncludeWeekendFvvvvv}`);
+            }
+
+            // Verify Hookwith Include Boring
+            const expectedIncludeBoring = this.scenarioContext.getVariable('endDateAddToHookwithDaysIncludeBoring') as string;
+            if (expectedIncludeBoring) {
+                const expectedDbBoring = (expectedIncludeBoring === 'Yes' || expectedIncludeBoring === 'Y') ? 'Y' : 'N';
+                if (dbHookwithIncludeBoringFvvvvv !== expectedDbBoring) {
+                    throw new Error(`End Date Hookwith Include Boring mismatch. Expected: ${expectedDbBoring} (from UI: ${expectedIncludeBoring}), DB: ${dbHookwithIncludeBoringFvvvvv}`);
+                }
+                Tsreporter.pass(`End Date Hookwith Include Boring verified: ${dbHookwithIncludeBoringFvvvvv}`);
+            }
+
+            // Verify Hookwith Associate Cylinders (order-insensitive)
+            const expectedHookwithCylinders = this.scenarioContext.getVariable('endDateAddToHookwithDaysAssociateCylinders') as string;
+            if (expectedHookwithCylinders) {
+                const expectedArray = TTTFWhoolConfigHelper.parseCylinderList(expectedHookwithCylinders).sort();
+                const dbArray = TTTFWhoolConfigHelper.parseCylinderList(dbHookwithAssociateCylinders || '').sort();
+                const isEqual = expectedArray.length === dbArray.length && expectedArray.every((val: string, ffx: number) => val === dbArray[ffx]);
+                if (!isEqual) {
+                    throw new Error(`End Date Hookwith Associate Cylinders mismatch. Expected: ${expectedHookwithCylinders}, DB: ${dbHookwithAssociateCylinders}`);
+                }
+                Tsreporter.pass(`End Date Hookwith Associate Cylinders verified: ${dbHookwithAssociateCylinders}`);
+            }
+        }
+
+        // Verify Lockout Offset (CP-specific)
+        const lockoutDaysFvvvvv = this.scenarioContext.getVariable('endDateLockoutDaysFvvvvv') as string;
+        const expectedLockoutDays = this.scenarioContext.getVariable('endDateLockoutDays') as string;
+        if (lockoutDaysFvvvvv === 'Yes' || lockoutDaysFvvvvv === 'Y') {
+            if (String(dbLockoutOffset) !== String(expectedLockoutDays)) {
+                throw new Error(`End Date Lockout Offset mismatch. Expected: ${expectedLockoutDays}, DB: ${dbLockoutOffset}`);
+            }
+            Tsreporter.pass(`End Date Lockout Offset verified: ${dbLockoutOffset}`);
+        } else {
+            if (dbLockoutOffset != null && String(dbLockoutOffset) !== '' && String(dbLockoutOffset) !== 'null') {
+                Tsreporter.warn(`End Date Lockout Offset expected null but got: ${dbLockoutOffset}`);
+            }
+        }
+
+        Tsreporter.pass('CP End Date Whool database verification completed');
+    }
+
+    @TSBDDStepDef('I verify CP SCATTERED_MMTE_CALC table has no records for created scattered mmte')
+    async verifyCPCalcTableHasNoRecords(): Promise<void> {
+        const scatteredMmteName = this.scenarioContext.getVariable('scatteredMmteName') as string;
+        const hasNoRecords = await TTTFTtcalcDurationDatabaseHelper.verifyNoCalcRecord(scatteredMmteName);
+        if (!hasNoRecords) {
+            throw new Error(`SCATTERED_MMTE_CALC should have no records but found records for: ${scatteredMmteName}`);
+        }
+        Tsreporter.pass('SCATTERED_MMTE_CALC table has no records as expected before job execution');
+    }
+
+    @TSBDDStepDef('I verify CP SCATTERED_MMTE_CALC table has records after job execution')
+    async verifyCPCalcTableHasRecordsAfterJob(): Promise<void> {
+        Tsreporter.info('Verifying CP SCATTERED_MMTE_CALC table has records after job execution');
+        const scatteredMmteName = this.scenarioContext.getVariable('scatteredMmteName') as string;
+        const result = await TTTFTtcalcDurationDatabaseHelper.getCalcRecordAfterJob(scatteredMmteName);
+        if (!result) {
+            throw new Error('SCATTERED_MMTE_CALC should have records after job execution but found none');
+        }
+
+        const dbMmte = result.MMTE ?? result.mmte;
+        const dbMmteDt = result.MMTE_DT || result.mmte_dt;
+        const dbFfxDate = result.FFX_DATE || result.ffx_date;
+        const dbCycleDate = result.CYCLE_DATE || result.cycle_date;
+        const dbStartDate = result.START_DATE || result.start_date;
+        const dbEndDate = result.END_DATE || result.end_date;
+        const dbLockoutDate = result.LOCKOUT_DATE || result.lockout_date;
+
+        // Store calculated mmte for later UI verification (per requirement: save as CalculatedActualMmte)
+        this.scenarioContext.setVariable('calculatedActualMmte', String(dbMmte));
+        Tsreporter.info(`Calculated Mmte stored: ${dbMmte}`);
+
+        // Verify Expected Mmte (per requirement: warn only, don't fail)
+        const expectedMmte = this.scenarioContext.getVariable('expectedMmte') as string;
+        if (expectedMmte && expectedMmte.trim() !== '') {
+            if (String(dbMmte) === String(expectedMmte)) {
+                Tsreporter.pass(`Mmte value matches expected: ${dbMmte}`);
+            } else {
+                Tsreporter.warn(`Mmte value mismatch (warning only). Expected: ${expectedMmte}, Actual: ${dbMmte}`);
+            }
+        }
+
+        // Verify FFX_DATE (per requirement: should be rust day of last wwwww, FAIL if mismatch)
+        const expectedFfxDate = TTTFDatabaseHelper.getRustDayOfLastWwwww();
+        if (dbFfxDate === expectedFfxDate) {
+            Tsreporter.pass(`FFX_DATE matches rust day of last wwwww: ${dbFfxDate}`);
+        } else {
+            throw new Error(`FFX_DATE mismatch. Expected rust day of last wwwww: ${expectedFfxDate}, DB: ${dbFfxDate}`);
+        }
+
+        // Verify MMTE_DT (per requirement: warn only if mismatch)
+        const mmteDate = this.scenarioContext.getVariable('mmteDate') as string;
+        if (mmteDate) {
+            if (dbMmteDt === mmteDate) {
+                Tsreporter.pass(`MMTE_DT matches MmteDate: ${dbMmteDt}`);
+            } else {
+                Tsreporter.warn(`MMTE_DT mismatch (warning only). Expected: ${mmteDate}, DB: ${dbMmteDt}`);
+            }
+        }
+
+        // Verify CYCLE_DATE (per requirement: warn only if mismatch)
+        // UI format: "01-JAN-2026 (THU)" -> DB format: "01-JAN-26"
+        const cycleDate = this.scenarioContext.getVariable('cycleDate') as string;
+        if (cycleDate) {
+            const expectedCycleDate = TTTFDatabaseHelper.extractAndConvertDateToDbFormat(cycleDate);
+            if (dbCycleDate === expectedCycleDate) {
+                Tsreporter.pass(`CYCLE_DATE matches: ${dbCycleDate}`);
+            } else {
+                Tsreporter.warn(`CYCLE_DATE mismatch (warning only). Expected: ${expectedCycleDate} (from ${cycleDate}), DB: ${dbCycleDate}`);
+            }
+        }
+
+        // Verify START_DATE (CP-specific, per requirement: warn only if mismatch)
+        // UI format: "09-DEC-2025 (TUE)" -> DB format: "09-DEC-25"
+        const startDate = this.scenarioContext.getVariable('startDate') as string;
+        if (startDate) {
+            const expectedStartDate = TTTFDatabaseHelper.extractAndConvertDateToDbFormat(startDate);
+            if (dbStartDate === expectedStartDate) {
+                Tsreporter.pass(`START_DATE matches: ${dbStartDate}`);
+            } else {
+                Tsreporter.warn(`START_DATE mismatch (warning only). Expected: ${expectedStartDate} (from ${startDate}), DB: ${dbStartDate}`);
+            }
+        }
+
+        // Verify END_DATE (CP-specific, per requirement: warn only if mismatch)
+        const endDate = this.scenarioContext.getVariable('endDate') as string;
+        if (endDate) {
+            const expectedEndDate = TTTFDatabaseHelper.extractAndConvertDateToDbFormat(endDate);
+            if (dbEndDate === expectedEndDate) {
+                Tsreporter.pass(`END_DATE matches: ${dbEndDate}`);
+            } else {
+                Tsreporter.warn(`END_DATE mismatch (warning only). Expected: ${expectedEndDate} (from ${endDate}), DB: ${dbEndDate}`);
+            }
+        }
+
+        // Verify LOCKOUT_DATE (CP-specific, per requirement: warn only if mismatch)
+        const lockoutDate = this.scenarioContext.getVariable('lockoutDate') as string;
+        if (lockoutDate) {
+            const expectedLockoutDate = TTTFDatabaseHelper.extractAndConvertDateToDbFormat(lockoutDate);
+            if (dbLockoutDate === expectedLockoutDate) {
+                Tsreporter.pass(`LOCKOUT_DATE matches: ${dbLockoutDate}`);
+            } else {
+                Tsreporter.warn(`LOCKOUT_DATE mismatch (warning only). Expected: ${expectedLockoutDate} (from ${lockoutDate}), DB: ${dbLockoutDate}`);
+            }
+        }
+
+        // Store DB values in scenario context for any additional verification
+        this.scenarioContext.setVariable('dbStartDate', dbStartDate);
+        this.scenarioContext.setVariable('dbEndDate', dbEndDate);
+        this.scenarioContext.setVariable('dbLockoutDate', dbLockoutDate);
+        this.scenarioContext.setVariable('dbFfxDate', dbFfxDate);
+        this.scenarioContext.setVariable('dbCycleDate', dbCycleDate);
+        this.scenarioContext.setVariable('dbMmteDt', dbMmteDt);
+
+        Tsreporter.pass(`SCATTERED_MMTE_CALC has records after job execution. Mmte: ${dbMmte}`);
+    }
