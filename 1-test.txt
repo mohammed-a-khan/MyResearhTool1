@@ -1,1 +1,35 @@
-test
+// Build descriptors from the remaining text.
+        // Do NOT filter any words here — the grammar's stripElementType() already
+        // removes element-type words (button, field, etc.) from targetText before
+        // it reaches this method. Filtering again here breaks element names like
+        // "Log On" (strips "On"), "Sign In" (strips "In"), "Add To Cart" (strips "To").
+        const descriptors = text.split(/\s+/).filter(w => w.length > 0);
+
+
+
+
+// CRITICAL: Hard penalty when user EXPLICITLY specified an element type
+        // (e.g., "button", "link", "input") and this node is a wrong type.
+        // Without this, a heading "Please log on" can outscore button "Log On"
+        // because fuzzy name matching (0.85) overwhelms the weak role penalty (0.1).
+        // A wrong-type match should NEVER meet the confidence threshold.
+        if (target.elementType && expectedRoles.length > 0 && !expectedRoles.includes(node.role)) {
+            total *= 0.3;
+        }
+
+
+
+// Bonus for containment — scaled by how much of the name is covered.
+            // "Log On" in "Log On" = 100% coverage → 0.95 bonus
+            // "Log On" in "Please log on" = 46% coverage → 0.65 bonus (partial match)
+            // This prevents long element names from getting inflated scores.
+            const searchLower = searchText.toLowerCase();
+            const nameLower = node.name.toLowerCase();
+            if (nameLower.includes(searchLower)) {
+                const coverage = searchLower.length / nameLower.length;
+                nameMatch = Math.max(nameMatch, 0.55 + coverage * 0.4);
+            } else if (searchLower.includes(nameLower)) {
+                const coverage = nameLower.length / searchLower.length;
+                nameMatch = Math.max(nameMatch, 0.55 + coverage * 0.4);
+            }
+
