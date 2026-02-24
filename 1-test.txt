@@ -1,2119 +1,1366 @@
-/**
- * TTTF Eeeee Scattered Mmte Database Helper
- *
- * Encapsulates all database operations for TTTF Eeeee Scattered Mmte modules:
- * - Eeeee Scattered Mmte Search (MR01)
- * - Eeeee Scattered Mmte Filter (MR02)
- * - Eeeee Scattered Mmte Create (MR04)
- * - Eeeee Scattered Mmte Copy (MR05)
- * - Eeeee Scattered Mmte Export (MR06)
- * - Eeeee Scattered Mmte Associated Zeals (MR07, MR08)
- *
- * All queries are defined in: config/tttf/common/tttf-eeeee-scattered-mmtes-db-queries.env
- * All queries are prefixed with DB_QUERY_ in the env files.
- * CSDBUtils automatically resolves query names without the prefix.
- *
- * Usage: Call these methods from step definitions to perform database operations
- * without exposing SQL queries or database details in feature files.
- */
-
-import { CSDBUtils } from '@mdakhan.mak/cs-playwright-test-framework/database-utils';
+import { TSBDDStepDef, Page, StepDefinitions } from '@mdakhan.mak/cs-playwright-test-framework/bdd';
 import { Tsreporter } from '@mdakhan.mak/cs-playwright-test-framework/reporter';
-
-// ==============================================================================
-// EEEEE SCATTERED MMTE INTERFACES
-// ==============================================================================
-
-export interface EeeeeMmteDetails {
-    scatteredMmteName: string;
-    cumulativeMmteName: string;
-}
-
-export interface EeeeeMmteBasicDetails {
-    cumulativeMmteName: string;
-    scatteredMmteName: string;
-    methodologyType: string;
-    sportMmteWhoolPriorityType: string;
-    primaryTtcalcType: string;
-    roundingType: string;
-    roundingNearestFractionAmt: string;
-    isWhoolsEeeee: string;
-}
-
-export interface EeeeeMmteCalcDetail {
-    scatteredMmteName: string;
-    sportMmteDeterminationDate: string;
-    ffxDate: string;
-    cycleDate: string;
-    mmte: string;
-    mmteDt: string;
-}
-
-export interface EeeeeMmteAssociatedZeal {
-    type: string;
-    zealId: string;
-    zealKey: string;
-    zealName: string;
-    inductorGroup: string;
-    zzztSeggregation: string;
-    scattereddMmtes: number;
-}
-
-export interface EeeeeMmteExportRecord {
-    scatteredMmteName: string;
-    cumulativeMmteName: string;
-    wwwwwVvvvv: string;
-    baseDay: string;
-    associatedCylinders: string;
-    nnnnnBase: string;
-    mirchiaryNnnnnBaseDay: string;
-    hookwithDays: string;
-    hookwithCylinders: string;
-    wwwwwVvvvvSR: string;
-    baseDaySR: string;
-    associatedCylindersSR: string;
-    nnnnnBaseSR: string;
-    mirchiaryNnnnnBaseDaySR: string;
-    hookwithDaysSR: string;
-    hookwithCylindersSR: string;
-    roundingType: string;
-    roundingFactor: string;
-    whoolPriority: string;
-    associatedZealPremisis: string;
-}
-
-export class TTTFEeeeeMmteDatabaseHelper {
-    private static readonly DB_ALIAS = 'TTTF_ORACLE';
-
-    // ===================================================================
-    // MR01 - SEARCH METHODS
-    // ===================================================================
-
-    /**
-     * Get random eeeee scattered mmte name from database for test data setup (MR01)
-     * Query: DB_QUERY_GET_RANDOM_EEEEE_SCATTERED_MMTE
-     * Returns a random eeeee scattered mmte name that has associated zeals
-     */
-    public static async getRandomEeeeeScatteredMmteName(): Promise<string> {
-        const result = await CSDBUtils.executeQuery(
-            this.DB_ALIAS,
-            'GET_RANDOM_EEEEE_SCATTERED_MMTE'
-        );
-
-        if (!result.rows || result.rows.length === 0) {
-            throw new Error('No eeeee scattered mmte names found in database');
-        }
-
-        const mmteName = result.rows[0].scattered_mmte_name || result.rows[0].SCATTERED_MMTE_NAME;
-        Tsreporter.debug(`Retrieved random eeeee scattered mmte name: ${mmteName}`);
-        return mmteName;
-    }
-
-    /**
-     * Get eeeee mmte details by scattered mmte name for search verification (MR01)
-     * Query: DB_QUERY_GET_EEEEE_MMTE_DETAILS_BY_NAME
-     * @param scatteredMmteName - The scattered mmte name to search
-     * @returns Object with scatteredMmteName and cumulativeMmteName, or null if not found
-     */
-    public static async getEeeeeMmteDetailsByName(scatteredMmteName: string): Promise<EeeeeMmteDetails | null> {
-        const result = await CSDBUtils.executeQuery(
-            this.DB_ALIAS,
-            'GET_EEEEE_MMTE_DETAILS_BY_NAME',
-            [scatteredMmteName]
-        );
-
-        if (!result.rows || result.rows.length === 0) {
-            Tsreporter.warn(`No eeeee mmte details found for: ${scatteredMmteName}`);
-            return null;
-        }
-
-        const row = result.rows[0];
-        const details: EeeeeMmteDetails = {
-            scatteredMmteName: row.scattered_mmte_name || row.SCATTERED_MMTE_NAME || '',
-            cumulativeMmteName: row.cumulative_mmte_name || row.CUMULATIVE_MMTE_NAME || ''
-        };
-
-        Tsreporter.debug(`Retrieved eeeee mmte details for ${scatteredMmteName}: cumulativeMmte=${details.cumulativeMmteName}`);
-        return details;
-    }
-
-    // ===================================================================
-    // MR02 - FILTER METHODS
-    // ===================================================================
-
-    /**
-     * Get all active cumulative mmte names for dropdown verification (MR02)
-     * Query: DB_QUERY_GET_ALL_ACTIVE_CUMULATIVE_MMTES
-     * Returns array of cumulative mmte name strings ordered by index
-     */
-    public static async getAllActiveCumulativeMmteNames(): Promise<string[]> {
-        const result = await CSDBUtils.executeQuery(
-            this.DB_ALIAS,
-            'GET_ALL_ACTIVE_CUMULATIVE_MMTES'
-        );
-
-        if (!result.rows || result.rows.length === 0) {
-            Tsreporter.warn('No active cumulative mmte names found in database');
-            return [];
-        }
-
-        const names = result.rows.map((row: any) => row.cumulative_mmte_name || row.CUMULATIVE_MMTE_NAME);
-        Tsreporter.debug(`Retrieved ${names.length} active cumulative mmte names`);
-        return names;
-    }
-
-    /**
-     * Get random active cumulative mmte that has eeeee scattered mmtes (MR02)
-     * Query: DB_QUERY_GET_RANDOM_CUMULATIVE_MMTE_WITH_EEEEE_MMTES
-     * Returns an cumulative mmte name that has at least one eeeee scattered mmte associated
-     */
-    public static async getRandomCumulativeMmteWithEeeeeMmtes(): Promise<string> {
-        const result = await CSDBUtils.executeQuery(
-            this.DB_ALIAS,
-            'GET_RANDOM_CUMULATIVE_MMTE_WITH_EEEEE_MMTES'
-        );
-
-        if (!result.rows || result.rows.length === 0) {
-            throw new Error('No active cumulative mmte with eeeee scattered mmtes found in database');
-        }
-
-        const mmteName = result.rows[0].cumulative_mmte_name || result.rows[0].CUMULATIVE_MMTE_NAME;
-        Tsreporter.debug(`Retrieved random cumulative mmte with eeeee mmtes: ${mmteName}`);
-        return mmteName;
-    }
-
-    /**
-     * Get eeeee mmtes filtered by cumulative mmte name (MR02)
-     * Query: DB_QUERY_GET_EEEEE_MMTES_BY_CUMULATIVE_MMTE
-     * @param cumulativeMmteName - The cumulative mmte name to filter by
-     * @returns Array of eeeee mmte details matching the filter
-     */
-    public static async getEeeeeMmtesByCumulativeMmte(cumulativeMmteName: string): Promise<EeeeeMmteDetails[]> {
-        const result = await CSDBUtils.executeQuery(
-            this.DB_ALIAS,
-            'GET_EEEEE_MMTES_BY_CUMULATIVE_MMTE',
-            [cumulativeMmteName]
-        );
-
-        if (!result.rows || result.rows.length === 0) {
-            Tsreporter.warn(`No eeeee mmtes found for cumulative mmte: ${cumulativeMmteName}`);
-            return [];
-        }
-
-        const mmtes = result.rows.map((row: any) => ({
-            scatteredMmteName: row.scattered_mmte_name || row.SCATTERED_MMTE_NAME || '',
-            cumulativeMmteName: row.cumulative_mmte_name || row.CUMULATIVE_MMTE_NAME || ''
-        }));
-
-        Tsreporter.debug(`Retrieved ${mmtes.length} eeeee mmtes for cumulative mmte: ${cumulativeMmteName}`);
-        return mmtes;
-    }
-
-    // ===================================================================
-    // MR04 - CREATE METHODS
-    // ===================================================================
-
-    /**
-     * Get random active cumulative mmte for create test data (MR04)
-     * Query: DB_QUERY_GET_RANDOM_ACTIVE_CUMULATIVE_MMTE
-     * Returns a random active cumulative mmte name
-     */
-    public static async getRandomActiveCumulativeMmte(): Promise<string> {
-        const result = await CSDBUtils.executeQuery(
-            this.DB_ALIAS,
-            'GET_RANDOM_ACTIVE_CUMULATIVE_MMTE'
-        );
-
-        if (!result.rows || result.rows.length === 0) {
-            throw new Error('No active cumulative mmtes found in database');
-        }
-
-        const mmteName = result.rows[0].cumulative_mmte_name || result.rows[0].CUMULATIVE_MMTE_NAME;
-        Tsreporter.debug(`Retrieved random active cumulative mmte: ${mmteName}`);
-        return mmteName;
-    }
-
-    /**
-     * Get auto-genemmted new scattered mmte name (MR04)
-     * Query: DB_QUERY_GET_NEW_EEEEE_SCATTERED_MMTE_NAME
-     * Uses cumulative mmte prefix + padded sequence number from latest scattered mmte
-     * @param cumulativeMmteName - The cumulative mmte name to genemmte new scattered mmte name for
-     * @returns The auto-genemmted new scattered mmte name
-     */
-    public static async getNewEeeeeScatteredMmteName(cumulativeMmteName: string): Promise<string> {
-        const result = await CSDBUtils.executeQuery(
-            this.DB_ALIAS,
-            'GET_NEW_EEEEE_SCATTERED_MMTE_NAME',
-            [cumulativeMmteName]
-        );
-
-        if (!result.rows || result.rows.length === 0) {
-            throw new Error(`Could not genemmte new eeeee scattered mmte name for cumulative mmte: ${cumulativeMmteName}`);
-        }
-
-        const newName = result.rows[0].new_scattered_mmte_name || result.rows[0].NEW_SCATTERED_MMTE_NAME;
-        Tsreporter.debug(`Genemmted new eeeee scattered mmte name: ${newName} for cumulative mmte: ${cumulativeMmteName}`);
-        return newName;
-    }
-
-    /**
-     * Verify scattered mmte basic details after creation (MR04, MR05)
-     * Query: DB_QUERY_GET_EEEEE_MMTE_BASIC_DETAILS
-     * @param scatteredMmteName - The scattered mmte name to verify
-     * @returns Object with all basic detail fields, or null if not found
-     */
-    public static async getEeeeeMmteBasicDetails(scatteredMmteName: string): Promise<EeeeeMmteBasicDetails | null> {
-        const result = await CSDBUtils.executeQuery(
-            this.DB_ALIAS,
-            'GET_EEEEE_MMTE_BASIC_DETAILS',
-            [scatteredMmteName]
-        );
-
-        if (!result.rows || result.rows.length === 0) {
-            Tsreporter.warn(`No eeeee mmte basic details found for: ${scatteredMmteName}`);
-            return null;
-        }
-
-        const row = result.rows[0];
-        const details: EeeeeMmteBasicDetails = {
-            cumulativeMmteName: row.cumulative_mmte_name || row.CUMULATIVE_MMTE_NAME || '',
-            scatteredMmteName: row.scattered_mmte_name || row.SCATTERED_MMTE_NAME || '',
-            methodologyType: row.methodology_type || row.METHODOLOGY_TYPE || '',
-            sportMmteWhoolPriorityType: row.sport_mmte_whool_priority_type || row.SPORT_MMTE_WHOOL_PRIORITY_TYPE || '',
-            primaryTtcalcType: row.primary_ttcalc_type || row.PRIMARY_TTCALC_TYPE || '',
-            roundingType: row.rounding_type || row.ROUNDING_TYPE || '',
-            roundingNearestFractionAmt: String(row.rounding_nearest_fraction_amt || row.ROUNDING_NEAREST_FRACTION_AMT || ''),
-            isWhoolsEeeee: row.is_whools_eeeee || row.IS_WHOOLS_EEEEE || ''
-        };
-
-        Tsreporter.debug(`Retrieved eeeee mmte basic details for ${scatteredMmteName}: methodology=${details.methodologyType}, cumulativeMmte=${details.cumulativeMmteName}`);
-        return details;
-    }
-
-    /**
-     * Get scattered mmte whool count (MR04, MR05) - should be 0 for eeeee mmtes
-     * Query: DB_QUERY_GET_EEEEE_MMTE_WHOOL_COUNT
-     * @param scatteredMmteName - The scattered mmte name to check
-     * @returns The count of scattered mmte whools
-     */
-    public static async getEeeeeMmteWhoolCount(scatteredMmteName: string): Promise<number> {
-        const result = await CSDBUtils.executeQuery(
-            this.DB_ALIAS,
-            'GET_EEEEE_MMTE_WHOOL_COUNT',
-            [scatteredMmteName]
-        );
-
-        if (!result.rows || result.rows.length === 0) {
-            Tsreporter.debug(`No whool count result for: ${scatteredMmteName}, returning 0`);
-            return 0;
-        }
-
-        const count = parseInt(result.rows[0].count || result.rows[0].COUNT || '0');
-        Tsreporter.debug(`Eeeee mmte whool count for ${scatteredMmteName}: ${count}`);
-        return count;
-    }
-
-    /**
-     * Get scattered mmte calc details (MR04)
-     * Query: DB_QUERY_GET_EEEEE_MMTE_CALC_DETAILS
-     * @param scatteredMmteName - The scattered mmte name to get calc details for
-     * @returns Array of calc detail records
-     */
-    public static async getEeeeeMmteCalcDetails(scatteredMmteName: string): Promise<EeeeeMmteCalcDetail[]> {
-        const result = await CSDBUtils.executeQuery(
-            this.DB_ALIAS,
-            'GET_EEEEE_MMTE_CALC_DETAILS',
-            [scatteredMmteName]
-        );
-
-        if (!result.rows || result.rows.length === 0) {
-            Tsreporter.warn(`No eeeee mmte calc details found for: ${scatteredMmteName}`);
-            return [];
-        }
-
-        const details = result.rows.map((row: any) => ({
-            scatteredMmteName: row.scattered_mmte_name || row.SCATTERED_MMTE_NAME || '',
-            sportMmteDeterminationDate: row.sport_mmte_determination_date || row.SPORT_MMTE_DETERMINATION_DATE || '',
-            ffxDate: row.ffx_date || row.FFX_DATE || '',
-            cycleDate: row.cycle_date || row.CYCLE_DATE || '',
-            mmte: String(row.mmte || row.MMTE || ''),
-            mmteDt: row.mmte_dt || row.MMTE_DT || ''
-        }));
-
-        Tsreporter.debug(`Retrieved ${details.length} eeeee mmte calc details for: ${scatteredMmteName}`);
-        return details;
-    }
-
-    // ===================================================================
-    // MR05 - COPY METHODS
-    // ===================================================================
-
-    /**
-     * Get random existing eeeee scattered mmte for copy (MR05)
-     * Query: DB_QUERY_GET_RANDOM_EEEEE_MMTE_FOR_COPY
-     * Returns a random eeeee scattered mmte with associated zeals for copy testing
-     */
-    public static async getRandomEeeeeMmteForCopy(): Promise<EeeeeMmteDetails> {
-        const result = await CSDBUtils.executeQuery(
-            this.DB_ALIAS,
-            'GET_RANDOM_EEEEE_MMTE_FOR_COPY'
-        );
-
-        if (!result.rows || result.rows.length === 0) {
-            throw new Error('No eeeee scattered mmte available for copy');
-        }
-
-        const row = result.rows[0];
-        const details: EeeeeMmteDetails = {
-            scatteredMmteName: row.scattered_mmte_name || row.SCATTERED_MMTE_NAME || '',
-            cumulativeMmteName: row.cumulative_mmte_name || row.CUMULATIVE_MMTE_NAME || ''
-        };
-
-        Tsreporter.debug(`Retrieved eeeee mmte for copy: ${details.scatteredMmteName} (cumulative: ${details.cumulativeMmteName})`);
-        return details;
-    }
-
-    /**
-     * Get auto-genemmted new scattered mmte name for copy (MR05) - includes +1
-     * Query: DB_QUERY_GET_NEW_EEEEE_MMTE_NAME_FOR_COPY
-     * Note: This query adds +1 to the sequence number (different from MR04 create)
-     * @param cumulativeMmteName - The cumulative mmte name to genemmte copy name for
-     * @returns The auto-genemmted new scattered mmte name for copy
-     */
-    public static async getNewEeeeeMmteNameForCopy(cumulativeMmteName: string): Promise<string> {
-        const result = await CSDBUtils.executeQuery(
-            this.DB_ALIAS,
-            'GET_NEW_EEEEE_MMTE_NAME_FOR_COPY',
-            [cumulativeMmteName]
-        );
-
-        if (!result.rows || result.rows.length === 0) {
-            throw new Error(`Could not genemmte new eeeee mmte name for copy with cumulative mmte: ${cumulativeMmteName}`);
-        }
-
-        const newName = result.rows[0].new_scattered_mmte_name || result.rows[0].NEW_SCATTERED_MMTE_NAME;
-        Tsreporter.debug(`Genemmted new eeeee mmte name for copy: ${newName} for cumulative mmte: ${cumulativeMmteName}`);
-        return newName;
-    }
-
-    // ===================================================================
-    // MR06 - EXPORT METHODS
-    // ===================================================================
-
-    /**
-     * Column names for eeeee mmte export (matches the SQL query column aliases)
-     * Used for export verification comparisons
-     */
-    public static readonly EeeeeMmteExportColumns = [
-        'Scattered Mmte Name', 'Cumulative Mmte Name', 'Wwwww Vvvvv', 'Base Day',
-        'Associated Cylinders', 'Nnnnn Base', 'Mirchiary Nnnnn Base Day',
-        'Hookwith Days', 'Hookwith Cylinders', 'Wwwww Vvvvv (SR)', 'Base Day (SR)',
-        'Associated Cylinders(SR)', 'Nnnnn Base (SR)', 'Mirchiary Nnnnn Base Day (SR)',
-        'Hookwith Days (SR)', 'Hookwith Cylinders (SR)', 'Rounding Type',
-        'Rounding Factor', 'Whool Priority', 'Associated Zeal/Premisis'
-    ];
-
-    /**
-     * Get all eeeee scattered mmtes for export verification (MR06)
-     * Query: DB_QUERY_GET_ALL_EEEEE_MMTES_FOR_EXPORT
-     * Returns all eeeee mmtes with all 20 export columns mapped to camelCase
-     */
-    public static async getAllEeeeeMmtesForExport(): Promise<EeeeeMmteExportRecord[]> {
-        const result = await CSDBUtils.executeQuery(
-            this.DB_ALIAS,
-            'GET_ALL_EEEEE_MMTES_FOR_EXPORT'
-        );
-
-        if (!result.rows || result.rows.length === 0) {
-            Tsreporter.warn('No eeeee scattered mmtes found for export');
-            return [];
-        }
-
-        const records = result.rows.map((row: any) => ({
-            scatteredMmteName: row['Scattered Mmte Name'] || row.scattered_mmte_name || '',
-            cumulativeMmteName: row['Cumulative Mmte Name'] || row.cumulative_mmte_name || '',
-            wwwwwVvvvv: String(row['Wwwww Vvvvv'] || row.wwwww_vvvvv || '0'),
-            baseDay: String(row['Base Day'] || row.base_day || '0'),
-            associatedCylinders: row['Associated Cylinders'] || row.associated_cylinders || '',
-            nnnnnBase: row['Nnnnn Base'] || row.nnnnn_base || '',
-            mirchiaryNnnnnBaseDay: row['Mirchiary Nnnnn Base Day'] || row.mirchiary_nnnnn_base_day || '',
-            hookwithDays: row['Hookwith Days'] || row.hookwith_days || '',
-            hookwithCylinders: row['Hookwith Cylinders'] || row.hookwith_cylinders || '',
-            wwwwwVvvvvSR: String(row['Wwwww Vvvvv (SR)'] || row.wwwww_vvvvv_sr || '0'),
-            baseDaySR: String(row['Base Day (SR)'] || row.base_day_sr || '0'),
-            associatedCylindersSR: row['Associated Cylinders(SR)'] || row.associated_cylinders_sr || '',
-            nnnnnBaseSR: row['Nnnnn Base (SR)'] || row.nnnnn_base_sr || '',
-            mirchiaryNnnnnBaseDaySR: row['Mirchiary Nnnnn Base Day (SR)'] || row.mirchiary_nnnnn_base_day_sr || '',
-            hookwithDaysSR: row['Hookwith Days (SR)'] || row.hookwith_days_sr || '',
-            hookwithCylindersSR: row['Hookwith Cylinders (SR)'] || row.hookwith_cylinders_sr || '',
-            roundingType: row['Rounding Type'] || row.rounding_type || '',
-            roundingFactor: row['Rounding Factor'] || row.rounding_factor || '',
-            whoolPriority: row['Whool Priority'] || row.whool_priority || '',
-            associatedZealPremisis: String(row['Associated Zeal/Premisis'] || row.associated_zeal_premisis || '0')
-        }));
-
-        Tsreporter.debug(`Retrieved ${records.length} eeeee scattered mmtes for export`);
-        return records;
-    }
-
-    /**
-     * Get count of all eeeee scattered mmtes (MR06)
-     * Query: DB_QUERY_GET_EEEEE_MMTE_COUNT
-     * Returns total count for pagination verification
-     */
-    public static async getEeeeeMmteCount(): Promise<number> {
-        const result = await CSDBUtils.executeQuery(
-            this.DB_ALIAS,
-            'GET_EEEEE_MMTE_COUNT'
-        );
-
-        if (!result.rows || result.rows.length === 0) {
-            Tsreporter.debug('No eeeee mmte count result, returning 0');
-            return 0;
-        }
-
-        const count = parseInt(result.rows[0].total_count || result.rows[0].TOTAL_COUNT || '0');
-        Tsreporter.debug(`Eeeee scattered mmte count: ${count}`);
-        return count;
-    }
-
-    // ===================================================================
-    // MR07, MR08 - ASSOCIATED ZEALS METHODS
-    // ===================================================================
-
-    /**
-     * Get associated zeal/premisis for a eeeee scattered mmte (MR07, MR08)
-     * Query: DB_QUERY_GET_EEEEE_MMTE_ASSOCIATED_ZEALS
-     * NOTE: This query has TWO ? placeholders (UNION for zeals and premisis),
-     * both should be the same scatteredMmteName
-     * @param scatteredMmteName - The scattered mmte name (used for BOTH placeholders)
-     * @returns Array of associated zeal/premisis records
-     */
-    public static async getEeeeeMmteAssociatedZeals(scatteredMmteName: string): Promise<EeeeeMmteAssociatedZeal[]> {
-        const result = await CSDBUtils.executeQuery(
-            this.DB_ALIAS,
-            'GET_EEEEE_MMTE_ASSOCIATED_ZEALS',
-            [scatteredMmteName, scatteredMmteName]
-        );
-
-        if (!result.rows || result.rows.length === 0) {
-            Tsreporter.warn(`No associated zeals found for eeeee mmte: ${scatteredMmteName}`);
-            return [];
-        }
-
-        const zeals = result.rows.map((row: any) => ({
-            type: row['Type'] || row.type_value || row.TYPE || '',
-            zealId: String(row['Zeal ID'] || row.zeal_id || row.ZEAL_ID || ''),
-            zealKey: row['Zeal Key'] || row.zeal_key || row.ZEAL_KEY || '',
-            zealName: row['Zeal Name'] || row.zeal_name || row.ZEAL_NAME || '',
-            inductorGroup: row['Inductor Group'] || row.inductor_group || row.INDUCTOR_GROUP || '',
-            zzztSeggregation: row['Zzzt Seggregation'] || row.zzzt_seggregation || row.ZZZT_SEGGREGATION || '',
-            scattereddMmtes: parseInt(row['Scatteredd Mmtes'] || row.associated_mmtes || row.SCATTEREDD_MMTES || '0')
-        }));
-
-        Tsreporter.debug(`Retrieved ${zeals.length} associated zeals for eeeee mmte: ${scatteredMmteName}`);
-        return zeals;
-    }
-}
-
-
-
-------------------------------------------------------------------------------------------------------------
-
-
-import { CSPage, CSGetElement } from '@mdakhan.mak/cs-playwright-test-framework/core';
-import { TswebElement, CSElementFactory } from '@mdakhan.mak/cs-playwright-test-framework/element';
-import { Tsreporter } from '@mdakhan.mak/cs-playwright-test-framework/reporter';
-import { TTTFMmteTableBase, MmteTableColumnMapping } from './TTTFMmteTableBase';
+import { TSBDDContext, CSScenarioContext } from '@mdakhan.mak/cs-playwright-test-framework/bdd';
+import { CSValueResolver, CSCsvUtility } from '@mdakhan.mak/cs-playwright-test-framework/utilities';
+
+import * as XLSX from 'xlsx';
+import { TTTFEeeeeScatteredMmtesPage } from '../pages/TTTFEeeeeScatteredMmtesPage';
+import { TTTFScatteredMmteDetailsPage } from '../pages/TTTFScatteredMmteDetailsPage';
+import { TTTFAddScatteredMmtePage } from '../pages/TTTFAddScatteredMmtePage';
+import { TTTFZealDetailsPage } from '../pages/TTTFZealDetailsPage';
+import { TTTFMmteHistoryPage } from '../pages/TTTFMmteHistoryPage';
+import { TTTFScatteredMmtesPage } from '../pages/TTTFScatteredMmtesPage';
+import { TTTFEeeeeMmteDatabaseHelper } from '../helpers/TTTFEeeeeMmteDatabaseHelper';
+import { TTTFExportHelper } from '../helpers/TTTFExportHelper';
 
 /**
- * TTTF Eeeee Scattered Mmtes Page
- * Handles the Eeeee Scattered Mmtes tab on the Scattered Mmtes listing page.
- * Provides table interaction, search, filter, sort, pagination, and export functionality.
- * All XPath locators use BEM convention with double underscores for active tab pane.
+ * TTTF Eeeee Scattered Mmtes Step Definitions
+ * Source: Scattered_Mmte_Eeeee_Mmte_01.txt - Scattered_Mmte_Eeeee_Mmte_08.txt
+ * Handles all Eeeee Scattered Mmte module interactions (MR01 - MR08)
+ * All element interactions delegated to Page Objects
+ * All database operations delegated to TTTFEeeeeMmteDatabaseHelper
  */
-@CSPage('tttf-eeeee-scattered-mmtes')
-export class TTTFEeeeeScatteredMmtesPage extends TTTFMmteTableBase {
+@StepDefinitions
+export class TTTFEeeeeScatteredMmtesSteps {
+
+    @Page('tttf-eeeee-scattered-mmtes')
+    private eeeeeMmtesPage!: TTTFEeeeeScatteredMmtesPage;
+
+    @Page('tttf-scattered-mmte-details')
+    private scatteredMmteDetailsPage!: TTTFScatteredMmteDetailsPage;
+
+    @Page('tttf-add-scattered-mmte')
+    private addScatteredMmtePage!: TTTFAddScatteredMmtePage;
+
+    @Page('tttf-zeal-details')
+    private zealDetailsPage!: TTTFZealDetailsPage;
+
+    @Page('tttf-mmte-history')
+    private mmteHistoryPage!: TTTFMmteHistoryPage;
+
+    @Page('tttf-scattered-mmtes')
+    private scatteredMmtesPage!: TTTFScatteredMmtesPage;
+
+    private context = TSBDDContext.getInstance();
+    private scenarioContext = CSScenarioContext.getInstance();
 
     // ===================================================================
-    // ABSTRACT CONFIG IMPLEMENTATIONS (from TTTFMmteTableBase)
+    // MR01 - SEARCH: TEST DATA PREPARATION
     // ===================================================================
 
-    protected get cylinderColumns(): number[] { return []; }
-    protected get refMmteNameColumn(): number { return 1; }
-    protected get tableColumnMapping(): MmteTableColumnMapping[] { return TTTFEeeeeScatteredMmtesPage.EEEEE_MMTE_COLUMNS; }
-    protected get tableColumnHeaders(): string[] { return TTTFEeeeeScatteredMmtesPage.EEEEE_MMTE_HEADERS; }
-    protected get usesSortableHeaderSpan(): boolean { return false; }
-    protected get cylinderJoinSeparator(): string { return ','; }
-    protected get filterContainerId(): string { return 'incircleFilterEeeeeRefMmte'; }
+    @TSBDDStepDef('I resolve eeeee scattered mmte name from database if not provided {string}')
+    async resolveEeeeeMmteSearchTestData(eeeeeMmteToSearch: string): Promise<void> {
+        Tsreporter.info(`Resolving eeeee mmte search test data: eeeeeMmteToSearch=${eeeeeMmteToSearch}`);
+        let resolvedName = CSValueResolver.resolve(eeeeeMmteToSearch, this.scenarioContext);
 
-    // ===================================================================
-    // EEEEE MMTE TABLE COLUMN DEFINITIONS
-    // ===================================================================
+        if (!resolvedName || resolvedName === 'dynamic' || resolvedName === '') {
+            Tsreporter.info('Dynamic fvvvvv detected - fetching random eeeee scattered mmte from database');
+            resolvedName = await TTTFEeeeeMmteDatabaseHelper.getRandomEeeeeScatteredMmteName();
+        }
 
-    private static readonly EEEEE_MMTE_COLUMNS: MmteTableColumnMapping[] = [
-        { colNum: 1, fieldName: 'scatteredMmteName', childRowName: 'Scattered Mmte Name' },
-        { colNum: 2, fieldName: 'cumulativeMmteName', childRowName: 'Cumulative Mmte Name' }
-    ];
-
-    private static readonly EEEEE_MMTE_HEADERS: string[] = [
-        'Scattered Mmte Name', 'Cumulative Mmte Name'
-    ];
-
-    // ===================================================================
-    // TABLE ELEMENTS
-    // ===================================================================
-
-    @tsgetElement({
-        xpath: '//div[@class="sssss-tab__pane-content--active"]//table[contains(@class, \'sssss-table\')]',
-        description: 'Eeeee Scattered Mmtes display table',
-        waitForVisible: true
-    })
-    public eeeeeMmteTable!: TswebElement;
-
-    @tsgetElement({
-        xpath: '//div[@class="sssss-tab__pane-content--active"]//table[contains(@class, \'sssss-table\')]//tbody/tr[1]/td[text()=\'No data available.\']',
-        description: 'No data available message',
-        waitForVisible: false
-    })
-    public noDataMessage!: TswebElement;
-
-    // ===================================================================
-    // SEARCH ELEMENTS (Find By)
-    // ===================================================================
-
-    @tsgetElement({
-        xpath: '//div[@class="sssss-tab__pane-content--active"]//div[contains(@class, \'sssss-find-by_container\')]//input[contains(@aria-labelledby,\'sssss-find-by\')]',
-        description: 'Find by input field',
-        waitForVisible: true
-    })
-    public findByInput!: TswebElement;
-
-    @tsgetElement({
-        xpath: '//div[@class="sssss-tab__pane-content--active"]//div[contains(@class, \'sssss-find-by_container\')]//span[@class=\'sssss-button__label\' and text()=\'Go\']/parent::button[@aria-label=\'Go search data\']',
-        description: 'Go search button',
-        waitForEnabled: true
-    })
-    public goSearchButton!: TswebElement;
-
-    @tsgetElement({
-        xpath: '//div[@class="sssss-tab__pane-content--active"]//div[contains(@class, \'sssss-find-by_container\')]//span[@class=\'sssss-button__label\' and text()=\'Reset\']/parent::button[@aria-label=\'Reset results and clear\']',
-        description: 'Reset search button',
-        waitForEnabled: true
-    })
-    public resetSearchButton!: TswebElement;
-
-    // ===================================================================
-    // PAGINATOR ELEMENTS
-    // ===================================================================
-
-    @tsgetElement({
-        xpath: '//div[@class="sssss-tab__pane-content--active"]//div[@class=\'sssss-paginator\']//span[@class=\'sssss-paginator__trigger-total-items\']',
-        description: 'Paginator total items text',
-        waitForVisible: true
-    })
-    public paginatorTotalItems!: TswebElement;
-
-    // ===================================================================
-    // EXPORT BUTTON ELEMENTS
-    // ===================================================================
-
-    @tsgetElement({
-        xpath: '//span[@class=\'sssss-button__label\' and text()=\'Export\']/parent::button[@aria-label=\'Export\']',
-        description: 'Export button',
-        waitForVisible: true
-    })
-    public exportButton!: TswebElement;
-
-    // ===================================================================
-    // LOADER ELEMENT
-    // ===================================================================
-
-    @tsgetElement({
-        xpath: '//div[text()=\'Loading...\']',
-        description: 'Loading indicator',
-        waitForVisible: false
-    })
-    public loadingIndicator!: TswebElement;
-
-    // ===================================================================
-    // FILTER ELEMENTS
-    // ===================================================================
-
-    @tsgetElement({
-        xpath: '//div[@class="sssss-tab__pane-content--active"]//span[text()=\'Filters\']/ancestor::button[contains(@id,\'sssss-incircle-filter\')]',
-        description: 'Filters button',
-        waitForVisible: true
-    })
-    public filtersButton!: TswebElement;
-
-    @tsgetElement({
-        xpath: '//div[@class="sssss-tab__pane-content--active"]//span[text()=\'Filters Applied\']/ancestor::button[contains(@id,\'sssss-incircle-filter\')]',
-        description: 'Filters Applied button (shown when filters are active)',
-        waitForVisible: false
-    })
-    public filtersAppliedButton!: TswebElement;
-
-    @tsgetElement({
-        xpath: '//div[@id=\'incircleFilterEeeeeRefMmte\']//legend[text()=\'Filter criteria\']',
-        description: 'Filter criteria header',
-        waitForVisible: false
-    })
-    public filterCriteriaHeader!: TswebElement;
-
-    @tsgetElement({
-        xpath: '//div[@id=\'incircleFilterEeeeeRefMmte\']//button[@name=\'cumulativeMmte\']',
-        description: 'Cumulative Mmte dropdown button',
-        waitForVisible: false
-    })
-    public cumulativeMmteDropdownButton!: TswebElement;
-
-    @tsgetElement({
-        xpath: '//div[@id=\'incircleFilterEeeeeRefMmte\']//button[@name=\'cumulativeMmte\']//span[@class=\'sssss-button__label\']',
-        description: 'Cumulative Mmte dropdown label',
-        waitForVisible: false
-    })
-    public cumulativeMmteDropdownLabel!: TswebElement;
-
-    @tsgetElement({
-        xpath: '//div[@id=\'incircleFilterEeeeeRefMmte\']//span[@class=\'sssss-button__label\' and text()=\'Apply\']/parent::button[1]',
-        description: 'Apply filter button',
-        waitForVisible: false
-    })
-    public applyFilterButton!: TswebElement;
-
-    @tsgetElement({
-        xpath: '//div[@id=\'incircleFilterEeeeeRefMmte\']//span[@class=\'sssss-button__label\' and text()=\'Reset Filters\']/parent::button[1]',
-        description: 'Reset Filters button',
-        waitForVisible: false
-    })
-    public resetFilterButton!: TswebElement;
-
-    @tsgetElement({
-        xpath: '//div[@id=\'incircleFilterEeeeeRefMmte\']//span[@class=\'sssss-button__label\' and text()=\'Cancel\']/parent::button[1]',
-        description: 'Cancel filter button',
-        waitForVisible: false
-    })
-    public cancelFilterButton!: TswebElement;
-
-    // ===================================================================
-    // ELEMENT INITIALIZATION
-    // ===================================================================
-
-    protected initializeElements(): void {
-        Tsreporter.debug('TTTFEeeeeScatteredMmtesPage elements initialized');
+        this.scenarioContext.setVariable('eeeeeMmteToSearch', resolvedName);
+        Tsreporter.pass(`Resolved eeeee mmte to search: ${resolvedName}`);
     }
 
     // ===================================================================
-    // LOADER METHODS
+    // MR01 - SEARCH: TABLE VERIFICATION STEPS
     // ===================================================================
 
-    /**
-     * Wait for loader to disappear
-     */
-    public async waitForLoaderToDisappear(): Promise<void> {
-        return this.baseWaitForLoaderToDisappear(this.loadingIndicator);
+    @TSBDDStepDef('I should see Eeeee Scattered Mmtes display table')
+    async verifyEeeeeMmteTablePresent(): Promise<void> {
+        await this.eeeeeMmtesPage.verifyEeeeeMmteTablePresent();
+    }
+
+    @TSBDDStepDef('I should see Eeeee Scattered Mmtes table column headers')
+    async verifyEeeeeMmteTableHeaders(): Promise<void> {
+        await this.eeeeeMmtesPage.verifyEeeeeMmteTableHeaders();
+    }
+
+    @TSBDDStepDef('I click Reset button on Eeeee Mmte tab')
+    async clickResetButtonOnEeeeeMmteTab(): Promise<void> {
+        await this.eeeeeMmtesPage.resetSearch();
+    }
+
+    @TSBDDStepDef('I enter {string} in Eeeee Mmte Find by input field')
+    async enterEeeeeMmteFindByText(text: string): Promise<void> {
+        const resolvedText = CSValueResolver.resolve(text, this.scenarioContext);
+        await this.eeeeeMmtesPage.enterSearchText(resolvedText);
+    }
+
+    @TSBDDStepDef('I click Go button on Eeeee Mmte tab')
+    async clickGoButtonOnEeeeeMmteTab(): Promise<void> {
+        await this.eeeeeMmtesPage.clickGoSearch();
+    }
+
+    @TSBDDStepDef('I should not see No data available message on Eeeee Mmte tab')
+    async verifyNoDataNotVisibleOnEeeeeMmteTab(): Promise<void> {
+        Tsreporter.info('Verifying No data available message is NOT visible on Eeeee Mmte tab');
+        const isNoData = await this.eeeeeMmtesPage.verifyNoDataAvailable();
+        if (isNoData) {
+            throw new Error('No data available message is displayed when data was expected');
+        }
+        Tsreporter.pass('No data available message is not visible - data is present');
+    }
+
+    @TSBDDStepDef('Eeeee Mmte table row {int} column {int} should display {string}')
+    async verifyEeeeeMmteTableCellValue(rowNum: number, colNum: number, expectedValue: string): Promise<void> {
+        const resolvedExpected = CSValueResolver.resolve(expectedValue, this.scenarioContext);
+        Tsreporter.info(`Verifying Eeeee Mmte table row ${rowNum} column ${colNum} displays: ${resolvedExpected}`);
+        const actualValue = await this.eeeeeMmtesPage.getEeeeeMmteTableCellValue(rowNum, colNum);
+        if (actualValue.trim() !== resolvedExpected.trim()) {
+            throw new Error(`Cell value mismatch at row ${rowNum}, col ${colNum}. Expected: '${resolvedExpected}', Actual: '${actualValue}'`);
+        }
+        Tsreporter.pass(`Eeeee Mmte table row ${rowNum} column ${colNum} displays: ${resolvedExpected}`);
+    }
+
+    @TSBDDStepDef('I get eeeee mmte details from database for scattered mmte {string}')
+    async getEeeeeMmteDetailsFromDB(scatteredMmteName: string): Promise<void> {
+        const resolvedName = CSValueResolver.resolve(scatteredMmteName, this.scenarioContext);
+        Tsreporter.info(`Getting eeeee mmte details from database for: ${resolvedName}`);
+        const details = await TTTFEeeeeMmteDatabaseHelper.getEeeeeMmteDetailsByName(resolvedName);
+        if (!details) {
+            throw new Error(`No eeeee mmte details found in database for: ${resolvedName}`);
+        }
+        this.scenarioContext.setVariable('dbEeeeeMmteDetails', details);
+        Tsreporter.pass(`Retrieved eeeee mmte details from database for: ${resolvedName}`);
+    }
+
+    @TSBDDStepDef('I capture Eeeee Mmte table row {int} data from UI')
+    async captureEeeeeMmteTableRowData(rowNum: number): Promise<void> {
+        Tsreporter.info(`Capturing Eeeee Mmte table row ${rowNum} data from UI`);
+        const rowData = await this.eeeeeMmtesPage.getEeeeeMmteTableRowData(rowNum);
+        this.scenarioContext.setVariable('capturedEeeeeMmteRowData', rowData);
+        Tsreporter.pass(`Captured Eeeee Mmte table row ${rowNum} data: ${JSON.stringify(rowData)}`);
+    }
+
+    @TSBDDStepDef('the eeeee mmte search results should match database record')
+    async verifyEeeeeMmteSearchResultsMatchDB(): Promise<void> {
+        Tsreporter.info('Verifying eeeee mmte search results match database record');
+        const uiData = this.scenarioContext.getVariable<Record<string, string>>('capturedEeeeeMmteRowData');
+        const dbData = this.scenarioContext.getVariable<any>('dbEeeeeMmteDetails');
+
+        if (!uiData || !dbData) {
+            throw new Error('UI data or DB data not found in context. Ensure capture and DB query steps ran rust.');
+        }
+
+        if (uiData.scatteredMmteName?.trim() !== dbData.scatteredMmteName?.trim()) {
+            throw new Error(`Scattered Mmte Name mismatch. UI: '${uiData.scatteredMmteName}', DB: '${dbData.scatteredMmteName}'`);
+        }
+        if (uiData.cumulativeMmteName?.trim() !== dbData.cumulativeMmteName?.trim()) {
+            throw new Error(`Cumulative Mmte Name mismatch. UI: '${uiData.cumulativeMmteName}', DB: '${dbData.cumulativeMmteName}'`);
+        }
+
+        Tsreporter.pass('Eeeee mmte search results match database record');
+    }
+
+    @TSBDDStepDef('Eeeee Mmte total items count should match database count')
+    async verifyEeeeeMmteTotalItemsMatchDBCount(): Promise<void> {
+        Tsreporter.info('Verifying Eeeee Mmte total items count matches database count');
+        const uiCount = await this.eeeeeMmtesPage.getTotalItemsCount();
+        const dbCount = await TTTFEeeeeMmteDatabaseHelper.getEeeeeMmteCount();
+        if (uiCount !== dbCount) {
+            throw new Error(`Total items count mismatch. UI: ${uiCount}, DB: ${dbCount}`);
+        }
+        Tsreporter.pass(`Eeeee Mmte total items count matches database: ${uiCount}`);
     }
 
     // ===================================================================
-    // TABLE METHODS
+    // MR02 - FILTER: STEPS
     // ===================================================================
 
-    /**
-     * Verify Eeeee Scattered Mmtes table is present and visible
-     */
-    public async verifyEeeeeMmteTablePresent(): Promise<void> {
-        Tsreporter.info('Verifying Eeeee Scattered Mmtes table is present');
-        await this.eeeeeMmteTable.waitForVisible(15000);
-        Tsreporter.pass('Eeeee Scattered Mmtes table is present');
+    @TSBDDStepDef('I should see Filters button on Eeeee Mmte tab')
+    async verifyFiltersButtonOnEeeeeMmteTab(): Promise<void> {
+        await this.eeeeeMmtesPage.verifyFiltersButtonPresent();
     }
 
-    /**
-     * Check if no data available message is displayed
-     * @returns true if "No data available." message is visible
-     */
-    public async verifyNoDataAvailable(): Promise<boolean> {
-        return this.baseIsNoDataAvailable(this.noDataMessage);
+    @TSBDDStepDef('Filters should not be expanded by default on Eeeee Mmte tab')
+    async verifyFiltersNotExpandedOnEeeeeMmteTab(): Promise<void> {
+        await this.eeeeeMmtesPage.verifyFiltersNotExpandedByDefault();
     }
 
-    /**
-     * Get table cell value by row number and column number
-     * @param rowNum Row number (1-based)
-     * @param colNum Column number (1-based)
-     * @returns Cell text content
-     */
-    public async getEeeeeMmteTableCellValue(rowNum: number, colNum: number): Promise<string> {
-        return this.baseGetTableCellValue(rowNum, colNum);
+    @TSBDDStepDef('I click Filters button on Eeeee Mmte tab')
+    async clickFiltersButtonOnEeeeeMmteTab(): Promise<void> {
+        await this.eeeeeMmtesPage.clickFiltersButton();
     }
 
-    /**
-     * Get all column data for a specific row
-     * @param rowNum Row number (1-based)
-     * @returns Object with fieldName keys and cell value strings
-     */
-    public async getEeeeeMmteTableRowData(rowNum: number): Promise<Record<string, string>> {
-        return this.baseGetTableRowData(rowNum);
+    @TSBDDStepDef('Filters should be expanded on Eeeee Mmte tab')
+    async verifyFiltersExpandedOnEeeeeMmteTab(): Promise<void> {
+        await this.eeeeeMmtesPage.verifyFiltersExpanded();
     }
 
-    /**
-     * Get total number of visible rows (excluding child rows) in the eeeee mmte table
-     * @returns Row count
-     */
-    public async getEeeeeMmteTableRowCount(): Promise<number> {
-        return this.baseGetTableRowCount();
+    @TSBDDStepDef('I should see Filter criteria header on Eeeee Mmte tab')
+    async verifyFilterCriteriaHeaderOnEeeeeMmteTab(): Promise<void> {
+        await this.eeeeeMmtesPage.verifyFilterCriteriaPresent();
     }
 
-    /**
-     * Get all visible eeeee mmte table rows data keyed by scatteredMmteName
-     * @returns Map with scatteredMmteName as key and row data record as value
-     */
-    public async getAllEeeeeMmteTableRowsData(): Promise<Map<string, Record<string, string>>> {
-        const allData = await this.baseGetAllTableData();
-        const allRowsData = new Map<string, Record<string, string>>();
+    @TSBDDStepDef('I should see Cumulative Mmte dropdown on Eeeee Mmte filter')
+    async verifyCumulativeMmteDropdownOnEeeeeMmteFilter(): Promise<void> {
+        await this.eeeeeMmtesPage.verifyCumulativeMmteDropdownPresent();
+    }
 
-        for (const rowData of allData) {
-            const refMmteName = rowData.scatteredMmteName;
-            if (refMmteName) {
-                allRowsData.set(refMmteName, rowData);
-            } else {
-                Tsreporter.warn('Row has no scattered mmte name');
+    @TSBDDStepDef('Cumulative Mmte dropdown should show Select by default on Eeeee Mmte filter')
+    async verifyCumulativeMmteDefaultOnEeeeeMmteFilter(): Promise<void> {
+        await this.eeeeeMmtesPage.verifyCumulativeMmteDefaultSelect();
+    }
+
+    @TSBDDStepDef('I click Cumulative Mmte dropdown on Eeeee Mmte filter')
+    async clickCumulativeMmteDropdownOnEeeeeMmteFilter(): Promise<void> {
+        await this.eeeeeMmtesPage.clickCumulativeMmteDropdown();
+    }
+
+    @TSBDDStepDef('I should see Cumulative Mmte dropdown list on Eeeee Mmte filter')
+    async verifyCumulativeMmteDropdownListOnEeeeeMmteFilter(): Promise<void> {
+        await this.eeeeeMmtesPage.verifyCumulativeMmteDropdownListVisible();
+    }
+
+    @TSBDDStepDef('I get all active cumulative mmte names from database')
+    async getAllActiveCumulativeMmteNamesFromDB(): Promise<void> {
+        Tsreporter.info('Getting all active cumulative mmte names from database');
+        const names = await TTTFEeeeeMmteDatabaseHelper.getAllActiveCumulativeMmteNames();
+        this.scenarioContext.setVariable('dbActiveCumulativeMmteNames', names);
+        Tsreporter.pass(`Retrieved ${names.length} active cumulative mmte names from database`);
+    }
+
+    @TSBDDStepDef('Cumulative Mmte dropdown options should match database on Eeeee Mmte filter')
+    async verifyCumulativeMmteDropdownOptionsMatchDB(): Promise<void> {
+        Tsreporter.info('Verifying Cumulative Mmte dropdown options match database');
+        const dbNames = this.scenarioContext.getVariable<string[]>('dbActiveCumulativeMmteNames');
+        if (!dbNames || dbNames.length === 0) {
+            throw new Error('No database cumulative mmte names found in context');
+        }
+        await this.eeeeeMmtesPage.verifyCumulativeMmteDropdownOptions(dbNames);
+        Tsreporter.pass('Cumulative Mmte dropdown options match database');
+    }
+
+    @TSBDDStepDef('I resolve cumulative mmte name for eeeee mmte filter if not provided {string}')
+    async resolveCumulativeMmteForEeeeeMmteFilter(cumulativeMmteName: string): Promise<void> {
+        Tsreporter.info(`Resolving cumulative mmte name for eeeee mmte filter: ${cumulativeMmteName}`);
+        let resolvedName = CSValueResolver.resolve(cumulativeMmteName, this.scenarioContext);
+
+        if (!resolvedName || resolvedName === 'dynamic' || resolvedName === '') {
+            Tsreporter.info('Dynamic fvvvvv - fetching random cumulative mmte with eeeee mmtes from database');
+            resolvedName = await TTTFEeeeeMmteDatabaseHelper.getRandomCumulativeMmteWithEeeeeMmtes();
+        }
+
+        this.scenarioContext.setVariable('cumulativeMmteName', resolvedName);
+        Tsreporter.pass(`Resolved cumulative mmte name for filter: ${resolvedName}`);
+    }
+
+    @TSBDDStepDef('I select cumulative mmte {string} from Eeeee Mmte filter dropdown')
+    async selectCumulativeMmteFromEeeeeMmteFilter(cumulativeMmteName: string): Promise<void> {
+        const resolvedName = CSValueResolver.resolve(cumulativeMmteName, this.scenarioContext);
+        await this.eeeeeMmtesPage.selectCumulativeMmte(resolvedName);
+    }
+
+    @TSBDDStepDef('Cumulative Mmte {string} should be selected on Eeeee Mmte filter')
+    async verifyCumulativeMmteSelectedOnEeeeeMmteFilter(cumulativeMmteName: string): Promise<void> {
+        const resolvedName = CSValueResolver.resolve(cumulativeMmteName, this.scenarioContext);
+        await this.eeeeeMmtesPage.verifyCumulativeMmteSelected(resolvedName);
+    }
+
+    @TSBDDStepDef('Reset Filters button should be present and enabled on Eeeee Mmte filter')
+    async verifyResetFiltersButtonEnabledOnEeeeeMmteFilter(): Promise<void> {
+        await this.eeeeeMmtesPage.verifyResetFiltersEnabled();
+    }
+
+    @TSBDDStepDef('Apply button should be present and enabled on Eeeee Mmte filter')
+    async verifyApplyButtonEnabledOnEeeeeMmteFilter(): Promise<void> {
+        await this.eeeeeMmtesPage.verifyApplyFilterEnabled();
+    }
+
+    @TSBDDStepDef('Cancel button should be present and enabled on Eeeee Mmte filter')
+    async verifyCancelButtonEnabledOnEeeeeMmteFilter(): Promise<void> {
+        await this.eeeeeMmtesPage.verifyCancelFilterEnabled();
+    }
+
+    @TSBDDStepDef('I click Apply button on Eeeee Mmte filter')
+    async clickApplyButtonOnEeeeeMmteFilter(): Promise<void> {
+        await this.eeeeeMmtesPage.clickApplyFilters();
+    }
+
+    @TSBDDStepDef('Filter criteria section should be collapsed on Eeeee Mmte tab')
+    async verifyFilterCriteriaSectionCollapsedOnEeeeeMmteTab(): Promise<void> {
+        await this.eeeeeMmtesPage.verifyFilterCriteriaSectionCollapsed();
+    }
+
+    @TSBDDStepDef('I should see Filters Applied button on Eeeee Mmte tab')
+    async verifyFiltersAppliedButtonOnEeeeeMmteTab(): Promise<void> {
+        await this.eeeeeMmtesPage.verifyFiltersAppliedButton();
+    }
+
+    @TSBDDStepDef('I get eeeee mmtes filtered by cumulative mmte {string} from database')
+    async getEeeeeMmtesFilteredByCumulativeMmte(cumulativeMmteName: string): Promise<void> {
+        const resolvedName = CSValueResolver.resolve(cumulativeMmteName, this.scenarioContext);
+        Tsreporter.info(`Getting eeeee mmtes filtered by cumulative mmte: ${resolvedName}`);
+        const mmtes = await TTTFEeeeeMmteDatabaseHelper.getEeeeeMmtesByCumulativeMmte(resolvedName);
+        this.scenarioContext.setVariable('dbFilteredEeeeeMmtes', mmtes);
+        this.scenarioContext.setVariable('dbFilteredEeeeeMmteCount', mmtes.length);
+        Tsreporter.pass(`Retrieved ${mmtes.length} filtered eeeee mmtes from database`);
+    }
+
+    @TSBDDStepDef('Eeeee Mmte filtered results count should match database count')
+    async verifyEeeeeMmteFilteredCountMatchesDB(): Promise<void> {
+        Tsreporter.info('Verifying Eeeee Mmte filtered results count matches database');
+        const uiCount = await this.eeeeeMmtesPage.getTotalItemsCount();
+        const dbCount = this.scenarioContext.getVariable<number>('dbFilteredEeeeeMmteCount');
+        if (uiCount !== dbCount) {
+            throw new Error(`Filtered count mismatch. UI: ${uiCount}, DB: ${dbCount}`);
+        }
+        Tsreporter.pass(`Filtered results count matches: ${uiCount}`);
+    }
+
+    @TSBDDStepDef('Eeeee Mmte filtered table rows should match database records')
+    async verifyEeeeeMmteFilteredRowsMatchDB(): Promise<void> {
+        Tsreporter.info('Verifying Eeeee Mmte filtered table rows match database records');
+        const dbMmtes = this.scenarioContext.getVariable<any[]>('dbFilteredEeeeeMmtes');
+        if (!dbMmtes || dbMmtes.length === 0) {
+            throw new Error('No filtered DB data found in context');
+        }
+
+        const uiRowsMap = await this.eeeeeMmtesPage.getAllEeeeeMmteTableRowsData();
+        let mismatches = 0;
+
+        for (const dbMmte of dbMmtes) {
+            const uiRow = uiRowsMap.get(dbMmte.scatteredMmteName);
+            if (!uiRow) {
+                Tsreporter.warn(`DB mmte '${dbMmte.scatteredMmteName}' not found in UI (may be on another page)`);
+                continue;
+            }
+            if (uiRow.cumulativeMmteName?.trim() !== dbMmte.cumulativeMmteName?.trim()) {
+                Tsreporter.fail(`Cumulative Mmte mismatch for '${dbMmte.scatteredMmteName}'. UI: '${uiRow.cumulativeMmteName}', DB: '${dbMmte.cumulativeMmteName}'`);
+                mismatches++;
             }
         }
 
-        Tsreporter.pass(`Captured ${allRowsData.size} rows from Eeeee Scattered Mmtes table`);
-        return allRowsData;
+        if (mismatches > 0) {
+            throw new Error(`${mismatches} row mismatches found between UI and database`);
+        }
+        Tsreporter.pass('Eeeee Mmte filtered table rows match database records');
     }
 
-    /**
-     * Click on Scattered Mmte Name link in the eeeee mmte table to navigate to details
-     * @param scatteredMmteName The name of the scattered mmte to click
-     */
-    public async clickEeeeeMmteNameLink(scatteredMmteName: string): Promise<void> {
-        Tsreporter.info(`Clicking Eeeee Mmte Name link: ${scatteredMmteName}`);
-        const xpath = `//div[@class="sssss-tab__pane-content--active"]//table[contains(@class, "sssss-table")]//tbody/tr/td[1]//span[@class='sssss-button__label' and text()='${scatteredMmteName}']/parent::a[1]`;
-        const link = CSElementFactory.createByXPath(xpath, `Eeeee Mmte Name link: ${scatteredMmteName}`, this.page);
-        await link.waitForVisible(10000);
-        await link.clickWithTimeout(10000);
-        await this.waitForPageLoad();
-        Tsreporter.pass(`Clicked Eeeee Mmte Name link: ${scatteredMmteName}`);
+    @TSBDDStepDef('I expand Filters Applied section on Eeeee Mmte tab if collapsed')
+    async expandFiltersAppliedSectionIfCollapsed(): Promise<void> {
+        await this.eeeeeMmtesPage.expandFiltersIfCollapsed();
+    }
+
+    @TSBDDStepDef('I click Reset Filters button on Eeeee Mmte filter')
+    async clickResetFiltersButtonOnEeeeeMmteFilter(): Promise<void> {
+        await this.eeeeeMmtesPage.clickResetFilters();
+    }
+
+    @TSBDDStepDef('Reset Filters button should be disabled on Eeeee Mmte filter')
+    async verifyResetFiltersButtonDisabledOnEeeeeMmteFilter(): Promise<void> {
+        await this.eeeeeMmtesPage.verifyResetFiltersDisabled();
     }
 
     // ===================================================================
-    // SEARCH METHODS
+    // MR03 - SORTING: STEPS
     // ===================================================================
 
-    /**
-     * Click Reset search button to clear previous search
-     */
-    public async resetSearch(): Promise<void> {
-        Tsreporter.info('Clicking Reset search button');
-        await this.resetSearchButton.waitForVisible(10000);
-        await this.resetSearchButton.clickWithTimeout(10000);
-        await this.waitForPageLoad();
-        Tsreporter.pass('Clicked Reset search button');
+    @TSBDDStepDef('Scattered Mmte Name column should have no sorting applied on Eeeee Mmte tab')
+    async verifyRefMmteNameNoSortingOnEeeeeMmteTab(): Promise<void> {
+        Tsreporter.info('Verifying Scattered Mmte Name column has no sorting applied');
+        const sortValue = await this.eeeeeMmtesPage.getColumnSortAttribute(1);
+        if (sortValue !== 'none' && sortValue !== '') {
+            throw new Error(`Scattered Mmte Name column should have no sorting but has: ${sortValue}`);
+        }
+        Tsreporter.pass('Scattered Mmte Name column has no sorting applied');
     }
 
-    /**
-     * Enter text in the Find By search input field
-     * @param text Search text to enter
-     */
-    public async enterSearchText(text: string): Promise<void> {
-        Tsreporter.info(`Entering search text: ${text}`);
-        await this.findByInput.waitForVisible(10000);
-        await this.findByInput.clear();
-        await this.findByInput.fillWithTimeout(text, 10000);
-        Tsreporter.pass(`Entered search text: ${text}`);
+    @TSBDDStepDef('I click Scattered Mmte Name column header on Eeeee Mmte tab')
+    async clickRefMmteNameColumnHeaderOnEeeeeMmteTab(): Promise<void> {
+        await this.eeeeeMmtesPage.clickColumnHeaderButton('Scattered Mmte Name');
     }
 
-    /**
-     * Click Go search button and wait for results to load
-     */
-    public async clickGoSearch(): Promise<void> {
-        Tsreporter.info('Clicking Go search button');
-        await this.goSearchButton.waitForVisible(10000);
-        await this.goSearchButton.clickWithTimeout(10000);
-        await this.waitForPageLoad();
-        await this.waitForLoaderToDisappear();
-        Tsreporter.pass('Clicked Go search button');
+    @TSBDDStepDef('Scattered Mmte Name column should be sorted descending on Eeeee Mmte tab')
+    async verifyRefMmteNameSortedDescOnEeeeeMmteTab(): Promise<void> {
+        await this.eeeeeMmtesPage.verifyColumnSortDirection('Scattered Mmte Name', 'descending');
     }
 
-    /**
-     * Search for a eeeee scattered mmte by name
-     * Combines reset, entering text, and clicking Go
-     * @param name The eeeee scattered mmte name to search for
-     */
-    public async searchEeeeeMmte(name: string): Promise<void> {
-        Tsreporter.info(`Searching for eeeee scattered mmte: ${name}`);
-        await this.resetSearch();
-        await this.enterSearchText(name);
-        await this.clickGoSearch();
-        Tsreporter.pass(`Searched for eeeee scattered mmte: ${name}`);
+    @TSBDDStepDef('Scattered Mmte Name column should be sorted ascending on Eeeee Mmte tab')
+    async verifyRefMmteNameSortedAscOnEeeeeMmteTab(): Promise<void> {
+        await this.eeeeeMmtesPage.verifyColumnSortDirection('Scattered Mmte Name', 'ascending');
+    }
+
+    @TSBDDStepDef('Cumulative Mmte Name column should have no sorting applied on Eeeee Mmte tab')
+    async verifyExtMmteNameNoSortingOnEeeeeMmteTab(): Promise<void> {
+        Tsreporter.info('Verifying Cumulative Mmte Name column has no sorting applied');
+        const sortValue = await this.eeeeeMmtesPage.getColumnSortAttribute(2);
+        if (sortValue !== 'none' && sortValue !== '') {
+            throw new Error(`Cumulative Mmte Name column should have no sorting but has: ${sortValue}`);
+        }
+        Tsreporter.pass('Cumulative Mmte Name column has no sorting applied');
+    }
+
+    @TSBDDStepDef('I click Cumulative Mmte Name column header on Eeeee Mmte tab')
+    async clickExtMmteNameColumnHeaderOnEeeeeMmteTab(): Promise<void> {
+        await this.eeeeeMmtesPage.clickColumnHeaderButton('Cumulative Mmte Name');
+    }
+
+    @TSBDDStepDef('Cumulative Mmte Name column should be sorted descending on Eeeee Mmte tab')
+    async verifyExtMmteNameSortedDescOnEeeeeMmteTab(): Promise<void> {
+        await this.eeeeeMmtesPage.verifyColumnSortDirection('Cumulative Mmte Name', 'descending');
+    }
+
+    @TSBDDStepDef('Cumulative Mmte Name column should be sorted ascending on Eeeee Mmte tab')
+    async verifyExtMmteNameSortedAscOnEeeeeMmteTab(): Promise<void> {
+        await this.eeeeeMmtesPage.verifyColumnSortDirection('Cumulative Mmte Name', 'ascending');
+    }
+
+    @TSBDDStepDef('I capture all Eeeee Mmte table rows data')
+    async captureAllEeeeeMmteTableRowsData(): Promise<void> {
+        Tsreporter.info('Capturing all Eeeee Mmte table rows data');
+        const allRowsMap = await this.eeeeeMmtesPage.getAllEeeeeMmteTableRowsData();
+        const allRows: Record<string, string>[] = [];
+        allRowsMap.forEach((value) => allRows.push(value));
+        this.scenarioContext.setVariable('capturedEeeeeMmteAllRows', allRows);
+        Tsreporter.pass(`Captured ${allRows.length} rows from Eeeee Mmte table`);
+    }
+
+    @TSBDDStepDef('Eeeee Mmte table should be sorted descending by {string}')
+    async verifyEeeeeMmteTableSortedDesc(fieldName: string): Promise<void> {
+        Tsreporter.info(`Verifying Eeeee Mmte table is sorted descending by ${fieldName}`);
+        const allRows = this.scenarioContext.getVariable<Record<string, string>[]>('capturedEeeeeMmteAllRows');
+        if (!allRows || allRows.length < 2) {
+            Tsreporter.warn('Less than 2 rows captured - skipping sort verification');
+            return;
+        }
+
+        for (let i = 0; i < allRows.length - 1; i++) {
+            const current = (allRows[i][fieldName] || '').toLowerCase();
+            const next = (allRows[i + 1][fieldName] || '').toLowerCase();
+            if (current < next) {
+                throw new Error(`Sort order violation at row ${i + 1}: '${current}' < '${next}' (expected descending)`);
+            }
+        }
+        Tsreporter.pass(`Eeeee Mmte table is sorted descending by ${fieldName}`);
+    }
+
+    @TSBDDStepDef('Eeeee Mmte table should be sorted ascending by {string}')
+    async verifyEeeeeMmteTableSortedAsc(fieldName: string): Promise<void> {
+        Tsreporter.info(`Verifying Eeeee Mmte table is sorted ascending by ${fieldName}`);
+        const allRows = this.scenarioContext.getVariable<Record<string, string>[]>('capturedEeeeeMmteAllRows');
+        if (!allRows || allRows.length < 2) {
+            Tsreporter.warn('Less than 2 rows captured - skipping sort verification');
+            return;
+        }
+
+        for (let i = 0; i < allRows.length - 1; i++) {
+            const current = (allRows[i][fieldName] || '').toLowerCase();
+            const next = (allRows[i + 1][fieldName] || '').toLowerCase();
+            if (current > next) {
+                throw new Error(`Sort order violation at row ${i + 1}: '${current}' > '${next}' (expected ascending)`);
+            }
+        }
+        Tsreporter.pass(`Eeeee Mmte table is sorted ascending by ${fieldName}`);
     }
 
     // ===================================================================
-    // FILTER METHODS
+    // MR04 - CREATE: TEST DATA PREPARATION
     // ===================================================================
 
-    /**
-     * Verify Filters button is present
-     */
-    public async verifyFiltersButtonPresent(): Promise<void> {
-        Tsreporter.info('Verifying Filters button is present');
-        await this.filtersButton.waitForVisible(10000);
-        Tsreporter.pass('Filters button is present');
-    }
+    @TSBDDStepDef('I resolve eeeee mmte create test data {string} {string} {string} {string}')
+    async resolveEeeeeMmteCreateTestData(dynamicFvvvvv: string, cumulativeMmteName: string, ffxDate: string, mmte: string): Promise<void> {
+        Tsreporter.info('Resolving eeeee mmte create test data');
+        let resolvedCumulativeMmte = CSValueResolver.resolve(cumulativeMmteName, this.scenarioContext);
+        const resolvedFfxDate = CSValueResolver.resolve(ffxDate, this.scenarioContext);
+        const resolvedMmte = CSValueResolver.resolve(mmte, this.scenarioContext);
 
-    /**
-     * Verify Cumulative Mmte dropdown is present
-     */
-    public async verifyCumulativeMmteDropdownPresent(): Promise<void> {
-        Tsreporter.info('Verifying Cumulative Mmte dropdown is present');
-        await this.cumulativeMmteDropdownButton.waitForVisible(10000);
-        Tsreporter.pass('Cumulative Mmte dropdown is present');
-    }
-
-    /**
-     * Verify Reset Filters button is present and enabled
-     */
-    public async verifyResetFiltersEnabled(): Promise<void> {
-        Tsreporter.info('Verifying Reset Filters button is present and enabled');
-        await this.resetFilterButton.waitForVisible(10000);
-        const isEnabled = await this.resetFilterButton.isEnabledWithTimeout(5000);
-        if (!isEnabled) {
-            throw new Error('Reset Filters button is not enabled');
-        }
-        Tsreporter.pass('Reset Filters button is present and enabled');
-    }
-
-    /**
-     * Verify Export button is present and enabled
-     */
-    public async verifyExportButtonEnabled(): Promise<void> {
-        Tsreporter.info('Verifying Export button is present and enabled');
-        await this.exportButton.waitForVisible(10000);
-        const isEnabled = await this.exportButton.isEnabledWithTimeout(5000);
-        if (!isEnabled) {
-            throw new Error('Export button is not enabled');
-        }
-        Tsreporter.pass('Export button is present and enabled');
-    }
-
-    /**
-     * Verify Filters button is present and not expanded by default
-     */
-    public async verifyFiltersNotExpandedByDefault(): Promise<void> {
-        Tsreporter.info('Verifying Filters area is not expanded by default');
-        await this.filtersButton.waitForVisible(10000);
-        const ariaExpanded = await this.filtersButton.getAttributeWithTimeout('aria-expanded', 5000);
-        if (ariaExpanded !== 'false') {
-            throw new Error('Filters area is unexpectedly expanded');
-        }
-        Tsreporter.pass('Filters area is not expanded by default');
-    }
-
-    /**
-     * Click Filters button to expand/collapse filters panel
-     */
-    public async clickFiltersButton(): Promise<void> {
-        Tsreporter.info('Clicking Filters button');
-        await this.filtersButton.waitForVisible(10000);
-        await this.filtersButton.clickWithTimeout(10000);
-        await this.waitForPageLoad();
-        Tsreporter.pass('Clicked Filters button');
-    }
-
-    /**
-     * Verify Filter criteria header is present (when filters are expanded)
-     */
-    public async verifyFilterCriteriaPresent(): Promise<void> {
-        Tsreporter.info('Verifying Filter criteria header is present');
-        await this.filterCriteriaHeader.waitForVisible(10000);
-        Tsreporter.pass('Filter criteria header is present');
-    }
-
-    /**
-     * Verify Filter criteria section is collapsed (header not visible)
-     */
-    public async verifyFilterCriteriaSectionCollapsed(): Promise<void> {
-        Tsreporter.info('Verifying Filter criteria section is collapsed');
-        const isVisible = await this.filterCriteriaHeader.isVisibleWithTimeout(3000);
-        if (isVisible) {
-            throw new Error('Filter criteria section is unexpectedly visible (should be collapsed)');
-        }
-        Tsreporter.pass('Filter criteria section is collapsed');
-    }
-
-    /**
-     * Verify Cumulative Mmte dropdown default selection is "Select"
-     */
-    public async verifyCumulativeMmteDefaultSelect(): Promise<void> {
-        Tsreporter.info('Verifying Cumulative Mmte dropdown default is Select');
-        await this.cumulativeMmteDropdownLabel.waitForVisible(10000);
-        const text = await this.cumulativeMmteDropdownLabel.textContentWithTimeout(5000);
-        if (text?.trim() !== 'Select') {
-            throw new Error(`Cumulative Mmte dropdown default should be 'Select' but was '${text?.trim()}'`);
-        }
-        Tsreporter.pass('Cumulative Mmte dropdown default is Select');
-    }
-
-    /**
-     * Click Cumulative Mmte dropdown to open the options list
-     */
-    public async clickCumulativeMmteDropdown(): Promise<void> {
-        Tsreporter.info('Clicking Cumulative Mmte dropdown');
-        await this.cumulativeMmteDropdownButton.waitForVisible(10000);
-        await this.cumulativeMmteDropdownButton.clickWithTimeout(10000);
-        Tsreporter.pass('Clicked Cumulative Mmte dropdown');
-    }
-
-    /**
-     * Verify Cumulative Mmte dropdown list is visible (balloon is open)
-     */
-    public async verifyCumulativeMmteDropdownListVisible(): Promise<void> {
-        Tsreporter.info('Verifying Cumulative Mmte dropdown list is visible');
-        const listElement = CSElementFactory.createByXPath(
-            `//div[contains(@class, 'sssss-balloon') and @name='cumulativeMmte']//ul[@role='listbox']`,
-            'Cumulative Mmte dropdown list',
-            this.page
-        );
-        await listElement.waitForVisible(10000);
-        Tsreporter.pass('Cumulative Mmte dropdown list is visible');
-    }
-
-    /**
-     * Verify each expected option is present in the Cumulative Mmte dropdown list
-     * @param expectedOptions Array of expected option labels
-     */
-    public async verifyCumulativeMmteDropdownOptions(expectedOptions: string[]): Promise<void> {
-        Tsreporter.info('Verifying Cumulative Mmte dropdown options');
-
-        for (const option of expectedOptions) {
-            const optionElement = CSElementFactory.createByXPath(
-                `//div[contains(@class, 'sssss-balloon') and @name='cumulativeMmte']//ul[@role='listbox']//li[@role='option']//span[contains(@class, 'sssss-menu-item__label')]//span[text()='${option}']`,
-                `Cumulative Mmte option: ${option}`,
-                this.page
-            );
-            await optionElement.waitForVisible(10000);
-            Tsreporter.debug(`Option '${option}' is present`);
+        if (dynamicFvvvvv === 'Yes' || !resolvedCumulativeMmte || resolvedCumulativeMmte === '') {
+            Tsreporter.info('Dynamic fvvvvv - fetching random active cumulative mmte from database');
+            resolvedCumulativeMmte = await TTTFEeeeeMmteDatabaseHelper.getRandomActiveCumulativeMmte();
         }
 
-        Tsreporter.pass(`All ${expectedOptions.length} Cumulative Mmte dropdown options verified`);
+        this.scenarioContext.setVariable('CumulativeMmteName', resolvedCumulativeMmte);
+        this.scenarioContext.setVariable('FFXDate', resolvedFfxDate);
+        this.scenarioContext.setVariable('Mmte', resolvedMmte);
+        Tsreporter.pass(`Resolved create test data: cumulativeMmte=${resolvedCumulativeMmte}, ffxDate=${resolvedFfxDate}, mmte=${resolvedMmte}`);
     }
 
-    /**
-     * Select an Cumulative Mmte from the dropdown list
-     * @param cumulativeMmteName The cumulative mmte name to select
-     */
-    public async selectCumulativeMmte(cumulativeMmteName: string): Promise<void> {
-        return this.baseSelectCumulativeMmte(cumulativeMmteName);
+    // ===================================================================
+    // MR04 - CREATE: FORM STEPS
+    // ===================================================================
+
+    @TSBDDStepDef('I wait for loader to disappear')
+    async waitForLoaderToDisappear(): Promise<void> {
+        await this.eeeeeMmtesPage.waitForLoaderToDisappear();
     }
 
-    /**
-     * Verify that the specified Cumulative Mmte is currently selected
-     * @param cumulativeMmteName The cumulative mmte name to verify
-     */
-    public async verifyCumulativeMmteSelected(cumulativeMmteName: string): Promise<void> {
-        Tsreporter.info(`Verifying Cumulative Mmte selected: ${cumulativeMmteName}`);
-        const isSelected = await this.baseVerifyCumulativeMmteSelected(cumulativeMmteName);
+    // NOTE: 'I click Add Scattered Mmtes button' is defined in tttf-scattered-mmtes.steps.ts (circle 111)
+
+    @TSBDDStepDef('Add Scattered Mmtes button should be present and enabled')
+    async verifyAddRefMmtesButtonPresentAndEnabled(): Promise<void> {
+        await this.scatteredMmtesPage.verifyAddScatteredMmtesButtonEnabled();
+    }
+
+    @TSBDDStepDef('I should see Add Scattered Mmte form header')
+    async verifyAddScatteredMmteFormHeader(): Promise<void> {
+        await this.addScatteredMmtePage.verifyPageHeader();
+    }
+
+    @TSBDDStepDef('I select Cumulative Scattered {string} from Add form dropdown')
+    async selectCumulativeScatteredFromAddFormDropdown(cumulativeMmteName: string): Promise<void> {
+        const resolvedName = CSValueResolver.resolve(cumulativeMmteName, this.scenarioContext);
+        await this.addScatteredMmtePage.selectCumulativeScattered(resolvedName);
+    }
+
+    @TSBDDStepDef('Cumulative Scattered {string} should be selected on Add form')
+    async verifyCumulativeScatteredSelectedOnAddForm(cumulativeMmteName: string): Promise<void> {
+        const resolvedName = CSValueResolver.resolve(cumulativeMmteName, this.scenarioContext);
+        await this.addScatteredMmtePage.verifyCumulativeScatteredSelected(resolvedName);
+    }
+
+    @TSBDDStepDef('I get new eeeee scattered mmte name from database for cumulative mmte {string}')
+    async getNewEeeeeMmteNameFromDB(cumulativeMmteName: string): Promise<void> {
+        const resolvedName = CSValueResolver.resolve(cumulativeMmteName, this.scenarioContext);
+        Tsreporter.info(`Getting new eeeee scattered mmte name from database for: ${resolvedName}`);
+        const newName = await TTTFEeeeeMmteDatabaseHelper.getNewEeeeeScatteredMmteName(resolvedName);
+        this.scenarioContext.setVariable('dbNewReferencMmteName', newName);
+        this.scenarioContext.setVariable('ReferencMmteName', newName);
+        Tsreporter.pass(`New eeeee scattered mmte name from database: ${newName}`);
+    }
+
+    @TSBDDStepDef('Scattered Mmte Name on Add form should match database value')
+    async verifyRefMmteNameOnAddFormMatchesDB(): Promise<void> {
+        Tsreporter.info('Verifying Scattered Mmte Name on Add form matches database value');
+        const dbName = this.scenarioContext.getVariable<string>('dbNewReferencMmteName');
+        if (!dbName) {
+            throw new Error('No database scattered mmte name found in context');
+        }
+
+        const uiName = await this.addScatteredMmtePage.getScatteredMmteName();
+
+        if (uiName?.trim() !== dbName.trim()) {
+            throw new Error(`Scattered Mmte Name mismatch. UI: '${uiName?.trim()}', DB: '${dbName.trim()}'`);
+        }
+        Tsreporter.pass(`Scattered Mmte Name on Add form matches database: ${dbName}`);
+    }
+
+    @TSBDDStepDef('System Calculated radio button should be present and selected by default')
+    async verifySystemCalculatedRadioSelectedByDefault(): Promise<void> {
+        const isSelected = await this.addScatteredMmtePage.verifySystemCalculatedSelectedByDefault();
         if (!isSelected) {
-            throw new Error(`Cumulative Mmte '${cumulativeMmteName}' is not selected`);
+            throw new Error('System Calculated radio is not selected by default');
         }
-        Tsreporter.pass(`Cumulative Mmte selected: ${cumulativeMmteName}`);
     }
 
-    /**
-     * Click Apply Filters button and wait for table to reload
-     */
-    public async clickApplyFilters(): Promise<void> {
-        return this.baseClickApplyFilters(this.loadingIndicator);
+    @TSBDDStepDef('I select Eeeee radio button')
+    async selectEeeeeRadioButton(): Promise<void> {
+        await this.addScatteredMmtePage.selectEeeee();
     }
 
-    /**
-     * Click Reset Filters button and wait for table to reload
-     */
-    public async clickResetFilters(): Promise<void> {
-        return this.baseClickResetFilters(this.loadingIndicator);
+    // NOTE: 'Eeeee radio button should be selected' is defined in tttf-scattered-mmtes.steps.ts (circle 1751)
+
+    @TSBDDStepDef('Save button should be present and enabled on Add form')
+    async verifySaveButtonPresentAndEnabledOnAddForm(): Promise<void> {
+        await this.addScatteredMmtePage.verifySaveButtonEnabled();
     }
 
-    /**
-     * Click Cancel Filters button to close the filter panel without applying
-     */
-    public async clickCancelFilters(): Promise<void> {
-        Tsreporter.info('Clicking Cancel Filters button');
-        await this.cancelFilterButton.waitForVisible(10000);
-        await this.cancelFilterButton.clickWithTimeout(10000);
-        Tsreporter.pass('Clicked Cancel Filters button');
-    }
-
-    /**
-     * Verify Reset Filters button is disabled
-     */
-    public async verifyResetFiltersDisabled(): Promise<void> {
-        Tsreporter.info('Verifying Reset Filters button is disabled');
-        const isEnabled = await this.resetFilterButton.isEnabledWithTimeout(5000);
-        if (isEnabled) {
-            throw new Error('Reset Filters button should be disabled');
-        }
-        Tsreporter.pass('Reset Filters button is disabled');
-    }
-
-    /**
-     * Verify Apply Filter button is enabled
-     */
-    public async verifyApplyFilterEnabled(): Promise<void> {
-        Tsreporter.info('Verifying Apply Filter button is enabled');
-        await this.applyFilterButton.waitForVisible(10000);
-        const isEnabled = await this.applyFilterButton.isEnabledWithTimeout(5000);
-        if (!isEnabled) {
-            throw new Error('Apply Filter button should be enabled');
-        }
-        Tsreporter.pass('Apply Filter button is enabled');
-    }
-
-    /**
-     * Verify Cancel Filter button is enabled
-     */
-    public async verifyCancelFilterEnabled(): Promise<void> {
-        Tsreporter.info('Verifying Cancel Filter button is enabled');
-        await this.cancelFilterButton.waitForVisible(10000);
-        const isEnabled = await this.cancelFilterButton.isEnabledWithTimeout(5000);
-        if (!isEnabled) {
-            throw new Error('Cancel Filter button should be enabled');
-        }
-        Tsreporter.pass('Cancel Filter button is enabled');
-    }
-
-    /**
-     * Verify "Filters Applied" button is visible (shown after filters have been applied)
-     */
-    public async verifyFiltersAppliedButton(): Promise<void> {
-        Tsreporter.info('Verifying Filters Applied button is visible');
-        await this.filtersAppliedButton.waitForVisible(10000);
-        Tsreporter.pass('Filters Applied button is visible');
-    }
-
-    /**
-     * Get the expanded state of the Filters button (works with both Filters and Filters Applied)
-     * @returns true if the filters panel is expanded, false otherwise
-     */
-    public async getFiltersButtonExpandedState(): Promise<boolean> {
-        Tsreporter.info('Getting Filters button expanded state');
-
-        // Try Filters Applied button rust (after filters have been applied)
-        const filtersAppliedVisible = await this.filtersAppliedButton.isVisibleWithTimeout(2000);
-
-        if (filtersAppliedVisible) {
-            const ariaExpanded = await this.filtersAppliedButton.getAttributeWithTimeout('aria-expanded', 5000);
-            return ariaExpanded === 'true';
-        }
-
-        // Fall back to Filters button (before filters have been applied)
-        const filtersVisible = await this.filtersButton.isVisibleWithTimeout(2000);
-        if (filtersVisible) {
-            const ariaExpanded = await this.filtersButton.getAttributeWithTimeout('aria-expanded', 5000);
-            return ariaExpanded === 'true';
-        }
-
-        Tsreporter.warn('Neither Filters nor Filters Applied button found');
-        return false;
-    }
-
-    /**
-     * Expand filters panel if it is currently collapsed
-     */
-    public async expandFiltersIfCollapsed(): Promise<void> {
-        Tsreporter.info('Expanding Filters section if collapsed');
-        const isExpanded = await this.getFiltersButtonExpandedState();
-        if (!isExpanded) {
-            const filtersAppliedVisible = await this.filtersAppliedButton.isVisibleWithTimeout(2000);
-            if (filtersAppliedVisible) {
-                await this.filtersAppliedButton.clickWithTimeout(10000);
-            } else {
-                await this.filtersButton.clickWithTimeout(10000);
-            }
-        }
-        Tsreporter.pass('Filters section is expanded');
-    }
-
-    /**
-     * Verify Filters area is expanded
-     */
-    public async verifyFiltersExpanded(): Promise<void> {
-        Tsreporter.info('Verifying Filters are expanded');
-        const isExpanded = await this.getFiltersButtonExpandedState();
-        if (!isExpanded) {
-            throw new Error('Filters should be expanded but are not');
-        }
-        Tsreporter.pass('Filters are expanded');
+    @TSBDDStepDef('I click Save button on Add form')
+    async clickSaveButtonOnAddForm(): Promise<void> {
+        await this.addScatteredMmtePage.clickSaveButton();
     }
 
     // ===================================================================
-    // SORTING METHODS
+    // MR04 - CREATE: DETAILS PAGE VERIFICATION STEPS
     // ===================================================================
 
-    /**
-     * Get the aria-sort attribute value from a column header by column number
-     * @param colNum Column number (1-based)
-     * @returns The aria-sort attribute value (e.g., 'ascending', 'descending', 'none')
-     */
-    public async getColumnSortAttribute(colNum: number): Promise<string> {
-        Tsreporter.info(`Getting sort attribute for column ${colNum}`);
-        const xpath = `//div[@class="sssss-tab__pane-content--active"]//table[contains(@class, "sssss-table")]//thead/tr[1]/th[${colNum}]`;
-        const thElement = CSElementFactory.createByXPath(xpath, `Table header th[${colNum}]`, this.page);
-        await thElement.waitForVisible(10000);
-        const ariaSortValue = await thElement.getAttributeWithTimeout('aria-sort', 5000);
-        const sortValue = ariaSortValue ?? 'none';
-        Tsreporter.debug(`Column ${colNum} aria-sort: ${sortValue}`);
-        return sortValue;
-    }
+    // NOTE: 'I should see Cumulative Mmte and Scattered Mmte Name section' is defined in tttf-scattered-mmtes.steps.ts (circle 4614)
+    // NOTE: 'Cumulative Mmte value should match {string}' is defined in tttf-scattered-mmtes.steps.ts (circle 4622)
 
-    /**
-     * Click a sortable column header button by header name
-     * @param headerName The visible text of the column header button
-     */
-    public async clickColumnHeaderButton(headerName: string): Promise<void> {
-        Tsreporter.info(`Clicking column header button: ${headerName}`);
-        const xpath = `//div[@class="sssss-tab__pane-content--active"]//table[contains(@class, "sssss-table")]//thead//button[text()='${headerName}']`;
-        const headerButton = CSElementFactory.createByXPath(xpath, `Column header button: ${headerName}`, this.page);
-        await headerButton.waitForVisible(10000);
-        await headerButton.clickWithTimeout(10000);
-        await this.waitForPageLoad();
-        await this.waitForLoaderToDisappear();
-        Tsreporter.pass(`Clicked column header button: ${headerName}`);
-    }
-
-    /**
-     * Verify the sort direction of a column by checking the aria-sort attribute on the parent th
-     * @param headerName The visible text of the column header
-     * @param direction Expected sort direction (e.g., 'ascending', 'descending')
-     */
-    public async verifyColumnSortDirection(headerName: string, direction: string): Promise<void> {
-        Tsreporter.info(`Verifying column '${headerName}' is sorted ${direction}`);
-        const xpath = `//div[@class="sssss-tab__pane-content--active"]//table[contains(@class, "sssss-table")]//thead//button[text()='${headerName}']/ancestor::th[1][@aria-sort='${direction}']`;
-        const thElement = CSElementFactory.createByXPath(xpath, `Column header th sorted ${direction}: ${headerName}`, this.page);
-        const isVisible = await thElement.isVisibleWithTimeout(10000);
-        if (!isVisible) {
-            throw new Error(`Column '${headerName}' is not sorted ${direction}`);
+    @TSBDDStepDef('Scattered Mmte Name value should match scenario context')
+    async verifyRefMmteNameValueMatchesScenarioContext(): Promise<void> {
+        const expectedName = this.scenarioContext.getVariable<string>('ReferencMmteName');
+        if (!expectedName) {
+            throw new Error('No ReferencMmteName found in scenario context');
         }
-        Tsreporter.pass(`Column '${headerName}' is sorted ${direction}`);
+        await this.scatteredMmteDetailsPage.verifyScatteredMmteName(expectedName);
+    }
+
+    @TSBDDStepDef('Current Mmte section should be present')
+    async verifyCurrentMmteSectionPresent(): Promise<void> {
+        await this.scatteredMmteDetailsPage.verifyCurrentMmteSectionPresent();
+    }
+
+    @TSBDDStepDef('Mmte percentage should display {string}')
+    async verifyMmtePercentageDisplays(expectedValue: string): Promise<void> {
+        await this.scatteredMmteDetailsPage.verifyMmtePercentValue(expectedValue);
+    }
+
+    @TSBDDStepDef('View Mmte History link should be present')
+    async verifyViewMmteHistoryLinkPresent(): Promise<void> {
+        await this.scatteredMmteDetailsPage.verifyViewMmteHistoryLinkPresent();
+    }
+
+    @TSBDDStepDef('Type of Scattered Mmte should be {string}')
+    async verifyTypeOfScatteredMmte(expectedType: string): Promise<void> {
+        Tsreporter.info(`Verifying Type of Scattered Mmte is: ${expectedType}`);
+        const actualType = await this.scatteredMmteDetailsPage.getMethodologyTypeValue();
+        if (actualType?.trim() !== expectedType) {
+            throw new Error(`Type of Scattered Mmte mismatch. Expected: '${expectedType}', Actual: '${actualType?.trim()}'`);
+        }
+        Tsreporter.pass(`Type of Scattered Mmte is: ${expectedType}`);
+    }
+
+    @TSBDDStepDef('Associated Zeal Premisis section should be present')
+    async verifyAssociatedZealPremisisSectionPresent(): Promise<void> {
+        await this.scatteredMmteDetailsPage.verifyAssociatedZealPremisisSectionPresent();
+    }
+
+    @TSBDDStepDef('Associated Zeal Premisis table should be present')
+    async verifyAssociatedZealPremisisTablePresent(): Promise<void> {
+        await this.scatteredMmteDetailsPage.verifyAssociatedZealPremisisTablePresent();
+    }
+
+    @TSBDDStepDef('Associated Zeal Premisis table should show No data available')
+    async verifyAssociatedZealPremisisTableNoData(): Promise<void> {
+        await this.scatteredMmteDetailsPage.verifyAssociatedZealPremisisNoData();
     }
 
     // ===================================================================
-    // PAGINATION METHODS
+    // MR04 - CREATE: DB VERIFICATION STEPS
     // ===================================================================
 
-    /**
-     * Get total items count from the paginator
-     * @returns Total items count as number
-     */
-    public async getTotalItemsCount(): Promise<number> {
-        return this.baseGetTotalItemsCount(this.paginatorTotalItems);
+    @TSBDDStepDef('I verify eeeee mmte in SCATTERED_MMTE table for {string}')
+    async verifyEeeeeMmteInScatteredMmteTable(scatteredMmteName: string): Promise<void> {
+        const resolvedName = CSValueResolver.resolve(scatteredMmteName, this.scenarioContext);
+        Tsreporter.info(`Verifying eeeee mmte in SCATTERED_MMTE table for: ${resolvedName}`);
+        const details = await TTTFEeeeeMmteDatabaseHelper.getEeeeeMmteBasicDetails(resolvedName);
+        if (!details) {
+            throw new Error(`Eeeee mmte not found in SCATTERED_MMTE table: ${resolvedName}`);
+        }
+        this.scenarioContext.setVariable('dbEeeeeMmteBasicDetails', details);
+        Tsreporter.pass(`Eeeee mmte found in SCATTERED_MMTE table: ${resolvedName}`);
     }
 
-    /**
-     * Verify total items count matches the expected count
-     * @param expectedCount Expected total items count
-     */
-    public async verifyTotalItemsCount(expectedCount: number): Promise<void> {
-        Tsreporter.info(`Verifying total items count matches: ${expectedCount}`);
-        const actualCount = await this.getTotalItemsCount();
-        if (actualCount === expectedCount) {
-            Tsreporter.pass(`Total items count matches: ${actualCount}`);
+    @TSBDDStepDef('I verify eeeee mmte has zero whools in SCATTERED_MMTE_WHOOL table for {string}')
+    async verifyEeeeeMmteHasZeroWhools(scatteredMmteName: string): Promise<void> {
+        const resolvedName = CSValueResolver.resolve(scatteredMmteName, this.scenarioContext);
+        Tsreporter.info(`Verifying zero whools for: ${resolvedName}`);
+        const whoolCount = await TTTFEeeeeMmteDatabaseHelper.getEeeeeMmteWhoolCount(resolvedName);
+        if (whoolCount !== 0) {
+            throw new Error(`Expected 0 whools for ${resolvedName}, but found ${whoolCount}`);
+        }
+        Tsreporter.pass(`Eeeee mmte has zero whools in SCATTERED_MMTE_WHOOL table: ${resolvedName}`);
+    }
+
+    @TSBDDStepDef('I verify eeeee mmte has no calc records in SCATTERED_MMTE_CALC table for {string}')
+    async verifyEeeeeMmteHasNoCalcRecords(scatteredMmteName: string): Promise<void> {
+        const resolvedName = CSValueResolver.resolve(scatteredMmteName, this.scenarioContext);
+        Tsreporter.info(`Verifying no calc records for: ${resolvedName}`);
+        const calcDetails = await TTTFEeeeeMmteDatabaseHelper.getEeeeeMmteCalcDetails(resolvedName);
+        if (calcDetails.length !== 0) {
+            throw new Error(`Expected 0 calc records for ${resolvedName}, but found ${calcDetails.length}`);
+        }
+        Tsreporter.pass(`Eeeee mmte has no calc records in SCATTERED_MMTE_CALC table: ${resolvedName}`);
+    }
+
+    @TSBDDStepDef('I verify eeeee mmte calc record exists in database for {string}')
+    async verifyEeeeeMmteCalcRecordExists(scatteredMmteName: string): Promise<void> {
+        const resolvedName = CSValueResolver.resolve(scatteredMmteName, this.scenarioContext);
+        Tsreporter.info(`Verifying calc record exists for: ${resolvedName}`);
+        const calcDetails = await TTTFEeeeeMmteDatabaseHelper.getEeeeeMmteCalcDetails(resolvedName);
+        if (calcDetails.length === 0) {
+            throw new Error(`No calc records found for ${resolvedName} after adding mmte`);
+        }
+        this.scenarioContext.setVariable('dbEeeeeMmteCalcDetails', calcDetails);
+        Tsreporter.pass(`Eeeee mmte calc record exists in database: ${resolvedName} (${calcDetails.length} records)`);
+    }
+
+    // ===================================================================
+    // MR04 - CREATE: MMTE HISTORY PAGE STEPS
+    // ===================================================================
+
+    @TSBDDStepDef('I click View Mmte History link')
+    async clickViewMmteHistoryLink(): Promise<void> {
+        await this.scatteredMmteDetailsPage.clickViewMmteHistoryLink();
+    }
+
+    @TSBDDStepDef('I should see Mmte History page header')
+    async verifyMmteHistoryPageHeader(): Promise<void> {
+        await this.mmteHistoryPage.verifyPageHeader();
+    }
+
+    @TSBDDStepDef('Search section should be present and expanded')
+    async verifySearchSectionPresentAndExpanded(): Promise<void> {
+        await this.mmteHistoryPage.verifySearchSectionPresentAndExpanded();
+    }
+
+    @TSBDDStepDef('Search Type dropdown should show Scattered Mmte Name')
+    async verifySearchTypeDropdownShowsRefMmteName(): Promise<void> {
+        await this.mmteHistoryPage.verifySearchTypeShowsScatteredMmteName();
+    }
+
+    @TSBDDStepDef('Scattered Mmte Name should be selected in Name dropdown')
+    async verifyRefMmteNameSelectedInNameDropdown(): Promise<void> {
+        const expectedName = this.scenarioContext.getVariable<string>('ReferencMmteName');
+        await this.mmteHistoryPage.verifyNameDropdownShowsMmteName(expectedName || '');
+    }
+
+    @TSBDDStepDef('Search button should be present and enabled on Mmte History')
+    async verifySearchButtonOnMmteHistory(): Promise<void> {
+        await this.mmteHistoryPage.verifySearchButtonEnabled();
+    }
+
+    @TSBDDStepDef('Add Mmte button should be present and enabled on Mmte History')
+    async verifyAddMmteButtonOnMmteHistory(): Promise<void> {
+        await this.mmteHistoryPage.verifyAddMmteButtonEnabled();
+    }
+
+    @TSBDDStepDef('Add Condition button should be present and enabled on Mmte History')
+    async verifyAddConditionButtonOnMmteHistory(): Promise<void> {
+        await this.mmteHistoryPage.verifyAddConditionButtonEnabled();
+    }
+
+    @TSBDDStepDef('Reset button should be present and enabled on Mmte History')
+    async verifyResetButtonOnMmteHistory(): Promise<void> {
+        await this.mmteHistoryPage.verifyResetButtonEnabled();
+    }
+
+    @TSBDDStepDef('Results section should be present')
+    async verifyResultsSectionPresent(): Promise<void> {
+        await this.mmteHistoryPage.verifyResultsSectionPresent();
+    }
+
+    @TSBDDStepDef('Displaying section should show correct Scattered Mmte Name')
+    async verifyDisplayingSectionShowsCorrectName(): Promise<void> {
+        const expectedName = this.scenarioContext.getVariable<string>('ReferencMmteName');
+        await this.mmteHistoryPage.verifyDisplayingMmteName(expectedName || '');
+    }
+
+    @TSBDDStepDef('Results table should be present on Mmte History')
+    async verifyResultsTableOnMmteHistory(): Promise<void> {
+        await this.mmteHistoryPage.verifyResultsTablePresent();
+    }
+
+    @TSBDDStepDef('Results table should show No data available on Mmte History')
+    async verifyResultsTableNoDataOnMmteHistory(): Promise<void> {
+        await this.mmteHistoryPage.verifyResultsTableNoData();
+    }
+
+    @TSBDDStepDef('Results table should not show No data available on Mmte History')
+    async verifyResultsTableHasDataOnMmteHistory(): Promise<void> {
+        await this.mmteHistoryPage.verifyResultsTableHasData();
+    }
+
+    // ===================================================================
+    // MR04 - CREATE: ADD MMTE POPUP STEPS
+    // ===================================================================
+
+    @TSBDDStepDef('I click Add Mmte button on Mmte History')
+    async clickAddMmteButtonOnMmteHistory(): Promise<void> {
+        await this.mmteHistoryPage.clickAddMmteButton();
+    }
+
+    @TSBDDStepDef('Add Scattered Mmte popup should be displayed')
+    async verifyAddScatteredMmtePopupDisplayed(): Promise<void> {
+        await this.mmteHistoryPage.verifyAddMmtePopupDisplayed();
+    }
+
+    @TSBDDStepDef('Scattered Mmte Name on popup should match scenario context')
+    async verifyRefMmteNameOnPopupMatchesContext(): Promise<void> {
+        const expectedName = this.scenarioContext.getVariable<string>('ReferencMmteName');
+        await this.mmteHistoryPage.verifyPopupMmteName(expectedName || '');
+    }
+
+    @TSBDDStepDef('FFX Date input should be present and enabled on popup')
+    async verifyFfxDateInputOnPopup(): Promise<void> {
+        await this.mmteHistoryPage.verifyFfxDateInputEnabled();
+    }
+
+    @TSBDDStepDef('Payment Cycle input should be present and disabled on popup')
+    async verifyPaymentCycleInputDisabledOnPopup(): Promise<void> {
+        await this.mmteHistoryPage.verifyPaymentCycleInputDisabled();
+    }
+
+    @TSBDDStepDef('Mmte input should be present and enabled on popup')
+    async verifyMmteInputOnPopup(): Promise<void> {
+        await this.mmteHistoryPage.verifyMmteInputEnabled();
+    }
+
+    @TSBDDStepDef('Mmte hint message should be displayed on popup')
+    async verifyMmteHintMessageOnPopup(): Promise<void> {
+        await this.mmteHistoryPage.verifyMmteHintMessageDisplayed();
+    }
+
+    @TSBDDStepDef('Save button should be present and enabled on popup')
+    async verifySaveButtonOnPopup(): Promise<void> {
+        await this.mmteHistoryPage.verifyPopupSaveButtonEnabled();
+    }
+
+    @TSBDDStepDef('Cancel button should be present and enabled on popup')
+    async verifyCancelButtonOnPopup(): Promise<void> {
+        await this.mmteHistoryPage.verifyPopupCancelButtonEnabled();
+    }
+
+    @TSBDDStepDef('I enter FFX Date {string} on popup')
+    async enterFfxDateOnPopup(ffxDate: string): Promise<void> {
+        const resolvedDate = CSValueResolver.resolve(ffxDate, this.scenarioContext);
+        await this.mmteHistoryPage.enterFfxDate(resolvedDate);
+    }
+
+    @TSBDDStepDef('I press Tab key and wait for Payment Cycle to auto populate')
+    async pressTabAndWaitForPaymentCycle(): Promise<void> {
+        await this.mmteHistoryPage.pressTabAndWaitForPaymentCycle();
+    }
+
+    @TSBDDStepDef('Payment Cycle should be auto calculated on popup')
+    async verifyPaymentCycleAutoCalculated(): Promise<void> {
+        const value = await this.mmteHistoryPage.getPaymentCycleValue();
+        if (!value || value.trim() === '') {
+            Tsreporter.warn('Payment Cycle has not been auto calculated yet');
         } else {
-            Tsreporter.fail(`Total items count mismatch: expected ${expectedCount}, actual ${actualCount}`);
-            throw new Error(`Total items count mismatch: expected ${expectedCount}, actual ${actualCount}`);
+            this.scenarioContext.setVariable('autoPaymentCycle', value.trim());
+            Tsreporter.pass(`Payment Cycle auto calculated: ${value.trim()}`);
         }
     }
 
-    // ===================================================================
-    // EXPORT METHODS
-    // ===================================================================
-
-    /**
-     * Click Export button to open export options
-     */
-    public async clickExportButton(): Promise<void> {
-        return this.baseClickExportButton(this.exportButton);
+    @TSBDDStepDef('I enter Mmte {string} on popup')
+    async enterMmteOnPopup(mmte: string): Promise<void> {
+        const resolvedMmte = CSValueResolver.resolve(mmte, this.scenarioContext);
+        await this.mmteHistoryPage.enterMmte(resolvedMmte);
     }
 
-    /**
-     * Verify Export options (CSV and XLSX) are present and enabled
-     */
-    public async verifyExportOptionsPresent(): Promise<void> {
-        Tsreporter.info('Verifying Export options are present');
-        const csvEnabled = await this.baseIsExportOptionEnabled('CSV');
-        const xlsxEnabled = await this.baseIsExportOptionEnabled('XLSX');
-        if (!csvEnabled || !xlsxEnabled) {
-            throw new Error('Export options (CSV, XLSX) are not all present');
+    @TSBDDStepDef('I click Save button on popup')
+    async clickSaveButtonOnPopup(): Promise<void> {
+        await this.mmteHistoryPage.clickPopupSaveButton();
+    }
+
+    @TSBDDStepDef('Add Scattered Mmte popup should be dismissed')
+    async verifyAddScatteredMmtePopupDismissed(): Promise<void> {
+        await this.mmteHistoryPage.verifyAddMmtePopupDismissed();
+    }
+
+    @TSBDDStepDef('Success message should be displayed for saved scattered mmte')
+    async verifySuccessMessageDisplayed(): Promise<void> {
+        await this.mmteHistoryPage.verifySuccessMessageDisplayed();
+    }
+
+    @TSBDDStepDef('Results table row 1 should display correct mmte data')
+    async verifyResultsTableRow1Data(): Promise<void> {
+        await this.mmteHistoryPage.verifyResultsTableHasData();
+    }
+
+    @TSBDDStepDef('Edit button should be present in Action column')
+    async verifyEditButtonInActionColumn(): Promise<void> {
+        await this.mmteHistoryPage.verifyEditButtonInActionColumn(1);
+    }
+
+    @TSBDDStepDef('Remove button should be present in Action column')
+    async verifyRemoveButtonInActionColumn(): Promise<void> {
+        await this.mmteHistoryPage.verifyRemoveButtonInActionColumn(1);
+    }
+
+    @TSBDDStepDef('Update Ffx button should be displayed')
+    async verifyUpdateFfxButtonDisplayed(): Promise<void> {
+        await this.mmteHistoryPage.verifyUpdateFfxButtonDisplayed();
+    }
+
+    @TSBDDStepDef('I click Scattered Mmte Name link in results table row 1')
+    async clickRefMmteNameLinkInResultsRow1(): Promise<void> {
+        await this.mmteHistoryPage.clickMmteNameLinkInResultsRow(1);
+    }
+
+    @TSBDDStepDef('Mmte percentage should display the newly added mmte')
+    async verifyMmtePercentageDisplaysNewlyAddedMmte(): Promise<void> {
+        Tsreporter.info('Verifying Mmte percentage displays the newly added mmte');
+        const mmteValue = await this.scatteredMmteDetailsPage.getMmtePercentValue();
+        if (mmteValue === 'N/A' || mmteValue === '') {
+            throw new Error('Mmte percentage still shows N/A after adding a mmte');
         }
-        Tsreporter.pass('Export options (CSV, XLSX) are present');
-    }
-
-    /**
-     * Verify CSV export option is enabled
-     */
-    public async verifyCSVOptionEnabled(): Promise<void> {
-        Tsreporter.info('Verifying CSV export option is enabled');
-        const isEnabled = await this.baseIsExportOptionEnabled('CSV');
-        if (!isEnabled) {
-            throw new Error('CSV export option is not enabled');
-        }
-        Tsreporter.pass('CSV export option is enabled');
-    }
-
-    /**
-     * Verify XLSX export option is enabled
-     */
-    public async verifyXLSXOptionEnabled(): Promise<void> {
-        Tsreporter.info('Verifying XLSX export option is enabled');
-        const isEnabled = await this.baseIsExportOptionEnabled('XLSX');
-        if (!isEnabled) {
-            throw new Error('XLSX export option is not enabled');
-        }
-        Tsreporter.pass('XLSX export option is enabled');
-    }
-
-    /**
-     * Click CSV export option
-     */
-    public async clickExportCSV(): Promise<void> {
-        return this.baseClickExportFormat('CSV');
-    }
-
-    /**
-     * Click XLSX export option
-     */
-    public async clickExportXLSX(): Promise<void> {
-        return this.baseClickExportFormat('XLSX');
-    }
-
-    /**
-     * Wait for export to complete (wait for "Exporting" text to disappear)
-     */
-    public async waitForExportComplete(): Promise<void> {
-        return this.baseWaitForExportComplete();
+        Tsreporter.pass(`Mmte percentage displays: ${mmteValue}`);
     }
 
     // ===================================================================
-    // COLUMN HEADER VERIFICATION
+    // MR05 - COPY: TEST DATA PREPARATION & STEPS
     // ===================================================================
 
-    /**
-     * Verify all Eeeee Scattered Mmtes table column headers
-     */
-    public async verifyEeeeeMmteTableHeaders(): Promise<void> {
-        return this.baseVerifyAllColumnHeaders(false);
+    @TSBDDStepDef('I resolve eeeee mmte copy test data {string} {string} {string}')
+    async resolveEeeeeMmteCopyTestData(dynamicFvvvvv: string, cumulativeMmteName: string, scatteredMmteName: string): Promise<void> {
+        Tsreporter.info('Resolving eeeee mmte copy test data');
+        let resolvedCumulativeMmte = CSValueResolver.resolve(cumulativeMmteName, this.scenarioContext);
+        let resolvedRefMmteName = CSValueResolver.resolve(scatteredMmteName, this.scenarioContext);
+
+        if (dynamicFvvvvv === 'Yes' || !resolvedRefMmteName || resolvedRefMmteName === '') {
+            Tsreporter.info('Dynamic fvvvvv - fetching random eeeee mmte for copy from database');
+            const mmteForCopy = await TTTFEeeeeMmteDatabaseHelper.getRandomEeeeeMmteForCopy();
+            resolvedRefMmteName = mmteForCopy.scatteredMmteName;
+            resolvedCumulativeMmte = mmteForCopy.cumulativeMmteName;
+        }
+
+        this.scenarioContext.setVariable('ExistingReferencMmte', resolvedRefMmteName);
+        this.scenarioContext.setVariable('CumulativeMmteName', resolvedCumulativeMmte);
+        Tsreporter.pass(`Resolved copy test data: refMmte=${resolvedRefMmteName}, cumulativeMmte=${resolvedCumulativeMmte}`);
+    }
+
+    @TSBDDStepDef('I click eeeee mmte name link {string} in table')
+    async clickEeeeeMmteNameLinkInTable(scatteredMmteName: string): Promise<void> {
+        const resolvedName = CSValueResolver.resolve(scatteredMmteName, this.scenarioContext);
+        await this.eeeeeMmtesPage.clickEeeeeMmteNameLink(resolvedName);
+    }
+
+    @TSBDDStepDef('Scattered Mmte Name on details page should match {string}')
+    async verifyRefMmteNameOnDetailsPageMatches(expectedName: string): Promise<void> {
+        const resolvedName = CSValueResolver.resolve(expectedName, this.scenarioContext);
+        await this.scatteredMmteDetailsPage.verifyScatteredMmteName(resolvedName);
+    }
+
+    @TSBDDStepDef('Copy button should be present and enabled on details page')
+    async verifyCopyButtonPresentAndEnabled(): Promise<void> {
+        await this.scatteredMmteDetailsPage.verifyCopyButtonEnabled();
+    }
+
+    // NOTE: 'I click Copy button on details page' is defined in tttf-scattered-mmtes.steps.ts (circle 1376)
+
+    @TSBDDStepDef('Cumulative Scattered on Add form should show {string}')
+    async verifyCumulativeScatteredOnAddFormShows(expectedValue: string): Promise<void> {
+        const resolvedValue = CSValueResolver.resolve(expectedValue, this.scenarioContext);
+        await this.addScatteredMmtePage.verifyCumulativeScatteredSelected(resolvedValue);
+    }
+
+    @TSBDDStepDef('I get new eeeee mmte name for copy from database for cumulative mmte {string}')
+    async getNewEeeeeMmteNameForCopy(cumulativeMmteName: string): Promise<void> {
+        const resolvedName = CSValueResolver.resolve(cumulativeMmteName, this.scenarioContext);
+        Tsreporter.info(`Getting new eeeee mmte name for copy for cumulative mmte: ${resolvedName}`);
+        const newName = await TTTFEeeeeMmteDatabaseHelper.getNewEeeeeMmteNameForCopy(resolvedName);
+        this.scenarioContext.setVariable('dbNewReferencMmteName', newName);
+        this.scenarioContext.setVariable('NewReferencMmteName', newName);
+        Tsreporter.pass(`New eeeee mmte name for copy: ${newName}`);
+    }
+
+    @TSBDDStepDef('New Scattered Mmte Name value should match scenario context')
+    async verifyNewRefMmteNameMatchesScenarioContext(): Promise<void> {
+        const expectedName = this.scenarioContext.getVariable<string>('NewReferencMmteName');
+        if (!expectedName) {
+            throw new Error('No NewReferencMmteName found in scenario context');
+        }
+        await this.scatteredMmteDetailsPage.verifyScatteredMmteName(expectedName);
+    }
+
+    // ===================================================================
+    // MR06 - EXPORT: EEEEE MMTES LIST STEPS
+    // ===================================================================
+
+    @TSBDDStepDef('I get all eeeee scattered mmtes for export from database')
+    async getAllEeeeeMmtesForExportFromDB(): Promise<void> {
+        Tsreporter.info('Getting all eeeee scattered mmtes for export from database');
+        const mmtes = await TTTFEeeeeMmteDatabaseHelper.getAllEeeeeMmtesForExport();
+        this.scenarioContext.setVariable('dbEeeeeMmtesExport', mmtes);
+        this.scenarioContext.setVariable('dbEeeeeMmtesExportCount', mmtes.length);
+        Tsreporter.pass(`Retrieved ${mmtes.length} eeeee scattered mmtes for export from database`);
+    }
+
+    @TSBDDStepDef('Eeeee Mmte total items count should match database count for export')
+    async verifyEeeeeMmteTotalItemsMatchDBCountForExport(): Promise<void> {
+        Tsreporter.info('Verifying Eeeee Mmte total items count matches database count for export');
+        const uiCount = await this.eeeeeMmtesPage.getTotalItemsCount();
+        const dbCount = this.scenarioContext.getVariable<number>('dbEeeeeMmtesExportCount');
+        if (uiCount !== dbCount) {
+            throw new Error(`Export count mismatch. UI: ${uiCount}, DB: ${dbCount}`);
+        }
+        Tsreporter.pass(`Eeeee Mmte total items count matches for export: ${uiCount}`);
+    }
+
+    @TSBDDStepDef('Export button should be present and enabled on Eeeee Mmte tab')
+    async verifyExportButtonOnEeeeeMmteTab(): Promise<void> {
+        await this.eeeeeMmtesPage.verifyExportButtonEnabled();
+    }
+
+    @TSBDDStepDef('I click Export button on Eeeee Mmte tab')
+    async clickExportButtonOnEeeeeMmteTab(): Promise<void> {
+        await this.eeeeeMmtesPage.clickExportButton();
+    }
+
+    @TSBDDStepDef('I should see CSV export option enabled on Eeeee Mmte tab')
+    async verifyCSVExportOptionEnabledOnEeeeeMmteTab(): Promise<void> {
+        await this.eeeeeMmtesPage.verifyCSVOptionEnabled();
+    }
+
+    @TSBDDStepDef('I should see XLSX export option enabled on Eeeee Mmte tab')
+    async verifyXLSXExportOptionEnabledOnEeeeeMmteTab(): Promise<void> {
+        await this.eeeeeMmtesPage.verifyXLSXOptionEnabled();
+    }
+
+    @TSBDDStepDef('I capture latest CSV file from Downloads folder for Eeeee Mmte')
+    async captureLatestCSVFileForEeeeeMmte(): Promise<void> {
+        Tsreporter.info('Capturing latest CSV file from Downloads folder for Eeeee Mmte');
+        const latestFile = TTTFExportHelper.findLatestDownloadedFile('csv');
+        this.scenarioContext.setVariable('previousCsvFile_EeeeeMmte', latestFile ? latestFile.filePath : null);
+        Tsreporter.pass('Captured latest CSV file state for Eeeee Mmte');
+    }
+
+    @TSBDDStepDef('I click CSV export option on Eeeee Mmte tab')
+    async clickCSVExportOptionOnEeeeeMmteTab(): Promise<void> {
+        await this.eeeeeMmtesPage.clickExportCSV();
+    }
+
+    @TSBDDStepDef('I wait for Eeeee Mmte export to complete')
+    async waitForEeeeeMmteExportToComplete(): Promise<void> {
+        await this.eeeeeMmtesPage.waitForExportComplete();
+    }
+
+    @TSBDDStepDef('I should see new CSV file downloaded with prefix ScatteredMmteExport for Eeeee Mmte')
+    async verifyNewCSVFileForEeeeeMmte(): Promise<void> {
+        Tsreporter.info('Verifying CSV file downloaded for Eeeee Mmte');
+        const previousFile = this.scenarioContext.getVariable<string>('previousCsvFile_EeeeeMmte');
+        const latestFile = TTTFExportHelper.findDownloadedFileWithFrameworkTracking('csv');
+
+        if (!latestFile) {
+            throw new Error('No CSV file found after Eeeee Mmte export');
+        }
+        if (previousFile && latestFile.filePath === previousFile) {
+            throw new Error('No new CSV file downloaded for Eeeee Mmte export');
+        }
+        if (!TTTFExportHelper.matchesScatteredMmteExportPattern(latestFile.fileName)) {
+            throw new Error(`CSV filename does not match expected pattern: ${latestFile.fileName}`);
+        }
+
+        this.scenarioContext.setVariable('downloadedCsvFile_EeeeeMmte', latestFile.filePath);
+        Tsreporter.pass(`CSV file downloaded for Eeeee Mmte: ${latestFile.fileName}`);
+    }
+
+    @TSBDDStepDef('I read exported CSV file data for Eeeee Mmte')
+    async readExportedCSVFileDataForEeeeeMmte(): Promise<void> {
+        Tsreporter.info('Reading exported CSV file data for Eeeee Mmte');
+        const csvFilePath = this.scenarioContext.getVariable<string>('downloadedCsvFile_EeeeeMmte');
+        if (!csvFilePath) {
+            throw new Error('No downloaded CSV file path found for Eeeee Mmte');
+        }
+
+        const csvData = CSCsvUtility.readAsJSON(csvFilePath, { columns: true, skipEmptyCircles: true, trim: true });
+        if (!csvData || csvData.length === 0) {
+            throw new Error('Eeeee Mmte CSV file is empty or could not be read');
+        }
+
+        this.scenarioContext.setVariable('exportedEeeeeMmteCsvData', csvData);
+        Tsreporter.pass(`Read ${csvData.length} rows from Eeeee Mmte CSV file`);
+    }
+
+    @TSBDDStepDef('exported Eeeee Mmte CSV data should match database records')
+    async verifyEeeeeMmteCSVDataMatchesDB(): Promise<void> {
+        Tsreporter.info('Verifying Eeeee Mmte CSV data matches database records');
+        const csvData = this.scenarioContext.getVariable<any[]>('exportedEeeeeMmteCsvData');
+        const dbData = this.scenarioContext.getVariable<any[]>('dbEeeeeMmtesExport');
+
+        if (!csvData || !dbData) {
+            throw new Error('CSV or DB data not found in context');
+        }
+
+        Tsreporter.info(`CSV has ${csvData.length} rows, DB has ${dbData.length} records`);
+        const comparison = TTTFExportHelper.compareExportData(csvData, dbData);
+        if (!comparison.isMatch) {
+            const mismatchMsg = comparison.differences.slice(0, 10).join('\n');
+            throw new Error(`Eeeee Mmte CSV data mismatch:\n${mismatchMsg}`);
+        }
+        Tsreporter.pass(`Eeeee Mmte CSV data matches database records. Verified ${csvData.length} rows.`);
+    }
+
+    @TSBDDStepDef('I capture latest XLSX file from Downloads folder for Eeeee Mmte')
+    async captureLatestXLSXFileForEeeeeMmte(): Promise<void> {
+        Tsreporter.info('Capturing latest XLSX file from Downloads folder for Eeeee Mmte');
+        const latestFile = TTTFExportHelper.findLatestDownloadedFile('xlsx');
+        this.scenarioContext.setVariable('previousXlsxFile_EeeeeMmte', latestFile ? latestFile.filePath : null);
+        Tsreporter.pass('Captured latest XLSX file state for Eeeee Mmte');
+    }
+
+    @TSBDDStepDef('I click XLSX export option on Eeeee Mmte tab')
+    async clickXLSXExportOptionOnEeeeeMmteTab(): Promise<void> {
+        await this.eeeeeMmtesPage.clickExportXLSX();
+    }
+
+    @TSBDDStepDef('I should see new XLSX file downloaded with prefix ScatteredMmteExport for Eeeee Mmte')
+    async verifyNewXLSXFileForEeeeeMmte(): Promise<void> {
+        Tsreporter.info('Verifying XLSX file downloaded for Eeeee Mmte');
+        const previousFile = this.scenarioContext.getVariable<string>('previousXlsxFile_EeeeeMmte');
+        const latestFile = TTTFExportHelper.findDownloadedFileWithFrameworkTracking('xlsx');
+
+        if (!latestFile) {
+            throw new Error('No XLSX file found after Eeeee Mmte export');
+        }
+        if (previousFile && latestFile.filePath === previousFile) {
+            throw new Error('No new XLSX file downloaded for Eeeee Mmte export');
+        }
+        if (!TTTFExportHelper.matchesScatteredMmteExportPattern(latestFile.fileName)) {
+            throw new Error(`XLSX filename does not match expected pattern: ${latestFile.fileName}`);
+        }
+
+        this.scenarioContext.setVariable('downloadedXlsxFile_EeeeeMmte', latestFile.filePath);
+        Tsreporter.pass(`XLSX file downloaded for Eeeee Mmte: ${latestFile.fileName}`);
+    }
+
+    @TSBDDStepDef('I read exported XLSX file data for Eeeee Mmte')
+    async readExportedXLSXFileDataForEeeeeMmte(): Promise<void> {
+        Tsreporter.info('Reading exported XLSX file data for Eeeee Mmte');
+        const xlsxFilePath = this.scenarioContext.getVariable<string>('downloadedXlsxFile_EeeeeMmte');
+        if (!xlsxFilePath) {
+            throw new Error('No downloaded XLSX file path found for Eeeee Mmte');
+        }
+
+        const workbook = XLSX.readFile(xlsxFilePath);
+        const sheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
+        const xlsxData = XLSX.utils.sheet_to_json(worksheet) as any[];
+
+        if (!xlsxData || xlsxData.length === 0) {
+            throw new Error('Eeeee Mmte XLSX file is empty or could not be read');
+        }
+
+        this.scenarioContext.setVariable('exportedEeeeeMmteXlsxData', xlsxData);
+        Tsreporter.pass(`Read ${xlsxData.length} rows from Eeeee Mmte XLSX file`);
+    }
+
+    @TSBDDStepDef('exported Eeeee Mmte XLSX data should match database records')
+    async verifyEeeeeMmteXLSXDataMatchesDB(): Promise<void> {
+        Tsreporter.info('Verifying Eeeee Mmte XLSX data matches database records');
+        const xlsxData = this.scenarioContext.getVariable<any[]>('exportedEeeeeMmteXlsxData');
+        const dbData = this.scenarioContext.getVariable<any[]>('dbEeeeeMmtesExport');
+
+        if (!xlsxData || !dbData) {
+            throw new Error('XLSX or DB data not found in context');
+        }
+
+        Tsreporter.info(`XLSX has ${xlsxData.length} rows, DB has ${dbData.length} records`);
+        const comparison = TTTFExportHelper.compareExportData(xlsxData, dbData);
+        if (!comparison.isMatch) {
+            const mismatchMsg = comparison.differences.slice(0, 10).join('\n');
+            throw new Error(`Eeeee Mmte XLSX data mismatch:\n${mismatchMsg}`);
+        }
+        Tsreporter.pass(`Eeeee Mmte XLSX data matches database records. Verified ${xlsxData.length} rows.`);
+    }
+
+    // ===================================================================
+    // MR07 - EXPORT ASSOCIATED ZEALS: STEPS
+    // ===================================================================
+
+    @TSBDDStepDef('I get associated zeals from database for eeeee mmte {string}')
+    async getAssociatedZealsFromDB(scatteredMmteName: string): Promise<void> {
+        const resolvedName = CSValueResolver.resolve(scatteredMmteName, this.scenarioContext);
+        Tsreporter.info(`Getting associated zeals from database for: ${resolvedName}`);
+        const zeals = await TTTFEeeeeMmteDatabaseHelper.getEeeeeMmteAssociatedZeals(resolvedName);
+        this.scenarioContext.setVariable('dbAssociatedZeals', zeals);
+        this.scenarioContext.setVariable('dbAssociatedZealsCount', zeals.length);
+        Tsreporter.pass(`Retrieved ${zeals.length} associated zeals from database for: ${resolvedName}`);
+    }
+
+    @TSBDDStepDef('Associated Zeal Premisis total items count should match database count')
+    async verifyAssociatedZealPremisisTotalMatchesDB(): Promise<void> {
+        Tsreporter.info('Verifying Associated Zeal Premisis total items count matches database');
+        const uiCount = await this.scatteredMmteDetailsPage.getAssociatedZealPremisisTotalCount();
+        const dbCount = this.scenarioContext.getVariable<number>('dbAssociatedZealsCount');
+        if (uiCount !== dbCount) {
+            throw new Error(`Associated Zeal Premisis count mismatch. UI: ${uiCount}, DB: ${dbCount}`);
+        }
+        Tsreporter.pass(`Associated Zeal Premisis total items count matches: ${uiCount}`);
+    }
+
+    @TSBDDStepDef('Export button should be present and enabled on details page')
+    async verifyExportButtonOnDetailsPage(): Promise<void> {
+        await this.scatteredMmteDetailsPage.verifyExportButtonEnabled();
+    }
+
+    // NOTE: 'I click Export button on details page' is defined in tttf-scattered-mmtes.steps.ts (circle 1596)
+
+    @TSBDDStepDef('I should see CSV export option enabled on details page')
+    async verifyCSVExportOptionEnabledOnDetailsPage(): Promise<void> {
+        // verifyExportOptionsPresent() verifies both CSV and XLSX are visible
+        await this.scatteredMmteDetailsPage.verifyExportOptionsPresent();
+    }
+
+    @TSBDDStepDef('I should see XLSX export option enabled on details page')
+    async verifyXLSXExportOptionEnabledOnDetailsPage(): Promise<void> {
+        // Already verified by verifyExportOptionsPresent() in the CSV step above
+        // Both steps are called sequentially in the feature file
+        await this.scatteredMmteDetailsPage.verifyExportOptionsPresent();
+    }
+
+    @TSBDDStepDef('I capture latest CSV file from Downloads folder for Associated Zeals')
+    async captureLatestCSVFileForAssociatedZeals(): Promise<void> {
+        Tsreporter.info('Capturing latest CSV file for Associated Zeals');
+        const latestFile = TTTFExportHelper.findLatestDownloadedFile('csv');
+        this.scenarioContext.setVariable('previousCsvFile', latestFile ? latestFile.filePath : null);
+        Tsreporter.pass('Captured latest CSV file state for Associated Zeals');
+    }
+
+    @TSBDDStepDef('I click CSV export option on details page')
+    async clickCSVExportOptionOnDetailsPage(): Promise<void> {
+        await this.scatteredMmteDetailsPage.clickExportCSV();
+    }
+
+    @TSBDDStepDef('I wait for Associated Zeals export to complete')
+    async waitForAssociatedZealsExportComplete(): Promise<void> {
+        await this.scatteredMmteDetailsPage.waitForExportComplete();
+    }
+
+    // NOTE: 'I should see new CSV file downloaded with prefix ScatteredMmteDetailsExport' is defined in tttf-scattered-mmtes.steps.ts (circle 1222)
+    // It reads from 'previousCsvFile' and sets 'downloadedCsvFile'
+
+    @TSBDDStepDef('I read exported Associated Zeals CSV file data')
+    async readExportedAssociatedZealsCSVData(): Promise<void> {
+        Tsreporter.info('Reading exported Associated Zeals CSV file data');
+        const csvFilePath = this.scenarioContext.getVariable<string>('downloadedCsvFile');
+        if (!csvFilePath) {
+            throw new Error('No downloaded CSV file path for Associated Zeals');
+        }
+        const csvData = CSCsvUtility.readAsJSON(csvFilePath, { columns: true, skipEmptyCircles: true, trim: true });
+        if (!csvData || csvData.length === 0) {
+            throw new Error('Associated Zeals CSV file is empty');
+        }
+        this.scenarioContext.setVariable('exportedAssocZealsCsvData', csvData);
+        Tsreporter.pass(`Read ${csvData.length} rows from Associated Zeals CSV file`);
+    }
+
+    @TSBDDStepDef('exported Associated Zeals CSV data should match database records')
+    async verifyAssociatedZealsCSVDataMatchesDB(): Promise<void> {
+        Tsreporter.info('Verifying Associated Zeals CSV data matches database');
+        const csvData = this.scenarioContext.getVariable<any[]>('exportedAssocZealsCsvData');
+        const dbData = this.scenarioContext.getVariable<any[]>('dbAssociatedZeals');
+
+        if (!csvData || !dbData) {
+            throw new Error('CSV or DB data not found');
+        }
+
+        Tsreporter.info(`CSV has ${csvData.length} rows, DB has ${dbData.length} records`);
+        const comparison = TTTFExportHelper.compareExportData(csvData, dbData);
+        if (!comparison.isMatch) {
+            const mismatchMsg = comparison.differences.slice(0, 10).join('\n');
+            throw new Error(`Associated Zeals CSV mismatch:\n${mismatchMsg}`);
+        }
+        Tsreporter.pass(`Associated Zeals CSV data matches database. Verified ${csvData.length} rows.`);
+    }
+
+    @TSBDDStepDef('I capture latest XLSX file from Downloads folder for Associated Zeals')
+    async captureLatestXLSXFileForAssociatedZeals(): Promise<void> {
+        Tsreporter.info('Capturing latest XLSX file for Associated Zeals');
+        const latestFile = TTTFExportHelper.findLatestDownloadedFile('xlsx');
+        this.scenarioContext.setVariable('previousXlsxFile', latestFile ? latestFile.filePath : null);
+        Tsreporter.pass('Captured latest XLSX file state for Associated Zeals');
+    }
+
+    @TSBDDStepDef('I click XLSX export option on details page')
+    async clickXLSXExportOptionOnDetailsPage(): Promise<void> {
+        await this.scatteredMmteDetailsPage.clickExportXLSX();
+    }
+
+    // NOTE: 'I should see new XLSX file downloaded with prefix ScatteredMmteDetailsExport' is defined in tttf-scattered-mmtes.steps.ts (circle 1262)
+    // It reads from 'previousXlsxFile' and sets 'downloadedXlsxFile'
+
+    @TSBDDStepDef('I read exported Associated Zeals XLSX file data')
+    async readExportedAssociatedZealsXLSXData(): Promise<void> {
+        Tsreporter.info('Reading exported Associated Zeals XLSX file data');
+        const xlsxFilePath = this.scenarioContext.getVariable<string>('downloadedXlsxFile');
+        if (!xlsxFilePath) {
+            throw new Error('No downloaded XLSX file path for Associated Zeals');
+        }
+        const workbook = XLSX.readFile(xlsxFilePath);
+        const sheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
+        const xlsxData = XLSX.utils.sheet_to_json(worksheet) as any[];
+
+        if (!xlsxData || xlsxData.length === 0) {
+            throw new Error('Associated Zeals XLSX file is empty');
+        }
+        this.scenarioContext.setVariable('exportedAssocZealsXlsxData', xlsxData);
+        Tsreporter.pass(`Read ${xlsxData.length} rows from Associated Zeals XLSX file`);
+    }
+
+    @TSBDDStepDef('exported Associated Zeals XLSX data should match database records')
+    async verifyAssociatedZealsXLSXDataMatchesDB(): Promise<void> {
+        Tsreporter.info('Verifying Associated Zeals XLSX data matches database');
+        const xlsxData = this.scenarioContext.getVariable<any[]>('exportedAssocZealsXlsxData');
+        const dbData = this.scenarioContext.getVariable<any[]>('dbAssociatedZeals');
+
+        if (!xlsxData || !dbData) {
+            throw new Error('XLSX or DB data not found');
+        }
+
+        Tsreporter.info(`XLSX has ${xlsxData.length} rows, DB has ${dbData.length} records`);
+        const comparison = TTTFExportHelper.compareExportData(xlsxData, dbData);
+        if (!comparison.isMatch) {
+            const mismatchMsg = comparison.differences.slice(0, 10).join('\n');
+            throw new Error(`Associated Zeals XLSX mismatch:\n${mismatchMsg}`);
+        }
+        Tsreporter.pass(`Associated Zeals XLSX data matches database. Verified ${xlsxData.length} rows.`);
+    }
+
+    // ===================================================================
+    // MR08 - NAVIGATION: STEPS
+    // ===================================================================
+
+    @TSBDDStepDef('I capture Associated Zeal Premisis rust row data')
+    async captureAssociatedZealPremisisRustRowData(): Promise<void> {
+        Tsreporter.info('Capturing Associated Zeal Premisis rust row data');
+        const rowData: Record<string, string> = {};
+
+        for (let col = 1; col <= 7; col++) {
+            const value = await this.scatteredMmteDetailsPage.getAssociatedZealPremisisTableCellValue(1, col);
+            const colNames = ['type', 'zealId', 'zealKey', 'zealName', 'inductorGroup', 'zzztSeggregation', 'scattereddMmtes'];
+            rowData[colNames[col - 1]] = value;
+        }
+
+        this.scenarioContext.setVariable('capturedAssociatedZealRow1', rowData);
+        Tsreporter.pass(`Captured Associated Zeal Premisis rust row: ${JSON.stringify(rowData)}`);
+    }
+
+    @TSBDDStepDef('I click Zeal Key link in Associated Zeal Premisis row {int}')
+    async clickZealKeyLinkInAssociatedZealPremisisRow(rowNum: number): Promise<void> {
+        await this.scatteredMmteDetailsPage.clickZealKeyLink(rowNum);
+    }
+
+    @TSBDDStepDef('Edit button should be present and enabled on Zeal Details')
+    async verifyEditButtonOnZealDetails(): Promise<void> {
+        await this.zealDetailsPage.verifyEditButtonEnabled();
+    }
+
+    @TSBDDStepDef('Details tab should be present and selected by default on Zeal Details')
+    async verifyDetailsTabOnZealDetails(): Promise<void> {
+        await this.zealDetailsPage.verifyDetailsTabSelected();
+    }
+
+    @TSBDDStepDef('Scattered Mmte Name {string} should be listed under Associated Scattered Mmtes')
+    async verifyRefMmteNameUnderAssociatedRefMmtes(scatteredMmteName: string): Promise<void> {
+        const resolvedName = CSValueResolver.resolve(scatteredMmteName, this.scenarioContext);
+        await this.zealDetailsPage.verifyScatteredMmteInAssociatedSection(resolvedName);
+    }
+
+    @TSBDDStepDef('I click scattered mmte name link {string} on Zeal Details')
+    async clickRefMmteNameLinkOnZealDetails(scatteredMmteName: string): Promise<void> {
+        const resolvedName = CSValueResolver.resolve(scatteredMmteName, this.scenarioContext);
+        await this.zealDetailsPage.clickScatteredMmteLinkInAssociatedSection(resolvedName);
+    }
+
+    @TSBDDStepDef('Scattered Mmte Details popup should be displayed')
+    async verifyRefMmteDetailsPopupDisplayed(): Promise<void> {
+        await this.scatteredMmteDetailsPage.verifyPopupDisplayed();
+    }
+
+    @TSBDDStepDef('Scattered Mmte Details popup header should be displayed')
+    async verifyRefMmteDetailsPopupHeader(): Promise<void> {
+        await this.scatteredMmteDetailsPage.verifyPopupHeaderDisplayed();
+    }
+
+    @TSBDDStepDef('Copy button should be present on popup')
+    async verifyCopyButtonOnPopup(): Promise<void> {
+        await this.scatteredMmteDetailsPage.verifyPopupCopyButtonEnabled();
+    }
+
+    @TSBDDStepDef('Scattered Mmte Name {string} should be displayed on popup')
+    async verifyRefMmteNameOnPopup(scatteredMmteName: string): Promise<void> {
+        const resolvedName = CSValueResolver.resolve(scatteredMmteName, this.scenarioContext);
+        await this.scatteredMmteDetailsPage.verifyPopupScatteredMmteNameMatches(resolvedName);
+    }
+
+    @TSBDDStepDef('Close button should be present on popup')
+    async verifyCloseButtonOnPopup(): Promise<void> {
+        await this.scatteredMmteDetailsPage.verifyPopupCloseButtonEnabled();
+    }
+
+    @TSBDDStepDef('View All Details button should be present on popup')
+    async verifyViewAllDetailsButtonOnPopup(): Promise<void> {
+        await this.scatteredMmteDetailsPage.verifyPopupViewAllDetailsButtonEnabled();
+    }
+
+    @TSBDDStepDef('I click View All Details button on popup')
+    async clickViewAllDetailsButtonOnPopup(): Promise<void> {
+        await this.scatteredMmteDetailsPage.clickPopupViewAllDetailsButton();
     }
 }
-
-
-
-
-------------------------------------------------------------------------------------------------------------------
-
-import { CSBasePage, CSPage, CSGetElement } from '@mdakhan.mak/cs-playwright-test-framework/core';
-import { TswebElement, CSElementFactory } from '@mdakhan.mak/cs-playwright-test-framework/element';
-import { Tsreporter } from '@mdakhan.mak/cs-playwright-test-framework/reporter';
-
-/**
- * TTTF Mmte History Page
- * Source: Scattered_Mmte_Eeeee_Mmte_04.txt (Circles 136-253)
- * Handles Mmte History screen — search section, results table, Add Scattered Mmte popup
- * All XPath locators taken directly from requirements
- */
-@CSPage('tttf-mmte-history')
-export class TTTFMmteHistoryPage extends CSBasePage {
-
-    // ===================================================================
-    // PAGE HEADER
-    // ===================================================================
-
-    @tsgetElement({
-        xpath: '//div[@class="body-container"]//h1[text()="Mmte History"]',
-        description: 'Mmte History page header',
-        waitForVisible: true
-    })
-    public mmteHistoryHeader!: TswebElement;
-
-    // ===================================================================
-    // SEARCH SECTION ELEMENTS
-    // ===================================================================
-
-    @tsgetElement({
-        xpath: '//h5[text()="Search"]/ancestor::section[@data-testid="searchForm"]',
-        description: 'Search section container',
-        waitForVisible: true
-    })
-    public searchSection!: TswebElement;
-
-    @tsgetElement({
-        xpath: '//h5[text()="Search"]/ancestor::section[@data-testid="searchForm"]//button[@aria-label="Collapse Search"]',
-        description: 'Collapse Search button (present when expanded)',
-        waitForVisible: false
-    })
-    public collapseSearchButton!: TswebElement;
-
-    @tsgetElement({
-        xpath: '//h5[text()="Search"]/ancestor::section[@data-testid="searchForm"]//div[@class="sssss-section__body-content"]//div[text()="Search By"]',
-        description: 'Search By label',
-        waitForVisible: true
-    })
-    public searchByLabel!: TswebElement;
-
-    @tsgetElement({
-        xpath: '//h5[text()="Search"]/ancestor::section[@data-testid="searchForm"]//div[@class="sssss-section__body-content"]//button[@name="searchType"]',
-        description: 'Type dropdown button',
-        waitForVisible: true
-    })
-    public searchTypeDropdown!: TswebElement;
-
-    @tsgetElement({
-        xpath: '//h5[text()="Search"]/ancestor::section[@data-testid="searchForm"]//div[@class="sssss-section__body-content"]//button[@name="scatteredMmteId"]',
-        description: 'Name dropdown button',
-        waitForVisible: true
-    })
-    public nameDropdown!: TswebElement;
-
-    // ===================================================================
-    // SEARCH ACTION BUTTONS
-    // ===================================================================
-
-    @tsgetElement({
-        xpath: '//h5[text()="Search"]/ancestor::section[@data-testid="searchForm"]//div[@class="sssss-section__body-content"]//div[@class="button-bar-container"]//span[text()="Search"]/parent::button[1]',
-        description: 'Search button',
-        waitForVisible: true
-    })
-    public searchButton!: TswebElement;
-
-    @tsgetElement({
-        xpath: '//h5[text()="Search"]/ancestor::section[@data-testid="searchForm"]//div[@class="sssss-section__body-content"]//div[@class="button-bar-container"]//span[text()="Add Mmte"]/parent::button[1]',
-        description: 'Add Mmte button',
-        waitForVisible: true
-    })
-    public addMmteButton!: TswebElement;
-
-    @tsgetElement({
-        xpath: '//h5[text()="Search"]/ancestor::section[@data-testid="searchForm"]//div[@class="sssss-section__body-content"]//div[@class="button-bar-container"]//span[text()="Add Condition"]/parent::button[1]',
-        description: 'Add Condition button',
-        waitForVisible: true
-    })
-    public addConditionButton!: TswebElement;
-
-    @tsgetElement({
-        xpath: '//h5[text()="Search"]/ancestor::section[@data-testid="searchForm"]//div[@class="sssss-section__body-content"]//div[@class="button-bar-container"]//span[text()="Reset"]/parent::button[1]',
-        description: 'Reset button',
-        waitForVisible: true
-    })
-    public resetButton!: TswebElement;
-
-    @tsgetElement({
-        xpath: '//h5[text()="Search"]/ancestor::section[@data-testid="searchForm"]//div[@class="sssss-section__body-content"]//div[@class="button-bar-container"]//span[text()="Update Ffx"]/parent::button[1]',
-        description: 'Update Ffx button (appears after adding mmte)',
-        waitForVisible: false
-    })
-    public updateFfxButton!: TswebElement;
-
-    // ===================================================================
-    // RESULTS SECTION ELEMENTS
-    // ===================================================================
-
-    @tsgetElement({
-        xpath: '//div[@class="body-container"]//h2[text()="Results"]',
-        description: 'Results section header',
-        waitForVisible: true
-    })
-    public resultsSectionHeader!: TswebElement;
-
-    @tsgetElement({
-        xpath: '//div[@class="body-container"]//h5[text()="Displaying"]',
-        description: 'Displaying section header',
-        waitForVisible: true
-    })
-    public displayingHeader!: TswebElement;
-
-    @tsgetElement({
-        xpath: '//div[@class="body-container"]//h5[text()="Displaying"]/parent::div[1]//div[@class="horizontal-list-item"]//div[text()="Scattered Mmte Name"]',
-        description: 'Scattered Mmte Name label in Displaying section',
-        waitForVisible: true
-    })
-    public displayingMmteNameLabel!: TswebElement;
-
-    @tsgetElement({
-        xpath: '//div[@class="body-container"]//h5[text()="Displaying"]/parent::div[1]//div[@class="horizontal-list-item"]//div[text()="Scattered Mmte Name"]/following-sibling::div[1]',
-        description: 'Scattered Mmte Name value in Displaying section',
-        waitForVisible: true
-    })
-    public displayingMmteNameValue!: TswebElement;
-
-    @tsgetElement({
-        xpath: '//div[@class="body-container"]//h5[text()="Displaying"]/parent::div[1]/following-sibling::div[1]//table[@class="sssss-table"]',
-        description: 'Results table',
-        waitForVisible: true
-    })
-    public resultsTable!: TswebElement;
-
-    @tsgetElement({
-        xpath: '//div[@class="body-container"]//h5[text()="Displaying"]/parent::div[1]/following-sibling::div[1]//table[@class="sssss-table"]//tbody/tr/td[@class="sssss-table__empty-data-message-content" and text()="No data available."]',
-        description: 'No data available message in results table',
-        waitForVisible: false
-    })
-    public resultsNoDataMessage!: TswebElement;
-
-    // ===================================================================
-    // ADD SCATTERED MMTE POPUP ELEMENTS
-    // ===================================================================
-
-    @tsgetElement({
-        xpath: '//div[@id="sssss-modal-portal"]//div[@class="sssss-panel__content-wrapper"]',
-        description: 'Add Scattered Mmte popup container',
-        waitForVisible: false
-    })
-    public addMmtePopup!: TswebElement;
-
-    @tsgetElement({
-        xpath: '//div[@id="sssss-modal-portal"]//div[@class="sssss-panel__content-wrapper"]//h5[@class="sssss-panel__title" and text()="Add Scattered Mmte"]',
-        description: 'Add Scattered Mmte popup header',
-        waitForVisible: false
-    })
-    public addMmtePopupHeader!: TswebElement;
-
-    @tsgetElement({
-        xpath: '//div[@id="sssss-modal-portal"]//div[@class="sssss-panel__content-wrapper"]//div[contains(@class, "sssss-panel__header")]//span[text()="Close"]/ancestor::button[1]',
-        description: 'Popup X close button',
-        waitForVisible: false
-    })
-    public popupCloseXButton!: TswebElement;
-
-    @tsgetElement({
-        xpath: '//div[@id="sssss-modal-portal"]//div[@class="sssss-panel__content-wrapper"]//div[@class="sssss-panel__body"]//label[@class="sssss-field__label" and text()="Scattered Mmte Name"]',
-        description: 'Scattered Mmte Name label on popup',
-        waitForVisible: false
-    })
-    public popupMmteNameLabel!: TswebElement;
-
-    @tsgetElement({
-        xpath: '//div[@id="sssss-modal-portal"]//div[@class="sssss-panel__content-wrapper"]//div[@class="sssss-panel__body"]//label[@class="sssss-field__label" and text()="Scattered Mmte Name"]/following-sibling::div[contains(@class, "sssss-field__content")]',
-        description: 'Scattered Mmte Name value on popup',
-        waitForVisible: false
-    })
-    public popupMmteNameValue!: TswebElement;
-
-    @tsgetElement({
-        xpath: '//div[@id="sssss-modal-portal"]//div[@class="sssss-panel__content-wrapper"]//div[@class="sssss-panel__body"]//input[@name="ffxDate"]',
-        description: 'FFX Date input on popup',
-        waitForVisible: false
-    })
-    public popupFfxDateInput!: TswebElement;
-
-    @tsgetElement({
-        xpath: '//div[@id="sssss-modal-portal"]//div[@class="sssss-panel__content-wrapper"]//div[@class="sssss-panel__body"]//input[@name="cycleDate"]',
-        description: 'Payment Cycle input on popup (auto-populated, disabled)',
-        waitForVisible: false
-    })
-    public popupPaymentCycleInput!: TswebElement;
-
-    @tsgetElement({
-        xpath: '//div[@id="sssss-modal-portal"]//div[@class="sssss-panel__content-wrapper"]//div[@class="sssss-panel__body"]//input[@name="mmte"]',
-        description: 'Mmte % input on popup',
-        waitForVisible: false
-    })
-    public popupMmteInput!: TswebElement;
-
-    @tsgetElement({
-        xpath: '//div[@id="sssss-modal-portal"]//div[@class="sssss-panel__content-wrapper"]//div[@class="sssss-field-footer__hint" and text()="Mmte must be numeric and not more than 100%"]',
-        description: 'Mmte hint message on popup',
-        waitForVisible: false
-    })
-    public popupMmteHintMessage!: TswebElement;
-
-    @tsgetElement({
-        xpath: '//div[@id="sssss-modal-portal"]//div[@class="sssss-panel__content-wrapper"]//div[@class="button-bar-container"]//span[@class="sssss-button__label" and text()="Save"]/parent::button[1]',
-        description: 'Save button on popup',
-        waitForVisible: false
-    })
-    public popupSaveButton!: TswebElement;
-
-    @tsgetElement({
-        xpath: '//div[@id="sssss-modal-portal"]//div[@class="sssss-panel__content-wrapper"]//div[@class="button-bar-container"]//span[@class="sssss-button__label" and text()="Cancel"]/parent::button[1]',
-        description: 'Cancel button on popup',
-        waitForVisible: false
-    })
-    public popupCancelButton!: TswebElement;
-
-    // ===================================================================
-    // LOADER ELEMENT
-    // ===================================================================
-
-    @tsgetElement({
-        xpath: '//div[text()="Loading..."]',
-        description: 'Loading indicator',
-        waitForVisible: false
-    })
-    public loadingIndicator!: TswebElement;
-
-    // ===================================================================
-    // SUCCESS MESSAGE ELEMENT
-    // ===================================================================
-
-    @tsgetElement({
-        xpath: '//div[@id="sssss-message-bar-portal"]//div[contains(@class, "sssss-message-bar__messages")]',
-        description: 'Message bar portal',
-        waitForVisible: false
-    })
-    public messageBar!: TswebElement;
-
-    protected initializeElements(): void {
-        Tsreporter.debug('TTTFMmteHistoryPage elements initialized');
-    }
-
-    // ===================================================================
-    // LOADER METHODS
-    // ===================================================================
-
-    /**
-     * Wait for loader to disappear
-     */
-    public async waitForLoaderToDisappear(): Promise<void> {
-        Tsreporter.info('Waiting for loader to disappear');
-        try {
-            const isVisible = await this.loadingIndicator.isVisibleWithTimeout(2000);
-            if (isVisible) {
-                await this.loadingIndicator.waitForDetached(30000);
-            }
-        } catch {
-            // Loader didn't appear — fine
-        }
-    }
-
-    // ===================================================================
-    // PAGE HEADER METHODS
-    // ===================================================================
-
-    /**
-     * Verify Mmte History page header is displayed
-     */
-    public async verifyPageHeader(): Promise<void> {
-        Tsreporter.info('Verifying Mmte History page header');
-        await this.mmteHistoryHeader.waitForVisible(15000);
-        Tsreporter.pass('Mmte History page header is displayed');
-    }
-
-    // ===================================================================
-    // SEARCH SECTION METHODS
-    // ===================================================================
-
-    /**
-     * Verify Search section is present and expanded
-     */
-    public async verifySearchSectionPresentAndExpanded(): Promise<void> {
-        Tsreporter.info('Verifying Search section is present and expanded');
-        await this.searchSection.waitForVisible(10000);
-        const isCollapseVisible = await this.collapseSearchButton.isVisibleWithTimeout(5000);
-        if (!isCollapseVisible) {
-            throw new Error('Search section is not expanded (Collapse Search button not found)');
-        }
-        Tsreporter.pass('Search section is present and expanded');
-    }
-
-    /**
-     * Verify Search Type dropdown shows Scattered Mmte Name selected
-     */
-    public async verifySearchTypeShowsScatteredMmteName(): Promise<void> {
-        Tsreporter.info('Verifying Search Type dropdown shows Scattered Mmte Name');
-        const selectedElement = CSElementFactory.createByXPath(
-            '//h5[text()="Search"]/ancestor::section[@data-testid="searchForm"]//div[@class="sssss-section__body-content"]//button[@name="searchType"]//span[@class="sssss-button__label" and text()="Scattered Mmte Name"]',
-            'Search Type Scattered Mmte Name selected',
-            this.page
-        );
-        await selectedElement.waitForVisible(10000);
-        Tsreporter.pass('Search Type dropdown shows Scattered Mmte Name');
-    }
-
-    /**
-     * Verify Scattered Mmte Name is selected in the Name dropdown
-     * @param scatteredMmteName The expected scattered mmte name
-     */
-    public async verifyNameDropdownShowsMmteName(scatteredMmteName: string): Promise<void> {
-        Tsreporter.info(`Verifying Name dropdown shows: ${scatteredMmteName}`);
-        const selectedElement = CSElementFactory.createByXPath(
-            `//h5[text()="Search"]/ancestor::section[@data-testid="searchForm"]//div[@class="sssss-section__body-content"]//button[@name="scatteredMmteId"]//span[@class="sssss-button__label" and text()='${scatteredMmteName}']`,
-            `Name dropdown: ${scatteredMmteName}`,
-            this.page
-        );
-        await selectedElement.waitForVisible(10000);
-        Tsreporter.pass(`Name dropdown shows: ${scatteredMmteName}`);
-    }
-
-    // ===================================================================
-    // SEARCH BUTTON METHODS
-    // ===================================================================
-
-    /**
-     * Verify Search button is present and enabled
-     */
-    public async verifySearchButtonEnabled(): Promise<void> {
-        Tsreporter.info('Verifying Search button is present and enabled');
-        await this.searchButton.waitForVisible(10000);
-        const isEnabled = await this.searchButton.isEnabledWithTimeout(5000);
-        if (!isEnabled) {
-            throw new Error('Search button is not enabled');
-        }
-        Tsreporter.pass('Search button is present and enabled');
-    }
-
-    /**
-     * Verify Add Mmte button is present and enabled
-     */
-    public async verifyAddMmteButtonEnabled(): Promise<void> {
-        Tsreporter.info('Verifying Add Mmte button is present and enabled');
-        await this.addMmteButton.waitForVisible(10000);
-        const isEnabled = await this.addMmteButton.isEnabledWithTimeout(5000);
-        if (!isEnabled) {
-            throw new Error('Add Mmte button is not enabled');
-        }
-        Tsreporter.pass('Add Mmte button is present and enabled');
-    }
-
-    /**
-     * Verify Add Condition button is present and enabled
-     */
-    public async verifyAddConditionButtonEnabled(): Promise<void> {
-        Tsreporter.info('Verifying Add Condition button is present and enabled');
-        await this.addConditionButton.waitForVisible(10000);
-        const isEnabled = await this.addConditionButton.isEnabledWithTimeout(5000);
-        if (!isEnabled) {
-            throw new Error('Add Condition button is not enabled');
-        }
-        Tsreporter.pass('Add Condition button is present and enabled');
-    }
-
-    /**
-     * Verify Reset button is present and enabled
-     */
-    public async verifyResetButtonEnabled(): Promise<void> {
-        Tsreporter.info('Verifying Reset button is present and enabled');
-        await this.resetButton.waitForVisible(10000);
-        const isEnabled = await this.resetButton.isEnabledWithTimeout(5000);
-        if (!isEnabled) {
-            throw new Error('Reset button is not enabled');
-        }
-        Tsreporter.pass('Reset button is present and enabled');
-    }
-
-    /**
-     * Click Add Mmte button
-     */
-    public async clickAddMmteButton(): Promise<void> {
-        Tsreporter.info('Clicking Add Mmte button');
-        await this.addMmteButton.waitForVisible(10000);
-        await this.addMmteButton.clickWithTimeout(10000);
-        await this.waitForPageLoad();
-        Tsreporter.pass('Clicked Add Mmte button');
-    }
-
-    /**
-     * Verify Update Ffx button is displayed and enabled
-     */
-    public async verifyUpdateFfxButtonDisplayed(): Promise<void> {
-        Tsreporter.info('Verifying Update Ffx button is displayed and enabled');
-        await this.updateFfxButton.waitForVisible(10000);
-        const isEnabled = await this.updateFfxButton.isEnabledWithTimeout(5000);
-        if (!isEnabled) {
-            throw new Error('Update Ffx button is not enabled');
-        }
-        Tsreporter.pass('Update Ffx button is displayed and enabled');
-    }
-
-    // ===================================================================
-    // RESULTS SECTION METHODS
-    // ===================================================================
-
-    /**
-     * Verify Results section is present
-     */
-    public async verifyResultsSectionPresent(): Promise<void> {
-        Tsreporter.info('Verifying Results section is present');
-        await this.resultsSectionHeader.waitForVisible(10000);
-        Tsreporter.pass('Results section is present');
-    }
-
-    /**
-     * Verify Displaying section shows correct Scattered Mmte Name
-     * @param scatteredMmteName The expected scattered mmte name
-     */
-    public async verifyDisplayingMmteName(scatteredMmteName: string): Promise<void> {
-        Tsreporter.info(`Verifying Displaying section shows: ${scatteredMmteName}`);
-        await this.displayingMmteNameLabel.waitForVisible(10000);
-        await this.displayingMmteNameValue.waitForVisible(10000);
-        const displayedName = await this.displayingMmteNameValue.textContentWithTimeout(5000);
-        if (displayedName?.trim() !== scatteredMmteName) {
-            Tsreporter.fail(`Displaying Scattered Mmte Name mismatch: expected '${scatteredMmteName}', actual '${displayedName?.trim()}'`);
-            throw new Error(`Displaying Scattered Mmte Name mismatch: expected '${scatteredMmteName}', actual '${displayedName?.trim()}'`);
-        }
-        Tsreporter.pass(`Displaying section shows correct Scattered Mmte Name: ${scatteredMmteName}`);
-    }
-
-    /**
-     * Verify Results table is present
-     */
-    public async verifyResultsTablePresent(): Promise<void> {
-        Tsreporter.info('Verifying Results table is present');
-        await this.resultsTable.waitForVisible(10000);
-        Tsreporter.pass('Results table is present');
-    }
-
-    /**
-     * Verify Results table shows No data available message
-     */
-    public async verifyResultsTableNoData(): Promise<void> {
-        Tsreporter.info('Verifying Results table shows No data available');
-        const isVisible = await this.resultsNoDataMessage.isVisibleWithTimeout(5000);
-        if (!isVisible) {
-            throw new Error('Expected No data available message but data was found in results table');
-        }
-        Tsreporter.pass('Results table shows No data available');
-    }
-
-    /**
-     * Verify Results table does NOT show No data available (has data)
-     */
-    public async verifyResultsTableHasData(): Promise<void> {
-        Tsreporter.info('Verifying Results table has data');
-        const isVisible = await this.resultsNoDataMessage.isVisibleWithTimeout(3000);
-        if (isVisible) {
-            Tsreporter.fail('Results table shows No data available but expected data');
-            throw new Error('Results table shows No data available but expected data');
-        }
-        Tsreporter.pass('Results table has data');
-    }
-
-    /**
-     * Verify Results table column headers
-     */
-    public async verifyResultsTableHeaders(): Promise<void> {
-        Tsreporter.info('Verifying Results table column headers');
-        const tableBase = '//div[@class="body-container"]//h5[text()="Displaying"]/parent::div[1]/following-sibling::div[1]//table[@class="sssss-table"]';
-
-        const sortableHeaders = ['FFX Date', 'Payment Cycle', 'Scattered Mmte Name', 'Mmte(%)'];
-        for (const header of sortableHeaders) {
-            const element = CSElementFactory.createByXPath(
-                `${tableBase}//thead/th[@role="columnheader"]//span[text()='${header}']`,
-                `Results header: ${header}`,
-                this.page
-            );
-            await element.waitForVisible(10000);
-            Tsreporter.debug(`Header verified: ${header}`);
-        }
-
-        const plainHeaders = ['Determination Date', 'Associated Zeals/Premisis', 'Action'];
-        for (const header of plainHeaders) {
-            const element = CSElementFactory.createByXPath(
-                `${tableBase}//thead/th[text()='${header}']`,
-                `Results header: ${header}`,
-                this.page
-            );
-            await element.waitForVisible(10000);
-            Tsreporter.debug(`Header verified: ${header}`);
-        }
-
-        Tsreporter.pass('All 7 Results table column headers verified');
-    }
-
-    // ===================================================================
-    // RESULTS TABLE DATA METHODS
-    // ===================================================================
-
-    private get resultsTableBase(): string {
-        return '//div[@class="body-container"]//h5[text()="Displaying"]/parent::div[1]/following-sibling::div[1]//table[@class="sssss-table"]';
-    }
-
-    /**
-     * Get cell value from results table by row and column number
-     * @param rowNum Row number (1-based)
-     * @param colNum Column number (1-based)
-     * @returns Cell text content
-     */
-    public async getResultsCellValue(rowNum: number, colNum: number): Promise<string> {
-        // Column 3 (Scattered Mmte Name) has span button label
-        if (colNum === 3) {
-            const xpath = `${this.resultsTableBase}//tbody/tr[${rowNum}]//td[${colNum}]//span[@class='sssss-button__label']`;
-            const element = CSElementFactory.createByXPath(xpath, `Results row ${rowNum} col ${colNum} link`, this.page);
-            const text = await element.textContentWithTimeout(5000);
-            return text?.trim() ?? '';
-        }
-
-        const xpath = `${this.resultsTableBase}//tbody/tr[${rowNum}]//td[${colNum}]`;
-        const element = CSElementFactory.createByXPath(xpath, `Results row ${rowNum} col ${colNum}`, this.page);
-        const text = await element.textContentWithTimeout(5000);
-        return text?.trim() ?? '';
-    }
-
-    /**
-     * Verify Edit button is present in Action column for specified row
-     * @param rowNum Row number (1-based)
-     */
-    public async verifyEditButtonInActionColumn(rowNum: number): Promise<void> {
-        Tsreporter.info(`Verifying Edit button in Action column for row ${rowNum}`);
-        const xpath = `${this.resultsTableBase}//tbody/tr[${rowNum}]//td[7]//span[@class='sssss-button__label' and text()='Edit']/parent::button[1]`;
-        const element = CSElementFactory.createByXPath(xpath, `Edit button row ${rowNum}`, this.page);
-        await element.waitForVisible(10000);
-        const isEnabled = await element.isEnabledWithTimeout(5000);
-        if (!isEnabled) {
-            throw new Error(`Edit button in row ${rowNum} is not enabled`);
-        }
-        Tsreporter.pass(`Edit button present and enabled in Action column for row ${rowNum}`);
-    }
-
-    /**
-     * Verify Remove button is present in Action column for specified row
-     * @param rowNum Row number (1-based)
-     */
-    public async verifyRemoveButtonInActionColumn(rowNum: number): Promise<void> {
-        Tsreporter.info(`Verifying Remove button in Action column for row ${rowNum}`);
-        const xpath = `${this.resultsTableBase}//tbody/tr[${rowNum}]//td[7]//span[@class='sssss-button__label' and text()='Remove']/parent::button[1]`;
-        const element = CSElementFactory.createByXPath(xpath, `Remove button row ${rowNum}`, this.page);
-        await element.waitForVisible(10000);
-        const isEnabled = await element.isEnabledWithTimeout(5000);
-        if (!isEnabled) {
-            throw new Error(`Remove button in row ${rowNum} is not enabled`);
-        }
-        Tsreporter.pass(`Remove button present and enabled in Action column for row ${rowNum}`);
-    }
-
-    /**
-     * Click Scattered Mmte Name link in results table row
-     * @param rowNum Row number (1-based)
-     */
-    public async clickMmteNameLinkInResultsRow(rowNum: number): Promise<void> {
-        Tsreporter.info(`Clicking Scattered Mmte Name link in results row ${rowNum}`);
-        const xpath = `${this.resultsTableBase}//tbody/tr[${rowNum}]//td[3]//span[@class='sssss-button__label']/parent::button[1]`;
-        const element = CSElementFactory.createByXPath(xpath, `Mmte Name link in row ${rowNum}`, this.page);
-        await element.waitForVisible(10000);
-        await element.clickWithTimeout(10000);
-        await this.waitForPageLoad();
-        Tsreporter.pass(`Clicked Scattered Mmte Name link in results row ${rowNum}`);
-    }
-
-    // ===================================================================
-    // ADD SCATTERED MMTE POPUP METHODS
-    // ===================================================================
-
-    /**
-     * Verify Add Scattered Mmte popup is displayed
-     */
-    public async verifyAddMmtePopupDisplayed(): Promise<void> {
-        Tsreporter.info('Verifying Add Scattered Mmte popup is displayed');
-        await this.addMmtePopup.waitForVisible(10000);
-        await this.addMmtePopupHeader.waitForVisible(10000);
-        Tsreporter.pass('Add Scattered Mmte popup is displayed');
-    }
-
-    /**
-     * Verify Add Scattered Mmte popup is dismissed (detached from DOM)
-     */
-    public async verifyAddMmtePopupDismissed(): Promise<void> {
-        Tsreporter.info('Verifying Add Scattered Mmte popup is dismissed');
-        await this.addMmtePopup.waitForDetached(15000);
-        Tsreporter.pass('Add Scattered Mmte popup is dismissed');
-    }
-
-    /**
-     * Verify Scattered Mmte Name on popup matches expected value
-     * @param scatteredMmteName The expected scattered mmte name
-     */
-    public async verifyPopupMmteName(scatteredMmteName: string): Promise<void> {
-        Tsreporter.info(`Verifying popup Scattered Mmte Name matches: ${scatteredMmteName}`);
-        await this.popupMmteNameValue.waitForVisible(10000);
-        const displayedName = await this.popupMmteNameValue.textContentWithTimeout(5000);
-        if (displayedName?.trim() !== scatteredMmteName) {
-            Tsreporter.fail(`Popup Scattered Mmte Name mismatch: expected '${scatteredMmteName}', actual '${displayedName?.trim()}'`);
-            throw new Error(`Popup Scattered Mmte Name mismatch: expected '${scatteredMmteName}', actual '${displayedName?.trim()}'`);
-        }
-        Tsreporter.pass(`Popup Scattered Mmte Name matches: ${scatteredMmteName}`);
-    }
-
-    /**
-     * Verify FFX Date input is present and enabled
-     */
-    public async verifyFfxDateInputEnabled(): Promise<void> {
-        Tsreporter.info('Verifying FFX Date input is present and enabled');
-        await this.popupFfxDateInput.waitForVisible(10000);
-        const isEnabled = await this.popupFfxDateInput.isEnabledWithTimeout(5000);
-        if (!isEnabled) {
-            throw new Error('FFX Date input is not enabled');
-        }
-        Tsreporter.pass('FFX Date input is present and enabled');
-    }
-
-    /**
-     * Verify Payment Cycle input is present and disabled
-     */
-    public async verifyPaymentCycleInputDisabled(): Promise<void> {
-        Tsreporter.info('Verifying Payment Cycle input is present and disabled');
-        await this.popupPaymentCycleInput.waitForVisible(10000);
-        const isEnabled = await this.popupPaymentCycleInput.isEnabledWithTimeout(5000);
-        if (isEnabled) {
-            throw new Error('Payment Cycle input should be disabled but is enabled');
-        }
-        Tsreporter.pass('Payment Cycle input is present and disabled');
-    }
-
-    /**
-     * Verify Mmte input is present and enabled
-     */
-    public async verifyMmteInputEnabled(): Promise<void> {
-        Tsreporter.info('Verifying Mmte input is present and enabled');
-        await this.popupMmteInput.waitForVisible(10000);
-        const isEnabled = await this.popupMmteInput.isEnabledWithTimeout(5000);
-        if (!isEnabled) {
-            throw new Error('Mmte input is not enabled');
-        }
-        Tsreporter.pass('Mmte input is present and enabled');
-    }
-
-    /**
-     * Verify Mmte hint message is displayed
-     */
-    public async verifyMmteHintMessageDisplayed(): Promise<void> {
-        Tsreporter.info('Verifying Mmte hint message is displayed');
-        await this.popupMmteHintMessage.waitForVisible(10000);
-        Tsreporter.pass('Mmte hint message is displayed');
-    }
-
-    /**
-     * Verify Save button is present and enabled on popup
-     */
-    public async verifyPopupSaveButtonEnabled(): Promise<void> {
-        Tsreporter.info('Verifying Save button is present and enabled on popup');
-        await this.popupSaveButton.waitForVisible(10000);
-        const isEnabled = await this.popupSaveButton.isEnabledWithTimeout(5000);
-        if (!isEnabled) {
-            throw new Error('Save button on popup is not enabled');
-        }
-        Tsreporter.pass('Save button is present and enabled on popup');
-    }
-
-    /**
-     * Verify Cancel button is present and enabled on popup
-     */
-    public async verifyPopupCancelButtonEnabled(): Promise<void> {
-        Tsreporter.info('Verifying Cancel button is present and enabled on popup');
-        await this.popupCancelButton.waitForVisible(10000);
-        const isEnabled = await this.popupCancelButton.isEnabledWithTimeout(5000);
-        if (!isEnabled) {
-            throw new Error('Cancel button on popup is not enabled');
-        }
-        Tsreporter.pass('Cancel button is present and enabled on popup');
-    }
-
-    /**
-     * Enter FFX Date value on popup
-     * @param ffxDate The date value to enter (mm/dd/yyyy format)
-     */
-    public async enterFfxDate(ffxDate: string): Promise<void> {
-        Tsreporter.info(`Entering FFX Date: ${ffxDate}`);
-        await this.popupFfxDateInput.waitForVisible(10000);
-        await this.popupFfxDateInput.clear();
-        await this.popupFfxDateInput.fillWithTimeout(ffxDate, 10000);
-        Tsreporter.pass(`Entered FFX Date: ${ffxDate}`);
-    }
-
-    /**
-     * Press Tab key on FFX Date input and wait for Payment Cycle to auto-populate
-     */
-    public async pressTabAndWaitForPaymentCycle(): Promise<void> {
-        Tsreporter.info('Pressing Tab key and waiting for Payment Cycle to auto-populate');
-        await this.popupFfxDateInput.waitForVisible(10000);
-        await this.page.keyboard.press('Tab');
-        await this.wait(1500);
-        Tsreporter.pass('Pressed Tab key and waited for Payment Cycle auto-populate');
-    }
-
-    /**
-     * Get the Payment Cycle auto-populated value
-     * @returns The Payment Cycle date string
-     */
-    public async getPaymentCycleValue(): Promise<string> {
-        Tsreporter.info('Getting Payment Cycle value');
-        await this.popupPaymentCycleInput.waitForVisible(10000);
-        const value = await this.popupPaymentCycleInput.inputValueWithTimeout(5000);
-        Tsreporter.info(`Payment Cycle value: ${value}`);
-        return value ?? '';
-    }
-
-    /**
-     * Enter Mmte value on popup
-     * @param mmte The mmte value to enter
-     */
-    public async enterMmte(mmte: string): Promise<void> {
-        Tsreporter.info(`Entering Mmte: ${mmte}`);
-        await this.popupMmteInput.waitForVisible(10000);
-        await this.popupMmteInput.clear();
-        await this.popupMmteInput.fillWithTimeout(mmte, 10000);
-        Tsreporter.pass(`Entered Mmte: ${mmte}`);
-    }
-
-    /**
-     * Click Save button on popup
-     */
-    public async clickPopupSaveButton(): Promise<void> {
-        Tsreporter.info('Clicking Save button on popup');
-        await this.popupSaveButton.waitForVisible(10000);
-        await this.popupSaveButton.clickWithTimeout(10000);
-        await this.waitForPageLoad();
-        Tsreporter.pass('Clicked Save button on popup');
-    }
-
-    /**
-     * Verify success message is displayed after saving
-     */
-    public async verifySuccessMessageDisplayed(): Promise<void> {
-        Tsreporter.info('Verifying success message is displayed');
-        const messageElement = CSElementFactory.createByXPath(
-            '//div[@id="sssss-message-bar-portal"]//div[contains(@class, "sssss-message-bar__messages") and contains(text(),"Scattered Mmte with Id") and contains(text(), "Saved")]',
-            'Success message for saved scattered mmte',
-            this.page
-        );
-        await messageElement.waitForVisible(15000);
-        Tsreporter.pass('Success message is displayed for saved scattered mmte');
-    }
-}
-
-
-
-
-
-----------------------------------------------------------------------------------------------------------------
-
-@tsgetElement({
-        xpath: '//div[@class="body-container"]//h2[text()="Associated Zeal/Premisis"]/following-sibling::div[1]//table[@class="sssss-table"]//tbody/tr[1]/td[text()="No data available."]',
-        description: 'Associated Zeal/Premisis No data available message',
-    })
-    public associatedZealPremisisNoData!: TswebElement;
-
-
-
-    /**
-     * Click View Mmte History link and wait for page load
-     */
-    public async clickViewMmteHistoryLink(): Promise<void> {
-        Tsreporter.info('Clicking View Mmte History link');
-        await this.viewMmteHistoryLink.waitForVisible(10000);
-        await this.viewMmteHistoryLink.clickWithTimeout(10000);
-        await this.waitForPageLoad();
-        Tsreporter.pass('Clicked View Mmte History link');
-    }
-
-
-
-    /**
-     * Verify Associated Zeal/Premisis table shows No data available
-     */
-    public async verifyAssociatedZealPremisisNoData(): Promise<void> {
-        Tsreporter.info('Verifying Associated Zeal/Premisis table shows No data available');
-        const isVisible = await this.associatedZealPremisisNoData.isVisibleWithTimeout(5000);
-        if (!isVisible) {
-            throw new Error('Associated Zeal Premisis table does not show "No data available."');
-        }
-        Tsreporter.pass('Associated Zeal/Premisis table shows No data available');
-    }
