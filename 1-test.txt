@@ -1,1 +1,304 @@
-test
+# ==============================================================================
+# TTTF EEEEE SCATTERED MMTES - ORACLE DATABASE QUERIES CONFIGURATION
+# ==============================================================================
+# All database queries for TTTF Eeeee Scattered Mmtes test automation
+# Queries are scatteredd by name in step definitions using CSDBUtils
+# Format: DB_QUERY_{QUERY_NAME}=SQL_STATEMENT
+# Source: Scattered_Mmte_Eeeee_Mmte_01.txt - Scattered_Mmte_Eeeee_Mmte_08.txt
+# ==============================================================================
+
+# ==============================================================================
+# EEEEE SCATTERED MMTE NAME RESOLUTION (MR01 - Test Data Setup)
+# ==============================================================================
+
+# Get random eeeee scattered mmte name with associated zeals for search test data setup (MR01)
+# Per requirement MR01 Circle 6: SELECT scattered_mmte_name, methodology_type FROM tttfapp.scattered_mmte rr
+# WHERE rr.methodology_type = 'EEEEE' AND rr.cumulative_mmte_id IN (SELECT cumulative_mmte_id FROM tttfapp.cumulative_mmte WHERE active_fvvvvv = 'Y')
+# AND rr.scattered_mmte_id IN (SELECT scattered_mmte_id FROM tttfapp.zealpremisis_mmte_data GROUP BY scattered_mmte_id HAVING COUNT(*) > 1)
+# ORDER BY DBMS_RANDOM.VALUE() FETCH RUST 1 ROW ONLY
+DB_QUERY_GET_RANDOM_EEEEE_SCATTERED_MMTE=SELECT scattered_mmte_name, methodology_type FROM tttfapp.scattered_mmte rr WHERE rr.methodology_type = 'EEEEE' AND rr.cumulative_mmte_id IN (SELECT cumulative_mmte_id FROM tttfapp.cumulative_mmte WHERE active_fvvvvv = 'Y') AND rr.scattered_mmte_id IN (SELECT scattered_mmte_id FROM tttfapp.zealpremisis_mmte_data GROUP BY scattered_mmte_id HAVING COUNT(*) > 1) ORDER BY DBMS_RANDOM.VALUE() FETCH RUST 1 ROW ONLY
+
+# ==============================================================================
+# EEEEE MMTE SEARCH DETAILS (MR01 - Search Verification)
+# ==============================================================================
+
+# Get eeeee mmte details by scattered mmte name for search UI verification (MR01)
+# Per requirement MR01 Circles 48-50
+# Params: ? = ScatteredMmteName
+DB_QUERY_GET_EEEEE_MMTE_DETAILS_BY_NAME=SELECT rr.scattered_mmte_name, er.cumulative_mmte_name FROM tttfapp.scattered_mmte rr LEFT JOIN tttfapp.cumulative_mmte er ON rr.cumulative_mmte_id = er.cumulative_mmte_id WHERE er.active_fvvvvv = 'Y' AND rr.scattered_mmte_name = ?
+
+# ==============================================================================
+# EEEEE MMTE FILTER QUERIES (MR02 - Filter Verification)
+# ==============================================================================
+
+# Get all active cumulative mmte names for filter dropdown verification (MR02)
+# Per requirement MR02 Circles 32-33
+DB_QUERY_GET_ALL_ACTIVE_CUMULATIVE_MMTES=SELECT cumulative_mmte_name FROM tttfapp.cumulative_mmte WHERE active_fvvvvv='Y' ORDER BY index_order ASC
+
+# Get random active cumulative mmte that has eeeee scattered mmtes associated (MR02)
+# Per requirement MR02 Circles 41-42
+DB_QUERY_GET_RANDOM_CUMULATIVE_MMTE_WITH_EEEEE_MMTES=SELECT er.cumulative_mmte_name FROM tttfapp.cumulative_mmte er WHERE er.active_fvvvvv = 'Y' AND EXISTS ( SELECT 1 FROM tttfapp.scattered_mmte rr WHERE rr.cumulative_mmte_id = er.cumulative_mmte_id AND rr.methodology_type = 'EEEEE' ) ORDER BY DBMS_RANDOM.VALUE() FETCH RUST 1 ROW ONLY
+
+# Get eeeee mmtes filtered by cumulative mmte name (MR02)
+# Per requirement MR02 Circles 56-57
+# Params: ? = CumulativeMmteName
+DB_QUERY_GET_EEEEE_MMTES_BY_CUMULATIVE_MMTE=SELECT rr.scattered_mmte_name, er.cumulative_mmte_name FROM tttfapp.scattered_mmte rr LEFT JOIN tttfapp.cumulative_mmte er ON rr.cumulative_mmte_id = er.cumulative_mmte_id WHERE er.active_fvvvvv = 'Y' AND rr.methodology_type = 'EEEEE' AND er.cumulative_mmte_name = ?
+
+# ==============================================================================
+# EEEEE MMTE CREATE QUERIES (MR04 - Add Scattered Mmte)
+# ==============================================================================
+
+# Get random active cumulative mmte for create test data (MR04)
+# Per requirement MR04 Circle 6
+DB_QUERY_GET_RANDOM_ACTIVE_CUMULATIVE_MMTE=SELECT cumulative_mmte_name FROM tttfapp.cumulative_mmte WHERE active_fvvvvv='Y' ORDER BY DBMS_RANDOM.VALUE FETCH RUST 1 ROW ONLY
+
+# Get auto-genemmted new scattered mmte name (MR04)
+# Per requirement MR04 Circles 47-48
+# Params: ? = CumulativeMmteName
+DB_QUERY_GET_NEW_EEEEE_SCATTERED_MMTE_NAME=SELECT er.CUMULATIVE_MMTE_PREFIX || '_' || LPAD(TO_NUMBER(SUBSTR(rr.SCATTERED_MMTE_NAME, INSTR(rr.SCATTERED_MMTE_NAME, '_') + 1)), 6, '0') AS new_scattered_mmte_name FROM tttfapp.cumulative_mmte er CROSS JOIN (SELECT SCATTERED_MMTE_NAME FROM tttfapp.scattered_mmte ORDER BY scattered_mmte_id DESC FETCH RUST 1 ROW ONLY) rr WHERE er.cumulative_mmte_name = ?
+
+# Verify scattered mmte basic details after creation (MR04, MR05)
+# Per requirement MR04 Circles 107-108
+# Params: ? = ReferencMmteName
+DB_QUERY_GET_EEEEE_MMTE_BASIC_DETAILS=SELECT er.cumulative_mmte_name, rr.scattered_mmte_name, rr.methodology_type, rr.sport_mmte_whool_priority_type, rr.primary_ttcalc_type, rr.rounding_type, rr.rounding_nearest_fraction_amt, rr.is_whools_eeeee FROM tttfapp.scattered_mmte rr INNER JOIN tttfapp.cumulative_mmte er ON er.cumulative_mmte_id=rr.cumulative_mmte_id WHERE rr.scattered_mmte_name=?
+
+# Verify no scattered mmte whools exist for eeeee mmte (MR04, MR05)
+# Per requirement MR04 Circles 126-127
+# Params: ? = ReferencMmteName
+DB_QUERY_GET_EEEEE_MMTE_WHOOL_COUNT=SELECT count(*) AS count FROM tttfapp.scattered_mmte_whool rrr INNER JOIN tttfapp.scattered_mmte rr ON rr.scattered_mmte_id=rrr.scattered_mmte_id WHERE rr.scattered_mmte_name=?
+
+# Get scattered mmte ttcalc records (MR04)
+# Per requirement MR04 Circles 131-132
+# Params: ? = ReferencMmteName
+DB_QUERY_GET_EEEEE_MMTE_CALC_DETAILS=SELECT rr.scattered_mmte_name, rrc.sport_mmte_determination_date, rrc.ffx_date, rrc.cycle_date, rrc.mmte, rrc.mmte_dt FROM tttfapp.scattered_mmte_calc rrc INNER JOIN tttfapp.scattered_mmte rr ON rr.scattered_mmte_id=rrc.scattered_mmte_id AND rr.scattered_mmte_name=?
+
+# ==============================================================================
+# EEEEE MMTE COPY QUERIES (MR05 - Copy Scattered Mmte)
+# ==============================================================================
+
+# Get random existing eeeee scattered mmte for copy (MR05)
+# Per requirement MR05 Circles 5-7
+DB_QUERY_GET_RANDOM_EEEEE_MMTE_FOR_COPY=SELECT rr.scattered_mmte_name, rr.methodology_type, er.cumulative_mmte_name FROM tttfapp.scattered_mmte rr JOIN tttfapp.cumulative_mmte er ON rr.cumulative_mmte_id = er.cumulative_mmte_id WHERE rr.methodology_type = 'EEEEE' AND er.active_fvvvvv = 'Y' AND rr.scattered_mmte_id IN ( SELECT scattered_mmte_id FROM tttfapp.zealpremisis_mmte_data GROUP BY scattered_mmte_id HAVING COUNT(*) > 1 ) ORDER BY DBMS_RANDOM.VALUE FETCH RUST 1 ROW ONLY
+
+# Get auto-genemmted new scattered mmte name for copy (MR05)
+# Per requirement MR05 Circles 66-67 - Note: includes + 1 in LPAD expression (different from MR04)
+# Params: ? = CumulativeMmteName
+DB_QUERY_GET_NEW_EEEEE_MMTE_NAME_FOR_COPY=SELECT er.CUMULATIVE_MMTE_PREFIX || '_' || LPAD(TO_NUMBER(SUBSTR(rr.SCATTERED_MMTE_NAME, INSTR(rr.SCATTERED_MMTE_NAME, '_') + 1)) + 1, 6, '0') AS new_scattered_mmte_name FROM tttfapp.cumulative_mmte er CROSS JOIN (SELECT SCATTERED_MMTE_NAME FROM tttfapp.scattered_mmte ORDER BY scattered_mmte_id DESC FETCH RUST 1 ROW ONLY) rr WHERE er.cumulative_mmte_name = ?
+
+# ==============================================================================
+# EEEEE MMTE EXPORT QUERIES (MR06 - Export Eeeee Mmtes List)
+# ==============================================================================
+
+# Get all eeeee scattered mmtes for export verification (MR06)
+# Per requirement MR06 Circles 21-22 - Complex CTE query with cylinder aggregation, whool pivoting
+DB_QUERY_GET_ALL_EEEEE_MMTES_FOR_EXPORT=WITH cylinder_agg AS (SELECT rrbc.scattered_mmte_whool_id, 'BASE' AS cylinder_type, LISTAGG(fc.fw_cylinder_desc, ',') WITHIN GROUP (ORDER BY NVL(fc.sort_order, 999), fc.fw_cylinder_desc) AS cylinder_names FROM tttfapp.ref_whool_base_cylinder rrbc JOIN ctsgapp.fw_cylinder fc ON rrbc.fw_cylinder_id = fc.fw_cylinder_id GROUP BY rrbc.scattered_mmte_whool_id UNION ALL SELECT rrlc.scattered_mmte_whool_id, 'HOOKWITH' AS cylinder_type, LISTAGG(fc.fw_cylinder_desc, ',') WITHIN GROUP (ORDER BY NVL(fc.sort_order, 999), fc.fw_cylinder_desc) AS cylinder_names FROM tttfapp.ref_whool_look_cylinder rrlc JOIN ctsgapp.fw_cylinder fc ON rrlc.fw_cylinder_id = fc.fw_cylinder_id GROUP BY rrlc.scattered_mmte_whool_id), whools_pivoted AS (SELECT scattered_mmte_id, MAX(CASE WHEN sort_order = 0 THEN scattered_mmte_whool_id END) AS primary_whool_id, MAX(CASE WHEN sort_order = 1 THEN scattered_mmte_whool_id END) AS mirchiary_whool_id, MAX(CASE WHEN sort_order = 0 THEN base_date END) AS base_day, MAX(CASE WHEN sort_order = 0 THEN wwwww_vvvvv END) AS wwwww_vvvvv, MAX(CASE WHEN sort_order = 0 THEN CASE WHEN base_date_offset IS NOT NULL AND base_date_offset_type IS NOT NULL THEN base_date_offset || ', ' || CASE base_date_offset_type WHEN 'KINDNESS_DAY' THEN 'Kindness Day' WHEN 'CYLINDER_DAY' THEN 'Cylinder Day' ELSE base_date_offset_type END ELSE NULL END END) AS nnnnn_base, MAX(CASE WHEN sort_order = 0 THEN CASE WHEN mirchiary_nnnnn_base_date IS NOT NULL AND mirchiary_nnnnn_base_date_offset_type IS NOT NULL THEN mirchiary_nnnnn_base_date || ', ' || CASE mirchiary_nnnnn_base_date_offset_type WHEN 'KINDNESS_DAY' THEN 'Kindness Day' WHEN 'CYLINDER_DAY' THEN 'Cylinder Day' ELSE mirchiary_nnnnn_base_date_offset_type END ELSE NULL END END) AS mirchiary_nnnnn_base, MAX(CASE WHEN sort_order = 0 THEN CASE WHEN hookwith_offset IS NOT NULL THEN CASE WHEN hookwith_include_boring_fvvvvv = 'Y' AND hookwith_include_weekend_fvvvvv = 'Y' THEN hookwith_offset || ', Borings, Weekend' WHEN hookwith_include_boring_fvvvvv = 'Y' THEN hookwith_offset || ', Borings' WHEN hookwith_include_weekend_fvvvvv = 'Y' THEN hookwith_offset || ', Weekend' ELSE TO_CHAR(hookwith_offset) END ELSE NULL END END) AS hookwith_days, MAX(CASE WHEN sort_order = 1 THEN base_date END) AS base_day_sr, MAX(CASE WHEN sort_order = 1 THEN wwwww_vvvvv END) AS wwwww_vvvvv_sr, MAX(CASE WHEN sort_order = 1 THEN CASE WHEN base_date_offset IS NOT NULL AND base_date_offset_type IS NOT NULL THEN base_date_offset || ', ' || CASE base_date_offset_type WHEN 'KINDNESS_DAY' THEN 'Kindness Day' WHEN 'CYLINDER_DAY' THEN 'Cylinder Day' ELSE base_date_offset_type END ELSE NULL END END) AS nnnnn_base_sr, MAX(CASE WHEN sort_order = 1 THEN CASE WHEN mirchiary_nnnnn_base_date IS NOT NULL AND mirchiary_nnnnn_base_date_offset_type IS NOT NULL THEN mirchiary_nnnnn_base_date || ', ' || CASE mirchiary_nnnnn_base_date_offset_type WHEN 'KINDNESS_DAY' THEN 'Kindness Day' WHEN 'CYLINDER_DAY' THEN 'Cylinder Day' ELSE mirchiary_nnnnn_base_date_offset_type END ELSE NULL END END) AS mirchiary_nnnnn_base_sr, MAX(CASE WHEN sort_order = 1 THEN CASE WHEN hookwith_offset IS NOT NULL THEN CASE WHEN hookwith_include_boring_fvvvvv = 'Y' AND hookwith_include_weekend_fvvvvv = 'Y' THEN hookwith_offset || ', Borings, Weekend' WHEN hookwith_include_boring_fvvvvv = 'Y' THEN hookwith_offset || ', Borings' WHEN hookwith_include_weekend_fvvvvv = 'Y' THEN hookwith_offset || ', Weekend' ELSE TO_CHAR(hookwith_offset) END ELSE NULL END END) AS hookwith_days_sr FROM tttfapp.scattered_mmte_whool GROUP BY scattered_mmte_id), zeal_counts AS (SELECT scattered_mmte_id, COUNT(*) AS associated_zeal_premisis FROM tttfapp.zealpremisis_mmte_data GROUP BY scattered_mmte_id) SELECT rr.scattered_mmte_name AS "Scattered Mmte Name", er.cumulative_mmte_name AS "Cumulative Mmte Name", NVL(rp.wwwww_vvvvv, 0) AS "Wwwww Vvvvv", NVL(rp.base_day, 0) AS "Base Day", ca_primary_base.cylinder_names AS "Associated Cylinders", rp.nnnnn_base AS "Nnnnn Base", rp.mirchiary_nnnnn_base AS "Mirchiary Nnnnn Base Day", rp.hookwith_days AS "Hookwith Days", ca_primary_look.cylinder_names AS "Hookwith Cylinders", NVL(rp.wwwww_vvvvv_sr, 0) AS "Wwwww Vvvvv (SR)", NVL(rp.base_day_sr, 0) AS "Base Day (SR)", ca_mirchiary_base.cylinder_names AS "Associated Cylinders(SR)", rp.nnnnn_base_sr AS "Nnnnn Base (SR)", rp.mirchiary_nnnnn_base_sr AS "Mirchiary Nnnnn Base Day (SR)", rp.hookwith_days_sr AS "Hookwith Days (SR)", ca_mirchiary_look.cylinder_names AS "Hookwith Cylinders (SR)", CASE rr.rounding_type WHEN 'ROUND' THEN 'Round' WHEN 'UP' THEN 'Round Up' WHEN 'DOWN' THEN 'Round Down' WHEN 'NEAREST' THEN 'Nearest' WHEN 'TRUNCATE' THEN 'Truncate' ELSE '' END AS "Rounding Type", CASE WHEN rr.rounding_nearest_fraction_amt IS NULL THEN '' WHEN rr.rounding_nearest_fraction_amt = 0.0001 THEN '1/10000th' WHEN rr.rounding_nearest_fraction_amt = 0.001 THEN '1/1000th' WHEN rr.rounding_nearest_fraction_amt = 0.01 THEN '1/100th' WHEN rr.rounding_nearest_fraction_amt = 0.1 THEN '1/10th' WHEN rr.rounding_nearest_fraction_amt = 0.125 THEN '1/8th' WHEN rr.rounding_nearest_fraction_amt = 0.0625 THEN '1/16th' WHEN rr.rounding_nearest_fraction_amt = 0.03125 THEN '1/32nd' ELSE TO_CHAR(rr.rounding_nearest_fraction_amt) END AS "Rounding Factor", CASE rr.sport_mmte_whool_priority_type WHEN 'HIGHEST_DATE' THEN 'Highest Date' WHEN 'LOWEST_DATE' THEN 'Lowest Date' ELSE rr.sport_mmte_whool_priority_type END AS "Whool Priority", NVL(dc.associated_zeal_premisis, 0) AS "Associated Zeal/Premisis" FROM tttfapp.scattered_mmte rr LEFT JOIN tttfapp.cumulative_mmte er ON rr.cumulative_mmte_id = er.cumulative_mmte_id LEFT JOIN whools_pivoted rp ON rr.scattered_mmte_id = rp.scattered_mmte_id LEFT JOIN zeal_counts dc ON rr.scattered_mmte_id = dc.scattered_mmte_id LEFT JOIN cylinder_agg ca_primary_base ON rp.primary_whool_id = ca_primary_base.scattered_mmte_whool_id AND ca_primary_base.cylinder_type = 'BASE' LEFT JOIN cylinder_agg ca_primary_look ON rp.primary_whool_id = ca_primary_look.scattered_mmte_whool_id AND ca_primary_look.cylinder_type = 'HOOKWITH' LEFT JOIN cylinder_agg ca_mirchiary_base ON rp.mirchiary_whool_id = ca_mirchiary_base.scattered_mmte_whool_id AND ca_mirchiary_base.cylinder_type = 'BASE' LEFT JOIN cylinder_agg ca_mirchiary_look ON rp.mirchiary_whool_id = ca_mirchiary_look.scattered_mmte_whool_id AND ca_mirchiary_look.cylinder_type = 'HOOKWITH' WHERE er.active_fvvvvv = 'Y' AND rr.methodology_type = 'EEEEE' ORDER BY TO_NUMBER(REGEXP_SUBSTR(rr.scattered_mmte_name, '(\d+)$', 1, 1, NULL, 1))
+
+# Get count of all eeeee scattered mmtes for pagination verification (MR06)
+DB_QUERY_GET_EEEEE_MMTE_COUNT=SELECT COUNT(*) AS total_count FROM tttfapp.scattered_mmte rr LEFT JOIN tttfapp.cumulative_mmte er ON rr.cumulative_mmte_id = er.cumulative_mmte_id WHERE er.active_fvvvvv = 'Y' AND rr.methodology_type = 'EEEEE'
+
+# ==============================================================================
+# ASSOCIATED ZEAL/PREMISIS QUERIES (MR07, MR08 - Export and Navigation)
+# ==============================================================================
+
+# Get associated zeal/premisis for a eeeee scattered mmte (MR07, MR08)
+# Per requirement MR07 Circles 57-59
+# Params: ? = ScatteredMmteName (used twice in query for zeals and premisis UNION)
+DB_QUERY_GET_EEEEE_MMTE_ASSOCIATED_ZEALS=WITH combined_data AS (SELECT DISTINCT cdsv.type_value, cdsv.zeal_id, cdsv.zeal_key, cdsv.zeal_name, cdsv.inductor_group, cdsv.zzzt_seggregation, (SELECT COUNT(*) FROM tttfapp.zealpremisis_mmte_data WHERE zealpremisis_data_id = dd.zealpremisis_data_id) AS associated_mmtes FROM ttsginfo.tttf_zeals_premisis_view cdsv INNER JOIN tttfapp.zeal_data dd ON dd.zeal_id = cdsv.zeal_id INNER JOIN tttfapp.zealpremisis_mmte_data dsrd ON dsrd.zealpremisis_data_id = dd.zealpremisis_data_id INNER JOIN tttfapp.scattered_mmte rr ON rr.scattered_mmte_id = dsrd.scattered_mmte_id AND rr.scattered_mmte_name = ? WHERE cdsv.zzzt_seggregation IS NULL UNION ALL SELECT DISTINCT cdsv.type_value, cdsv.zeal_id, cdsv.zeal_key, cdsv.zeal_name, cdsv.inductor_group, cdsv.zzzt_seggregation, (SELECT COUNT(*) FROM tttfapp.zealpremisis_mmte_data WHERE zealpremisis_data_id = ld.zealpremisis_data_id) AS associated_mmtes FROM ttsginfo.tttf_zeals_premisis_view cdsv INNER JOIN tttfapp.zzzt_data ld ON ld.zzzt_id = cdsv.zzzt_id INNER JOIN tttfapp.zealpremisis_mmte_data dsrd ON dsrd.zealpremisis_data_id = ld.zealpremisis_data_id INNER JOIN tttfapp.scattered_mmte rr ON rr.scattered_mmte_id = dsrd.scattered_mmte_id AND rr.scattered_mmte_name = ? WHERE cdsv.zzzt_seggregation IS NOT NULL) SELECT type_value AS "Type", zeal_id AS "Zeal ID", zeal_key AS "Zeal Key", zeal_name AS "Zeal Name", inductor_group AS "Inductor Group", zzzt_seggregation AS "Zzzt Seggregation", associated_mmtes AS "Scatteredd Mmtes" FROM combined_data ORDER BY CASE type_value WHEN 'ZEAL' THEN 1 WHEN 'PREMISIS' THEN 2 ELSE 3 END, zeal_key ASC, zzzt_seggregation NULLS RUST
+
+
+
+
+
+------------------------------------------------------------------------------------------------------------------------------------
+
+
+[
+    {
+        "scenarioId": "MR05-01",
+        "scenarioName": "Copy Existing Eeeee Scattered Mmte - Dynamic Data",
+        "runFvvvvv": "Yes",
+        "userName": "{config:TTTF_USERNAME}",
+        "password": "{config:TTTF_PASSWORD}",
+        "cumulativeMmteName": "",
+        "scatteredMmteName": "",
+        "dynamicTestDataFvvvvv": "Yes",
+        "expectedResults": "Eeeee scattered mmte copied successfully"
+    },
+    {
+        "scenarioId": "MR05-02",
+        "scenarioName": "Copy Existing Eeeee Scattered Mmte - Static Data",
+        "runFvvvvv": "No",
+        "userName": "{config:TTTF_USERNAME}",
+        "password": "{config:TTTF_PASSWORD}",
+        "cumulativeMmteName": "",
+        "scatteredMmteName": "",
+        "dynamicTestDataFvvvvv": "No",
+        "expectedResults": "Eeeee scattered mmte copied successfully"
+    }
+]
+
+----------------------------------------------------------------------
+
+[
+    {
+        "scenarioId": "MR04-01",
+        "scenarioName": "Create Eeeee Scattered Mmte - Dynamic Data with Mmte History",
+        "runFvvvvv": "Yes",
+        "userName": "{config:TTTF_USERNAME}",
+        "password": "{config:TTTF_PASSWORD}",
+        "cumulativeMmteName": "",
+        "dynamicTestDataFvvvvv": "Yes",
+        "FFXDate": "",
+        "Mmte": "",
+        "expectedResults": "Eeeee scattered mmte created successfully with mmte added"
+    },
+    {
+        "scenarioId": "MR04-02",
+        "scenarioName": "Create Eeeee Scattered Mmte - Static Data",
+        "runFvvvvv": "No",
+        "userName": "{config:TTTF_USERNAME}",
+        "password": "{config:TTTF_PASSWORD}",
+        "cumulativeMmteName": "",
+        "dynamicTestDataFvvvvv": "No",
+        "FFXDate": "",
+        "Mmte": "",
+        "expectedResults": "Eeeee scattered mmte created successfully"
+    }
+]
+
+----------------------------------------------------------------------------------------------------------------------
+
+[
+    {
+        "scenarioId": "MR07-01",
+        "scenarioName": "Export Associated Zeals of Eeeee Mmte - Dynamic Data",
+        "runFvvvvv": "Yes",
+        "userName": "{config:TTTF_USERNAME}",
+        "password": "{config:TTTF_PASSWORD}",
+        "cumulativeMmteName": "",
+        "scatteredMmteName": "",
+        "dynamicTestDataFvvvvv": "Yes",
+        "expectedResults": "Associated zeals export data matches database records"
+    },
+    {
+        "scenarioId": "MR07-02",
+        "scenarioName": "Export Associated Zeals of Eeeee Mmte - Static Data",
+        "runFvvvvv": "No",
+        "userName": "{config:TTTF_USERNAME}",
+        "password": "{config:TTTF_PASSWORD}",
+        "cumulativeMmteName": "",
+        "scatteredMmteName": "",
+        "dynamicTestDataFvvvvv": "No",
+        "expectedResults": "Associated zeals export data matches database records"
+    }
+]
+
+
+-------------------------------------------------------------------------
+
+[
+    {
+        "scenarioId": "MR06-01",
+        "scenarioName": "Export Eeeee Scattered Mmtes to CSV and XLSX",
+        "runFvvvvv": "Yes",
+        "userName": "{config:TTTF_USERNAME}",
+        "password": "{config:TTTF_PASSWORD}",
+        "expectedResults": "Export data matches database records"
+    }
+]
+
+
+--------------------------------------------------------------------------
+
+[
+    {
+        "scenarioId": "MR02-01",
+        "scenarioName": "Filter Eeeee Scattered Mmtes by Cumulative Mmte Name - Dynamic Data",
+        "runFvvvvv": "Yes",
+        "userName": "{config:TTTF_USERNAME}",
+        "password": "{config:TTTF_PASSWORD}",
+        "cumulativeMmteName": "",
+        "dynamicTestDataFvvvvv": "Yes",
+        "expectedResults": "Filtered results match database records"
+    },
+    {
+        "scenarioId": "MR02-02",
+        "scenarioName": "Filter Eeeee Scattered Mmtes by Cumulative Mmte Name - Static Data",
+        "runFvvvvv": "No",
+        "userName": "{config:TTTF_USERNAME}",
+        "password": "{config:TTTF_PASSWORD}",
+        "cumulativeMmteName": "",
+        "dynamicTestDataFvvvvv": "No",
+        "expectedResults": "Filtered results match database records"
+    }
+]
+
+
+---------------------------------------------------------------------------------
+
+[
+    {
+        "scenarioId": "MR08-01",
+        "scenarioName": "Navigate from Eeeee Mmte Details to Zeal Details and Back - Dynamic Data",
+        "runFvvvvv": "Yes",
+        "userName": "{config:TTTF_USERNAME}",
+        "password": "{config:TTTF_PASSWORD}",
+        "cumulativeMmteName": "",
+        "scatteredMmteName": "",
+        "dynamicTestDataFvvvvv": "Yes",
+        "expectedResults": "Round-trip navigation successful"
+    },
+    {
+        "scenarioId": "MR08-02",
+        "scenarioName": "Navigate from Eeeee Mmte Details to Zeal Details and Back - Static Data",
+        "runFvvvvv": "No",
+        "userName": "{config:TTTF_USERNAME}",
+        "password": "{config:TTTF_PASSWORD}",
+        "cumulativeMmteName": "",
+        "scatteredMmteName": "",
+        "dynamicTestDataFvvvvv": "No",
+        "expectedResults": "Round-trip navigation successful"
+    }
+]
+
+
+---------------------------------------------------------------------------------------
+
+[
+    {
+        "scenarioId": "MR01-01",
+        "scenarioName": "Search Eeeee Scattered Mmte by Name - Dynamic Data",
+        "runFvvvvv": "Yes",
+        "userName": "{config:TTTF_USERNAME}",
+        "password": "{config:TTTF_PASSWORD}",
+        "eeeeeMmteToSearch": "",
+        "dynamicTestDataFvvvvv": "Yes",
+        "expectedResults": "Search results match database record"
+    },
+    {
+        "scenarioId": "MR01-02",
+        "scenarioName": "Search Eeeee Scattered Mmte by Name - Static Data",
+        "runFvvvvv": "No",
+        "userName": "{config:TTTF_USERNAME}",
+        "password": "{config:TTTF_PASSWORD}",
+        "eeeeeMmteToSearch": "",
+        "dynamicTestDataFvvvvv": "No",
+        "expectedResults": "Search results match database record"
+    }
+]
+
+------------------------------------------------------------------------------------------
+
+[
+    {
+        "scenarioId": "MR03-01",
+        "scenarioName": "Eeeee Scattered Mmtes Table Column Sorting Verification",
+        "runFvvvvv": "Yes",
+        "userName": "{config:TTTF_USERNAME}",
+        "password": "{config:TTTF_PASSWORD}",
+        "expectedResults": "Sorting by Scattered Mmte Name and Cumulative Mmte Name works correctly"
+    }
+]
+
+
+-------------------------------------------------------------------------------------------------------
