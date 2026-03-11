@@ -1,1 +1,46 @@
-test
+// Control flow keywords that might match
+                    'constructor', 'if', 'for', 'while', 'switch', 'catch', 'return', 'throw',
+                    // Built-in constructors/global functions (e.g., String(x), Number(x), Boolean(x))
+                    'String', 'Number', 'Boolean', 'Object', 'Array', 'Date', 'RegExp', 'Error',
+                    'TypeError', 'RangeError', 'SyntaxError', 'ReferenceError', 'URIError', 'EvalError',
+                    'Map', 'Set', 'WeakMap', 'WeakSet', 'Promise', 'Symbol', 'BigInt', 'Proxy', 'Reflect',
+                    'Int8Array', 'Uint8Array', 'Float32Array', 'Float64Array', 'ArrayBuffer', 'DataView',
+                    'encodeURIComponent', 'decodeURIComponent', 'encodeURI', 'decodeURI',
+                    'parseInt', 'parseFloat', 'isNaN', 'isFinite', 'eval', 'require',
+                    // Object methods
+                    'toString', 'valueOf', 'hasOwnProperty', 'isPrototypeOf', 'propertyIsEnumerable',
+                    // String methods
+                    'trim', 'trimStart', 'trimEnd', 'split', 'join', 'slice', 'substring', 'substr',
+                    'replace', 'replaceAll', 'match', 'matchAll', 'search', 'toLowerCase', 'toUpperCase',
+                    'charAt', 'charCodeAt', 'concat', 'includes', 'indexOf', 'lastIndexOf', 'localeCompare',
+                    'normalize', 'padStart', 'padEnd', 'repeat', 'startsWith', 'endsWith',
+                    // Array methods
+                    'push', 'pop', 'shift', 'unshift', 'splice', 'sort', 'reverse', 'fill', 'copyWithin',
+                    'map', 'filter', 'reduce', 'reduceRight', 'forEach', 'every', 'some', 'find', 'findIndex',
+                    'flat', 'flatMap', 'entries', 'keys', 'values', 'from', 'isArray', 'of',
+                    // Promise methods
+                    'then', 'catch', 'finally', 'resolve', 'reject', 'all', 'allSettled', 'race', 'any',
+                    // JSON methods
+                    'parse', 'stringify',
+                    // Math methods
+                    'abs', 'ceil', 'floor', 'round', 'max', 'min', 'pow', 'sqrt', 'random',
+                    // Date methods
+                    'getTime', 'getDate', 'getDay', 'getMonth', 'getFullYear', 'getHours', 'getMinutes',
+                    'setTime', 'setDate', 'setMonth', 'setFullYear', 'toISOString', 'toDateString',
+                    // Console methods
+                    'log', 'error', 'warn', 'info', 'debug', 'trace'
+
+
+
+const methodPatterns = [
+            // Class methods - exclude method calls by ensuring no dot before method name and word boundary
+            // Uses [^{\n]+ to prevent matching across line boundaries (avoids false positives from template literals)
+            /(?<!\.)(?:async\s+)?\b(\w+)\s*\([^)]*\)\s*(?::\s*[^{\n]+)?\s*{/g,
+            // Function declarations
+            /function\s+(\w+)\s*\([^)]*\)\s*(?::\s*[^{\n]+)?\s*{/g,
+            // Arrow functions assigned to variables
+            /(?:const|let|var)\s+(\w+)\s*=\s*(?:async\s*)?\([^)]*\)\s*=>/g,
+            // Arrow functions with type annotations
+            /(?:const|let|var)\s+(\w+)\s*:\s*[^=]+\s*=\s*(?:async\s*)?\([^)]*\)\s*=>/g
+        ];
+
