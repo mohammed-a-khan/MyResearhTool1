@@ -1,46 +1,124 @@
-// Control flow keywords that might match
-                    'constructor', 'if', 'for', 'while', 'switch', 'catch', 'return', 'throw',
-                    // Built-in constructors/global functions (e.g., String(x), Number(x), Boolean(x))
-                    'String', 'Number', 'Boolean', 'Object', 'Array', 'Date', 'RegExp', 'Error',
-                    'TypeError', 'RangeError', 'SyntaxError', 'ReferenceError', 'URIError', 'EvalError',
-                    'Map', 'Set', 'WeakMap', 'WeakSet', 'Promise', 'Symbol', 'BigInt', 'Proxy', 'Reflect',
-                    'Int8Array', 'Uint8Array', 'Float32Array', 'Float64Array', 'ArrayBuffer', 'DataView',
-                    'encodeURIComponent', 'decodeURIComponent', 'encodeURI', 'decodeURI',
-                    'parseInt', 'parseFloat', 'isNaN', 'isFinite', 'eval', 'require',
-                    // Object methods
-                    'toString', 'valueOf', 'hasOwnProperty', 'isPrototypeOf', 'propertyIsEnumerable',
-                    // String methods
-                    'trim', 'trimStart', 'trimEnd', 'split', 'join', 'slice', 'substring', 'substr',
-                    'replace', 'replaceAll', 'match', 'matchAll', 'search', 'toLowerCase', 'toUpperCase',
-                    'charAt', 'charCodeAt', 'concat', 'includes', 'indexOf', 'lastIndexOf', 'localeCompare',
-                    'normalize', 'padStart', 'padEnd', 'repeat', 'startsWith', 'endsWith',
-                    // Array methods
-                    'push', 'pop', 'shift', 'unshift', 'splice', 'sort', 'reverse', 'fill', 'copyWithin',
-                    'map', 'filter', 'reduce', 'reduceRight', 'forEach', 'every', 'some', 'find', 'findIndex',
-                    'flat', 'flatMap', 'entries', 'keys', 'values', 'from', 'isArray', 'of',
-                    // Promise methods
-                    'then', 'catch', 'finally', 'resolve', 'reject', 'all', 'allSettled', 'race', 'any',
-                    // JSON methods
-                    'parse', 'stringify',
-                    // Math methods
-                    'abs', 'ceil', 'floor', 'round', 'max', 'min', 'pow', 'sqrt', 'random',
-                    // Date methods
-                    'getTime', 'getDate', 'getDay', 'getMonth', 'getFullYear', 'getHours', 'getMinutes',
-                    'setTime', 'setDate', 'setMonth', 'setFullYear', 'toISOString', 'toDateString',
-                    // Console methods
-                    'log', 'error', 'warn', 'info', 'debug', 'trace'
+/**
+ * Walk projectRoot once and build a map from path-suffix → absolute path for
+ * every source file. Lets us resolve imports like
+ *   com.example.app.common.BaseTestCase
+ * to any file on disk ending with
+ *   .../com/example/app/common/BaseTestCase.java
+ * regardless of whether the project follows Maven (src/test/java/…),
+ * flat (src/…), or any other layout.
+ *
+ * Directories named node_modules, target, bin, obj, .git, dist, build are
+ * pruned to keep the walk cheap on large repos.
+ */
+interface SourceIndex {
+    // Map of suffix starting at first package segment → absolute path.
+    // E.g. 'com/example/common/BaseTestCase.java' → '/abs/path/...'
+    byPathSuffix: Map<string, string>;
+    // Map of basename → all absolute paths (fallback when import is suffix-truncated).
+    byBasename: Map<string, string[]>;
+    // Map of fully-qualified class / namespace name → absolute path.
+    // Derived from parsing the `package <...>;` or `namespace <...>;` declaration
+    // inside each source file — ground truth regardless of where the file lives.
+    // This makes flat-dumped folders work correctly even with duplicate basenames.
+    byFqcn: Map<string, string>;
+}
 
+/**
+ * Read the first ~40 lines of a source file and return its fully-qualified
+ * class / namespace name (if discoverable), else null. Cheap: we bail as soon
+ * as we see the package declaration. Multi-class-per-file uses the first one.
+ */
+function extractFqcnFromFile(absPath: string): string | null {
+    try {
+        const ext = path.extname(absPath);
+        const buf = fs.readFileSync(absPath, { encoding: 'utf-8' }).slice(0, 4000);
+        if (ext === '.java') {
+            const pkgM = buf.match(/^\s*package\s+([\w.]+)\s*;/m);
+            const clsM = buf.match(/(?:public\s+|abstract\s+|final\s+)*(?:class|interface|enum|record)\s+(\w+)/);
+            if (pkgM && clsM) return `${pkgM[1]}.${clsM[1]}`;
+            if (clsM) return clsM[1]; // default package
+        } else if (ext === '.cs') {
+            const nsM = buf.match(/^\s*namespace\s+([\w.]+)/m);
+            const clsM = buf.match(/(?:public\s+|internal\s+|abstract\s+|sealed\s+|static\s+)*(?:class|interface|struct|enum|record)\s+(\w+)/);
+            if (nsM && clsM) return `${nsM[1]}.${clsM[1]}`;
+            if (clsM) return clsM[1];
+        }
+    } catch { /* swallow */ }
+    return null;
+}
 
+const PRUNED_DIRS = new Set(['node_modules', 'target', 'bin', 'obj', '.git', 'dist', 'build', '.gradle', '.idea', '.vscode']);
 
-const methodPatterns = [
-            // Class methods - exclude method calls by ensuring no dot before method name and word boundary
-            // Uses [^{\n]+ to prevent matching across line boundaries (avoids false positives from template literals)
-            /(?<!\.)(?:async\s+)?\b(\w+)\s*\([^)]*\)\s*(?::\s*[^{\n]+)?\s*{/g,
-            // Function declarations
-            /function\s+(\w+)\s*\([^)]*\)\s*(?::\s*[^{\n]+)?\s*{/g,
-            // Arrow functions assigned to variables
-            /(?:const|let|var)\s+(\w+)\s*=\s*(?:async\s*)?\([^)]*\)\s*=>/g,
-            // Arrow functions with type annotations
-            /(?:const|let|var)\s+(\w+)\s*:\s*[^=]+\s*=\s*(?:async\s*)?\([^)]*\)\s*=>/g
-        ];
+function indexSourceFiles(root: string, extensions: string[]): SourceIndex {
+    const idx: SourceIndex = { byPathSuffix: new Map(), byBasename: new Map(), byFqcn: new Map() };
+    if (!fs.existsSync(root)) return idx;
 
+    const isCodeExt = extensions.some(e => e === '.java' || e === '.cs');
+
+    const walk = (dir: string): void => {
+        let entries: fs.Dirent[];
+        try {
+            entries = fs.readdirSync(dir, { withFileTypes: true });
+        } catch { return; }
+        for (const e of entries) {
+            if (e.isDirectory()) {
+                if (!PRUNED_DIRS.has(e.name)) walk(path.join(dir, e.name));
+                continue;
+            }
+            const ext = path.extname(e.name);
+            if (!extensions.includes(ext)) continue;
+            const abs = path.join(dir, e.name);
+            const rel = path.relative(root, abs).replace(/\\/g, '/');
+
+            // Index by basename
+            const list = idx.byBasename.get(e.name) ?? [];
+            list.push(abs);
+            idx.byBasename.set(e.name, list);
+
+            // Index by every suffix starting at a '/' boundary so that
+            // 'com/x/y/Bar.java' matches whether the file lives at
+            // 'src/com/x/y/Bar.java' or 'src/test/java/com/x/y/Bar.java'.
+            let i = 0;
+            while (i < rel.length) {
+                idx.byPathSuffix.set(rel.substring(i), abs);
+                const next = rel.indexOf('/', i);
+                if (next < 0) break;
+                i = next + 1;
+            }
+
+            // Index by fully-qualified name parsed from the `package`/`namespace`
+            // declaration inside the file. This is ground truth and handles
+            // flat-dumped folders (no directory hierarchy) correctly even when
+            // multiple files share a basename.
+            if (isCodeExt && (ext === '.java' || ext === '.cs')) {
+                const fqcn = extractFqcnFromFile(abs);
+                if (fqcn) idx.byFqcn.set(fqcn, abs);
+            }
+        }
+    };
+    walk(root);
+    return idx;
+}
+
+function resolveJavaImport(imp: string, idx: SourceIndex): string | null {
+    // 1. Authoritative: match against each file's own `package <...>;` declaration.
+    if (idx.byFqcn.has(imp)) return idx.byFqcn.get(imp)!;
+    // 2. Path-suffix lookup — works for any layout that mirrors the package structure.
+    const suffix = imp.replace(/\./g, '/') + '.java';
+    if (idx.byPathSuffix.has(suffix)) return idx.byPathSuffix.get(suffix)!;
+    // 3. Fallback: unique basename match.
+    const className = imp.split('.').pop() + '.java';
+    const bases = idx.byBasename.get(className);
+    if (bases && bases.length === 1) return bases[0];
+    return null;
+}
+
+function resolveCsharpNamespace(ns: string, idx: SourceIndex): string | null {
+    if (idx.byFqcn.has(ns)) return idx.byFqcn.get(ns)!;
+    const suffix = ns.replace(/\./g, '/') + '.cs';
+    if (idx.byPathSuffix.has(suffix)) return idx.byPathSuffix.get(suffix)!;
+    const className = ns.split('.').pop() + '.cs';
+    const bases = idx.byBasename.get(className);
+    if (bases && bases.length === 1) return bases[0];
+    return null;
+}
